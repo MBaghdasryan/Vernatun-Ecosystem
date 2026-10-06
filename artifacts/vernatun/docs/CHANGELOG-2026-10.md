@@ -33,3 +33,20 @@
 - Browser QA Console invitations/audit на desktop1440/mobile390 прошёл; scope и ограничения подробно отмечены в `VERNATUN-AUDIT.md`.
 
 Остальные фазы спецификации пока не выполнены.
+
+## 6 октября — согласованная Phase 1 foundation
+
+### Added
+- Добавочная migration013, immutable audit guard, subscription/plan module policy, reasoned overrides, minute support/subscription expiry jobs.
+- Три функциональные Console поверхности: subscriptions, paginated audit, invitation lifecycle.
+- Защищённый dev/test email outbox и SMTP adapter с честным acceptance status; единая доставка приглашений, семейного делегирования и reset.
+
+### Fixed
+- Повторная отправка меняет токен и не восстанавливает отозванное приглашение.
+- Status transitions проверяют перекрытие/лимит и не возобновляют закрытый контракт; null grace означает отсутствие grace.
+- Даты Console учитывают Asia/Yerevan; stale responses и состояние другого контекста не подменяют текущие значения.
+
+### Preservation / verification
+- Основной seed не запускался; accounts/business/private bytes не заменялись. Backup manifest создан до main migration. До/после проверены исходные строки и значения.
+- Core50/50, затем final Phase1-only11/11; TypeScript и Vite build passed. Remote storage/full backup drill не объявляется повторно пройденным.
+- Реальный SMTP/production не настроен; весь платформенный prompt не завершён.
