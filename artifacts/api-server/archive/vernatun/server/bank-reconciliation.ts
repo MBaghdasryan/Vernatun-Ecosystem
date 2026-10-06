@@ -136,7 +136,7 @@ bankReconciliation.post('/finance/bank/transactions/:id/ignore',async(req,res)=>
 bankReconciliation.get('/finance/credits',async(req,res)=>{
  const existing=await context(req),own=!existing.permissions.includes('payments.reconcile');
  const c=await requirePermission(req,own?'billing.own':'payments.reconcile');if(!own)orgFinance(c);
- res.json((await pool.query(`SELECT p.id,p.reference,p.currency,p.amount_minor::text,${available} AS credit_minor,p.created_at,a.unit_id,a.payer_user_id,u.number,x.name AS payer_name,
+ res.json((await pool.query(`SELECT p.id,p.reference,p.source,p.currency,p.amount_minor::text,${available} AS credit_minor,p.created_at,a.unit_id,a.payer_user_id,u.number,x.name AS payer_name,
  COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'invoiceId',r.invoice_id,'amountMinor',r.amount_minor::text,'kind',r.allocation_kind,'createdAt',r.created_at) ORDER BY r.created_at,r.id) FROM payment_allocations r WHERE r.payment_id=p.id),'[]'::jsonb) AS allocations
  FROM payment_accounts a JOIN payments p ON p.id=a.payment_id JOIN units u ON u.id=a.unit_id JOIN users x ON x.id=a.payer_user_id
  WHERE a.organization_id=$1 AND ($2::uuid IS NULL OR a.payer_user_id=$2)

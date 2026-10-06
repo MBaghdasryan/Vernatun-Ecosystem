@@ -677,8 +677,285 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreditAllocationInput" } } } }
       responses:
         "200": { description: Append-only credit allocation, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /platform/operators:
+    get:
+      operationId: listPlatformOperators
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordsResponse' }
+  /platform/organizations/{id}:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    get:
+      operationId: getPlatformOrganization
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+    patch:
+      operationId: updatePlatformOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformOrganizationProfile' }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/organizations/{id}/state:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: changePlatformOrganizationState
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformOrganizationState' }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/support-cases:
+    get:
+      operationId: listPlatformCases
+      parameters:
+        - { name: queue, in: query, schema: { type: string, enum: [unassigned, mine, all], default: all } }
+        - { name: status, in: query, schema: { type: string, enum: [open, in_progress, resolved] } }
+        - { name: priority, in: query, schema: { type: string, enum: [low, normal, high, urgent] } }
+        - { name: organizationId, in: query, schema: { type: string, format: uuid } }
+        - { name: overdue, in: query, schema: { type: string, enum: ['true', 'false'], default: 'false' } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordsResponse' }
+    post:
+      operationId: createPlatformCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformCaseInput' }
+      responses:
+        '201': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/support-cases/{id}:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    get:
+      operationId: getPlatformCase
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/support-cases/{id}/attachments/{documentId}:
+    parameters:
+      - { $ref: '#/components/parameters/PlatformId' }
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: downloadPlatformCaseAttachment
+      responses:
+        '200':
+          description: Explicitly shared case document; private/no-store. Unassigned ordinary support cannot download.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+  /platform/support-cases/{id}/messages:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: appendPlatformCaseMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformCaseMessage' }
+      responses:
+        '201': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/support-cases/{id}/change:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: changePlatformCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformCaseChange' }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/onboarding:
+    get:
+      operationId: listPlatformOnboarding
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordsResponse' }
+    post:
+      operationId: createPlatformOnboardingStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformStepInput' }
+      responses:
+        '201': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/onboarding/{id}:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    get:
+      operationId: getPlatformOnboardingStep
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/onboarding/{id}/change:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: changePlatformOnboardingStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformStepChange' }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/imports:
+    get:
+      operationId: listPlatformImports
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordsResponse' }
+  /platform/imports/preview:
+    post:
+      operationId: previewPlatformImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformImportInput' }
+      responses:
+        '201': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/imports/{id}:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    get:
+      operationId: getPlatformImport
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
+  /platform/imports/{id}/confirm:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: confirmPlatformImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformVersionIntent' }
+      responses:
+        '200': { $ref: '#/components/responses/PlatformRecordResponse' }
 components:
+  parameters:
+    PlatformId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    PlatformRecordResponse:
+      description: Authorized platform record; sensitive nested records remain permission-filtered.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformRecord' }
+    PlatformRecordsResponse:
+      description: Authorized platform records.
+      content:
+        application/json:
+          schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    PlatformRecord:
+      type: object
+      additionalProperties: true
+    PlatformVersionIntent:
+      type: object
+      required: [key, version]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+    PlatformOrganizationProfile:
+      type: object
+      required: [key, version, name, legalName, taxId, address, contactEmail, contactPhone, timezone, currency, defaultLanguage]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 2, maxLength: 200 }
+        legalName: { type: string, maxLength: 200 }
+        taxId: { type: string, maxLength: 80 }
+        address: { type: string, maxLength: 500 }
+        contactEmail: { type: string }
+        contactPhone: { type: string, maxLength: 80 }
+        timezone: { type: string, maxLength: 100 }
+        currency: { type: string, enum: [AMD, RUB, USD] }
+        defaultLanguage: { type: string, enum: [hy, ru, en] }
+    PlatformOrganizationState:
+      type: object
+      required: [key, version, status, reason]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        status: { type: string, enum: [active, suspended, archived] }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    PlatformCaseInput:
+      type: object
+      required: [key, subject, body]
+      properties:
+        key: { type: string, format: uuid }
+        subject: { type: string, minLength: 2, maxLength: 200 }
+        body: { type: string, minLength: 1, maxLength: 8000 }
+        priority: { type: string, enum: [low, normal, high, urgent], default: normal }
+        category: { type: string, default: general }
+        attachmentIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+    PlatformCaseMessage:
+      type: object
+      required: [key, version, body]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        body: { type: string, minLength: 1, maxLength: 8000 }
+        internal: { type: boolean, default: false }
+        attachmentIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+    PlatformCaseChange:
+      type: object
+      required: [key, version]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        assigneeId: { type: [string, 'null'], format: uuid }
+        status: { type: string, enum: [open, in_progress, resolved] }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        category: { type: string }
+    PlatformStepInput:
+      type: object
+      required: [key, organizationId, title, assigneeId, dueOn, order]
+      properties:
+        key: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        title: { type: string, minLength: 2, maxLength: 200 }
+        category: { type: string, default: general }
+        assigneeId: { type: string, format: uuid }
+        dueOn: { type: string, format: date }
+        order: { type: integer, minimum: 0, maximum: 100000 }
+        dependencies: { type: array, maxItems: 100, uniqueItems: true, items: { type: string, format: uuid } }
+        notes: { type: string, maxLength: 8000 }
+    PlatformStepChange:
+      type: object
+      required: [key, version, action]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        action: { type: string, enum: [edit, assign, start, complete, reopen] }
+        assigneeId: { type: string, format: uuid }
+        title: { type: string, minLength: 2, maxLength: 200 }
+        category: { type: string }
+        dueOn: { type: string, format: date }
+        order: { type: integer, minimum: 0, maximum: 100000 }
+        dependencies: { type: array, maxItems: 100, uniqueItems: true, items: { type: string, format: uuid } }
+        notes: { type: string, maxLength: 8000 }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+        reopenDependents: { type: boolean, default: false }
+    PlatformImportInput:
+      type: object
+      required: [key, buildingId, entityType, rows]
+      properties:
+        key: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        entityType: { type: string, enum: [units, owners, residents, meters, opening_balances] }
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            additionalProperties: { type: string, maxLength: 1000 }
     FinanceRecord:
       type: object
       additionalProperties: true

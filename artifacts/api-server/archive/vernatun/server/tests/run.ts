@@ -29,6 +29,8 @@ const checks=process.argv.includes('--offline-only')
  ? [['--test','server/tests/phase2.test.ts']]
  : process.argv.includes('--phase3-only')
  ? [['--test','server/tests/maintenance-calendar.test.ts'],['--test','server/tests/phase3.test.ts']]
+ : process.argv.includes('--phase5-only')
+ ? [['--test','server/tests/phase5.test.ts']]
  : process.argv.includes('--phase4-only')
  ? [['--test','server/tests/phase4.test.ts']]
  : process.argv.includes('--backup-only')
@@ -43,6 +45,7 @@ if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
 if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
  checks.push(['--test','server/tests/maintenance-calendar.test.ts'],['--test','server/tests/phase3.test.ts']);
  checks.push(['--test','server/tests/phase4.test.ts']);
+ checks.push(['--test','server/tests/phase5.test.ts']);
 }
 try{
  for(const args of [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts'],...checks.filter(args=>!process.argv.includes('--core-only')||!args.some(a=>/\/(backup|storage|storage-inventory)\.test\.ts$/.test(a)))]){

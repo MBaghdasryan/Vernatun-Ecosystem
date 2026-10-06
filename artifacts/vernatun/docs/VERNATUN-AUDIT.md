@@ -1,5 +1,9 @@
 # Vernatun — сверка с активной спецификацией
 
+## Актуальное дополнение: Phase 5
+
+COMPLETE implementation и isolated regressions: organization profile/card/status lifecycle, append-only support conversation + private internal notes + scoped queue, guarded onboarding dependencies/order/reopen и пять typed import strategies. 106 isolated core checks прошли; TypeScript, OpenAPI generation и production Web build успешны. Migration 020 применена development после isolated tests, прежние поля 17 business tables сохранены по counts/digests. Browser acceptance PARTIAL: org card/stale draft/status guard подтверждены, onboarding route defect исправлен с 2 targeted routing regressions, остальные journeys не подтверждены браузером. Подробный объём и границы — [PHASE5-COMPLETION.md](PHASE5-COMPLETION.md). Phases 6–8 и production/email acceptance не выполнены. Следующий абзац и baseline ниже являются историческими, не текущим статусом Phase 5.
+
 Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md), [Phase 3](PHASE3-COMPLETION.md) и [Phase 4](PHASE4-COMPLETION.md). Phase 4 реализует массовые начисления, CSV-выписки, явную сверку бухгалтером, multi-invoice allocations и авансы. 98 core-проверок и 3 CSV/money/date tests прошли. Миграция 019 проверена изолированно и применена development с preservation check 9 финансовых таблиц. Финансовый browser pass завершён на fixtures: публикация, import, allocations, frozen/idempotent retry и own/mobile credit подтверждены; successful browser Ignore outcome не подтверждён из-за unresolved fixture/transport результата, хотя real isolated API scenario прошёл. Сохраняется отдельный manager UI acceptance blocker Phase 3: 401 исходных demo credentials. Phases 5–8, production acceptance и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
 
 Дата: 6 октября 2026 года.

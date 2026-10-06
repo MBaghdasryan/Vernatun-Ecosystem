@@ -1,5 +1,11 @@
 # Vernatun Completion Report — фактическое состояние проекта
 
+## Последнее дополнение: Phase 5, 7 октября 2026
+
+COMPLETE implementation: организация/card/profile/status lifecycle, append-only support conversation и очередь, onboarding dependencies/order/reopen и typed units/owners/residents/meters/opening balances. 106 isolated core checks прошли; workspace TypeScript, generated OpenAPI contracts и Vite build успешны. Migration 020 проверена изолированно и применена только development с совпадением прежних данных 17 business tables. Browser acceptance PARTIAL: org card/stale draft/status guard подтверждены, onboarding route defect исправлен с 2 pure route regressions, остальные browser journeys ещё не подтверждены. Полный отчёт — [PHASE5-COMPLETION.md](PHASE5-COMPLETION.md).
+
+Phases 6–8, production acceptance, реальная выдача case private bytes и email delivery не сертифицированы этой работой. Main seed/reset и real business mutations для QA не выполнялись. Старые отчёты ниже сохраняются как исторические baseline и не отменяют новые дополнения.
+
 ## Последнее дополнение: Phase 4, 7 октября 2026
 
 Массовые начисления, импорт выписок, явная банковская сверка, частичные multi-invoice allocations и account credit реализованы в существующих Vernatun OS/ImTun. 98 isolated core checks и 3 CSV/money/calendar tests прошли. Миграция development применена после изолированной проверки с подтверждённой сохранностью 9 финансовых таблиц. [Подробный отчёт и ограничения](PHASE4-COMPLETION.md). Финансовый browser QA завершён на fixtures: основные денежные формы и mobile own-view проверены, successful Ignore outcome остаётся непроверенным в браузере; API сценарий прошёл изолированно. Phase 5–8 и production acceptance пока не завершены. Даты и утверждения о незавершённых фазах ниже относятся к историческим срезам.

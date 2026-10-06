@@ -939,3 +939,293 @@ export const AllocateAccountCreditBody = zod.object({
 export const AllocateAccountCreditResponse = zod.record(zod.string(), zod.unknown())
 
 
+export const ListPlatformOperatorsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListPlatformOperatorsResponse = zod.array(ListPlatformOperatorsResponseItem)
+
+
+export const GetPlatformOrganizationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPlatformOrganizationResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UpdatePlatformOrganizationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const updatePlatformOrganizationBodyNameMin = 2;
+export const updatePlatformOrganizationBodyNameMax = 200;
+
+export const updatePlatformOrganizationBodyLegalNameMax = 200;
+
+export const updatePlatformOrganizationBodyTaxIdMax = 80;
+
+export const updatePlatformOrganizationBodyAddressMax = 500;
+
+export const updatePlatformOrganizationBodyContactPhoneMax = 80;
+
+export const updatePlatformOrganizationBodyTimezoneMax = 100;
+
+
+
+export const UpdatePlatformOrganizationBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "name": zod.string().min(updatePlatformOrganizationBodyNameMin).max(updatePlatformOrganizationBodyNameMax),
+  "legalName": zod.string().max(updatePlatformOrganizationBodyLegalNameMax),
+  "taxId": zod.string().max(updatePlatformOrganizationBodyTaxIdMax),
+  "address": zod.string().max(updatePlatformOrganizationBodyAddressMax),
+  "contactEmail": zod.string(),
+  "contactPhone": zod.string().max(updatePlatformOrganizationBodyContactPhoneMax),
+  "timezone": zod.string().max(updatePlatformOrganizationBodyTimezoneMax),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "defaultLanguage": zod.enum(['hy', 'ru', 'en'])
+})
+
+export const UpdatePlatformOrganizationResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangePlatformOrganizationStateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const changePlatformOrganizationStateBodyReasonMin = 3;
+export const changePlatformOrganizationStateBodyReasonMax = 1000;
+
+
+
+export const ChangePlatformOrganizationStateBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "status": zod.enum(['active', 'suspended', 'archived']),
+  "reason": zod.string().min(changePlatformOrganizationStateBodyReasonMin).max(changePlatformOrganizationStateBodyReasonMax)
+})
+
+export const ChangePlatformOrganizationStateResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const listPlatformCasesQueryQueueDefault = `all`;
+export const listPlatformCasesQueryOverdueDefault = `false`;
+export const listPlatformCasesQuerySearchMax = 100;
+
+export const listPlatformCasesQueryPageDefault = 0;
+export const listPlatformCasesQueryPageMin = 0;
+
+
+
+export const ListPlatformCasesQueryParams = zod.object({
+  "queue": zod.enum(['unassigned', 'mine', 'all']).default(listPlatformCasesQueryQueueDefault),
+  "status": zod.enum(['open', 'in_progress', 'resolved']).optional(),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  "organizationId": zod.coerce.string().uuid().optional(),
+  "overdue": zod.enum(['true', 'false']).default(listPlatformCasesQueryOverdueDefault),
+  "search": zod.coerce.string().max(listPlatformCasesQuerySearchMax).optional(),
+  "page": zod.coerce.number().int().min(listPlatformCasesQueryPageMin).default(listPlatformCasesQueryPageDefault)
+})
+
+export const ListPlatformCasesResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListPlatformCasesResponse = zod.array(ListPlatformCasesResponseItem)
+
+
+export const createPlatformCaseBodySubjectMin = 2;
+export const createPlatformCaseBodySubjectMax = 200;
+
+export const createPlatformCaseBodyBodyMax = 8000;
+
+export const createPlatformCaseBodyPriorityDefault = `normal`;
+export const createPlatformCaseBodyCategoryDefault = `general`;
+export const createPlatformCaseBodyAttachmentIdsMax = 10;
+
+
+
+export const CreatePlatformCaseBody = zod.object({
+  "key": zod.string().uuid(),
+  "subject": zod.string().min(createPlatformCaseBodySubjectMin).max(createPlatformCaseBodySubjectMax),
+  "body": zod.string().min(1).max(createPlatformCaseBodyBodyMax),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent']).default(createPlatformCaseBodyPriorityDefault),
+  "category": zod.string().default(createPlatformCaseBodyCategoryDefault),
+  "attachmentIds": zod.array(zod.string().uuid()).max(createPlatformCaseBodyAttachmentIdsMax).optional()
+})
+
+export const CreatePlatformCaseResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetPlatformCaseParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPlatformCaseResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const DownloadPlatformCaseAttachmentParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const DownloadPlatformCaseAttachmentResponse = zod.unknown()
+
+
+export const AppendPlatformCaseMessageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const appendPlatformCaseMessageBodyBodyMax = 8000;
+
+export const appendPlatformCaseMessageBodyInternalDefault = false;
+export const appendPlatformCaseMessageBodyAttachmentIdsMax = 10;
+
+
+
+export const AppendPlatformCaseMessageBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "body": zod.string().min(1).max(appendPlatformCaseMessageBodyBodyMax),
+  "internal": zod.boolean().default(appendPlatformCaseMessageBodyInternalDefault),
+  "attachmentIds": zod.array(zod.string().uuid()).max(appendPlatformCaseMessageBodyAttachmentIdsMax).optional()
+})
+
+export const AppendPlatformCaseMessageResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangePlatformCaseParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ChangePlatformCaseBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "assigneeId": zod.string().uuid().nullish(),
+  "status": zod.enum(['open', 'in_progress', 'resolved']).optional(),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  "category": zod.string().optional()
+})
+
+export const ChangePlatformCaseResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListPlatformOnboardingResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListPlatformOnboardingResponse = zod.array(ListPlatformOnboardingResponseItem)
+
+
+export const createPlatformOnboardingStepBodyTitleMin = 2;
+export const createPlatformOnboardingStepBodyTitleMax = 200;
+
+export const createPlatformOnboardingStepBodyCategoryDefault = `general`;
+export const createPlatformOnboardingStepBodyOrderMin = 0;
+export const createPlatformOnboardingStepBodyOrderMax = 100000;
+
+export const createPlatformOnboardingStepBodyDependenciesMax = 100;
+
+export const createPlatformOnboardingStepBodyNotesMax = 8000;
+
+
+
+export const CreatePlatformOnboardingStepBody = zod.object({
+  "key": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "title": zod.string().min(createPlatformOnboardingStepBodyTitleMin).max(createPlatformOnboardingStepBodyTitleMax),
+  "category": zod.string().default(createPlatformOnboardingStepBodyCategoryDefault),
+  "assigneeId": zod.string().uuid(),
+  "dueOn": zod.coerce.date(),
+  "order": zod.number().int().min(createPlatformOnboardingStepBodyOrderMin).max(createPlatformOnboardingStepBodyOrderMax),
+  "dependencies": zod.array(zod.string().uuid()).max(createPlatformOnboardingStepBodyDependenciesMax).optional(),
+  "notes": zod.string().max(createPlatformOnboardingStepBodyNotesMax).optional()
+})
+
+export const CreatePlatformOnboardingStepResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetPlatformOnboardingStepParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPlatformOnboardingStepResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangePlatformOnboardingStepParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const changePlatformOnboardingStepBodyTitleMin = 2;
+export const changePlatformOnboardingStepBodyTitleMax = 200;
+
+export const changePlatformOnboardingStepBodyOrderMin = 0;
+export const changePlatformOnboardingStepBodyOrderMax = 100000;
+
+export const changePlatformOnboardingStepBodyDependenciesMax = 100;
+
+export const changePlatformOnboardingStepBodyNotesMax = 8000;
+
+export const changePlatformOnboardingStepBodyReasonMin = 3;
+export const changePlatformOnboardingStepBodyReasonMax = 1000;
+
+export const changePlatformOnboardingStepBodyReopenDependentsDefault = false;
+
+export const ChangePlatformOnboardingStepBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.enum(['edit', 'assign', 'start', 'complete', 'reopen']),
+  "assigneeId": zod.string().uuid().optional(),
+  "title": zod.string().min(changePlatformOnboardingStepBodyTitleMin).max(changePlatformOnboardingStepBodyTitleMax).optional(),
+  "category": zod.string().optional(),
+  "dueOn": zod.coerce.date().optional(),
+  "order": zod.number().int().min(changePlatformOnboardingStepBodyOrderMin).max(changePlatformOnboardingStepBodyOrderMax).optional(),
+  "dependencies": zod.array(zod.string().uuid()).max(changePlatformOnboardingStepBodyDependenciesMax).optional(),
+  "notes": zod.string().max(changePlatformOnboardingStepBodyNotesMax).optional(),
+  "reason": zod.string().min(changePlatformOnboardingStepBodyReasonMin).max(changePlatformOnboardingStepBodyReasonMax).optional(),
+  "reopenDependents": zod.boolean().default(changePlatformOnboardingStepBodyReopenDependentsDefault)
+})
+
+export const ChangePlatformOnboardingStepResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListPlatformImportsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListPlatformImportsResponse = zod.array(ListPlatformImportsResponseItem)
+
+
+export const previewPlatformImportBodyRowsItemMaxOne = 1000;
+
+export const previewPlatformImportBodyRowsMax = 1000;
+
+
+
+export const PreviewPlatformImportBody = zod.object({
+  "key": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "entityType": zod.enum(['units', 'owners', 'residents', 'meters', 'opening_balances']),
+  "rows": zod.array(zod.record(zod.string(), zod.string().max(previewPlatformImportBodyRowsItemMaxOne))).min(1).max(previewPlatformImportBodyRowsMax)
+})
+
+export const PreviewPlatformImportResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetPlatformImportParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPlatformImportResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ConfirmPlatformImportParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ConfirmPlatformImportBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1)
+})
+
+export const ConfirmPlatformImportResponse = zod.record(zod.string(), zod.unknown())
+
+

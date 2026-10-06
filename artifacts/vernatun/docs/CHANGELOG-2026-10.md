@@ -1,5 +1,11 @@
 # Vernatun — октябрь 2026
 
+## Phase 5 — organization lifecycle, поддержка, внедрение, typed imports
+
+Карточка и versioned profile/status transitions организации; suspension/archive прекращают новые organization contexts без удаления истории. Append-only support messages, public/internal privacy, assignment queue/filters/SLA и case-scoped sharing ранее разрешённых документов. Legacy reply сохранён с unknown historical author/date, без придуманных метаданных. Onboarding order/dependencies/progress, guarded start/complete, audited reopen/cascade. Пять CSV typed strategies: units, owners, residents, meters, opening balances; legacy units CSV/XLSX сохранён. Preview metadata, fresh revalidation, atomic/idempotent commit; registered accounts only, явные rentMinor/currency, exact signed opening ledger debt/credit и старый allocation workflow.
+
+106 isolated core checks прошли вместе с cleanup. Workspace TypeScript, OpenAPI generation и production Vite build прошли. Миграция 020 применена development после изоляции; 17 legacy business-table digests совпали повторно после read-only QA. Main seed/reset, production, реальные бизнес-тестовые записи и email не выполнялись. Браузер подтвердил org card/profile stale-draft и status guard, затем обнаружил onboarding route defect; исправлено, 2 targeted route regressions прошли. Остальные UI сценарии пока unverified/PARTIAL; итог и границы — [PHASE5-COMPLETION.md](PHASE5-COMPLETION.md).
+
 ## Phase 4 — batch billing и банковская сверка
 
 Добавлены предпросмотр/черновик/атомарная публикация пакетов счетов, CSV-import evidence с явным mapping и minor/major units, duplicate/conflict validation, предложения соответствий без автопроводок, подтверждение бухгалтером, multi-invoice allocations и append-only account credit. Поиск и серверная пагинация банковской очереди; собственные авансы ImTun без доступа к банковским строкам. Старый финансовый workflow сохранён.

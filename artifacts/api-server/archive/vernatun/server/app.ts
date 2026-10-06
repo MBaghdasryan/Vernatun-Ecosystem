@@ -13,6 +13,10 @@ import {mfa} from './mfa.js';
 import {finance} from './finance.js';
 import {billingBatches} from './billing-batches.js';
 import {bankReconciliation} from './bank-reconciliation.js';
+import {organizationConsole} from './organization-console.js';
+import {supportConversation} from './support-conversation.js';
+import {onboardingWorkflow} from './onboarding-workflow.js';
+import {typedImports} from './typed-imports.js';
 import {field} from './field.js';
 import {grants} from './grants.js';
 import {photos} from './photos.js';
@@ -43,6 +47,7 @@ app.use('/api/email-webhooks',emailWebhooks);
 // Statement rows are structured metadata, not file bytes. Keep the larger
 // bounded parser confined to statement preview/import, with the same auth/CSRF.
 app.use('/api/finance/bank/imports',express.json({limit:'1mb'}));
+app.use('/api/platform/imports',express.json({limit:'1mb'}));
 app.use(express.json({limit:'32kb'}));
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(passport.initialize());app.use(passport.session());
@@ -51,6 +56,10 @@ app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({s
 app.use('/api',hayat);
 app.use('/api',billingBatches);
 app.use('/api',bankReconciliation);
+app.use('/api',organizationConsole);
+app.use('/api',supportConversation);
+app.use('/api',onboardingWorkflow);
+app.use('/api',typedImports);
 app.use('/api',emailOperations);
 app.use('/api',(_req,res)=>res.status(404).json({error:'not_found'}));
 app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{if((error as {type?:string})?.type==='entity.too.large')return res.status(413).json({error:'file_too_large'});if(error instanceof ApiError)return res.status(error.status).json({error:error.code});if(error instanceof ZodError)return res.status(400).json({error:'validation_error',fields:Object.fromEntries(error.issues.map(i=>[i.path.join('.'),i.code]))});if((error as {code?:string})?.code==='23505')return res.status(409).json({error:'already_exists'});if((error as {code?:string})?.code==='23503')return res.status(400).json({error:'invalid_reference'});const incident=randomBytes(6).toString('hex');const code=(error as {code?:string})?.code??'unknown';logger.error({incident,code},'Vernatun API error');if(['ECONNREFUSED','ETIMEDOUT','ENOTFOUND','57P01','53300','42P01','42703'].includes(code))return res.status(503).json({error:'service_unavailable',incident});return res.status(500).json({error:'server_error',incident})});

@@ -5,6 +5,236 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface PlatformRecord { [key: string]: unknown }
+
+export interface PlatformVersionIntent {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+}
+
+export type PlatformOrganizationProfileCurrency = typeof PlatformOrganizationProfileCurrency[keyof typeof PlatformOrganizationProfileCurrency];
+
+
+export const PlatformOrganizationProfileCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type PlatformOrganizationProfileDefaultLanguage = typeof PlatformOrganizationProfileDefaultLanguage[keyof typeof PlatformOrganizationProfileDefaultLanguage];
+
+
+export const PlatformOrganizationProfileDefaultLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export interface PlatformOrganizationProfile {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  name: string;
+  /** @maxLength 200 */
+  legalName: string;
+  /** @maxLength 80 */
+  taxId: string;
+  /** @maxLength 500 */
+  address: string;
+  contactEmail: string;
+  /** @maxLength 80 */
+  contactPhone: string;
+  /** @maxLength 100 */
+  timezone: string;
+  currency: PlatformOrganizationProfileCurrency;
+  defaultLanguage: PlatformOrganizationProfileDefaultLanguage;
+}
+
+export type PlatformOrganizationStateStatus = typeof PlatformOrganizationStateStatus[keyof typeof PlatformOrganizationStateStatus];
+
+
+export const PlatformOrganizationStateStatus = {
+  active: 'active',
+  suspended: 'suspended',
+  archived: 'archived',
+} as const;
+
+export interface PlatformOrganizationState {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  status: PlatformOrganizationStateStatus;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export type PlatformCaseInputPriority = typeof PlatformCaseInputPriority[keyof typeof PlatformCaseInputPriority];
+
+
+export const PlatformCaseInputPriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+} as const;
+
+export interface PlatformCaseInput {
+  key: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  subject: string;
+  /**
+     * @minLength 1
+     * @maxLength 8000
+     */
+  body: string;
+  priority?: PlatformCaseInputPriority;
+  category?: string;
+  /** @maxItems 10 */
+  attachmentIds?: string[];
+}
+
+export interface PlatformCaseMessage {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  /**
+     * @minLength 1
+     * @maxLength 8000
+     */
+  body: string;
+  internal?: boolean;
+  /** @maxItems 10 */
+  attachmentIds?: string[];
+}
+
+export type PlatformCaseChangeStatus = typeof PlatformCaseChangeStatus[keyof typeof PlatformCaseChangeStatus];
+
+
+export const PlatformCaseChangeStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+} as const;
+
+export type PlatformCaseChangePriority = typeof PlatformCaseChangePriority[keyof typeof PlatformCaseChangePriority];
+
+
+export const PlatformCaseChangePriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+} as const;
+
+export interface PlatformCaseChange {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  /** @nullable */
+  assigneeId?: string | null;
+  status?: PlatformCaseChangeStatus;
+  priority?: PlatformCaseChangePriority;
+  category?: string;
+}
+
+export interface PlatformStepInput {
+  key: string;
+  organizationId: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  category?: string;
+  assigneeId: string;
+  dueOn: string;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  order: number;
+  /** @maxItems 100 */
+  dependencies?: string[];
+  /** @maxLength 8000 */
+  notes?: string;
+}
+
+export type PlatformStepChangeAction = typeof PlatformStepChangeAction[keyof typeof PlatformStepChangeAction];
+
+
+export const PlatformStepChangeAction = {
+  edit: 'edit',
+  assign: 'assign',
+  start: 'start',
+  complete: 'complete',
+  reopen: 'reopen',
+} as const;
+
+export interface PlatformStepChange {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: PlatformStepChangeAction;
+  assigneeId?: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title?: string;
+  category?: string;
+  dueOn?: string;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  order?: number;
+  /** @maxItems 100 */
+  dependencies?: string[];
+  /** @maxLength 8000 */
+  notes?: string;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason?: string;
+  reopenDependents?: boolean;
+}
+
+export type PlatformImportInputEntityType = typeof PlatformImportInputEntityType[keyof typeof PlatformImportInputEntityType];
+
+
+export const PlatformImportInputEntityType = {
+  units: 'units',
+  owners: 'owners',
+  residents: 'residents',
+  meters: 'meters',
+  opening_balances: 'opening_balances',
+} as const;
+
+export type PlatformImportInputRowsItem = {[key: string]: string};
+
+export interface PlatformImportInput {
+  key: string;
+  buildingId: string;
+  entityType: PlatformImportInputEntityType;
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  rows: PlatformImportInputRowsItem[];
+}
+
 export interface FinanceRecord { [key: string]: unknown }
 
 export interface BillingBatchInput {
@@ -715,6 +945,16 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * Authorized platform record; sensitive nested records remain permission-filtered.
+ */
+export type PlatformRecordResponseResponse = PlatformRecord;
+
+/**
+ * Authorized platform records.
+ */
+export type PlatformRecordsResponseResponse = PlatformRecord[];
+
 export type GetEmailHealthParams = {
 from?: string;
 to?: string;
@@ -822,4 +1062,56 @@ payerId?: string;
 export type ListFinanceAccountsParams = {
 unitId: string;
 };
+
+export type ListPlatformCasesParams = {
+queue?: ListPlatformCasesQueue;
+status?: ListPlatformCasesStatus;
+priority?: ListPlatformCasesPriority;
+organizationId?: string;
+overdue?: ListPlatformCasesOverdue;
+/**
+ * @maxLength 100
+ */
+search?: string;
+/**
+ * @minimum 0
+ */
+page?: number;
+};
+
+export type ListPlatformCasesQueue = typeof ListPlatformCasesQueue[keyof typeof ListPlatformCasesQueue];
+
+
+export const ListPlatformCasesQueue = {
+  unassigned: 'unassigned',
+  mine: 'mine',
+  all: 'all',
+} as const;
+
+export type ListPlatformCasesStatus = typeof ListPlatformCasesStatus[keyof typeof ListPlatformCasesStatus];
+
+
+export const ListPlatformCasesStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+} as const;
+
+export type ListPlatformCasesPriority = typeof ListPlatformCasesPriority[keyof typeof ListPlatformCasesPriority];
+
+
+export const ListPlatformCasesPriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+} as const;
+
+export type ListPlatformCasesOverdue = typeof ListPlatformCasesOverdue[keyof typeof ListPlatformCasesOverdue];
+
+
+export const ListPlatformCasesOverdue = {
+  true: 'true',
+  false: 'false',
+} as const;
 

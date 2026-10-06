@@ -48,6 +48,7 @@ import type {
   ListEmailMessagesParams,
   ListFinanceAccountsParams,
   ListOperationalVisitsParams,
+  ListPlatformCasesParams,
   LookupEquipmentParams,
   MaintenanceConfigurationInput,
   MaintenanceGenerationInput,
@@ -57,6 +58,17 @@ import type {
   NotificationDestination,
   OperationalRequestInput,
   OperationalRow,
+  PlatformCaseChange,
+  PlatformCaseInput,
+  PlatformCaseMessage,
+  PlatformImportInput,
+  PlatformOrganizationProfile,
+  PlatformOrganizationState,
+  PlatformRecordResponseResponse,
+  PlatformRecordsResponseResponse,
+  PlatformStepChange,
+  PlatformStepInput,
+  PlatformVersionIntent,
   RecentAuthenticationInput,
   ResendDeliveryInput,
   ResidentDelegationInput,
@@ -4561,5 +4573,1400 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAllocateAccountCreditMutationOptions(options));
+    }
+
+export const getListPlatformOperatorsUrl = () => {
+
+
+
+
+  return `/api/platform/operators`
+}
+
+export const listPlatformOperators = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordsResponseResponse> => {
+
+  return customFetch<PlatformRecordsResponseResponse>(getListPlatformOperatorsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformOperatorsQueryKey = () => {
+    return [
+    `/api/platform/operators`
+    ] as const;
+    }
+
+
+export const getListPlatformOperatorsQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformOperators>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOperators>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformOperatorsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformOperators>>> = ({ signal }) => listPlatformOperators({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformOperators>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformOperatorsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformOperators>>>
+export type ListPlatformOperatorsQueryError = ErrorType<unknown>
+
+
+
+export function useListPlatformOperators<TData = Awaited<ReturnType<typeof listPlatformOperators>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOperators>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformOperatorsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPlatformOrganizationUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/organizations/${id}`
+}
+
+export const getPlatformOrganization = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+  return customFetch<PlatformRecordResponseResponse>(getGetPlatformOrganizationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformOrganizationQueryKey = (id: string,) => {
+    return [
+    `/api/platform/organizations/${id}`
+    ] as const;
+    }
+
+
+export const getGetPlatformOrganizationQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformOrganization>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOrganization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformOrganizationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformOrganization>>> = ({ signal }) => getPlatformOrganization(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformOrganization>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformOrganizationQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformOrganization>>>
+export type GetPlatformOrganizationQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformOrganization<TData = Awaited<ReturnType<typeof getPlatformOrganization>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOrganization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformOrganizationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePlatformOrganizationUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/organizations/${id}`
+}
+
+export const updatePlatformOrganization = async (id: string,
+    platformOrganizationProfile: PlatformOrganizationProfile, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getUpdatePlatformOrganizationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformOrganizationProfile)
+  }
+);}
+
+
+
+
+
+export const getUpdatePlatformOrganizationMutationKey = () => ['updatePlatformOrganization'] as const;
+
+export const getUpdatePlatformOrganizationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlatformOrganization>>, TError,UpdatePlatformOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlatformOrganization>>, TError,UpdatePlatformOrganizationMutationVariables, TContext> => {
+
+const mutationKey = getUpdatePlatformOrganizationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlatformOrganization>>, UpdatePlatformOrganizationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlatformOrganization(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlatformOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlatformOrganization>>>
+    export type UpdatePlatformOrganizationMutationBody = BodyType<PlatformOrganizationProfile>
+    export type UpdatePlatformOrganizationMutationError = ErrorType<unknown>
+    export type UpdatePlatformOrganizationMutationVariables = {id: string;data: BodyType<PlatformOrganizationProfile>}
+
+    export const useUpdatePlatformOrganization = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlatformOrganization>>, TError,UpdatePlatformOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlatformOrganization>>,
+        TError,
+        UpdatePlatformOrganizationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdatePlatformOrganizationMutationOptions(options));
+    }
+
+export const getChangePlatformOrganizationStateUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/organizations/${id}/state`
+}
+
+export const changePlatformOrganizationState = async (id: string,
+    platformOrganizationState: PlatformOrganizationState, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getChangePlatformOrganizationStateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformOrganizationState)
+  }
+);}
+
+
+
+
+
+export const getChangePlatformOrganizationStateMutationKey = () => ['changePlatformOrganizationState'] as const;
+
+export const getChangePlatformOrganizationStateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformOrganizationState>>, TError,ChangePlatformOrganizationStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePlatformOrganizationState>>, TError,ChangePlatformOrganizationStateMutationVariables, TContext> => {
+
+const mutationKey = getChangePlatformOrganizationStateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePlatformOrganizationState>>, ChangePlatformOrganizationStateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changePlatformOrganizationState(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePlatformOrganizationStateMutationResult = NonNullable<Awaited<ReturnType<typeof changePlatformOrganizationState>>>
+    export type ChangePlatformOrganizationStateMutationBody = BodyType<PlatformOrganizationState>
+    export type ChangePlatformOrganizationStateMutationError = ErrorType<unknown>
+    export type ChangePlatformOrganizationStateMutationVariables = {id: string;data: BodyType<PlatformOrganizationState>}
+
+    export const useChangePlatformOrganizationState = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformOrganizationState>>, TError,ChangePlatformOrganizationStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changePlatformOrganizationState>>,
+        TError,
+        ChangePlatformOrganizationStateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangePlatformOrganizationStateMutationOptions(options));
+    }
+
+export const getListPlatformCasesUrl = (params?: ListPlatformCasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/support-cases?${stringifiedParams}` : `/api/platform/support-cases`
+}
+
+export const listPlatformCases = async (params?: ListPlatformCasesParams, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordsResponseResponse> => {
+
+  return customFetch<PlatformRecordsResponseResponse>(getListPlatformCasesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformCasesQueryKey = (params?: ListPlatformCasesParams,) => {
+    return [
+    `/api/platform/support-cases`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlatformCasesQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformCases>>, TError = ErrorType<unknown>>(params?: ListPlatformCasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformCasesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformCases>>> = ({ signal }) => listPlatformCases(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformCases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformCasesQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformCases>>>
+export type ListPlatformCasesQueryError = ErrorType<unknown>
+
+
+
+export function useListPlatformCases<TData = Awaited<ReturnType<typeof listPlatformCases>>, TError = ErrorType<unknown>>(
+ params?: ListPlatformCasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformCasesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePlatformCaseUrl = () => {
+
+
+
+
+  return `/api/platform/support-cases`
+}
+
+export const createPlatformCase = async (platformCaseInput: PlatformCaseInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getCreatePlatformCaseUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformCaseInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePlatformCaseMutationKey = () => ['createPlatformCase'] as const;
+
+export const getCreatePlatformCaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformCase>>, TError,CreatePlatformCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlatformCase>>, TError,CreatePlatformCaseMutationVariables, TContext> => {
+
+const mutationKey = getCreatePlatformCaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlatformCase>>, CreatePlatformCaseMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlatformCase(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlatformCaseMutationResult = NonNullable<Awaited<ReturnType<typeof createPlatformCase>>>
+    export type CreatePlatformCaseMutationBody = BodyType<PlatformCaseInput>
+    export type CreatePlatformCaseMutationError = ErrorType<unknown>
+    export type CreatePlatformCaseMutationVariables = {data: BodyType<PlatformCaseInput>}
+
+    export const useCreatePlatformCase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformCase>>, TError,CreatePlatformCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlatformCase>>,
+        TError,
+        CreatePlatformCaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePlatformCaseMutationOptions(options));
+    }
+
+export const getGetPlatformCaseUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/support-cases/${id}`
+}
+
+export const getPlatformCase = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+  return customFetch<PlatformRecordResponseResponse>(getGetPlatformCaseUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformCaseQueryKey = (id: string,) => {
+    return [
+    `/api/platform/support-cases/${id}`
+    ] as const;
+    }
+
+
+export const getGetPlatformCaseQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformCase>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformCase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformCaseQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformCase>>> = ({ signal }) => getPlatformCase(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformCase>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformCaseQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformCase>>>
+export type GetPlatformCaseQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformCase<TData = Awaited<ReturnType<typeof getPlatformCase>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformCase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformCaseQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadPlatformCaseAttachmentUrl = (id: string,
+    documentId: string,) => {
+
+
+
+
+  return `/api/platform/support-cases/${id}/attachments/${documentId}`
+}
+
+export const downloadPlatformCaseAttachment = async (id: string,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadPlatformCaseAttachmentUrl(id,documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadPlatformCaseAttachmentQueryKey = (id: string,
+    documentId: string,) => {
+    return [
+    `/api/platform/support-cases/${id}/attachments/${documentId}`
+    ] as const;
+    }
+
+
+export const getDownloadPlatformCaseAttachmentQueryOptions = <TData = Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>, TError = ErrorType<unknown>>(id: string,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadPlatformCaseAttachmentQueryKey(id,documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>> = ({ signal }) => downloadPlatformCaseAttachment(id,documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadPlatformCaseAttachmentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>>
+export type DownloadPlatformCaseAttachmentQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadPlatformCaseAttachment<TData = Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>, TError = ErrorType<unknown>>(
+ id: string,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadPlatformCaseAttachment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadPlatformCaseAttachmentQueryOptions(id,documentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAppendPlatformCaseMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/support-cases/${id}/messages`
+}
+
+export const appendPlatformCaseMessage = async (id: string,
+    platformCaseMessage: PlatformCaseMessage, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getAppendPlatformCaseMessageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformCaseMessage)
+  }
+);}
+
+
+
+
+
+export const getAppendPlatformCaseMessageMutationKey = () => ['appendPlatformCaseMessage'] as const;
+
+export const getAppendPlatformCaseMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendPlatformCaseMessage>>, TError,AppendPlatformCaseMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof appendPlatformCaseMessage>>, TError,AppendPlatformCaseMessageMutationVariables, TContext> => {
+
+const mutationKey = getAppendPlatformCaseMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof appendPlatformCaseMessage>>, AppendPlatformCaseMessageMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  appendPlatformCaseMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AppendPlatformCaseMessageMutationResult = NonNullable<Awaited<ReturnType<typeof appendPlatformCaseMessage>>>
+    export type AppendPlatformCaseMessageMutationBody = BodyType<PlatformCaseMessage>
+    export type AppendPlatformCaseMessageMutationError = ErrorType<unknown>
+    export type AppendPlatformCaseMessageMutationVariables = {id: string;data: BodyType<PlatformCaseMessage>}
+
+    export const useAppendPlatformCaseMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendPlatformCaseMessage>>, TError,AppendPlatformCaseMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof appendPlatformCaseMessage>>,
+        TError,
+        AppendPlatformCaseMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAppendPlatformCaseMessageMutationOptions(options));
+    }
+
+export const getChangePlatformCaseUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/support-cases/${id}/change`
+}
+
+export const changePlatformCase = async (id: string,
+    platformCaseChange: PlatformCaseChange, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getChangePlatformCaseUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformCaseChange)
+  }
+);}
+
+
+
+
+
+export const getChangePlatformCaseMutationKey = () => ['changePlatformCase'] as const;
+
+export const getChangePlatformCaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformCase>>, TError,ChangePlatformCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePlatformCase>>, TError,ChangePlatformCaseMutationVariables, TContext> => {
+
+const mutationKey = getChangePlatformCaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePlatformCase>>, ChangePlatformCaseMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changePlatformCase(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePlatformCaseMutationResult = NonNullable<Awaited<ReturnType<typeof changePlatformCase>>>
+    export type ChangePlatformCaseMutationBody = BodyType<PlatformCaseChange>
+    export type ChangePlatformCaseMutationError = ErrorType<unknown>
+    export type ChangePlatformCaseMutationVariables = {id: string;data: BodyType<PlatformCaseChange>}
+
+    export const useChangePlatformCase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformCase>>, TError,ChangePlatformCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changePlatformCase>>,
+        TError,
+        ChangePlatformCaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangePlatformCaseMutationOptions(options));
+    }
+
+export const getListPlatformOnboardingUrl = () => {
+
+
+
+
+  return `/api/platform/onboarding`
+}
+
+export const listPlatformOnboarding = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordsResponseResponse> => {
+
+  return customFetch<PlatformRecordsResponseResponse>(getListPlatformOnboardingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformOnboardingQueryKey = () => {
+    return [
+    `/api/platform/onboarding`
+    ] as const;
+    }
+
+
+export const getListPlatformOnboardingQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformOnboarding>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOnboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformOnboardingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformOnboarding>>> = ({ signal }) => listPlatformOnboarding({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformOnboarding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformOnboardingQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformOnboarding>>>
+export type ListPlatformOnboardingQueryError = ErrorType<unknown>
+
+
+
+export function useListPlatformOnboarding<TData = Awaited<ReturnType<typeof listPlatformOnboarding>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOnboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformOnboardingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePlatformOnboardingStepUrl = () => {
+
+
+
+
+  return `/api/platform/onboarding`
+}
+
+export const createPlatformOnboardingStep = async (platformStepInput: PlatformStepInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getCreatePlatformOnboardingStepUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformStepInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePlatformOnboardingStepMutationKey = () => ['createPlatformOnboardingStep'] as const;
+
+export const getCreatePlatformOnboardingStepMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformOnboardingStep>>, TError,CreatePlatformOnboardingStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlatformOnboardingStep>>, TError,CreatePlatformOnboardingStepMutationVariables, TContext> => {
+
+const mutationKey = getCreatePlatformOnboardingStepMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlatformOnboardingStep>>, CreatePlatformOnboardingStepMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlatformOnboardingStep(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlatformOnboardingStepMutationResult = NonNullable<Awaited<ReturnType<typeof createPlatformOnboardingStep>>>
+    export type CreatePlatformOnboardingStepMutationBody = BodyType<PlatformStepInput>
+    export type CreatePlatformOnboardingStepMutationError = ErrorType<unknown>
+    export type CreatePlatformOnboardingStepMutationVariables = {data: BodyType<PlatformStepInput>}
+
+    export const useCreatePlatformOnboardingStep = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformOnboardingStep>>, TError,CreatePlatformOnboardingStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlatformOnboardingStep>>,
+        TError,
+        CreatePlatformOnboardingStepMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePlatformOnboardingStepMutationOptions(options));
+    }
+
+export const getGetPlatformOnboardingStepUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/onboarding/${id}`
+}
+
+export const getPlatformOnboardingStep = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+  return customFetch<PlatformRecordResponseResponse>(getGetPlatformOnboardingStepUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformOnboardingStepQueryKey = (id: string,) => {
+    return [
+    `/api/platform/onboarding/${id}`
+    ] as const;
+    }
+
+
+export const getGetPlatformOnboardingStepQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformOnboardingStep>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOnboardingStep>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformOnboardingStepQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformOnboardingStep>>> = ({ signal }) => getPlatformOnboardingStep(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformOnboardingStep>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformOnboardingStepQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformOnboardingStep>>>
+export type GetPlatformOnboardingStepQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformOnboardingStep<TData = Awaited<ReturnType<typeof getPlatformOnboardingStep>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformOnboardingStep>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformOnboardingStepQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangePlatformOnboardingStepUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/onboarding/${id}/change`
+}
+
+export const changePlatformOnboardingStep = async (id: string,
+    platformStepChange: PlatformStepChange, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getChangePlatformOnboardingStepUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformStepChange)
+  }
+);}
+
+
+
+
+
+export const getChangePlatformOnboardingStepMutationKey = () => ['changePlatformOnboardingStep'] as const;
+
+export const getChangePlatformOnboardingStepMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformOnboardingStep>>, TError,ChangePlatformOnboardingStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePlatformOnboardingStep>>, TError,ChangePlatformOnboardingStepMutationVariables, TContext> => {
+
+const mutationKey = getChangePlatformOnboardingStepMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePlatformOnboardingStep>>, ChangePlatformOnboardingStepMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changePlatformOnboardingStep(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePlatformOnboardingStepMutationResult = NonNullable<Awaited<ReturnType<typeof changePlatformOnboardingStep>>>
+    export type ChangePlatformOnboardingStepMutationBody = BodyType<PlatformStepChange>
+    export type ChangePlatformOnboardingStepMutationError = ErrorType<unknown>
+    export type ChangePlatformOnboardingStepMutationVariables = {id: string;data: BodyType<PlatformStepChange>}
+
+    export const useChangePlatformOnboardingStep = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformOnboardingStep>>, TError,ChangePlatformOnboardingStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changePlatformOnboardingStep>>,
+        TError,
+        ChangePlatformOnboardingStepMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangePlatformOnboardingStepMutationOptions(options));
+    }
+
+export const getListPlatformImportsUrl = () => {
+
+
+
+
+  return `/api/platform/imports`
+}
+
+export const listPlatformImports = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordsResponseResponse> => {
+
+  return customFetch<PlatformRecordsResponseResponse>(getListPlatformImportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformImportsQueryKey = () => {
+    return [
+    `/api/platform/imports`
+    ] as const;
+    }
+
+
+export const getListPlatformImportsQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformImports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformImportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformImports>>> = ({ signal }) => listPlatformImports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformImports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformImportsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformImports>>>
+export type ListPlatformImportsQueryError = ErrorType<unknown>
+
+
+
+export function useListPlatformImports<TData = Awaited<ReturnType<typeof listPlatformImports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformImportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewPlatformImportUrl = () => {
+
+
+
+
+  return `/api/platform/imports/preview`
+}
+
+export const previewPlatformImport = async (platformImportInput: PlatformImportInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getPreviewPlatformImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformImportInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewPlatformImportMutationKey = () => ['previewPlatformImport'] as const;
+
+export const getPreviewPlatformImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlatformImport>>, TError,PreviewPlatformImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewPlatformImport>>, TError,PreviewPlatformImportMutationVariables, TContext> => {
+
+const mutationKey = getPreviewPlatformImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewPlatformImport>>, PreviewPlatformImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewPlatformImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewPlatformImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewPlatformImport>>>
+    export type PreviewPlatformImportMutationBody = BodyType<PlatformImportInput>
+    export type PreviewPlatformImportMutationError = ErrorType<unknown>
+    export type PreviewPlatformImportMutationVariables = {data: BodyType<PlatformImportInput>}
+
+    export const usePreviewPlatformImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlatformImport>>, TError,PreviewPlatformImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewPlatformImport>>,
+        TError,
+        PreviewPlatformImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewPlatformImportMutationOptions(options));
+    }
+
+export const getGetPlatformImportUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/imports/${id}`
+}
+
+export const getPlatformImport = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+  return customFetch<PlatformRecordResponseResponse>(getGetPlatformImportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformImportQueryKey = (id: string,) => {
+    return [
+    `/api/platform/imports/${id}`
+    ] as const;
+    }
+
+
+export const getGetPlatformImportQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformImport>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformImport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformImportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformImport>>> = ({ signal }) => getPlatformImport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformImport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformImportQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformImport>>>
+export type GetPlatformImportQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformImport<TData = Awaited<ReturnType<typeof getPlatformImport>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformImport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformImportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getConfirmPlatformImportUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/imports/${id}/confirm`
+}
+
+export const confirmPlatformImport = async (id: string,
+    platformVersionIntent: PlatformVersionIntent, options?: Parameters<typeof customFetch>[1]): Promise<PlatformRecordResponseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformRecordResponseResponse>(getConfirmPlatformImportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformVersionIntent)
+  }
+);}
+
+
+
+
+
+export const getConfirmPlatformImportMutationKey = () => ['confirmPlatformImport'] as const;
+
+export const getConfirmPlatformImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPlatformImport>>, TError,ConfirmPlatformImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmPlatformImport>>, TError,ConfirmPlatformImportMutationVariables, TContext> => {
+
+const mutationKey = getConfirmPlatformImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPlatformImport>>, ConfirmPlatformImportMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  confirmPlatformImport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmPlatformImportMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPlatformImport>>>
+    export type ConfirmPlatformImportMutationBody = BodyType<PlatformVersionIntent>
+    export type ConfirmPlatformImportMutationError = ErrorType<unknown>
+    export type ConfirmPlatformImportMutationVariables = {id: string;data: BodyType<PlatformVersionIntent>}
+
+    export const useConfirmPlatformImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPlatformImport>>, TError,ConfirmPlatformImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmPlatformImport>>,
+        TError,
+        ConfirmPlatformImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmPlatformImportMutationOptions(options));
     }
 

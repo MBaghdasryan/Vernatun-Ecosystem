@@ -28,3 +28,16 @@ does not prove the metadata was never committed.
 **How to apply:** Future upload, restore and maintenance paths must coordinate
 with cleanup, and must not treat an exception as permission to delete bytes.
 Run cleanup only against the database that owns the selected storage prefix.
+
+Support-case document sharing is a separate, narrow business purpose, not a
+blanket documents permission for platform staff. Sharing requires the author's
+existing document access and explicit selection; a download requires the visible
+case reference, current case authorization, and assignment for ordinary support.
+
+**Why:** The master prompt requests case attachments, but the support role must
+not thereby gain access to the customer's entire document catalog.
+
+**How to apply:** Keep direct document downloads unchanged. When document
+versioning is introduced, pin the exact shared version before allowing a parent
+document to change: consent to one attachment is not consent to future replacement
+content. Include case-shared versions in the live-reference cleanup inventory.
