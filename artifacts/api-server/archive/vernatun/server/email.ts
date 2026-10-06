@@ -1,47 +1,33 @@
-import nodemailer from 'nodemailer';
-import {mkdir,writeFile} from 'node:fs/promises';
-import {z} from 'zod';
 import {config} from './config.js';
-import {ApiError} from './access.js';
+import {createEmailProvider,type EmailMessage,type EmailSettings,type ProviderDependencies} from './email-providers/index.js';
+import {assertConfigured,assertSafeEmailKey,type SMTPTransport} from './email-providers/types.js';
 
-export type EmailMessage={to:string;subject:string;text:string;url:string};
-export type EmailSettings={mode:string;provider?:string;host?:string;port?:number;user?:string;password?:string;from?:string};
-type Transport={sendMail:(message:Record<string,unknown>)=>Promise<{accepted?:unknown[];rejected?:unknown[]}>};
+export type {EmailMessage,EmailSettings,EmailProvider} from './email-providers/index.js';
+export {createEmailProvider} from './email-providers/index.js';
 export function settingsFromEnvironment():EmailSettings{
  if(config.NODE_ENV==='test')return {mode:'test',provider:'outbox'};
  return {mode:config.NODE_ENV,provider:process.env.MAIL_PROVIDER??(config.NODE_ENV==='production'?'disabled':'outbox'),
   host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT??587),user:process.env.SMTP_USER,
-  password:process.env.SMTP_PASS??process.env.SMTP_PASSWORD,from:process.env.SMTP_FROM};
+  password:process.env.SMTP_PASS??process.env.SMTP_PASSWORD,from:process.env.EMAIL_FROM??process.env.SMTP_FROM};
 }
-export function emailProviderState(s:EmailSettings=settingsFromEnvironment()){
- if(s.provider==='outbox'&&s.mode!=='production')return 'local_outbox';
- if(s.provider!=='smtp'||!s.host||!s.from||!z.string().email().safeParse(s.from).success||
-  !Number.isInteger(s.port)||(s.port??0)<1||(s.port??0)>65535||
-  Boolean(s.user)!==Boolean(s.password)||
-  (s.mode==='production'&&(!s.user||!s.password)))return 'not_configured';
- return 'smtp';
+export function emailProviderState(settings:EmailSettings=settingsFromEnvironment()){
+ const provider=createEmailProvider(settings);
+ return provider.isConfigured()?(provider.name==='outbox'?'local_outbox':provider.name):'not_configured';
 }
-export function assertEmailConfigured(s:EmailSettings=settingsFromEnvironment()){
- if(emailProviderState(s)==='not_configured')throw new ApiError(503,'email_not_configured');
+export function assertEmailConfigured(settings:EmailSettings=settingsFromEnvironment()){
+ assertConfigured(createEmailProvider(settings));
 }
-export async function deliverEmail(message:EmailMessage,key:string,options?:{settings:EmailSettings;transport?:Transport}){
- const settings=options?.settings??settingsFromEnvironment();assertEmailConfigured(settings);
- if(!/^(reset|invitation)-[0-9a-f-]{36}$/.test(key))throw new Error('Unsafe private outbox key');
- if(emailProviderState(settings)==='local_outbox'){
-  const directory=settings.mode==='test'?'.local/test/outbox':'.local/outbox';
-  await mkdir(directory,{recursive:true,mode:0o700});
-  await writeFile(`${directory}/${key}.json`,JSON.stringify({email:message.to,...message},null,2),{mode:0o600});
-  return {delivery:'local_only' as const,url:message.url};
- }
- const transporter=options?.transport??nodemailer.createTransport({
-  host:settings.host,port:settings.port,secure:settings.port===465,requireTLS:settings.mode==='production'&&settings.port!==465,
-  ...(settings.user?{auth:{user:settings.user,pass:settings.password}}:{}),
-  tls:{minVersion:'TLSv1.2',rejectUnauthorized:true},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:20000
+export type EmailDelivery={delivery:'local_only';provider:string;url:string}|
+ {delivery:'smtp_accepted'|'resend_accepted'|'provider_accepted';provider:string;messageId?:string};
+export async function deliverEmail(message:EmailMessage,key:string,options?:{settings:EmailSettings;transport?:SMTPTransport;dependencies?:ProviderDependencies}):Promise<EmailDelivery>{
+ assertSafeEmailKey(key);
+ const provider=createEmailProvider(options?.settings??settingsFromEnvironment(),{
+  ...options?.dependencies,...(options?.transport?{smtpTransport:options.transport}:{})
  });
- try{
-  const result=await transporter.sendMail({from:settings.from,to:message.to,subject:message.subject,text:message.text});
-  if(!result.accepted?.length||result.rejected?.length)throw new Error('Recipient was not accepted');
-  // Accepted by SMTP is not a guarantee of inbox delivery.
-  return {delivery:'smtp_accepted' as const};
- }catch{throw new ApiError(503,'email_delivery_failed')}
+ assertConfigured(provider);
+ const receipt=await provider.send(message,key);
+ if(receipt.kind==='local')return {delivery:'local_only' as const,provider:provider.name,url:receipt.url};
+ // Preserve the existing SMTP receipt for callers; new adapters use the same facade.
+ const delivery=provider.name==='smtp'?'smtp_accepted':provider.name==='resend'?'resend_accepted':'provider_accepted';
+ return {delivery,provider:provider.name,...(receipt.messageId?{messageId:receipt.messageId}:{})};
 }

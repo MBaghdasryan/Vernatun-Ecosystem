@@ -42,3 +42,17 @@ mtime_ms = 1791295474791
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/04fa173d-302a-40d5-bb86-ba2ffe7b58d2/b7bf4c1a-1c15-4377-91cc-df042b37ae95"
 storage_version_token = "1791295648240984"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "XyEUwLuFgRIF4Kehlud7x"
+uri = "file://artifacts/vernatun/docs/EMAIL-SETUP.md"
+type = "text"
+title = "Vernatun — почтовые провайдеры"
+description = "Общий EmailProvider, переключение Resend/SMTP/outbox, результаты тестов и оставшиеся шаги настройки."
+logical_id = "eb849d44-a82f-4592-a403-760d3420ff1f"
+content_hash = "sha256:2b06955590c26ba65aa16b13f5610883e0ac54b7281de85d129a2c799cab3cad"
+size = 5972
+mtime_ms = 1791296918020
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/eb849d44-a82f-4592-a403-760d3420ff1f/11e2cc37-eef7-4471-a9b5-a15bede85b66"
+storage_version_token = "1791297509764587"
+content_type = "text/markdown"

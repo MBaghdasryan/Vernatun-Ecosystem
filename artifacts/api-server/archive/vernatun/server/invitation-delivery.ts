@@ -16,7 +16,7 @@ export async function sendInvitation(req:Request,c:Context,id:string,token:strin
   await transaction(async db=>{
    await db.query('UPDATE invitations SET email_delivery_status=$1,email_delivery_at=now() WHERE id=$2 AND token_hash=$3',
     [delivery.delivery==='local_only'?'local':'sent',id,hash]);
-   await record(db,req,{...c,organization_id:invitation.organization_id},'invitation.delivery','invitation',id,{result:'success',delivery:delivery.delivery});
+   await record(db,req,{...c,organization_id:invitation.organization_id},'invitation.delivery','invitation',id,{result:'success',delivery:delivery.delivery,provider:delivery.provider});
   });
   return delivery;
  }catch(e){

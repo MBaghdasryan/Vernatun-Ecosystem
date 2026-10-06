@@ -50,3 +50,11 @@
 - Основной seed не запускался; accounts/business/private bytes не заменялись. Backup manifest создан до main migration. До/после проверены исходные строки и значения.
 - Core50/50, затем final Phase1-only11/11; TypeScript и Vite build passed. Remote storage/full backup drill не объявляется повторно пройденным.
 - Реальный SMTP/production не настроен; весь платформенный prompt не завершён.
+
+## 6 октября — общий EmailProvider и выбранный Resend
+
+- Добавлены независимые ResendEmailProvider, SMTPEmailProvider и DevelopmentOutboxProvider, registry и общий facade без изменения business callers.
+- SDK интеграции используется только сервером; MAIL_PROVIDER выбирает адаптер, EMAIL_FROM общий для сервисов.
+- Resend receipts/ошибки/idempotency проверяются; смена токена меняет ключ отправки. Нет тихого fallback на outbox.
+- 8 новых adapter regression tests включены в стандартный core/phase1 runner; полный текущий core59/59, TypeScript и Web build passed.
+- Live setup BLOCKED: существующее подключение Resend возвращает API key is invalid, отправитель пока не задан. Реальные сообщения и production publishing не выполнялись.

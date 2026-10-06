@@ -26,6 +26,9 @@ const checks=process.argv.includes('--phase1-only')
  : process.argv.includes('--storage-only')
  ? [['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']]
  : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
+if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
+ checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
+}
 try{
  for(const args of [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts'],...checks.filter(args=>!process.argv.includes('--core-only')||!args.some(a=>/\/(backup|storage|storage-inventory)\.test\.ts$/.test(a)))]){
   const child=spawnSync(process.execPath,[cli,...args],{env,stdio:'inherit'});

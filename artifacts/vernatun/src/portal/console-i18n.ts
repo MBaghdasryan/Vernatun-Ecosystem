@@ -22,7 +22,7 @@ apply:['Կիրառել','Применить','Apply'],reset:['Մաքրել','С�
 invitations:['Հրավերներ','Приглашения','Invitations'],email:['Էլ․ հասցե','Email','Email'],role:['Դեր','Роль','Role'],building:['Շենք','Здание','Building'],unit:['Տարածք','Помещение','Unit'],expires:['Ժամկետ','Истекает','Expires'],delivery:['Առաքում','Доставка','Delivery'],
 pending:['Սպասում է','Ожидает','Pending'],accepted:['Ընդունված','Принято','Accepted'],revoked:['Հետ կանչված','Отозвано','Revoked'],
 unknown:['Անհայտ','Неизвестно','Unknown'],local:['Միայն տեղական, նամակ չի ուղարկվել','Только локально, письмо не отправлено','Local only, no email sent'],sent:['SMTP ընդունել է','Принято SMTP','SMTP accepted'],failed:['Առաքումը ձախողվել է','Ошибка доставки','Delivery failed'],
-smtpNote:['SMTP-ի ընդունումը չի երաշխավորում ստացումը մուտքի արկղում։','Принятие SMTP не гарантирует доставку во входящие.','SMTP acceptance does not guarantee inbox delivery.'],
+smtpNote:['Փոստային ծառայության ընդունումը չի երաշխավորում ստացումը մուտքի արկղում։','Принятие почтовым сервисом не гарантирует доставку во входящие.','Mail service acceptance does not guarantee inbox delivery.'],
 localLink:['Տեղական հղում (ցուցադրվում է մեկ անգամ)','Локальная ссылка (показывается один раз)','Local link (shown once)'],
 resend:['Նորից ուղարկել','Отправить повторно','Resend'],revoke:['Հետ կանչել','Отозвать','Revoke'],confirmRevoke:['Հետ կանչե՞լ հրավերը։','Отозвать приглашение?','Revoke this invitation?'],
 invite:['Ստեղծել հրավեր','Создать приглашение','Create invitation'],noResend:['Այս հրավերը չի կարող նորից ուղարկվել։','Это приглашение нельзя отправить повторно.','This invitation cannot be resent.'],
