@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Vernatun"
+description = "The public Vernatun website from the provided project archive: a multilingual introduction to Vernatun OS, HAYAT, and ImTun, with responsive product previews, language selection, and demonstration interactions."
+version = "1.0.0"
+id = "artifacts/vernatun"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23227
+
+[services.development]
+run = "pnpm --filter @workspace/vernatun run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vernatun", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vernatun/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23227"
+BASE_PATH = "/"

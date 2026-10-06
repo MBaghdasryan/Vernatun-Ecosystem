@@ -1,0 +1,2 @@
+import {landingLanguage} from '../landing-i18n';
+export default function LanguageSelector(){return <div className="languages">{(['hy','ru','en'] as const).map(language=><button key={language} type="button" aria-label={{hy:'Հայերեն',ru:'Русский',en:'English'}[language]} aria-pressed={landingLanguage===language} onClick={()=>{if(language===landingLanguage)return;localStorage.setItem('vernatun.language',language);location.reload()}}>{language.toUpperCase()}</button>)}</div>}
