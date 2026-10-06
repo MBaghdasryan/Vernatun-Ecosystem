@@ -6,7 +6,8 @@ import {randomUUID,createHash} from 'node:crypto';
 import {transaction,idempotent} from './operations.js';
 import {z} from 'zod';
 import {pool} from './db.js';
-import {ApiError,requireAuth} from './access.js';
+import {ApiError,requireAuth,requirePermission} from './access.js';
+import {accessibleIncidents} from './operation-incidents.js';
 import {accessibleRequests} from './workflow.js';
 export const photos=Router();photos.use(requireAuth);
 photos.post('/requests/:id/photos',raw({type:'application/octet-stream',limit:'6mb'}),async(req,res)=>{res.status(201).json(await upload(req,'requests'))});
@@ -17,7 +18,13 @@ async function sanitizePhoto(body:Buffer){let buffer:Buffer;try{const image=shar
 photos.post('/defects/:id/photos',raw({type:'application/octet-stream',limit:'6mb'}),async(req,res)=>{res.status(201).json(await upload(req,'defects'))});
 photos.get('/defect-photos/:id',async(req,res)=>{const row=(await pool.query('SELECT * FROM file_attachments WHERE id=$1',[z.string().uuid().parse(req.params.id)])).rows[0];if(!row)throw new ApiError(404,'not_found');await accessibleDefects(req,row.defect_id);const body=await readPrivateFile('photos',row.storage_key);res.set({'Content-Type':'image/jpeg','Content-Disposition':'attachment; filename="vernatun-defect.jpg"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).send(body)});
 
-async function upload(req:import('express').Request,kind:'requests'|'defects'){
+photos.post('/incidents/:id/attachments',raw({type:'application/octet-stream',limit:'6mb'}),async(req,res)=>{res.status(201).json(await upload(req,'incidents'))});
+photos.get('/incident-attachments/:id',async(req,res)=>{
+ const row=(await pool.query('SELECT * FROM incident_attachments WHERE id=$1',[z.string().uuid().parse(req.params.id)])).rows[0];
+ if(!row)throw new ApiError(404,'not_found');await accessibleIncidents(req,row.incident_id);
+ res.set({'Content-Type':'image/jpeg','Content-Disposition':'attachment; filename="vernatun-incident.jpg"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).send(await readPrivateFile('photos',row.storage_key));
+});
+async function upload(req:import('express').Request,kind:'requests'|'defects'|'incidents'){
  const id=z.string().uuid().parse(req.params.id);
  const operation=req.get('X-Operation-Key');
  if(operation)z.string().uuid().parse(operation);
@@ -25,21 +32,25 @@ async function upload(req:import('express').Request,kind:'requests'|'defects'){
  const expected=version?z.coerce.number().int().positive().parse(version):undefined;
  if(!Buffer.isBuffer(req.body)||!req.body.length)throw new ApiError(400,'invalid_photo');
  const hash=createHash('sha256').update(req.body).digest('hex');
+ const photoType=kind==='requests'?z.enum(['before','during','after','evidence']).optional().parse(req.query.photoType):undefined;
+ if(kind==='incidents')await requirePermission(req,'incidents.manage');
  return transaction(async db=>{
   // Authorization is checked even on replay. Row locks prevent a close/accept
   // transition racing a photo commit; the existing receipt table is reused.
-  const row=(await (kind==='requests'?accessibleRequests(req,id,db,true):accessibleDefects(req,id,db)))[0];
+  const row=(await (kind==='requests'?accessibleRequests(req,id,db,true):kind==='defects'?accessibleDefects(req,id,db):accessibleIncidents(req,id,db,true)))[0];
   const run=async()=>{
-   if(row.status===(kind==='requests'?'closed':'accepted'))throw new ApiError(409,'invalid_transition');
+   if(row.status===(kind==='defects'?'accepted':'closed'))throw new ApiError(409,'invalid_transition');
    if(expected!==undefined&&row.version!==expected)throw new ApiError(409,'stale_version');
    const buffer=await sanitizePhoto(req.body),key=randomUUID()+'.jpg';
    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[privateFileLockKey('photos',key)]);
    await savePrivateFile('photos',key,buffer,'image/jpeg');
    const sql=kind==='requests'
-    ?'INSERT INTO request_photos(request_id,author_id,storage_key) VALUES($1,$2,$3) RETURNING id'
-    :'INSERT INTO file_attachments(defect_id,author_id,storage_key) VALUES($1,$2,$3) RETURNING id';
-   return (await db.query(sql,[id,req.user!.id,key])).rows[0];
+    ?'INSERT INTO request_photos(request_id,author_id,storage_key,photo_type) VALUES($1,$2,$3,$4) RETURNING id,photo_type'
+    :kind==='defects'?'INSERT INTO file_attachments(defect_id,author_id,storage_key) VALUES($1,$2,$3) RETURNING id'
+    :'INSERT INTO incident_attachments(incident_id,author_id,storage_key) VALUES($1,$2,$3) RETURNING id';
+   return (await db.query(sql,kind==='requests'?[id,req.user!.id,key,photoType??'evidence']:[id,req.user!.id,key])).rows[0];
   };
-  return operation?idempotent(db,req,operation,{kind,id,hash,version:expected},run):run();
+  // An absent type keeps the exact pre-Phase2 fingerprint for pending offline receipts.
+  return operation?idempotent(db,req,operation,{kind,id,hash,version:expected,...(photoType?{photoType}:{})},run):run();
  });
 }

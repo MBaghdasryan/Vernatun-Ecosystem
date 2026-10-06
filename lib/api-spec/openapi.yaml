@@ -176,8 +176,401 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /operations/categories:
+    get:
+      operationId: getRequestCategories
+      responses:
+        "200":
+          description: Organization-scoped categories
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/OperationalRow" } }
+    post:
+      operationId: createRequestCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "201": { description: Category created }
+  /operations/categories/{id}:
+    patch:
+      operationId: updateRequestCategory
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryUpdateInput" }
+      responses:
+        "200": { description: Category updated }
+        "409": { description: Stale version }
+  /operations/sla-policies:
+    get:
+      operationId: getSlaPolicies
+      responses:
+        "200":
+          description: Configured organization and category priority policies
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/OperationalRow" } }
+    post:
+      operationId: saveSlaPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SlaPolicyInput" }
+      responses:
+        "200": { description: Policy saved; existing deadlines preserved }
+        "409": { description: Existing policy requires matching version }
+  /operations/setup:
+    get:
+      operationId: getDispatcherSetup
+      parameters:
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+        - { name: unitId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Scoped buildings units residents technicians
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalRow" }
+  /requests:
+    get:
+      operationId: getOperationalRequests
+      responses:
+        "200":
+          description: Existing authorized array enriched with priority and backend SLA
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/OperationalRow" } }
+    post:
+      operationId: createOperationalRequest
+      description: Source is derived server-side. Enhanced staff requests require category and idempotency key. Legacy resident inputs stay compatible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OperationalRequestInput" }
+      responses:
+        "201":
+          description: Created or same idempotent result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalRow" }
+        "403": { description: Invalid assignment resident or permission }
+        "409": { description: Idempotency conflict }
+  /requests/{id}:
+    get:
+      operationId: getOperationalRequest
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Existing detail with SLA visits history materials and typed photos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalRow" }
+        "404": { description: No authorized request }
+  /requests/{id}/transition:
+    post:
+      operationId: transitionOperationalRequest
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkTransitionInput" }
+      responses:
+        "200": { description: Authorized versioned transition or original receipt }
+        "409": { description: Stale version or illegal transition }
+  /requests/{id}/visits:
+    post:
+      operationId: proposeRequestVisit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitProposalInput" }
+      responses:
+        "200": { description: Proposed or rescheduled visit; previous visit retained }
+  /requests/{id}/visits/{visitId}:
+    post:
+      operationId: respondToRequestVisit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: visitId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitResponseInput" }
+      responses:
+        "200": { description: Independent resident or assigned technician response }
+  /requests/{id}/materials:
+    post:
+      operationId: addWorkMaterial
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialInput" }
+      responses:
+        "201": { description: Recorded without creating financial transaction }
+  /assets/lookup:
+    get:
+      operationId: lookupEquipment
+      parameters:
+        - { name: identifier, in: query, required: true, schema: { type: string, maxLength: 160 } }
+      responses:
+        "200":
+          description: Scoped asset plans work history and unit identifiers; identifier never grants access
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalRow" }
+        "404": { description: Asset not in authorized scope }
+  /incidents/{id}:
+    get:
+      operationId: getOperationalIncident
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Scoped incident with append-only history and private attachments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalRow" }
+  /incidents/{id}/transition:
+    post:
+      operationId: transitionIncident
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentTransitionInput" }
+      responses:
+        "200": { description: Incident transitioned with historical snapshot }
+  /operations/visits:
+    get:
+      operationId: listOperationalVisits
+      parameters:
+        - {name: from, in: query, required: true, schema: {type: string, format: date-time}}
+        - {name: to, in: query, required: true, schema: {type: string, format: date-time}}
+      responses:
+        "200":
+          description: Active visits in a bounded date range and the current request scope
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/OperationalRow"}}
+  /assets/{id}/qr:
+    get:
+      operationId: getAssetQr
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: QR encodes an identifier, never an authorization grant
+          content:
+            image/png:
+              schema: {type: string, format: binary}
+  /requests/{id}/photos:
+    post:
+      operationId: uploadOperationalPhoto
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: photoType, in: query, schema: {type: string, enum: [before, during, after, evidence]}}
+        - {name: X-Operation-Key, in: header, schema: {type: string, format: uuid}}
+        - {name: X-Work-Version, in: header, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {$ref: "#/components/schemas/PrivateImageInput"}
+      responses:
+        "201":
+          description: Sanitized private photo metadata; stable operation key permits safe retry
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationalRow"}
+  /incidents:
+    get:
+      operationId: listOperationalIncidents
+      responses:
+        "200":
+          description: Incident list within current organization/building/unit scope
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/OperationalRow"}}
+    post:
+      operationId: createOperationalIncident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/IncidentInput"}
+      responses:
+        "201":
+          description: Created incident with append-only history
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationalRow"}
+  /incidents/{id}/attachments:
+    post:
+      operationId: uploadIncidentEvidence
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: X-Operation-Key, in: header, schema: {type: string, format: uuid}}
+        - {name: X-Work-Version, in: header, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {$ref: "#/components/schemas/PrivateImageInput"}
+      responses:
+        "201":
+          description: Sanitized private incident evidence metadata
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationalRow"}
+  /incident-attachments/{id}:
+    get:
+      operationId: getIncidentEvidence
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Private image after fresh incident authorization
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
 components:
   schemas:
+    PrivateImageInput:
+      description: Opaque binary image carried as application/octet-stream; decoded and validated on the server.
+    IncidentInput:
+      type: object
+      additionalProperties: false
+      required: [buildingId, description]
+      properties:
+        key: {type: string, format: uuid}
+        buildingId: {type: string, format: uuid}
+        description: {type: string, minLength: 3, maxLength: 4000}
+        severity: {type: string, enum: [low, normal, high, critical]}
+    CategoryInput:
+      type: object
+      required: [key, name]
+      properties:
+        key: { type: string, maxLength: 60 }
+        name: { type: string, maxLength: 160 }
+    CategoryUpdateInput:
+      type: object
+      required: [version, name, active]
+      properties:
+        version: { type: integer, minimum: 1 }
+        name: { type: string, maxLength: 160 }
+        active: { type: boolean }
+    SlaPolicyInput:
+      type: object
+      required: [categoryId, priority, responseMinutes, assignmentMinutes, arrivalMinutes, resolutionMinutes, pauseResolution]
+      properties:
+        categoryId: { type: [string, "null"], format: uuid }
+        priority: { $ref: "#/components/schemas/RequestPriority" }
+        responseMinutes: { type: integer, minimum: 1, maximum: 43200 }
+        assignmentMinutes: { type: integer, minimum: 1, maximum: 43200 }
+        arrivalMinutes: { type: integer, minimum: 1, maximum: 43200 }
+        resolutionMinutes: { type: integer, minimum: 1, maximum: 43200 }
+        pauseResolution: { type: boolean }
+        version: { type: integer, minimum: 1 }
+    OperationalRequestInput:
+      type: object
+      required: [unitId, subject]
+      additionalProperties: false
+      properties:
+        key: { type: string, format: uuid }
+        unitId: { type: string, format: uuid }
+        subject: { type: string, minLength: 3, maxLength: 160 }
+        description: { type: string, maxLength: 4000 }
+        categoryId: { type: string, format: uuid }
+        priority: { $ref: "#/components/schemas/RequestPriority" }
+        reportedForUserId: { type: string, format: uuid }
+        contactMethod: { type: string, enum: [app, phone, email, none] }
+        preferredVisitStart: { type: string, format: date-time }
+        preferredVisitEnd: { type: string, format: date-time }
+        technicianId: { type: string, format: uuid }
+        assetId: { type: string, format: uuid }
+    WorkTransitionInput:
+      type: object
+      required: [action, version]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        action: { type: string, enum: [assign, start, report, approve, reject, confirm, reopen, accept, cannot_perform, pause, resume] }
+        technicianId: { type: string, format: uuid }
+        note: { type: string, maxLength: 4000 }
+        reason: { type: string, enum: [resident_unavailable, no_access, missing_material, requires_specialist, unsafe_condition, wrong_category, other] }
+        checklist:
+          type: array
+          maxItems: 30
+          items:
+            type: object
+            required: [text, done]
+            properties:
+              text: { type: string, maxLength: 200 }
+              done: { type: boolean }
+    VisitProposalInput:
+      type: object
+      required: [key, version, startsAt, endsAt]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+    VisitResponseInput:
+      type: object
+      required: [key, version, visitVersion, action]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        visitVersion: { type: integer, minimum: 1 }
+        action: { type: string, enum: [confirm, cancel] }
+        note: { type: string, maxLength: 4000 }
+    MaterialInput:
+      type: object
+      required: [key, version, kind, name, quantity, unit]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        kind: { type: string, enum: [material, service] }
+        name: { type: string, maxLength: 160 }
+        quantity: { type: number, minimum: 0.001 }
+        unit: { type: string, maxLength: 30 }
+        unitCostMinor: { type: integer, minimum: 0 }
+        comment: { type: string, maxLength: 1000 }
+    IncidentTransitionInput:
+      type: object
+      required: [key, version, status, note]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        status: { type: string, enum: [open, investigating, resolved, closed] }
+        severity: { type: string, enum: [low, normal, high, critical] }
+        note: { type: string, minLength: 3, maxLength: 4000 }
+    OperationalRow:
+      type: object
+      additionalProperties: true
+    RequestPriority:
+      type: string
+      enum: [low, normal, high, urgent, emergency]
     EmailStatus:
       type: string
       enum: [unknown, local, accepted, sent, delayed, delivered, bounced, complained, failed]

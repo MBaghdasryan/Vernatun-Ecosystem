@@ -1,5 +1,7 @@
 # Vernatun — сверка с активной спецификацией
 
+Текущее дополнение: [Phase 2 — реализация и проверки](PHASE2-COMPLETION.md). Managed lifecycle исправлен; phone/SLA/visits/materials/typed photos/equipment QR/incidents реализованы и проверены API-регрессией. Signed-in QA выполняется. Phases 3–8 и production email не объявлены завершёнными. Ниже — историческая baseline-сверка.
+
 Дата: 6 октября 2026 года.
 
 **Это промежуточный аудит и отчёт о первых исправлениях, не объявление о завершении всех фаз и не сертификат production readiness.**

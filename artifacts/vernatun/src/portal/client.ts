@@ -100,7 +100,9 @@ export function syncPhoto(scope:Scope,kind:string,id:string,file:File,key:string
  return fetchApi<any>(`/${kind}/${id}/photos`,{method:'POST',headers:{'Content-Type':'application/octet-stream',...scopedHeaders(scope),'X-Operation-Key':key,'X-Work-Version':String(version)},body:file});
 }
 
-export async function uploadPhoto(id:string,file:File,kind:'requests'|'defects'='requests'){return fetchApi<any>(`/${kind}/${id}/photos`,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}
+export async function uploadIncidentAttachment(id:string,file:File,opts?:{key:string;version?:number}){return fetchApi<any>(`/incidents/${id}/attachments`,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf,...(opts?{"X-Operation-Key":opts.key,...(opts.version!=null?{"X-Work-Version":String(opts.version)}:{})}:{})},body:file});}
+
+export async function uploadPhoto(id:string,file:File,kind:'requests'|'defects'='requests',photoType?:'before'|'during'|'after'|'evidence',opts?:{key:string;version?:number}){return fetchApi<any>(`/${kind}/${id}/photos${photoType?'?photoType='+photoType:''}`,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf,...(opts?{"X-Operation-Key":opts.key,...(opts.version!=null?{"X-Work-Version":String(opts.version)}:{})}:{})},body:file});}
 
 export async function uploadImport(query:URLSearchParams,file:File){return fetchApi<any>("/imports/preview?"+query,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}
 

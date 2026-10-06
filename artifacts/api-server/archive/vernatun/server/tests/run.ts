@@ -25,11 +25,13 @@ const checks=process.argv.includes('--offline-only')
  ? [['--test','server/tests/imtun.test.ts']]
  : process.argv.includes('--hayat-only')
  ? [['--test','server/tests/hayat.test.ts']]
+ : process.argv.includes('--phase2-only')
+ ? [['--test','server/tests/phase2.test.ts']]
  : process.argv.includes('--backup-only')
  ? [['--test','server/tests/backup.test.ts']]
  : process.argv.includes('--storage-only')
  ? [['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']]
- : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/offline.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
+ : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/phase2.test.ts'],['--test','server/tests/offline.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
 if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
  if(!checks.some(args=>args.includes('server/tests/email-providers.test.ts')))checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
  if(!checks.some(args=>args.includes('server/tests/email-delivery.test.ts')))checks.splice(2,0,['--test','server/tests/email-delivery.test.ts']);

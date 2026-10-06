@@ -1,0 +1,41 @@
+Continue the existing Vernatun Master Completion Prompt. Do not start a new architecture phase yet.
+The current Completion Report confirms that Phase 0/1 foundations are largely complete, but Phases 2–8 are not. Continue from the existing specification and close the remaining business functionality in the original priority order.
+First, before adding new business features, resolve the current managed Web/API workflow lifecycle/port conflict so the project has one clean, reproducible development runtime. Do not terminate working production-like data or replace managed services; determine why the workflow manager reports occupied ports while Web / and /api/health are healthy, fix the configuration, and document the final startup model.
+Then complete Phase 2 in full:
+- dispatcher phone-created requests;
+- configurable categories;
+- five priorities;
+- SLA policies and deadlines;
+- idempotent escalation;
+- visit proposal/confirmation/reschedule/cancel/history;
+- technician accept/cannot-perform/pause/resume;
+- structured materials;
+- before/during/after/evidence photo types;
+- equipment QR flow;
+- full incident severity/status/timeline/attachments;
+- SSE or visibility-aware polling decision.
+Do not redesign existing HAYAT or duplicate Workflow.
+After Phase 2, continue automatically with the existing specification phases:
+Phase 3
+recurring maintenance → WorkOrder, ImTun visit approval, delegation lifecycle, notification deep links, lease/access lifecycle.
+Phase 4
+mass billing, preview/publish, bank statement import, reconciliation, unmatched payments, account credits, multi-invoice allocations.
+Phase 5
+organization lifecycle/card, support conversation and queue, onboarding dependencies/order/reopen, typed imports.
+Phase 6
+ownership shares/history, weighted voting/quorum/protocol, document versioning, portfolio analytics and contractor scorecard.
+Phase 7
+notification catalog/preferences, full branding/white-label foundation, limited PWA completion where safe.
+Phase 8
+all role dashboards, server-side pagination/search/sort for scalable tables, MFA-required rollout, i18n/timezone scan, responsive matrix, accessibility acceptance, OpenAPI completion, /api/leads, production readiness.
+After every phase:
+- run TypeScript frontend/backend;
+- run relevant regression tests;
+- run Vite production build;
+- update VERNATUN-AUDIT.md;
+- update CHANGELOG-2026-10.md;
+- update VERNATUN-COMPLETION-REPORT.md;
+- clearly distinguish COMPLETE / PARTIAL / EXTERNAL BLOCKER.
+Do not claim completion based only on schema/UI presence.
+Do not start Payment Provider integrations, Boon integration, native apps, or Platform Operations extensions until the current Master Completion Prompt Phases 2–8 are finished or explicitly paused by the user.
+Resend live verification remains an external blocker and must not stop core platform development. Keep the implemented email/webhook code intact.

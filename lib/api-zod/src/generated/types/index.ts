@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './categoryInput';
+export * from './categoryUpdateInput';
 export * from './emailBusinessType';
 export * from './emailHealth';
 export * from './emailHealthCounts';
@@ -19,8 +21,14 @@ export * from './emailMessageDetailEventsItem';
 export * from './emailMessageDetailEventsItemSafeMetadata';
 export * from './emailMessagePage';
 export * from './emailStatus';
+export * from './getDispatcherSetupParams';
 export * from './getEmailHealthParams';
 export * from './healthStatus';
+export * from './incidentInput';
+export * from './incidentInputSeverity';
+export * from './incidentTransitionInput';
+export * from './incidentTransitionInputSeverity';
+export * from './incidentTransitionInputStatus';
 export * from './invitation';
 export * from './invitationDeliveryOutcome';
 export * from './invitationEmailDeliveryStatus';
@@ -30,5 +38,24 @@ export * from './invitationSendReceiptDelivery';
 export * from './invitationStatus';
 export * from './listEmailMessagesParams';
 export * from './listEmailMessagesProvider';
+export * from './listOperationalVisitsParams';
+export * from './lookupEquipmentParams';
+export * from './materialInput';
+export * from './materialInputKind';
+export * from './operationalRequestInput';
+export * from './operationalRequestInputContactMethod';
+export * from './operationalRow';
+export * from './privateImageInput';
+export * from './requestPriority';
 export * from './resendDeliveryInput';
 export * from './resendDeliveryInputData';
+export * from './slaPolicyInput';
+export * from './uploadOperationalPhotoParams';
+export * from './uploadOperationalPhotoPhotoType';
+export * from './visitProposalInput';
+export * from './visitResponseInput';
+export * from './visitResponseInputAction';
+export * from './workTransitionInput';
+export * from './workTransitionInputAction';
+export * from './workTransitionInputChecklistItem';
+export * from './workTransitionInputReason';

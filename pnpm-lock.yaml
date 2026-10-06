@@ -237,6 +237,9 @@ importers:
       pino-http:
         specifier: ^10.5.0
         version: 10.5.0
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@25.9.6)
@@ -277,6 +280,9 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
+      '@types/qrcode':
+        specifier: 1.5.6
+        version: 1.5.6
       esbuild:
         specifier: 0.28.2
         version: 0.28.2

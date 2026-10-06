@@ -225,3 +225,329 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+export const GetRequestCategoriesResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetRequestCategoriesResponse = zod.array(GetRequestCategoriesResponseItem)
+
+
+export const createRequestCategoryBodyKeyMax = 60;
+
+export const createRequestCategoryBodyNameMax = 160;
+
+
+
+export const CreateRequestCategoryBody = zod.object({
+  "key": zod.string().max(createRequestCategoryBodyKeyMax),
+  "name": zod.string().max(createRequestCategoryBodyNameMax)
+})
+
+export const CreateRequestCategoryResponse = zod.void()
+
+
+export const UpdateRequestCategoryParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const updateRequestCategoryBodyNameMax = 160;
+
+
+
+export const UpdateRequestCategoryBody = zod.object({
+  "version": zod.number().int().min(1),
+  "name": zod.string().max(updateRequestCategoryBodyNameMax),
+  "active": zod.boolean()
+})
+
+export const UpdateRequestCategoryResponse = zod.unknown()
+
+
+export const GetSlaPoliciesResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetSlaPoliciesResponse = zod.array(GetSlaPoliciesResponseItem)
+
+
+export const saveSlaPolicyBodyResponseMinutesMax = 43200;
+
+export const saveSlaPolicyBodyAssignmentMinutesMax = 43200;
+
+export const saveSlaPolicyBodyArrivalMinutesMax = 43200;
+
+export const saveSlaPolicyBodyResolutionMinutesMax = 43200;
+
+
+
+
+export const SaveSlaPolicyBody = zod.object({
+  "categoryId": zod.string().uuid().nullable(),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent', 'emergency']),
+  "responseMinutes": zod.number().int().min(1).max(saveSlaPolicyBodyResponseMinutesMax),
+  "assignmentMinutes": zod.number().int().min(1).max(saveSlaPolicyBodyAssignmentMinutesMax),
+  "arrivalMinutes": zod.number().int().min(1).max(saveSlaPolicyBodyArrivalMinutesMax),
+  "resolutionMinutes": zod.number().int().min(1).max(saveSlaPolicyBodyResolutionMinutesMax),
+  "pauseResolution": zod.boolean(),
+  "version": zod.number().int().min(1).optional()
+})
+
+export const SaveSlaPolicyResponse = zod.unknown()
+
+
+export const GetDispatcherSetupQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional(),
+  "unitId": zod.coerce.string().uuid().optional()
+})
+
+export const GetDispatcherSetupResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetOperationalRequestsResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetOperationalRequestsResponse = zod.array(GetOperationalRequestsResponseItem)
+
+
+/**
+ * Source is derived server-side. Enhanced staff requests require category and idempotency key. Legacy resident inputs stay compatible.
+ */
+export const createOperationalRequestBodySubjectMin = 3;
+export const createOperationalRequestBodySubjectMax = 160;
+
+export const createOperationalRequestBodyDescriptionMax = 4000;
+
+
+
+export const CreateOperationalRequestBody = zod.object({
+  "key": zod.string().uuid().optional(),
+  "unitId": zod.string().uuid(),
+  "subject": zod.string().min(createOperationalRequestBodySubjectMin).max(createOperationalRequestBodySubjectMax),
+  "description": zod.string().max(createOperationalRequestBodyDescriptionMax).optional(),
+  "categoryId": zod.string().uuid().optional(),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent', 'emergency']).optional(),
+  "reportedForUserId": zod.string().uuid().optional(),
+  "contactMethod": zod.enum(['app', 'phone', 'email', 'none']).optional(),
+  "preferredVisitStart": zod.coerce.date().optional(),
+  "preferredVisitEnd": zod.coerce.date().optional(),
+  "technicianId": zod.string().uuid().optional(),
+  "assetId": zod.string().uuid().optional()
+})
+
+export const CreateOperationalRequestResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetOperationalRequestParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetOperationalRequestResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const TransitionOperationalRequestParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const transitionOperationalRequestBodyNoteMax = 4000;
+
+export const transitionOperationalRequestBodyChecklistItemTextMax = 200;
+
+export const transitionOperationalRequestBodyChecklistMax = 30;
+
+
+
+export const TransitionOperationalRequestBody = zod.object({
+  "key": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1),
+  "action": zod.enum(['assign', 'start', 'report', 'approve', 'reject', 'confirm', 'reopen', 'accept', 'cannot_perform', 'pause', 'resume']),
+  "technicianId": zod.string().uuid().optional(),
+  "note": zod.string().max(transitionOperationalRequestBodyNoteMax).optional(),
+  "reason": zod.enum(['resident_unavailable', 'no_access', 'missing_material', 'requires_specialist', 'unsafe_condition', 'wrong_category', 'other']).optional(),
+  "checklist": zod.array(zod.object({
+  "text": zod.string().max(transitionOperationalRequestBodyChecklistItemTextMax),
+  "done": zod.boolean()
+})).max(transitionOperationalRequestBodyChecklistMax).optional()
+})
+
+export const TransitionOperationalRequestResponse = zod.unknown()
+
+
+export const ProposeRequestVisitParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ProposeRequestVisitBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date()
+})
+
+export const ProposeRequestVisitResponse = zod.unknown()
+
+
+export const RespondToRequestVisitParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "visitId": zod.coerce.string().uuid()
+})
+
+
+
+export const respondToRequestVisitBodyNoteMax = 4000;
+
+
+
+export const RespondToRequestVisitBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "visitVersion": zod.number().int().min(1),
+  "action": zod.enum(['confirm', 'cancel']),
+  "note": zod.string().max(respondToRequestVisitBodyNoteMax).optional()
+})
+
+export const RespondToRequestVisitResponse = zod.unknown()
+
+
+export const AddWorkMaterialParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const addWorkMaterialBodyNameMax = 160;
+
+export const addWorkMaterialBodyQuantityMin = 0.001;
+
+export const addWorkMaterialBodyUnitMax = 30;
+
+export const addWorkMaterialBodyUnitCostMinorMin = 0;
+
+export const addWorkMaterialBodyCommentMax = 1000;
+
+
+
+export const AddWorkMaterialBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "kind": zod.enum(['material', 'service']),
+  "name": zod.string().max(addWorkMaterialBodyNameMax),
+  "quantity": zod.number().min(addWorkMaterialBodyQuantityMin),
+  "unit": zod.string().max(addWorkMaterialBodyUnitMax),
+  "unitCostMinor": zod.number().int().min(addWorkMaterialBodyUnitCostMinorMin).optional(),
+  "comment": zod.string().max(addWorkMaterialBodyCommentMax).optional()
+})
+
+export const AddWorkMaterialResponse = zod.void()
+
+
+export const lookupEquipmentQueryIdentifierMax = 160;
+
+
+
+export const LookupEquipmentQueryParams = zod.object({
+  "identifier": zod.coerce.string().max(lookupEquipmentQueryIdentifierMax)
+})
+
+export const LookupEquipmentResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetOperationalIncidentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetOperationalIncidentResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const TransitionIncidentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const transitionIncidentBodyNoteMin = 3;
+export const transitionIncidentBodyNoteMax = 4000;
+
+
+
+export const TransitionIncidentBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "status": zod.enum(['open', 'investigating', 'resolved', 'closed']),
+  "severity": zod.enum(['low', 'normal', 'high', 'critical']).optional(),
+  "note": zod.string().min(transitionIncidentBodyNoteMin).max(transitionIncidentBodyNoteMax)
+})
+
+export const TransitionIncidentResponse = zod.unknown()
+
+
+export const ListOperationalVisitsQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date()
+})
+
+export const ListOperationalVisitsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOperationalVisitsResponse = zod.array(ListOperationalVisitsResponseItem)
+
+
+export const GetAssetQrParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetAssetQrResponse = zod.unknown()
+
+
+export const UploadOperationalPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const UploadOperationalPhotoQueryParams = zod.object({
+  "photoType": zod.enum(['before', 'during', 'after', 'evidence']).optional()
+})
+
+
+
+
+export const UploadOperationalPhotoHeader = zod.object({
+  "X-Operation-Key": zod.string().uuid().optional(),
+  "X-Work-Version": zod.number().int().min(1).optional()
+})
+
+export const UploadOperationalPhotoResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListOperationalIncidentsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOperationalIncidentsResponse = zod.array(ListOperationalIncidentsResponseItem)
+
+
+export const createOperationalIncidentBodyDescriptionMin = 3;
+export const createOperationalIncidentBodyDescriptionMax = 4000;
+
+
+
+export const CreateOperationalIncidentBody = zod.object({
+  "key": zod.string().uuid().optional(),
+  "buildingId": zod.string().uuid(),
+  "description": zod.string().min(createOperationalIncidentBodyDescriptionMin).max(createOperationalIncidentBodyDescriptionMax),
+  "severity": zod.enum(['low', 'normal', 'high', 'critical']).optional()
+})
+
+export const CreateOperationalIncidentResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UploadIncidentEvidenceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const UploadIncidentEvidenceHeader = zod.object({
+  "X-Operation-Key": zod.string().uuid().optional(),
+  "X-Work-Version": zod.number().int().min(1).optional()
+})
+
+export const UploadIncidentEvidenceResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetIncidentEvidenceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetIncidentEvidenceResponse = zod.unknown()
+
+

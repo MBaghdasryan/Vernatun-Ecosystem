@@ -185,9 +185,9 @@ export default function OfflineWork({id,c,userId,language,kind='requests',change
       onClick={()=>edit(v=>({...v,photos:v.photos.map(p=>p.attempted?p:{...p,version:live.version,key:crypto.randomUUID()}),draft:{...v.draft,version:live.version,key:crypto.randomUUID(),
        checklist:(live.checklist??[]).map((item:{text:string;done:boolean})=>({...item,done:v.draft.checklist.find(x=>x.text===item.text)?.done??item.done}))}}))}>{t('compare')}</button>}
     </div>}
-    {['assigned','in_progress'].includes(state)&&!local.pending&&<button className={kind==='defects'?'h-primary':'p-button orange'} disabled={busy||saving>0||offline||blocked||conflict||!permission}>
+    {['assigned','in_progress'].includes(state)&&!local.pending&&<button className={kind==='defects'?'h-primary':'p-button orange'} disabled={busy||saving>0||offline||blocked||conflict||!permission||!!d.paused_at||!!d.blocked_reason||(state==='assigned'&&!!d.category_id&&!d.accepted_at)}>
      {label(state==='assigned'?'start':kind==='defects'?'submitReview':'report')}</button>}
-    <div className="p-modal-actions">
+    <div className="p-modal-actions" style={{flexWrap:'wrap',minWidth:0,maxWidth:'100%'}}>
      <button type="button" className="p-button" disabled={busy||saving>0||offline||blocked||!permission}
       onClick={()=>void synchronize()}>{t('sync')}</button>
      <button type="button" className="p-button" disabled={busy} onClick={()=>void discard()}>{t('discard')}</button>

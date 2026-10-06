@@ -1,5 +1,9 @@
 # Vernatun — октябрь 2026
 
+## Core operations и managed runtime
+
+Один управляемый owner для Web/API; добавочная миграция 016 после изолированных проверок; телефонный intake, категории/приоритеты/SLA, история визитов, действия техника, материалы, типизированные приватные фото, equipment QR/manual lookup и инциденты. Новые incident bytes включены в inventory/backup. Старые offline receipts сохраняют fingerprint. Реальные email не отправлялись. Подробные проверки и известные ограничения: PHASE2-COMPLETION.md.
+
 ## Email Operations и шесть Resend событий
 
 - Объединённая delivery модель расширена без переписывания provider adapters и без дублирования event store. Canonical route `/api/webhooks/resend`, прежний route — совместимый alias.

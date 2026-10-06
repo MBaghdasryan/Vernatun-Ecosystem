@@ -35,9 +35,11 @@ export async function tableFingerprints(db:PoolClient|Client,schema:string,names
 }
 export async function referencedFiles(db:PoolClient|Client,schema:string){
   const s=identifier(schema);
+  const hasIncidents=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='incident_attachments'",[schema])).rowCount;
   return (await db.query(`
     SELECT 'photos' AS kind,storage_key AS key,'image/jpeg' AS media_type FROM ${s}.request_photos
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.file_attachments
+    ${hasIncidents?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.incident_attachments`:''}
     UNION SELECT 'documents',storage_key,media_type FROM ${s}.documents
     ORDER BY kind,key,media_type`)).rows as {kind:'photos'|'documents';key:string;media_type:string}[];
 }

@@ -8,3 +8,4 @@
 - [Email provider boundary](email-provider-boundary.md) — Resend is selected; provider adapters must remain replaceable without rewriting business logic.
 - [Delivery evidence policy](delivery-evidence-policy.md) — acceptance is not delivery; no opens/clicks tracking; Svix verification may return void.
 - [HAYAT offline policy](hayat-offline-policy.md) — local work stays user/context-bound; reconnect never starts submission or grants server access.
+- [Managed runtime ownership](runtime-ownership.md) — artifact-relative commands and one direct process owner prevent orphan listeners during managed restarts.

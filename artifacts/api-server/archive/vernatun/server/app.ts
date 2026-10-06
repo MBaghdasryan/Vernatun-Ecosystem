@@ -27,6 +27,8 @@ import {api} from './api.js';
 import {logger} from '../../../src/lib/logger.js';
 import {emailWebhooks} from './email-delivery-events.js';
 import {emailOperations} from './email-operations.js';
+import {coreOperations} from './core-operations.js';
+import {operationIncidents} from './operation-incidents.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 // Only this signed, raw-body endpoint bypasses session CSRF.
 app.use('/api/webhooks',emailWebhooks);
@@ -37,7 +39,7 @@ app.use(express.json({limit:'32kb'}));
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(passport.initialize());app.use(passport.session());
 app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['GET','HEAD','OPTIONS'].includes(req.method))return next();const origin=req.headers.origin;if(origin&&origin!==config.APP_ORIGIN)return next(new ApiError(403,'csrf_invalid'));const expected=req.session.csrf;const actual=req.get('X-CSRF-Token');if(!expected||!actual||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return next(new ApiError(403,'csrf_invalid'));next()});
-app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});app.use('/api/auth',auth);app.use('/api/mfa',mfa);app.use('/api',platformFoundation);app.use('/api',photos);app.use('/api',workflow);app.use('/api',finance);app.use('/api',field);app.use('/api',grants);app.use('/api',services);app.use('/api',imports);app.use('/api',lifecycle);app.use('/api',documents);app.use('/api',reporting);app.use('/api',insights);app.use('/api',api);
+app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});app.use('/api/auth',auth);app.use('/api/mfa',mfa);app.use('/api',platformFoundation);app.use('/api',coreOperations);app.use('/api',operationIncidents);app.use('/api',photos);app.use('/api',workflow);app.use('/api',finance);app.use('/api',field);app.use('/api',grants);app.use('/api',services);app.use('/api',imports);app.use('/api',lifecycle);app.use('/api',documents);app.use('/api',reporting);app.use('/api',insights);app.use('/api',api);
 app.use('/api',hayat);
 app.use('/api',emailOperations);
 app.use('/api',(_req,res)=>res.status(404).json({error:'not_found'}));

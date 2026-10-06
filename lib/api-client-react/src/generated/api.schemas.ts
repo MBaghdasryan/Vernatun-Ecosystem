@@ -5,6 +5,253 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Opaque binary image carried as application/octet-stream; decoded and validated on the server.
+ */
+export interface PrivateImageInput {}
+
+export type IncidentInputSeverity = typeof IncidentInputSeverity[keyof typeof IncidentInputSeverity];
+
+
+export const IncidentInputSeverity = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export interface IncidentInput {
+  key?: string;
+  buildingId: string;
+  /**
+     * @minLength 3
+     * @maxLength 4000
+     */
+  description: string;
+  severity?: IncidentInputSeverity;
+}
+
+export interface CategoryInput {
+  /** @maxLength 60 */
+  key: string;
+  /** @maxLength 160 */
+  name: string;
+}
+
+export interface CategoryUpdateInput {
+  /** @minimum 1 */
+  version: number;
+  /** @maxLength 160 */
+  name: string;
+  active: boolean;
+}
+
+export type RequestPriority = typeof RequestPriority[keyof typeof RequestPriority];
+
+
+export const RequestPriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+  emergency: 'emergency',
+} as const;
+
+export interface SlaPolicyInput {
+  /** @nullable */
+  categoryId: string | null;
+  priority: RequestPriority;
+  /**
+     * @minimum 1
+     * @maximum 43200
+     */
+  responseMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 43200
+     */
+  assignmentMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 43200
+     */
+  arrivalMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 43200
+     */
+  resolutionMinutes: number;
+  pauseResolution: boolean;
+  /** @minimum 1 */
+  version?: number;
+}
+
+export type OperationalRequestInputContactMethod = typeof OperationalRequestInputContactMethod[keyof typeof OperationalRequestInputContactMethod];
+
+
+export const OperationalRequestInputContactMethod = {
+  app: 'app',
+  phone: 'phone',
+  email: 'email',
+  none: 'none',
+} as const;
+
+export interface OperationalRequestInput {
+  key?: string;
+  unitId: string;
+  /**
+     * @minLength 3
+     * @maxLength 160
+     */
+  subject: string;
+  /** @maxLength 4000 */
+  description?: string;
+  categoryId?: string;
+  priority?: RequestPriority;
+  reportedForUserId?: string;
+  contactMethod?: OperationalRequestInputContactMethod;
+  preferredVisitStart?: string;
+  preferredVisitEnd?: string;
+  technicianId?: string;
+  assetId?: string;
+}
+
+export type WorkTransitionInputAction = typeof WorkTransitionInputAction[keyof typeof WorkTransitionInputAction];
+
+
+export const WorkTransitionInputAction = {
+  assign: 'assign',
+  start: 'start',
+  report: 'report',
+  approve: 'approve',
+  reject: 'reject',
+  confirm: 'confirm',
+  reopen: 'reopen',
+  accept: 'accept',
+  cannot_perform: 'cannot_perform',
+  pause: 'pause',
+  resume: 'resume',
+} as const;
+
+export type WorkTransitionInputReason = typeof WorkTransitionInputReason[keyof typeof WorkTransitionInputReason];
+
+
+export const WorkTransitionInputReason = {
+  resident_unavailable: 'resident_unavailable',
+  no_access: 'no_access',
+  missing_material: 'missing_material',
+  requires_specialist: 'requires_specialist',
+  unsafe_condition: 'unsafe_condition',
+  wrong_category: 'wrong_category',
+  other: 'other',
+} as const;
+
+export type WorkTransitionInputChecklistItem = {
+  /** @maxLength 200 */
+  text: string;
+  done: boolean;
+};
+
+export interface WorkTransitionInput {
+  key?: string;
+  /** @minimum 1 */
+  version: number;
+  action: WorkTransitionInputAction;
+  technicianId?: string;
+  /** @maxLength 4000 */
+  note?: string;
+  reason?: WorkTransitionInputReason;
+  /** @maxItems 30 */
+  checklist?: WorkTransitionInputChecklistItem[];
+}
+
+export interface VisitProposalInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export type VisitResponseInputAction = typeof VisitResponseInputAction[keyof typeof VisitResponseInputAction];
+
+
+export const VisitResponseInputAction = {
+  confirm: 'confirm',
+  cancel: 'cancel',
+} as const;
+
+export interface VisitResponseInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  /** @minimum 1 */
+  visitVersion: number;
+  action: VisitResponseInputAction;
+  /** @maxLength 4000 */
+  note?: string;
+}
+
+export type MaterialInputKind = typeof MaterialInputKind[keyof typeof MaterialInputKind];
+
+
+export const MaterialInputKind = {
+  material: 'material',
+  service: 'service',
+} as const;
+
+export interface MaterialInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  kind: MaterialInputKind;
+  /** @maxLength 160 */
+  name: string;
+  /** @minimum 0.001 */
+  quantity: number;
+  /** @maxLength 30 */
+  unit: string;
+  /** @minimum 0 */
+  unitCostMinor?: number;
+  /** @maxLength 1000 */
+  comment?: string;
+}
+
+export type IncidentTransitionInputStatus = typeof IncidentTransitionInputStatus[keyof typeof IncidentTransitionInputStatus];
+
+
+export const IncidentTransitionInputStatus = {
+  open: 'open',
+  investigating: 'investigating',
+  resolved: 'resolved',
+  closed: 'closed',
+} as const;
+
+export type IncidentTransitionInputSeverity = typeof IncidentTransitionInputSeverity[keyof typeof IncidentTransitionInputSeverity];
+
+
+export const IncidentTransitionInputSeverity = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export interface IncidentTransitionInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  status: IncidentTransitionInputStatus;
+  severity?: IncidentTransitionInputSeverity;
+  /**
+     * @minLength 3
+     * @maxLength 4000
+     */
+  note: string;
+}
+
+export interface OperationalRow { [key: string]: unknown }
+
 export type EmailStatus = typeof EmailStatus[keyof typeof EmailStatus];
 
 
@@ -272,5 +519,36 @@ export const ListEmailMessagesProvider = {
   smtp: 'smtp',
   outbox: 'outbox',
   disabled: 'disabled',
+} as const;
+
+export type GetDispatcherSetupParams = {
+buildingId?: string;
+unitId?: string;
+};
+
+export type LookupEquipmentParams = {
+/**
+ * @maxLength 160
+ */
+identifier: string;
+};
+
+export type ListOperationalVisitsParams = {
+from: string;
+to: string;
+};
+
+export type UploadOperationalPhotoParams = {
+photoType?: UploadOperationalPhotoPhotoType;
+};
+
+export type UploadOperationalPhotoPhotoType = typeof UploadOperationalPhotoPhotoType[keyof typeof UploadOperationalPhotoPhotoType];
+
+
+export const UploadOperationalPhotoPhotoType = {
+  before: 'before',
+  during: 'during',
+  after: 'after',
+  evidence: 'evidence',
 } as const;
 

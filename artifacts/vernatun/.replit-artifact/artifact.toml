@@ -12,7 +12,7 @@ paths = [ "/" ]
 localPort = 23227
 
 [services.development]
-run = "pnpm --filter @workspace/vernatun run dev"
+run = "node ../../scripts/dev-service.mjs web"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/vernatun", "run", "build" ]

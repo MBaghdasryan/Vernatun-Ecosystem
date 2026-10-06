@@ -120,7 +120,9 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-buildAll().catch((err) => {
+// Importers must not start dist/index.mjs until the new bundle exists.
+// A fire-and-forget promise let the managed owner import the previous build.
+await buildAll().catch((err) => {
   console.error(err);
   process.exit(1);
 });
