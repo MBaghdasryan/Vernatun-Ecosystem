@@ -1,0 +1,15 @@
+
+#15 - Цель
+Сейчас invitation email_delivery_status=sent означает только принятие транспортом. Добавить подтверждённые delivered/bounced/complained outcomes, чтобы оператор видел недоставленные приглашения и мог исправить адрес/повторить отправку. Не добавлять tracking открытий/кликов. Это отдельное улучшение после подключения EmailProvider.
+
+Архитектура и исходники
+artifacts/api-server/archive/vernatun/server/email-providers/types.ts, resend.ts, smtp.ts, index.ts; server/email.ts, invitation-delivery.ts; artifacts/vernatun/src/portal/InvitationConsole.tsx, console-i18n.ts. Уже есть ResendEmailProvider/SMTPEmailProvider/DevelopmentOutboxProvider; send facade возвращает messageId для Resend, но persistent delivery attempt ledger/webhooks пока отсутствуют. Провайдер выбран настройкой MAIL_PROVIDER, бизнес-логика не должна зависеть от Resend.
+
+Готово, когда
+Generic normalized delivery events с provider adapters и честными capability flags; отсутствие SMTP/DSN evidence не превращается в delivered.
+Persistent attempt/message correlation без plaintext URL/token; прежние sent остаются accepted/unknown. Аудит сохраняется append-only.
+Signed Resend inbound webhook, replay/idempotency protection, scoped correlation и отсутствие чужих recipient данных в UI. Старый bounce от предыдущего attempt не портит статус нового письма и не меняет lifecycle/роль приглашения.
+Оператор видит фактический outcome и может resend/revoke существующими scoped ручками. Никаких ложных success/автоматического revival.
+Regression tests: bad signature, duplicate/out-of-order event, old attempt, tenant isolation, provider without delivery evidence, rotated token.
+Безопасность/зависимости
+Для live setup необходим исправный ключ существующего Resend connection, verified sender и согласованный публичный callback. Production URL получать по deployment skill, не конструировать. Webhook signing secret вводить через environment-secrets, никогда в чат/код. Не создавать webhook и не отправлять реальные письма без согласованного setup. Добавочные миграции сначала проверять в изоляции; применённые001–013 не переписывать, main seed/data/private bytes не трогать.

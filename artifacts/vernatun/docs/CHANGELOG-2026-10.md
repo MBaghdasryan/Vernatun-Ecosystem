@@ -1,5 +1,13 @@
 # Vernatun — октябрь 2026
 
+## 6 октября — текущий подробный completion report
+
+- Создан `VERNATUN-COMPLETION-REPORT.md`: 17 acceptance-разделов, сверка всего мастер-промпта, scenarios A–H, live-mail results и production checklist.
+- Учтён реально объединённый HAYAT offline; current core61/61, Web/API types и Web build passed.
+- Готовая отдельная email delivery задача не объявляется активной: её handler отсутствует в основных исходниках.
+- Read-only Resend auth по-прежнему отклонён; domain/live mail не проверены, сообщений не отправляли.
+- Production deployment отсутствует; dev URL не используется вместо callback.
+
 ## 6 октября — старт выполнения новой платформенной спецификации
 
 ### Changed

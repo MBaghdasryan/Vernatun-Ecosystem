@@ -1,0 +1,2383 @@
+Продолжи разработку существующего проекта **Vernatun** после завершения текущего Master Completion Prompt.
+
+Это отдельный следующий этап.
+
+# ЦЕЛЬ ЭТАПА
+
+Создать внутри **Vernatun Console** полноценный технический контур управления платформой:
+
+**Platform Operations Center**
+
+Он предназначен только для:
+
+- `platform_admin`;
+- при необходимости — отдельной будущей технической роли `platform_engineer`.
+
+Этот раздел НЕ должен быть доступен:
+
+- org_admin;
+- manager;
+- dispatcher;
+- accountant;
+- resident;
+- owner;
+- renter;
+- family;
+- contractor;
+- security;
+- обычному support без специального permission.
+
+Основная задача:
+
+сделать Vernatun не просто приложением, а **управляемой SaaS-платформой**, которую можно обслуживать, резервировать, диагностировать, интегрировать, расширять модулями и обновлять через контролируемый administrative workflow.
+
+---
+
+# 1. НЕ ЛОМАТЬ СУЩЕСТВУЮЩУЮ СИСТЕМУ
+
+Перед реализацией проведи audit текущего:
+
+- Vernatun Console;
+- RBAC;
+- permissions;
+- audit log;
+- database;
+- filesystem/storage;
+- API;
+- environment;
+- Replit deployment;
+- existing logs;
+- cache;
+- migrations;
+- OpenAPI;
+- modules;
+- integrations;
+- backup scripts;
+- deployment scripts.
+
+Если часть требуемого функционала уже существует — расширь её.
+
+НЕ создавай параллельную техническую админку.
+
+Используй существующий:
+
+`/console/*`
+
+---
+
+# 2. НОВЫЙ РАЗДЕЛ CONSOLE
+
+Добавить верхнеуровневый раздел:
+
+**System**
+
+или
+
+**Platform Operations**
+
+Предпочтительный маршрут:
+
+`/console/system`
+
+Подразделы:
+
+- Overview
+- Backups
+- Logs
+- Cache
+- API
+- Integrations
+- Modules & Plugins
+- Updates
+- Jobs
+- Health
+- Environment
+- Audit
+
+Если существующая структура Console использует другой паттерн — адаптируйся к нему.
+
+---
+
+# 3. PERMISSIONS
+
+Не использовать один огромный `platform_admin=true`.
+
+Добавить granular permissions.
+
+Минимум:
+
+- `system.read`
+- `system.health.read`
+
+- `backups.read`
+- `backups.create`
+- `backups.download`
+- `backups.restore`
+
+- `logs.read`
+- `logs.export`
+
+- `cache.read`
+- `cache.clear`
+
+- `api.read`
+- `api.keys.manage`
+- `api.clients.manage`
+
+- `integrations.read`
+- `integrations.manage`
+- `integrations.test`
+
+- `plugins.read`
+- `plugins.manage`
+
+- `updates.read`
+- `updates.upload`
+- `updates.install`
+- `updates.rollback`
+
+- `jobs.read`
+- `jobs.manage`
+
+- `environment.read`
+
+Не разрешать secrets через `environment.read`.
+
+На критичные действия использовать:
+
+- recent authentication;
+- MFA если включена;
+- confirmation;
+- audit event.
+
+---
+
+# 4. SYSTEM OVERVIEW
+
+Создать:
+
+`/console/system/overview`
+
+Показать:
+
+## Application
+
+- application version;
+- build version;
+- Git commit/hash если доступно;
+- environment;
+- uptime;
+- start time;
+- node version;
+- frontend version;
+- backend version.
+
+## Database
+
+- PostgreSQL status;
+- DB version;
+- connectivity;
+- database size;
+- current migration version;
+- connection pool status.
+
+## Storage
+
+- provider:
+  - Local
+  - S3 Compatible
+- status;
+- used size where available;
+- files count where practical.
+
+## Email
+
+- provider;
+- configured/not configured;
+- last successful send;
+- recent failures.
+
+## Cache
+
+- provider;
+- entries/approximate usage if available.
+
+## Background jobs
+
+- healthy;
+- running;
+- failed;
+- queued.
+
+## Integrations
+
+- total;
+- active;
+- failed;
+- not configured.
+
+## Backup
+
+- last successful backup;
+- age;
+- size;
+- backup type.
+
+## System status
+
+- Healthy
+- Warning
+- Critical
+
+Do not fake metrics.
+
+Если значение невозможно получить безопасно — показывать:
+
+`Unavailable`
+
+---
+
+# 5. BACKUP CENTER
+
+Добавить:
+
+`/console/system/backups`
+
+Это один из самых важных технических разделов.
+
+Поддержать несколько типов backup.
+
+---
+
+# 5.1 DATABASE BACKUP
+
+Тип:
+
+**Database Only**
+
+Создавать backup PostgreSQL.
+
+Предпочтительно использовать стандартный:
+
+`pg_dump`
+
+Backup должен содержать:
+
+- schema;
+- migrations state;
+- business records.
+
+Не включать plaintext secrets.
+
+---
+
+# 5.2 FILES BACKUP
+
+Тип:
+
+**Files Only**
+
+Включить:
+
+- private photos;
+- private documents;
+- uploaded assets;
+- organization logos;
+- другие user-generated files.
+
+Не включать cache/temp.
+
+---
+
+# 5.3 FULL APPLICATION DATA BACKUP
+
+Тип:
+
+**Full Data Backup**
+
+Включает:
+
+- PostgreSQL;
+- private uploaded files;
+- storage metadata;
+- application metadata необходимую для восстановления.
+
+---
+
+# 5.4 PLATFORM CONFIGURATION BACKUP
+
+Тип:
+
+**Configuration Backup**
+
+Можно включать:
+
+- non-secret settings;
+- organization module configuration;
+- plans;
+- system configuration;
+- integration definitions WITHOUT secret credentials.
+
+Нельзя экспортировать secret values открытым текстом.
+
+---
+
+# 5.5 FULL SYSTEM PACKAGE
+
+Если архитектура позволяет безопасно:
+
+**Full Platform Snapshot**
+
+может включать:
+
+- DB backup;
+- private files;
+- current application version manifest;
+- migration version;
+- module registry;
+- integration registry;
+- checksum manifest.
+
+Не надо включать:
+
+- node_modules;
+- build cache;
+- temp;
+- logs;
+- raw environment secrets.
+
+---
+
+# 6. BACKUP UI
+
+Для каждого backup показывать:
+
+- ID;
+- type;
+- created_at;
+- created_by;
+- status;
+- size;
+- application version;
+- schema/migration version;
+- storage provider;
+- checksum;
+- notes.
+
+Statuses:
+
+- pending
+- running
+- completed
+- failed
+- expired
+- deleted
+
+Actions:
+
+- Create
+- Download
+- Verify
+- Delete
+- Restore
+
+Restore — особо опасная операция.
+
+---
+
+# 7. BACKUP VERIFICATION
+
+После создания backup:
+
+- проверить archive readability;
+- проверить checksum;
+- проверить manifest;
+- проверить наличие ожидаемых компонентов.
+
+Status:
+
+- verified
+- verification_failed
+
+Не считать backup успешным только потому, что процесс завершился exit code 0.
+
+---
+
+# 8. BACKUP ENCRYPTION
+
+Предусмотреть возможность:
+
+- encrypted backups;
+- encryption at rest.
+
+Не хранить encryption password вместе с backup.
+
+Если полноценное encryption management сейчас невозможно — построить интерфейс provider abstraction и честно отметить configuration status.
+
+---
+
+# 9. BACKUP STORAGE PROVIDERS
+
+Создать abstraction:
+
+`BackupStorageProvider`
+
+Минимум:
+
+### LocalBackupStorage
+
+для development/testing.
+
+### S3BackupStorage
+
+для production.
+
+В дальнейшем можно подключать:
+
+- AWS S3;
+- Cloudflare R2;
+- Backblaze B2;
+- MinIO;
+- Wasabi;
+- другие S3-compatible.
+
+Не делать vendor lock-in.
+
+---
+
+# 10. BACKUP SCHEDULE
+
+Добавить автоматические backup policies.
+
+Например:
+
+Database:
+- daily
+
+Full data:
+- weekly
+
+Configuration:
+- before platform update
+
+Настройки:
+
+- enabled;
+- frequency;
+- retention;
+- target provider.
+
+Retention examples:
+
+- last 7 daily;
+- last 4 weekly;
+- last 6 monthly.
+
+Background job должен чистить только backups согласно retention policy.
+
+---
+
+# 11. RESTORE
+
+Создать restore workflow.
+
+НИКОГДА не делать restore одной кнопкой без проверки.
+
+Workflow:
+
+1. Select backup
+2. Verify backup
+3. Show contents
+4. Show version compatibility
+5. Recent authentication
+6. MFA where configured
+7. Type confirmation phrase
+8. Maintenance mode
+9. Pre-restore automatic safety backup
+10. Restore
+11. Migration compatibility
+12. Health checks
+13. Exit maintenance mode
+14. Audit
+
+В production restore должен требовать максимально строгую защиту.
+
+---
+
+# 12. LOG CENTER
+
+Добавить:
+
+`/console/system/logs`
+
+Не ограничиваться одним server.log.
+
+Нужно создать централизованный Log Viewer.
+
+---
+
+# 13. LOG TYPES
+
+Разделить минимум:
+
+### Application Logs
+
+- info
+- warning
+- error
+- fatal
+
+### API Logs
+
+- endpoint
+- method
+- status
+- latency
+- request ID
+
+### Authentication Logs
+
+- login success
+- login failure
+- logout
+- MFA
+- password reset
+- lockout
+
+### Security Logs
+
+- unauthorized access
+- forbidden
+- CSRF failure
+- rate limit
+- IDOR attempt where detectable
+- invalid token
+- permission denied
+
+### Database Logs
+
+Только безопасная диагностическая информация.
+
+Не показывать raw credentials.
+
+### Integration Logs
+
+- provider
+- operation
+- status
+- latency
+- external error
+
+### Email Logs
+
+- queued
+- sent
+- failed
+- provider response reference
+
+Не хранить полный sensitive email body без необходимости.
+
+### Background Job Logs
+
+- job
+- start
+- finish
+- failure
+- retries
+
+### System Logs
+
+- application start;
+- deployment;
+- migration;
+- backup;
+- restore;
+- update.
+
+---
+
+# 14. LOG FILTERS
+
+UI должен поддерживать:
+
+- date from/to;
+- level;
+- service;
+- module;
+- user;
+- organization;
+- request ID;
+- endpoint;
+- HTTP status;
+- error code;
+- integration;
+- job.
+
+Search:
+
+- free text;
+- request ID;
+- account email/name where allowed;
+- resource ID.
+
+Pagination обязательна.
+
+Не загружать гигабайты логов в browser.
+
+---
+
+# 15. ACCOUNT ACTIVITY
+
+Нужен технический поиск по account/user.
+
+Например:
+
+`/console/system/logs?user=<id>`
+
+Показывать связанные события:
+
+- login;
+- failed login;
+- contexts;
+- permissions denied;
+- API actions;
+- sessions;
+- MFA;
+- password resets;
+- business audit references;
+- integration calls initiated by user.
+
+Не смешивать operational log и immutable business audit.
+
+UI может показывать их рядом, но данные должны оставаться разными системами.
+
+---
+
+# 16. ERROR CENTER
+
+Добавить специализированный экран:
+
+`/console/system/errors`
+
+или tab внутри Logs.
+
+Группировать ошибки:
+
+- fingerprint;
+- message;
+- service;
+- first seen;
+- last seen;
+- occurrences;
+- affected users;
+- affected organizations;
+- latest request ID;
+- resolved/open.
+
+Не нужно строить полный Sentry clone.
+
+Но должна быть практичная диагностика повторяющихся ошибок.
+
+---
+
+# 17. ERROR DETAILS
+
+Error detail:
+
+- error type;
+- safe stack trace;
+- timestamp;
+- application version;
+- request ID;
+- endpoint;
+- user ID if allowed;
+- organization ID;
+- environment;
+- context metadata.
+
+НЕ отображать:
+
+- password;
+- token;
+- cookies;
+- Authorization header;
+- MFA secret;
+- DB password;
+- SMTP password;
+- API secret.
+
+Добавить central redaction function.
+
+---
+
+# 18. EXPORT LOGS
+
+Разрешить platform engineer/admin экспортировать выбранный диапазон:
+
+- JSON
+- CSV
+
+С ограничением размера.
+
+Большой export выполнять background job.
+
+Export также аудировать.
+
+---
+
+# 19. CACHE MANAGEMENT
+
+Создать:
+
+`/console/system/cache`
+
+Сначала определить, какие cache реально используются.
+
+НЕ создавай fake cache UI.
+
+Показывать cache namespaces.
+
+Например:
+
+- application;
+- permission;
+- session-related cache если существует;
+- dashboard;
+- API metadata;
+- public content;
+- temporary cache.
+
+---
+
+# 20. CLEAR CACHE
+
+Actions:
+
+- Clear selected namespace
+- Clear organization cache
+- Clear user cache
+- Clear all safe cache
+
+Очень важно:
+
+**НЕ удалять sessions под названием "clear cache"**, если пользователь отдельно этого не выбрал.
+
+Разделить:
+
+`Cache`
+
+и
+
+`Sessions`.
+
+После очистки показать:
+
+- cache;
+- number of entries where measurable;
+- duration;
+- success/failure.
+
+Audit обязательно.
+
+---
+
+# 21. CACHE PROVIDER ABSTRACTION
+
+Если сейчас cache in-memory:
+
+создать abstraction для будущего Redis:
+
+`CacheProvider`
+
+Implementations:
+
+- MemoryCacheProvider
+- RedisCacheProvider
+
+Не требуется обязательно подключать Redis сейчас.
+
+---
+
+# 22. SESSION ADMINISTRATION
+
+Добавить отдельный технический экран Sessions.
+
+Platform admin с соответствующим permission может:
+
+- увидеть количество активных sessions;
+- sessions конкретного account;
+- created_at;
+- last_activity;
+- approximate device/browser;
+- IP если privacy policy позволяет;
+- revoke one session;
+- revoke all sessions user.
+
+Не показывать session cookie/token.
+
+---
+
+# 23. API CENTER
+
+Создать:
+
+`/console/system/api`
+
+Подразделы:
+
+- Overview
+- Documentation
+- API Clients
+- API Keys
+- Webhooks
+- Integration Registry
+- Testing
+
+---
+
+# 24. API DOCUMENTATION
+
+Использовать существующий OpenAPI.
+
+Добавить UI документации.
+
+Например:
+
+- Swagger UI
+или
+- Scalar
+или аналогичную безопасную OpenAPI viewer библиотеку.
+
+Маршрут:
+
+`/api/docs`
+
+или защищённый:
+
+`/console/system/api/docs`
+
+В production документация может требовать authentication.
+
+---
+
+# 25. OPENAPI
+
+OpenAPI должен:
+
+- соответствовать реальным routes;
+- содержать schemas;
+- authentication;
+- parameters;
+- responses;
+- errors.
+
+Добавить CI/test, который хотя бы проверяет schema validity.
+
+---
+
+# 26. API VERSIONING
+
+Не ломать текущие `/api/*`.
+
+Для будущих external API заложить:
+
+`/api/v1/...`
+
+Внутренние endpoints можно временно оставить.
+
+Новые external/public integration endpoints предпочтительно проектировать с versioning.
+
+---
+
+# 27. API CLIENTS
+
+Добавить сущность:
+
+`api_clients`
+
+Поля:
+
+- id
+- organization_id nullable
+- name
+- description
+- client_type
+- status
+- allowed_scopes
+- allowed_ips optional
+- created_by
+- created_at
+- last_used_at
+
+Types:
+
+- platform
+- organization
+- integration
+- machine_to_machine
+
+---
+
+# 28. API KEYS
+
+Создание key:
+
+показывать secret только один раз.
+
+В БД хранить:
+
+- hash;
+- prefix;
+- metadata.
+
+Не plaintext.
+
+Поддержать:
+
+- expiration;
+- revoke;
+- rotate;
+- scopes;
+- last_used;
+- rate limit policy.
+
+---
+
+# 29. API SCOPES
+
+Scopes должны быть отдельны от UI role permissions.
+
+Например:
+
+- properties.read
+- units.read
+- residents.read
+- requests.read
+- requests.write
+- payments.read
+- payments.write
+- meters.read
+- meters.write
+- passes.read
+- access_events.write
+
+Не создавать один:
+
+`api.full_access`
+
+как стандартный вариант.
+
+---
+
+# 30. WEBHOOKS
+
+Добавить framework для outgoing webhooks.
+
+Configuration:
+
+- endpoint URL;
+- events;
+- secret;
+- enabled;
+- organization/platform scope.
+
+Events examples:
+
+- request.created
+- request.updated
+- workorder.completed
+- payment.received
+- invoice.created
+- meter.submitted
+- pass.created
+- access.event
+- incident.created
+
+---
+
+# 31. WEBHOOK SECURITY
+
+Подписывать webhook:
+
+HMAC SHA-256 или эквивалент.
+
+Headers:
+
+- event ID;
+- timestamp;
+- signature.
+
+Добавить:
+
+- retry;
+- exponential backoff;
+- delivery log;
+- manual retry;
+- dead-letter state.
+
+---
+
+# 32. INTEGRATIONS CENTER
+
+Создать:
+
+`/console/system/integrations`
+
+Это должен быть важный extensibility layer.
+
+Создать единый integration registry.
+
+---
+
+# 33. INTEGRATION CATEGORIES
+
+Поддержать категории:
+
+### Payments
+
+- payment gateways
+- online acquiring
+
+### Banks
+
+- statement import
+- transaction APIs
+
+### SMS
+
+- SMS providers
+
+### Email
+
+- SMTP
+- transactional email providers
+
+### Access Control
+
+- barriers
+- gates
+- turnstiles
+
+### Intercom
+
+- building intercom APIs
+
+### CCTV / Cameras
+
+- camera/VMS integrations
+
+### Metering
+
+- IoT meters
+- telemetry platforms
+
+### AI
+
+- OpenAI-compatible API
+- local LLM
+- other LLM provider
+
+### Chatbots
+
+- website chatbot
+- Telegram
+- WhatsApp where provider exists
+
+### CRM / ERP
+
+- accounting
+- CRM
+- ERP
+
+### Government / Registries
+
+future integrations.
+
+---
+
+# 34. INTEGRATION PROVIDER INTERFACE
+
+Каждый integration provider должен иметь единый contract conceptually:
+
+- id
+- name
+- category
+- version
+- capabilities
+- configuration schema
+- credential schema
+- testConnection()
+- healthCheck()
+- activate()
+- deactivate()
+
+Не обязательно использовать dynamic executable packages на первом этапе.
+
+Главное — создать безопасную extensible architecture.
+
+---
+
+# 35. INTEGRATION INSTANCE
+
+Организация или платформа может создать integration instance.
+
+Поля:
+
+- provider;
+- organization/platform;
+- display name;
+- enabled;
+- environment:
+  - sandbox
+  - production
+- config;
+- encrypted credentials;
+- status;
+- last check;
+- last error.
+
+Secrets encrypted at rest.
+
+Не отправлять secrets frontend после сохранения.
+
+---
+
+# 36. TEST CONNECTION
+
+Кнопка:
+
+**Test Connection**
+
+должна реально вызвать provider health/test method.
+
+Результаты:
+
+- Connected
+- Authentication failed
+- Timeout
+- Invalid configuration
+- Provider error
+
+Сохранять безопасный diagnostic log.
+
+---
+
+# 37. PAYMENT PROVIDER ARCHITECTURE
+
+Создать интерфейс:
+
+`PaymentProvider`
+
+Capabilities:
+
+- createPayment
+- verifyPayment
+- webhook
+- refund optional
+
+Конкретный провайдер сейчас может отсутствовать.
+
+Нельзя создавать fake successful payment.
+
+---
+
+# 38. BANK PROVIDER
+
+Интерфейс:
+
+`BankingProvider`
+
+Capabilities:
+
+- importStatement
+- fetchTransactions optional
+- validateAccount
+- transaction normalization.
+
+CSV import может существовать независимо.
+
+---
+
+# 39. EMAIL PROVIDER
+
+Расширить существующий EmailProvider.
+
+Поддержать architecture для:
+
+- SMTP;
+- SendGrid-style API;
+- Amazon SES;
+- Mailgun;
+- Brevo;
+- другие.
+
+Сейчас минимум SMTP.
+
+---
+
+# 40. SMS PROVIDER
+
+Создать abstraction:
+
+`SmsProvider`
+
+Пока можно иметь:
+
+`NotConfiguredSmsProvider`
+
+Но не имитировать отправку.
+
+---
+
+# 41. ACCESS CONTROL PROVIDER
+
+Создать интерфейс:
+
+`AccessControlProvider`
+
+Для будущих:
+
+- gates;
+- barrier;
+- door controller;
+- turnstile.
+
+Capabilities:
+
+- validate credential;
+- open device;
+- device status;
+- access event.
+
+Критично:
+
+**не подключать действие openDevice к UI без реального provider configuration и permission.**
+
+---
+
+# 42. CAMERA PROVIDER
+
+Не пытайся самостоятельно реализовать VMS.
+
+Создать integration abstraction:
+
+`CameraProvider`
+
+Capabilities:
+
+- list cameras;
+- live stream URL/token;
+- snapshot;
+- event lookup.
+
+Security permissions обязательны.
+
+---
+
+# 43. AI PROVIDER
+
+Создать generic abstraction:
+
+`AIProvider`
+
+Поддержать OpenAI-compatible configuration:
+
+- base URL;
+- API key;
+- model;
+- timeout;
+- max tokens;
+- optional organization/project.
+
+Но пока НЕ интегрировать AI в чувствительные процессы автоматически.
+
+Можно создать test prompt functionality только для platform admin.
+
+Не отправлять resident/business data в AI provider без отдельного явного feature implementation и permission.
+
+---
+
+# 44. MODULES & PLUGINS CENTER
+
+Создать:
+
+`/console/system/modules`
+
+или
+
+`/console/system/plugins`
+
+Предпочтительно назвать UI:
+
+**Modules & Extensions**
+
+---
+
+# 45. РАЗДЕЛИТЬ CONCEPTS
+
+Важно различать:
+
+### Core Modules
+
+Встроенные функциональные области Vernatun:
+
+- requests
+- finance
+- maintenance
+- access
+- documents
+- meetings
+- meters
+- etc.
+
+### Extensions
+
+Дополнительные функции поверх core.
+
+### Integrations
+
+Подключение внешних сервисов.
+
+Не смешивать всё в одну таблицу.
+
+---
+
+# 46. MODULE REGISTRY
+
+Создать registry metadata:
+
+- module_id;
+- name;
+- version;
+- type;
+- description;
+- status;
+- required_core_version;
+- dependencies;
+- capabilities;
+- configurable;
+- organization_enableable.
+
+---
+
+# 47. MODULE STATES
+
+- installed
+- enabled
+- disabled
+- incompatible
+- error
+
+---
+
+# 48. MODULE DEPENDENCIES
+
+Пример:
+
+AI Chatbot
+может требовать:
+
+- requests
+- documents
+- AI provider integration.
+
+При отключении dependency:
+
+не silently ломать module.
+
+Показывать dependency conflict.
+
+---
+
+# 49. ORGANIZATION MODULES
+
+Platform admin может определять:
+
+- globally available;
+- plan included;
+- organization override.
+
+Organization admin может управлять только разрешёнными ему optional modules.
+
+---
+
+# 50. PLUGIN SECURITY
+
+На данном этапе НЕ разрешать произвольную загрузку ZIP с исполняемым JavaScript и автоматический запуск.
+
+Это огромная supply-chain vulnerability.
+
+Архитектура должна предусматривать plugins, но installation package должен проходить trusted validation.
+
+Для первой версии:
+
+использовать registry известных extensions.
+
+---
+
+# 51. FUTURE PLUGIN PACKAGE FORMAT
+
+Спроектировать manifest.
+
+Например:
+
+`vernatun-extension.json`
+
+Поля:
+
+- id
+- name
+- version
+- vendor
+- description
+- compatibleCore
+- permissions
+- dependencies
+- migrations
+- frontendEntrypoint
+- backendEntrypoint
+
+Но сейчас не исполнять arbitrary uploaded code.
+
+---
+
+# 52. UPDATE CENTER
+
+Создать:
+
+`/console/system/updates`
+
+Это очень чувствительный модуль.
+
+---
+
+# 53. CURRENT VERSION
+
+Показать:
+
+- current version;
+- build;
+- release date;
+- commit/hash;
+- schema version.
+
+---
+
+# 54. UPDATE PACKAGE
+
+В будущем platform admin должен иметь возможность загрузить update package.
+
+Но не разрешать:
+
+`Upload ZIP → immediately execute`
+
+без валидации.
+
+Update package должен иметь:
+
+- manifest;
+- version;
+- required current version;
+- checksum;
+- signature future;
+- migrations;
+- application package;
+- release notes.
+
+---
+
+# 55. UPDATE MANIFEST
+
+Создать спецификацию:
+
+`vernatun-update.json`
+
+Минимум:
+
+- packageFormatVersion;
+- product;
+- version;
+- fromVersions;
+- createdAt;
+- checksum;
+- databaseMigrationRequired;
+- restartRequired;
+- minimumNodeVersion;
+- files manifest;
+- release notes.
+
+---
+
+# 56. UPDATE WORKFLOW
+
+Строго:
+
+1. Upload
+2. Store safely
+3. Calculate checksum
+4. Parse manifest
+5. Validate format
+6. Validate compatibility
+7. Validate version
+8. Show release notes
+9. Run preflight checks
+10. Automatic backup
+11. Enable maintenance mode
+12. Apply database migrations
+13. Deploy application files
+14. Restart where needed
+15. Health check
+16. Smoke test
+17. Complete
+18. Exit maintenance mode
+
+Если failure:
+
+- stop;
+- mark failed;
+- attempt safe rollback where architecture allows;
+- keep logs.
+
+---
+
+# 57. UPDATE DRY RUN
+
+Добавить:
+
+**Validate Update**
+
+до установки.
+
+Проверять:
+
+- manifest;
+- checksum;
+- version;
+- file paths;
+- migration compatibility;
+- disk capacity;
+- permissions;
+- expected application structure.
+
+---
+
+# 58. UPDATE PATH TRAVERSAL SECURITY
+
+Любой update archive должен проверяться против:
+
+- `../`
+- absolute paths;
+- symlinks;
+- unexpected executables;
+- overwrite sensitive runtime files.
+
+Update package не должен иметь возможность переписать:
+
+- `.env`;
+- backup encryption secrets;
+- OS/system files;
+- SSH configuration.
+
+---
+
+# 59. DATABASE BEFORE UPDATE
+
+Перед каждым production update:
+
+создавать автоматический verified DB backup.
+
+Если миграция затрагивает storage metadata — при необходимости full backup.
+
+Если backup failed:
+
+обновление не начинать.
+
+---
+
+# 60. UPDATE HISTORY
+
+Хранить:
+
+- version;
+- previous version;
+- uploaded by;
+- installed by;
+- started;
+- finished;
+- result;
+- backup ID;
+- log;
+- error;
+- rollback result.
+
+---
+
+# 61. ROLLBACK
+
+Не обещать rollback, если его невозможно гарантировать.
+
+Разделить:
+
+### Application rollback
+
+может быть возможен.
+
+### Database rollback
+
+опаснее.
+
+Предпочитать:
+
+- forward migrations;
+- backup restore для disaster recovery.
+
+UI должен ясно показывать последствия.
+
+---
+
+# 62. MAINTENANCE MODE
+
+Добавить platform maintenance mode.
+
+Options:
+
+- entire platform;
+- administrative maintenance;
+- API restrictions.
+
+Пользовательская страница:
+
+**Vernatun is temporarily under maintenance.**
+
+Но health endpoint должен оставаться доступен техническим системам.
+
+Не выключать backup/restore admin emergency channel без необходимости.
+
+---
+
+# 63. BACKGROUND JOB CENTER
+
+Создать:
+
+`/console/system/jobs`
+
+Показывать:
+
+- scheduled;
+- running;
+- completed;
+- failed;
+- retries.
+
+Примеры:
+
+- backups;
+- notifications;
+- SLA escalation;
+- maintenance generation;
+- webhook delivery;
+- log export;
+- imports;
+- update validation.
+
+---
+
+# 64. JOB ACTIONS
+
+Разрешить где безопасно:
+
+- retry failed;
+- cancel queued;
+- inspect details.
+
+Не давать возможность произвольно выполнить internal server function из UI.
+
+---
+
+# 65. HEALTH CENTER
+
+Создать:
+
+`/console/system/health`
+
+Проверять:
+
+- frontend;
+- API;
+- DB;
+- storage;
+- email;
+- backup storage;
+- cache;
+- background jobs;
+- configured integrations.
+
+Статусы:
+
+- Healthy
+- Degraded
+- Down
+- Not Configured
+
+---
+
+# 66. ENVIRONMENT SCREEN
+
+Создать read-only:
+
+`/console/system/environment`
+
+Показывать только:
+
+- environment name;
+- provider modes;
+- Node version;
+- DB engine;
+- storage provider;
+- cache provider;
+- email provider;
+- feature flags.
+
+Никогда не показывать secret values.
+
+Для secret:
+
+`Configured`
+
+или
+
+`Not configured`.
+
+---
+
+# 67. SECRET MANAGEMENT
+
+Создать central secret handling pattern.
+
+Secrets:
+
+- SMTP password;
+- API keys;
+- S3 credentials;
+- payment credentials;
+- bank credentials;
+- AI keys;
+- webhook secrets.
+
+После сохранения:
+
+не возвращать secret frontend.
+
+UI:
+
+`••••••••••••`
+
+Actions:
+
+- Replace
+- Remove
+- Test
+
+Не `View`.
+
+---
+
+# 68. ENCRYPTION AT REST FOR INTEGRATION SECRETS
+
+Использовать application encryption key из secure environment.
+
+Не использовать SESSION_SECRET автоматически, если архитектурно возможно выделить:
+
+`PLATFORM_ENCRYPTION_KEY`
+
+Добавить documented key rotation strategy.
+
+---
+
+# 69. PLATFORM AUDIT
+
+Каждое административное действие должно попасть в audit:
+
+- create backup;
+- download backup;
+- delete backup;
+- restore;
+- clear cache;
+- revoke session;
+- create API key;
+- revoke API key;
+- change integration;
+- test integration;
+- enable module;
+- disable module;
+- upload update;
+- validate update;
+- install update;
+- rollback;
+- enter maintenance mode;
+- exit maintenance mode.
+
+---
+
+# 70. DANGEROUS ACTION CONFIRMATION
+
+Создать общий reusable confirmation component.
+
+Для опасных действий:
+
+например:
+
+**RESTORE DATABASE**
+
+требовать ввести:
+
+`RESTORE`
+
+Для:
+
+**CLEAR ALL CACHE**
+
+`CLEAR CACHE`
+
+Для:
+
+**INSTALL UPDATE**
+
+version number или `INSTALL`.
+
+---
+
+# 71. RATE LIMITING
+
+Technical endpoints также защищать rate limits.
+
+Особенно:
+
+- login;
+- test integration;
+- log export;
+- API key creation;
+- backup;
+- update upload.
+
+---
+
+# 72. FILE UPLOAD SECURITY
+
+Для:
+
+- update packages;
+- backups;
+- plugin manifests;
+- integration files
+
+проверять:
+
+- size;
+- content type;
+- extension;
+- archive contents;
+- filename sanitization;
+- path traversal;
+- decompression bomb limits.
+
+---
+
+# 73. DATABASE MIGRATIONS
+
+Все новые таблицы добавлять только новыми migrations.
+
+Не изменять старые уже применённые migrations.
+
+Ожидаемые новые сущности могут включать:
+
+- system_backups
+- backup_policies
+- api_clients
+- api_keys
+- webhook_endpoints
+- webhook_deliveries
+- integration_providers
+- integration_instances
+- module_registry
+- module_instances
+- platform_updates
+- platform_update_runs
+- system_jobs
+- system_errors
+
+Но сначала audit существующей DB.
+
+Не создавать дубликаты существующих сущностей.
+
+---
+
+# 74. API
+
+Создать backend endpoints структурированно.
+
+Например:
+
+### Backups
+
+`GET /api/platform/backups`
+
+`POST /api/platform/backups`
+
+`POST /api/platform/backups/:id/verify`
+
+`GET /api/platform/backups/:id/download`
+
+`POST /api/platform/backups/:id/restore`
+
+### Logs
+
+`GET /api/platform/logs`
+
+`GET /api/platform/errors`
+
+### Cache
+
+`GET /api/platform/cache`
+
+`POST /api/platform/cache/clear`
+
+### Health
+
+`GET /api/platform/health`
+
+### Integrations
+
+`GET /api/platform/integrations`
+
+`POST /api/platform/integrations`
+
+`PATCH /api/platform/integrations/:id`
+
+`POST /api/platform/integrations/:id/test`
+
+### API clients
+
+`GET /api/platform/api-clients`
+
+`POST /api/platform/api-clients`
+
+### API keys
+
+`POST /api/platform/api-clients/:id/keys`
+
+`POST /api/platform/api-keys/:id/revoke`
+
+### Modules
+
+`GET /api/platform/modules`
+
+`POST /api/platform/modules/:id/enable`
+
+`POST /api/platform/modules/:id/disable`
+
+### Updates
+
+`GET /api/platform/updates`
+
+`POST /api/platform/updates/upload`
+
+`POST /api/platform/updates/:id/validate`
+
+`POST /api/platform/updates/:id/install`
+
+Это пример — адаптируй к существующим conventions.
+
+---
+
+# 75. OPENAPI
+
+Все эти endpoints внести в существующий OpenAPI.
+
+Documentation должна совпадать с реальностью.
+
+---
+
+# 76. TESTING
+
+Обязательно добавить integration tests.
+
+## Backup
+
+- unauthorized;
+- create;
+- verify;
+- failed backup;
+- permission;
+- retention;
+- delete;
+- restore validation.
+
+Не выполнять destructive restore основной тестовой БД без disposable test database.
+
+## Logs
+
+- filtering;
+- organization;
+- account;
+- redaction.
+
+## Cache
+
+- namespace clear;
+- permissions.
+
+## API key
+
+- creation;
+- secret only once;
+- valid scope;
+- invalid scope;
+- revoke;
+- expiration.
+
+## Webhook
+
+- signature;
+- delivery;
+- retry.
+
+## Integration
+
+- secret not returned;
+- test failure;
+- disabled provider.
+
+## Modules
+
+- dependency;
+- plan;
+- enable/disable.
+
+## Updates
+
+- invalid archive;
+- wrong checksum;
+- incompatible version;
+- path traversal;
+- preflight failure.
+
+---
+
+# 77. BROWSER QA
+
+Проверить Platform Operations Center:
+
+- 390px
+- 768px
+- 1024px
+- 1440px
+
+Основной приоритет desktop/tablet.
+
+Technical tables могут использовать horizontal scrolling.
+
+---
+
+# 78. TECHNICAL DOCUMENTATION
+
+Создать:
+
+`docs/PLATFORM-OPERATIONS.md`
+
+Описать:
+
+- backups;
+- restore;
+- logs;
+- cache;
+- health;
+- jobs.
+
+Создать:
+
+`docs/INTEGRATION-ARCHITECTURE.md`
+
+Описать:
+
+- Provider interfaces;
+- credentials;
+- webhook architecture;
+- external APIs.
+
+Создать:
+
+`docs/EXTENSION-SYSTEM.md`
+
+Описать:
+
+- core modules;
+- extensions;
+- integrations;
+- dependencies.
+
+Создать:
+
+`docs/UPDATE-SYSTEM.md`
+
+Описать:
+
+- package format;
+- validation;
+- backup;
+- installation;
+- rollback limitations.
+
+---
+
+# 79. НЕ ДЕЛАТЬ СЕЙЧАС
+
+Не нужно реально подключать все внешние сервисы.
+
+На этом этапе задача:
+
+**создать правильный integration framework.**
+
+Не надо сейчас покупать/подключать:
+
+- bank API;
+- SMS provider;
+- camera vendor;
+- barrier vendor;
+- intercom vendor;
+- OpenAI;
+- Telegram;
+- WhatsApp;
+- payment gateway.
+
+Но после этого этапа добавление нового provider должно требовать создания конкретного adapter, а не изменения всей платформы.
+
+---
+
+# 80. КОНЕЧНАЯ АРХИТЕКТУРА
+
+После этого Vernatun должен иметь четыре уровня:
+
+## CORE
+
+Основная бизнес-логика ЖКХ.
+
+## MODULES
+
+Опциональные функции.
+
+## INTEGRATIONS
+
+Внешние providers.
+
+## PLATFORM OPERATIONS
+
+Техническое управление самой SaaS.
+
+Схема:
+
+                    VERNATUN
+                        │
+       ┌────────────────┼────────────────┐
+       │                │                │
+ Vernatun OS          HAYAT            ImTun
+       │                │                │
+       └────────── Vernatun Core ───────┘
+                        │
+            ┌───────────┼───────────┐
+            │           │           │
+         Modules   Integrations    API
+            │           │           │
+            └───────────┼───────────┘
+                        │
+              Platform Operations
+                        │
+      ┌─────────────────┼──────────────────┐
+      │       │         │        │         │
+   Backup    Logs     Cache    Updates   Health
+
+---
+
+# 81. ПРИОРИТЕТ РЕАЛИЗАЦИИ
+
+Делай по этапам.
+
+## PHASE 1 — Operations foundation
+
+- permissions;
+- system overview;
+- health;
+- logs;
+- redaction;
+- jobs.
+
+## PHASE 2 — Backups
+
+- DB;
+- files;
+- full data;
+- policies;
+- verification.
+
+## PHASE 3 — Cache & Sessions
+
+- cache;
+- clear;
+- session administration.
+
+## PHASE 4 — API Center
+
+- OpenAPI UI;
+- clients;
+- API keys;
+- scopes;
+- webhooks.
+
+## PHASE 5 — Integrations
+
+- provider registry;
+- instances;
+- encrypted secrets;
+- connection tests.
+
+## PHASE 6 — Modules & Extensions
+
+- registry;
+- dependencies;
+- entitlement connection.
+
+## PHASE 7 — Updates
+
+- package manifest;
+- validation;
+- upload;
+- pre-backup;
+- update workflow;
+- history.
+
+## PHASE 8 — QA + documentation.
+
+---
+
+# 82. ВАЖНО ДЛЯ REPLIT
+
+Сейчас проект работает в Replit.
+
+Поэтому перед реализацией backup/update functionality отдельно выясни ограничения Replit runtime:
+
+- writable filesystem;
+- persistence;
+- deployment filesystem;
+- process restart;
+- environment secrets;
+- PostgreSQL access;
+- storage persistence.
+
+Не проектируй update mechanism, который работает локально, но физически не может безопасно работать в текущем Replit deployment.
+
+Если Replit deployment не позволяет безопасно заменять application files runtime-обновлением:
+
+НЕ имитируй это.
+
+В таком случае:
+
+реализуй Update Center как:
+
+- upload;
+- validation;
+- manifest;
+- history;
+- backup;
+- staged state;
+
+а installation adapter сделай deployment-provider-specific.
+
+Статус:
+
+`Manual deployment required`
+
+Это лучше ложной кнопки обновления.
+
+---
+
+# 83. ФИНАЛЬНЫЙ REPORT
+
+После выполнения создай:
+
+`docs/PLATFORM-OPERATIONS-COMPLETION.md`
+
+Дай таблицу:
+
+| Feature | Status | Real/Test/Stub | Notes |
+
+Обязательно перечислить:
+
+- Backup
+- Restore
+- Logs
+- Error Center
+- Cache
+- Sessions
+- Health
+- Jobs
+- OpenAPI
+- API Clients
+- API Keys
+- Webhooks
+- Integration Registry
+- Secret Storage
+- Modules
+- Extensions
+- Update Upload
+- Update Validation
+- Update Installation
+- Rollback
+
+Статусы только:
+
+- COMPLETE
+- PARTIAL
+- NOT IMPLEMENTED
+- NOT SUPPORTED BY CURRENT DEPLOYMENT
+- REQUIRES EXTERNAL PROVIDER
+
+Никаких преувеличений.
+
+---
+
+# 84. ГЛАВНАЯ ЦЕЛЬ
+
+После выполнения данного этапа я хочу иметь возможность открыть:
+
+**Vernatun Console → Platform Operations**
+
+и из единого технического интерфейса понимать:
+
+- работает ли платформа;
+- есть ли ошибки;
+- что происходило с конкретным аккаунтом;
+- что происходило с API;
+- какие integration failures есть;
+- когда был последний backup;
+- создать новый backup;
+- увидеть состояние базы;
+- увидеть storage;
+- очистить безопасный cache;
+- управлять sessions;
+- создавать API clients;
+- выдавать scoped API keys;
+- читать API documentation;
+- подключать external providers;
+- видеть установленные modules;
+- управлять optional modules;
+- загружать и проверять update packages;
+- видеть историю обновлений;
+- выполнять безопасные административные операции.
+
+Это должно превратить Vernatun из набора бизнес-модулей в **эксплуатационно управляемую SaaS-платформу**.
+
+Главный принцип:
+
+**Business platform + extensibility layer + operations layer.**
+
+Начни с audit текущего кода и реализуй эту архитектуру без дублирования уже существующих механизмов.

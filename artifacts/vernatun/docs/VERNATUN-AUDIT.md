@@ -4,6 +4,8 @@
 
 **Это промежуточный аудит и отчёт о первых исправлениях, не объявление о завершении всех фаз и не сертификат production readiness.**
 
+Актуальный подробный срез: `VERNATUN-COMPLETION-REPORT.md`. После объединения HAYAT offline текущий core run прошёл **61/61**. Webhook delivery задача отмечена как реализованная отдельно, но не объединена; в основных исходниках handler отсутствует. Resend read-only auth всё ещё возвращает `API key is invalid`, публикации нет.
+
 Активный текст задания сохранён без изменений в `VERNATUN-PLATFORM-SPECIFICATION.md`. Все 15 приложенных изображений просмотрены как ориентиры состава экранов. Показанные на них суммы, даты, имена, графики и статусы интеграций не переносятся в рабочие данные.
 
 ## Архитектура и ограничения
@@ -71,10 +73,10 @@ Manager может входить в OS только при уже предус�
 | 36: storage abstraction | Текущий защищённый App Storage уже работает — сохраняется вместо замены на Local/S3. Перенос байтов не выполнялся | `private-files.ts`, storage/backup tests |
 | 37–38: notifications/preferences | Частично: notifications и mark read; нет всего event catalog/email preferences/category settings | `services.ts`, `/notifications` |
 | 39: white label | Частично: базовый branding, original assets, tenant color; не полный org branding API/UI | `OrganizationSettings.tsx`, HAYAT/ImTun config |
-| 40: limited PWA/offline | Частично: в проверенном основном Workflow есть local draft; полноценный PWA/static fallback отсутствует. Отдельный offline результат нельзя считать активным только по статусу задачи без сверки main-кода | `Workflow.tsx` |
+| 40: limited PWA/offline | Частично: HAYAT offline реально объединён; IndexedDB drafts/files, публичная shell cache, явная sync и server receipts/context/version guards есть. Полный PWA/device acceptance не завершён | `OfflineWork.tsx`, `offline-store.ts`, `offline-shell.ts`, `offline.test.ts` |
 | 41: 14 dashboards | Частично: 14 roles/routes, scoped insights и HAYAT queues есть; не все блоки референсов имеют готовые процессы/агрегаты | `insights.ts`, `hayat.ts`, 3 оболочки |
-| 42: server pagination/filter/sort | Частично: HAYAT queue server-side; общие Records/DataTable работают client-side, audit ограничен 100 | `hayat.ts`, `api.ts`, `Portal.tsx` |
-| 43: security | Есть существенные guards и текущие проходящие API tests; cancelled subscription/новые процессы ещё требуют реализации и проверки | `security.test.ts`, `access.ts`, все routers |
+| 42: server pagination/filter/sort | Частично: HAYAT queue и новый audit server-side; общие Records/DataTable ещё client-side | `hayat.ts`, `platform-foundation.ts`, `Portal.tsx` |
+| 43: security | Guards и subscription read-only реализованы/проверены; отсутствующие новые процессы и production acceptance ещё требуют завершения | `security.test.ts`, `phase1.test.ts`, `access.ts`, все routers |
 | 44: MFA policy | Есть TOTP/recovery/rate limiting; нет configurable required policy/rollout | `mfa.ts`, `Mfa.tsx` |
 | 45–46: HY/RU/EN, AMD, timezone | Есть базовые настройки и translations; новые экраны потребуют string/timezone scan | i18n-файлы, organization settings |
 | 47–48: responsive/a11y | Частично: текущие адаптивные оболочки есть; все роли на всех 5 ширинах и accessibility acceptance ещё не проверены | portal/hayat/imtun CSS, dialogs |

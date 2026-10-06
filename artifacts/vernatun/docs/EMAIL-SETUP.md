@@ -10,6 +10,8 @@ Production запрещает outbox и возвращает configuration error
 
 ## Resend
 
+Текущий дополнительный срез: существующее connection всё ещё отвечает `API key is invalid`; действующая настройка sender сама по себе не подтверждает авторизацию/домен. Production publication отсутствует. Реализация учёта доставки отмечена как готовая в отдельной задаче, но не объединена с main; handler в текущих серверных исходниках не обнаружен. `RESEND_WEBHOOK_SECRET` отсутствует. Для запрошенной цепочки после объединения проверить `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, подпись raw body, replay/deduplication и связь со стабильным message ID/попыткой. До исправления ключа, публикации и разрешённого тестового адреса live-проверка не выполняется. Подробная сверка — `VERNATUN-COMPLETION-REPORT.md`.
+
 - `MAIL_PROVIDER=resend`, `EMAIL_FROM` — подтверждённый адрес отправителя.
 - Credentials хранятся в подключённой интеграции. Сервер использует `@replit/connectors-sdk`; отдельный `RESEND_API_KEY` не нужен.
 - SDK заново получает identity для запроса, не хранит долгоживущий клиент/ключ.
