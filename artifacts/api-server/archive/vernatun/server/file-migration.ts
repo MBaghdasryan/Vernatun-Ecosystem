@@ -2,7 +2,7 @@ import {readFile,lstat} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {pool} from './db.js';
-import {privateFileExists,readPrivateFile,savePrivateFile,type FileKind} from './private-files.js';
+import {privateFileExists,readPrivateFile,saveAndCommitPrivateFile,type FileKind} from './private-files.js';
 
 export async function storedFiles():Promise<{kind:FileKind;key:string;media_type:string}[]>{
   return (await pool.query(`
@@ -36,7 +36,7 @@ export async function migratePrivateFiles(sourceRoot:string,apply=false){
       report.pending++;
     }else{
       // Create-only: a rerun or another writer cannot overwrite existing bytes.
-      try{await savePrivateFile(file.kind,file.key,local,file.media_type)}
+      try{await saveAndCommitPrivateFile(file.kind,file.key,local,file.media_type,async()=>{})}
       catch(error){if((error as {code?:number}).code!==412)throw error}
       if(digest(local)!==digest(await readPrivateFile(file.kind,file.key)))throw new Error('Private file checksum mismatch after transfer');
       report.copied++;

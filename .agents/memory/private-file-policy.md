@@ -16,3 +16,15 @@ allow that validation to be bypassed.
 download, rather than granting permanent access based on the uploader's identity.
 Preserve existing metadata during byte transfer and require separate permission
 before publishing.
+
+Cleanup must never remove bytes with live references or change application
+metadata to make objects eligible for deletion. Use a reviewed inventory and a
+conservative waiting period, not automatic deletion on upload errors.
+
+**Why:** The user explicitly required safe cleanup after interrupted uploads.
+An object write and a PostgreSQL commit are not atomic; a failed commit response
+does not prove the metadata was never committed.
+
+**How to apply:** Future upload, restore and maintenance paths must coordinate
+with cleanup, and must not treat an exception as permission to delete bytes.
+Run cleanup only against the database that owns the selected storage prefix.

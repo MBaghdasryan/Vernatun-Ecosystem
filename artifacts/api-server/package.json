@@ -12,7 +12,8 @@
     "db:seed": "tsx archive/vernatun/server/seed.ts && tsx archive/vernatun/server/seed-modules.ts",
     "test:api": "cd archive/vernatun && tsx server/tests/run.ts",
     "test:storage": "cd archive/vernatun && tsx server/tests/run.ts --storage-only",
-    "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts"
+    "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts",
+    "storage:inventory": "tsx archive/vernatun/server/inventory-files.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^8.2.0",
