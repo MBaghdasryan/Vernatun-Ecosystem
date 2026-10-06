@@ -26,3 +26,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 MAIL_PROVIDER = "resend"
+EMAIL_FROM = "noreply@vernatun.io"
