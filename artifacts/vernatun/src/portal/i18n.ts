@@ -5,6 +5,9 @@ export type Language='hy'|'ru'|'en';
 export type Currency='AMD'|'RUB'|'USD';
 const strings={...businessStrings,...communityStrings,...lifecycleStrings,error_mfa_required:['Մուտքագրեք TOTP կամ վերականգնման կոդը։','Введите TOTP или резервный код.','Enter a TOTP or recovery code.'],error_invalid_mfa:['Կոդը սխալ է կամ արդեն օգտագործված։','Код неверен или уже использован.','Code is invalid or already used.'],
  brandSubtitle:['Գույքի կառավարման հարթակ','Платформа управления недвижимостью','Property management platform'],
+ error_connection:['Սերվերի հետ կապ չկա։ Ստուգեք կապը և կրկին փորձեք։','Нет соединения с сервером. Проверьте подключение и повторите попытку.','Cannot connect to the server. Check your connection and try again.'],
+ error_service_unavailable:['Ծառայությունը ժամանակավորապես անհասանելի է։ Կրկին փորձեք ավելի ուշ։','Сервис временно недоступен. Повторите попытку позже.','The service is temporarily unavailable. Please try again later.'],
+ error_server_error:['Սերվերի սխալ։ Կրկին փորձեք ավելի ուշ։','Ошибка сервера. Повторите попытку позже.','Server error. Please try again later.'],
  signIn:['Մուտք գործել','Войти','Sign in'],signOut:['Դուրս գալ','Выйти','Sign out'],email:['Էլ․ հասցե','Email','Email'],password:['Գաղտնաբառ','Пароль','Password'],name:['Անուն','Имя','Name'],
  welcome:['Բարի գալուստ Vernatun','Добро пожаловать в Vernatun','Welcome to Vernatun'],loginSubtitle:['Ձեր շենքերը, թիմը և տան ծառայությունները՝ մեկ հարթակում։','Ваши здания, команда и сервисы дома — в одной платформе.','Your buildings, team and home services in one place.'],
  loginTitle:['Մուտք ձեր հաշիվ','Вход в ваш аккаунт','Sign in to your account'],loginHint:['Օգտագործեք ձեր անհատական հաշիվը։ Հասանելիությունը որոշվում է նշանակված դերերով։','Используйте личный аккаунт. Доступ определяется назначенными ролями.','Use your individual account. Access is defined by your assigned roles.'],

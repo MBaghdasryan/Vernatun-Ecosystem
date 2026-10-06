@@ -1,0 +1,51 @@
+import {test,before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {randomBytes} from 'node:crypto';
+import {app} from '../app.js';
+import {pool} from '../db.js';
+import sharp from 'sharp';
+import {config} from '../config.js';
+if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Tests require isolated vernatun_test database');
+const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
+let base='';const server=app.listen(0,'127.0.0.1');
+class Client{cookie='';csrf='';async call(path:string,method='GET',body?:unknown,csrf=true){const r=await fetch(base+'/api'+path,{method,headers:{'Content-Type':'application/json',...(this.cookie?{Cookie:this.cookie}:{}),...(csrf&&method!=='GET'?{'X-CSRF-Token':this.csrf}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});const cookies=r.headers.getSetCookie();if(cookies.length)this.cookie=cookies.map(x=>x.split(';')[0]).join('; ');const data=r.status===204?null:await r.json();if(data?.csrf)this.csrf=data.csrf;return {status:r.status,data}}async login(key:string){const a=seeded.accounts[key];await this.call('/auth/session');const r=await this.call('/auth/login','POST',{email:a.email,password:a.password});assert.equal(r.status,200);if(!r.data.contextId){const id=r.data.contexts.find((x:any)=>x.role_key===a.role).id;assert.equal((await this.call('/auth/context','POST',{id})).status,200)}return this}}
+let owner:Client,dispatcher:Client,tech:Client,manager:Client,family:Client,other:Client;
+before(async()=>{await pool.query("DELETE FROM auth_rate_limits");await new Promise<void>(r=>server.listening?r():server.on('listening',r));base='http://127.0.0.1:'+(server.address() as {port:number}).port;owner=await new Client().login('unit_owner');dispatcher=await new Client().login('dispatcher');tech=await new Client().login('technician');manager=await new Client().login('manager');family=await new Client().login('family');other=await new Client().login('second_org')});
+after(async()=>{server.close();server.closeAllConnections();await pool.end()});
+test('Full request workflow, status guards, privacy and private photo authorization',async()=>{
+ const created=await owner.call('/requests','POST',{unitId:seeded.fixtures.ua,subject:'Workflow verification',description:'Integration test'});assert.equal(created.status,201);const id=created.data.id;
+ const step=(c:Client,action:string,version:number,extra={})=>c.call('/requests/'+id+'/transition','POST',{action,version,...extra});
+ assert.equal((await family.call('/requests/'+id)).status,404);
+ assert.equal((await tech.call('/requests/'+id)).status,404);
+ assert.equal((await other.call('/requests/'+id)).status,403);
+ assert.equal((await step(owner,'assign',1,{technicianId:seeded.accounts.technician.id})).status,403);
+ assert.equal((await step(dispatcher,'assign',1,{technicianId:seeded.accounts.family.id})).status,403);
+ assert.equal((await step(dispatcher,'assign',1,{technicianId:seeded.accounts.technician.id,checklist:[{text:'Inspect wiring',done:false}]})).status,200);
+ assert.equal((await step(dispatcher,'assign',1,{technicianId:seeded.accounts.technician.id})).status,409);
+ assert.equal((await step(tech,'report',2,{note:'Premature report'})).status,409);
+ assert.equal((await step(tech,'start',2)).status,200);
+ assert.equal((await step(tech,'report',3,{note:'Completed repair'})).status,400);
+ assert.equal((await dispatcher.call('/requests/'+id+'/messages','POST',{body:'Internal discussion',internal:true})).status,201);
+ assert.equal((await owner.call('/requests/'+id)).data.messages.length,0);
+ assert.equal((await owner.call('/requests/'+id+'/messages','POST',{body:'Attempt',internal:true})).status,403);
+ const image=await sharp({create:{width:8,height:8,channels:3,background:'#ff680a'}}).png().toBuffer();
+ const upload=await fetch(base+'/api/requests/'+id+'/photos',{method:'POST',headers:{Cookie:tech.cookie,'X-CSRF-Token':tech.csrf,'Content-Type':'application/octet-stream'},body:image});assert.equal(upload.status,201);const photo:any=await upload.json();
+ const download=await fetch(base+'/api/photos/'+photo.id,{headers:{Cookie:owner.cookie}});assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'image/jpeg');assert.match(download.headers.get('cache-control')!,/no-store/);
+ assert.equal((await fetch(base+'/api/photos/'+photo.id,{headers:{Cookie:family.cookie}})).status,404);
+ assert.equal((await fetch(base+'/api/photos/'+photo.id)).status,401);
+ assert.equal((await fetch(base+'/api/requests/'+id+'/photos',{method:'POST',headers:{Cookie:tech.cookie,'X-CSRF-Token':tech.csrf,'Content-Type':'application/octet-stream'},body:'<svg>invalid</svg>'})).status,400);
+ const assignment=(await tech.call('/auth/session')).data.contextId;
+ try{await pool.query('UPDATE role_assignments SET active=false WHERE id=$1',[assignment]);assert.equal((await fetch(base+'/api/photos/'+photo.id,{headers:{Cookie:tech.cookie}})).status,403)}finally{await pool.query('UPDATE role_assignments SET active=true WHERE id=$1',[assignment])}
+ try{await pool.query("UPDATE module_entitlements SET enabled=false WHERE organization_id=$1 AND module='requests'",[seeded.fixtures.orgA]);assert.equal((await owner.call('/requests/'+id)).status,403);assert.equal((await fetch(base+'/api/photos/'+photo.id,{headers:{Cookie:owner.cookie}})).status,403)}finally{await pool.query("UPDATE module_entitlements SET enabled=true WHERE organization_id=$1 AND module='requests'",[seeded.fixtures.orgA])}
+ const reportKey=crypto.randomUUID();const reportBody={key:reportKey,note:'Completed repair',checklist:[{text:'Inspect wiring',done:true}]};assert.equal((await step(tech,'report',3,reportBody)).status,200);assert.equal((await step(tech,'report',3,reportBody)).status,200);
+ assert.equal((await step(dispatcher,'approve',4)).status,403);
+ assert.equal((await step(manager,'reject',4,{note:'Please retest wiring'})).status,200);
+ assert.equal((await step(tech,'report',5,{note:'Retested successfully',checklist:[{text:'Inspect wiring',done:true}]})).status,200);
+ assert.equal((await step(manager,'approve',6)).status,200);
+ assert.equal((await step(owner,'reopen',7,{note:'The issue persists'})).status,200);
+ assert.equal((await step(tech,'report',8,{note:'Replaced faulty unit',checklist:[{text:'Inspect wiring',done:true}]})).status,200);
+ assert.equal((await step(manager,'approve',9)).status,200);
+ const results=await Promise.all([step(owner,'confirm',10),step(owner,'confirm',10)]);assert.deepEqual(results.map(x=>x.status).sort(),[200,409]);
+ const final=await owner.call('/requests/'+id);assert.equal(final.data.status,'closed');assert.equal(final.data.history.length,11);assert.equal(final.data.messages.length,0);assert.equal((await dispatcher.call('/requests/'+id)).data.messages.length,1);
+});

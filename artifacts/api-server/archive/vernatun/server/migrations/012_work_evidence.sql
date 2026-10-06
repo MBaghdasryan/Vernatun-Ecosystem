@@ -1,0 +1,3 @@
+CREATE TABLE work_reports(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),work_order_id uuid NOT NULL REFERENCES work_orders(id),reporter_id uuid NOT NULL REFERENCES users(id),body text NOT NULL,checklist jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TRIGGER work_report_guard BEFORE UPDATE OR DELETE ON work_reports FOR EACH ROW EXECUTE FUNCTION protect_request_history();
+CREATE TABLE file_attachments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),defect_id uuid NOT NULL REFERENCES defects(id),author_id uuid NOT NULL REFERENCES users(id),storage_key text NOT NULL UNIQUE,created_at timestamptz NOT NULL DEFAULT now());

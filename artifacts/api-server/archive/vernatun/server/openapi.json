@@ -1,0 +1,5174 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vernatun API",
+    "version": "0.3.0",
+    "description": "Local Vernatun API: authenticated role-scoped operations. Existing detailed schemas plus route inventory for expanded modules. For new route request/response validation see the referenced Zod schemas in server source. Cookie sessions; mutations require CSRF. External integrations are not connected."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "vernatun.sid"
+      }
+    },
+    "parameters": {
+      "csrf": {
+        "name": "X-CSRF-Token",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Database health",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [],
+        "security": []
+      }
+    },
+    "/auth/session": {
+      "get": {
+        "summary": "Get identity, granted contexts and CSRF token",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [],
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Sign in using an individual account",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Destroy current session",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ]
+      }
+    },
+    "/auth/context": {
+      "post": {
+        "summary": "Choose an already granted assignment",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/preferences": {
+      "patch": {
+        "summary": "Save language and currency",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "hy",
+                      "ru",
+                      "en"
+                    ]
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "AMD",
+                      "RUB",
+                      "USD"
+                    ]
+                  }
+                },
+                "required": [
+                  "locale",
+                  "currency"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "summary": "List own active sessions",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/auth/sessions/{id}": {
+      "delete": {
+        "summary": "Revoke own session",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/auth/password": {
+      "post": {
+        "summary": "Change password and revoke other sessions",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Create local reset message; no real email delivery",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Consume one-time reset token",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/accept-invitation": {
+      "post": {
+        "summary": "Accept unexpired, unrevoked invitation",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "name",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Read metrics authorized for current role",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/organizations": {
+      "get": {
+        "summary": "Read platform organizations",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      },
+      "post": {
+        "summary": "Create organization (platform permission)",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "AMD",
+                      "RUB",
+                      "USD"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "currency"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/properties": {
+      "get": {
+        "summary": "Read scoped buildings",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      },
+      "post": {
+        "summary": "Create building in active organization",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "address"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/units": {
+      "get": {
+        "summary": "Read scoped units",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      },
+      "post": {
+        "summary": "Create unit in allowed building",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "buildingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "number": {
+                    "type": "string"
+                  },
+                  "area": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "buildingId",
+                  "number",
+                  "area"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/units/{id}": {
+      "get": {
+        "summary": "Read unit; foreign or out-of-scope ID is 404",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/people": {
+      "get": {
+        "summary": "Read scoped role assignments",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/roles/{id}": {
+      "delete": {
+        "summary": "Immediately revoke an organizational role",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/modules": {
+      "get": {
+        "summary": "List organization module gates",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/modules/{module}": {
+      "patch": {
+        "summary": "Enable or disable organization module",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          },
+          {
+            "name": "module",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices": {
+      "get": {
+        "summary": "Read scoped charges; own payer restriction for residents",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AMD",
+                "RUB",
+                "USD"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/audit": {
+      "get": {
+        "summary": "Read audit within permitted organization/platform scope",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/invitations": {
+      "get": {
+        "summary": "List organization invitations without token hashes",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": []
+      },
+      "post": {
+        "summary": "Create local invitation link; no email sent",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "buildingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "unitId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "email",
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invitations/{id}": {
+      "delete": {
+        "summary": "Revoke unaccepted organization invitation",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/users/{id}/block": {
+      "post": {
+        "summary": "Block account and revoke all sessions (platform only)",
+        "responses": {
+          "200": {
+            "description": "Success; some creation operations return 201 and deletion operations 204"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "Completed without response body"
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Permission, scope, module or CSRF denied"
+          },
+          "404": {
+            "description": "Not found in authorized scope"
+          },
+          "409": {
+            "description": "Already exists"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "External delivery not configured"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/requests": {
+      "get": {
+        "summary": "List authorized requests with work order state; residents own, technician assigned, staff organization scope",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": []
+      },
+      "post": {
+        "summary": "Create resident request",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "unitId",
+                  "subject"
+                ],
+                "properties": {
+                  "unitId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 160
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/requests/{id}": {
+      "get": {
+        "summary": "Authorized detail, transition history, messages and photo IDs; resident cannot see internal messages",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/requests/{id}/technicians": {
+      "get": {
+        "summary": "Active technicians eligible for assignment in request scope",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/requests/{id}/transition": {
+      "post": {
+        "summary": "Atomic version-checked role-specific transition",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action",
+                  "version"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "assign",
+                      "start",
+                      "report",
+                      "approve",
+                      "reject",
+                      "confirm",
+                      "reopen"
+                    ]
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "technicianId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "checklist": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "text",
+                        "done"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/requests/{id}/messages": {
+      "post": {
+        "summary": "Add public message or staff-only internal note",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "internal": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/requests/{id}/photos": {
+      "post": {
+        "summary": "Upload private photo: JPEG, PNG, WebP; at most 6 MiB and 16 million pixels; sanitized to JPEG",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          },
+          "201": {
+            "description": "Private photo ID"
+          },
+          "413": {
+            "description": "File too large"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/photos/{id}": {
+      "get": {
+        "summary": "Download private photo after current request authorization; no-store; attachment",
+        "responses": {
+          "200": {
+            "description": "Sanitized JPEG",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or module disabled"
+          },
+          "404": {
+            "description": "Not found in current scope"
+          },
+          "409": {
+            "description": "Stale version or invalid transition"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/finance": {
+      "get": {
+        "summary": "GET /finance",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/payer-candidates": {
+      "get": {
+        "summary": "GET /finance/payer-candidates",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/tariffs": {
+      "post": {
+        "summary": "POST /finance/tariffs",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/payers": {
+      "post": {
+        "summary": "POST /finance/payers",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/calculate": {
+      "post": {
+        "summary": "POST /finance/calculate",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/invoices/{id}/publish": {
+      "post": {
+        "summary": "POST /finance/invoices/{id}/publish",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/payments": {
+      "post": {
+        "summary": "POST /finance/payments",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/adjustments": {
+      "post": {
+        "summary": "POST /finance/adjustments",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/finance/invoices/{id}/details": {
+      "get": {
+        "summary": "GET /finance/invoices/{id}/details",
+        "tags": [
+          "finance"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/finance.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defects": {
+      "get": {
+        "summary": "GET /defects",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /defects",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defects/contractors": {
+      "get": {
+        "summary": "GET /defects/contractors",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defects/{id}": {
+      "get": {
+        "summary": "GET /defects/{id}",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defects/{id}/transition": {
+      "post": {
+        "summary": "POST /defects/{id}/transition",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/passes": {
+      "get": {
+        "summary": "GET /passes",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /passes",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/passes/{id}/revoke": {
+      "post": {
+        "summary": "POST /passes/{id}/revoke",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/passes/validate": {
+      "post": {
+        "summary": "POST /passes/validate",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/passes/{id}/events": {
+      "post": {
+        "summary": "POST /passes/{id}/events",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/access-events": {
+      "get": {
+        "summary": "GET /access-events",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/incidents": {
+      "post": {
+        "summary": "POST /incidents",
+        "tags": [
+          "field"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/support/organizations": {
+      "get": {
+        "summary": "GET /support/organizations",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/support/grants": {
+      "get": {
+        "summary": "GET /support/grants",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /support/grants",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/support/grants/{id}/{action}": {
+      "post": {
+        "summary": "POST /support/grants/{id}/{action}",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/delegations": {
+      "get": {
+        "summary": "GET /delegations",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /delegations",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/delegations/{id}/revoke": {
+      "post": {
+        "summary": "POST /delegations/{id}/revoke",
+        "tags": [
+          "grants"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/grants.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "summary": "GET /status",
+        "tags": [
+          "mfa"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/mfa.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/setup": {
+      "post": {
+        "summary": "POST /setup",
+        "tags": [
+          "mfa"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/mfa.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/enable": {
+      "post": {
+        "summary": "POST /enable",
+        "tags": [
+          "mfa"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/mfa.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/disable": {
+      "post": {
+        "summary": "POST /disable",
+        "tags": [
+          "mfa"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/mfa.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/community/buildings": {
+      "get": {
+        "summary": "GET /community/buildings",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/announcements": {
+      "get": {
+        "summary": "GET /announcements",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /announcements",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/announcements/{id}/publish": {
+      "post": {
+        "summary": "POST /announcements/{id}/publish",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/assets": {
+      "get": {
+        "summary": "GET /assets",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /assets",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/maintenance": {
+      "post": {
+        "summary": "POST /maintenance",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/maintenance/{id}/complete": {
+      "post": {
+        "summary": "POST /maintenance/{id}/complete",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/meters": {
+      "get": {
+        "summary": "GET /meters",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /meters",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/meters/{id}/readings": {
+      "post": {
+        "summary": "POST /meters/{id}/readings",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/meetings": {
+      "get": {
+        "summary": "GET /meetings",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /meetings",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/agenda/{id}/vote": {
+      "post": {
+        "summary": "POST /agenda/{id}/vote",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/expenses": {
+      "get": {
+        "summary": "GET /expenses",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /expenses",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/expenses/{id}/approve": {
+      "post": {
+        "summary": "POST /expenses/{id}/approve",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "summary": "GET /notifications",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "post": {
+        "summary": "POST /notifications/{id}/read",
+        "tags": [
+          "services"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/imports/preview": {
+      "post": {
+        "summary": "POST /imports/preview",
+        "tags": [
+          "imports"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/imports.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/imports": {
+      "get": {
+        "summary": "GET /imports",
+        "tags": [
+          "imports"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/imports.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/imports/{id}/confirm": {
+      "post": {
+        "summary": "POST /imports/{id}/confirm",
+        "tags": [
+          "imports"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/imports.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/imports/{id}/errors": {
+      "get": {
+        "summary": "GET /imports/{id}/errors",
+        "tags": [
+          "imports"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/imports.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/leases": {
+      "get": {
+        "summary": "GET /leases",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /leases",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/leases/candidates": {
+      "get": {
+        "summary": "GET /leases/candidates",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/handovers": {
+      "get": {
+        "summary": "GET /handovers",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /handovers",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/handovers/{id}/inspect": {
+      "post": {
+        "summary": "POST /handovers/{id}/inspect",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/inspections/{id}/complete": {
+      "post": {
+        "summary": "POST /inspections/{id}/complete",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/handovers/{id}/transition": {
+      "post": {
+        "summary": "POST /handovers/{id}/transition",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/warranties": {
+      "post": {
+        "summary": "POST /warranties",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/subscriptions": {
+      "get": {
+        "summary": "GET /subscriptions",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /subscriptions",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/subscription-plans": {
+      "post": {
+        "summary": "POST /subscription-plans",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/support-cases": {
+      "get": {
+        "summary": "GET /support-cases",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /support-cases",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/support-cases/{id}/reply": {
+      "post": {
+        "summary": "POST /support-cases/{id}/reply",
+        "tags": [
+          "lifecycle"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/lifecycle.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/documents": {
+      "get": {
+        "summary": "GET /documents",
+        "tags": [
+          "documents"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /documents",
+        "tags": [
+          "documents"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/documents/{id}/download": {
+      "get": {
+        "summary": "GET /documents/{id}/download",
+        "tags": [
+          "documents"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/budgets": {
+      "get": {
+        "summary": "GET /budgets",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /budgets",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/reports/invoices.csv": {
+      "get": {
+        "summary": "GET /reports/invoices.csv",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/onboarding": {
+      "get": {
+        "summary": "GET /onboarding",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /onboarding",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/onboarding/{id}/complete": {
+      "post": {
+        "summary": "POST /onboarding/{id}/complete",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/organization-settings": {
+      "get": {
+        "summary": "GET /organization-settings",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /organization-settings",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/ownerships": {
+      "post": {
+        "summary": "POST /ownerships",
+        "tags": [
+          "reporting"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/reporting.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/role-insights": {
+      "get": {
+        "summary": "GET /role-insights",
+        "tags": [
+          "insights"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/insights.ts. Request schemas are not fully represented here.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defects/{id}/photos": {
+      "post": {
+        "summary": "POST /defects/{id}/photos",
+        "tags": [
+          "photos"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/photos.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    },
+    "/defect-photos/{id}": {
+      "get": {
+        "summary": "GET /defect-photos/{id}",
+        "tags": [
+          "photos"
+        ],
+        "description": "Route inventory; validation and scoped authorization: server/photos.ts. Request schemas are not fully represented here.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read or update (route-dependent)"
+          },
+          "201": {
+            "description": "Created (creation routes)"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Permission or module denied"
+          },
+          "404": {
+            "description": "Resource not in permitted scope"
+          },
+          "409": {
+            "description": "State, duplicate or version conflict"
+          }
+        }
+      }
+    }
+  }
+}

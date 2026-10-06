@@ -4,10 +4,11 @@
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src"],
+  "include": ["src", "archive/vernatun/server", "archive/vernatun/shared"],
+  "exclude": ["archive/vernatun/server/tests"],
   "references": [
     {
       "path": "../../lib/db"

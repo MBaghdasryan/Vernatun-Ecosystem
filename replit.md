@@ -1,6 +1,7 @@
-# [Project name]
+# Vernatun
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Property-management platform restored from the supplied source archive, with
+Console, OS, HAYAT and ImTun portals over one permission-scoped API.
 
 ## Run & Operate
 
@@ -8,8 +9,9 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-server run db:migrate` — restored SQL migrations (development only)
+- `pnpm --filter @workspace/api-server run test:api` — original integration tests in an isolated test database
+- Required env: `DATABASE_URL`, `SESSION_SECRET`; production also requires HTTPS `APP_ORIGIN`.
 
 ## Stack
 
@@ -38,7 +40,10 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+Do not push the template's empty Drizzle schema to the restored SQL database.
+Do not seed users on startup or merge. Local demo credentials are gitignored at
+`artifacts/api-server/.local/demo-accounts.md`; do not expose or log them.
+See `artifacts/api-server/RESTORATION.md` for operation and production boundaries.
 
 ## Pointers
 
