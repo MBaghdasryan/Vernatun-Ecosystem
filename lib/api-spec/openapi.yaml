@@ -325,6 +325,134 @@ paths:
             schema: { $ref: "#/components/schemas/MaterialInput" }
       responses:
         "201": { description: Recorded without creating financial transaction }
+  /auth/reauthenticate:
+    post:
+      operationId: reauthenticateResident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecentAuthenticationInput" }
+      responses:
+        "200": { description: Password and configured MFA verified; five minute sensitive-action window }
+  /delegations:
+    post:
+      operationId: createResidentDelegation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResidentDelegationInput" }
+      responses:
+        "201": { description: Separate pending family invitation; email acceptance is not delivery }
+  /delegations/{id}/expiration:
+    post:
+      operationId: changeDelegationExpiration
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DelegationExpirationInput" }
+      responses:
+        "200": { description: Owner-authorized versioned expiration update }
+  /delegations/{id}/resend:
+    post:
+      operationId: resendResidentDelegation
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DelegationResendInput" }
+      responses:
+        "200": { description: Pending invitation rotated and submitted to existing provider }
+  /leases/{id}/{action}:
+    post:
+      operationId: transitionResidentLease
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [extend, cancel] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LeaseLifecycleInput" }
+      responses:
+        "200": { description: Versioned lease with centralized access policy }
+  /notifications/{id}/destination:
+    get:
+      operationId: resolveNotificationDestination
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: contextId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Authorized destination suggestion without switching or merging permissions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationDestination" }
+        "403": { description: No current authorized assignment for this request }
+  /maintenance:
+    post:
+      operationId: createMaintenancePlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaintenancePlanInput" }
+      responses:
+        "201":
+          description: Saved inactive or explicitly activated maintenance plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaintenanceRecord" }
+  /maintenance/{id}/configure:
+    post:
+      operationId: configureMaintenancePlan
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaintenanceConfigurationInput" }
+      responses:
+        "200":
+          description: Versioned active and automatic generation configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaintenanceRecord" }
+  /maintenance/{id}/generate:
+    post:
+      operationId: generateMaintenanceEvent
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaintenanceGenerationInput" }
+      responses:
+        "200":
+          description: Existing or newly generated due event with linked request and work order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaintenanceRecord" }
+  /maintenance/{id}/events:
+    get:
+      operationId: getMaintenanceEvents
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Authorized equipment maintenance history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MaintenanceRecord" }
   /assets/lookup:
     get:
       operationId: lookupEquipment
@@ -455,6 +583,86 @@ paths:
               schema: {type: string, format: binary}
 components:
   schemas:
+    RecentAuthenticationInput:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, minLength: 1, maxLength: 72 }
+        code: { type: string, minLength: 6, maxLength: 30 }
+    ResidentDelegationInput:
+      type: object
+      required: [email, expiresAt, permissions]
+      properties:
+        email: { type: string, format: email }
+        phone: { type: string }
+        expiresAt: { type: string, format: date-time }
+        permissions:
+          type: array
+          items: { type: string, enum: [requests.own, requests.create, announcements.read, properties.own, access.create] }
+    DelegationExpirationInput:
+      type: object
+      required: [version, expiresAt]
+      properties:
+        version: { type: integer, minimum: 1 }
+        expiresAt: { type: string, format: date-time }
+    DelegationResendInput:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, minimum: 1 }
+    LeaseLifecycleInput:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, minimum: 1 }
+        endsOn: { type: string, format: date }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    NotificationDestination:
+      type: object
+      required: [targetContextId, requiresSwitch, destination]
+      properties:
+        targetContextId: { type: string, format: uuid }
+        requiresSwitch: { type: boolean }
+        destination: { type: string }
+    MaintenanceRecord:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+      additionalProperties: true
+    MaintenancePlanInput:
+      type: object
+      required: [assetId, title, dueOn, categoryId]
+      additionalProperties: false
+      properties:
+        assetId: { type: string, format: uuid }
+        title: { type: string, minLength: 2, maxLength: 160 }
+        dueOn: { type: string, format: date }
+        frequency: { type: string, enum: [once, daily, weekly, monthly, quarterly, semiannual, annual, custom], default: once }
+        intervalDays: { type: [integer, "null"], minimum: 1, maximum: 36600 }
+        categoryId: { type: string, format: uuid }
+        priority: { type: string, enum: [low, normal, high, urgent, emergency], default: normal }
+        instructions: { type: string, maxLength: 4000 }
+        checklist:
+          type: array
+          maxItems: 30
+          items: { type: string, minLength: 1, maxLength: 200 }
+        active: { type: boolean, default: false }
+        automatic: { type: boolean, default: false }
+    MaintenanceConfigurationInput:
+      type: object
+      required: [version, active, automatic]
+      additionalProperties: false
+      properties:
+        version: { type: integer, minimum: 1 }
+        active: { type: boolean }
+        automatic: { type: boolean }
+        categoryId: { type: string, format: uuid }
+    MaintenanceGenerationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        cycleNo: { type: integer, minimum: 0 }
     PrivateImageInput:
       description: Opaque binary image carried as application/octet-stream; decoded and validated on the server.
     IncidentInput:
@@ -542,8 +750,10 @@ components:
         key: { type: string, format: uuid }
         version: { type: integer, minimum: 1 }
         visitVersion: { type: integer, minimum: 1 }
-        action: { type: string, enum: [confirm, cancel] }
+        action: { type: string, enum: [confirm, cancel, request_another_time] }
         note: { type: string, maxLength: 4000 }
+        suggestedStart: { type: string, format: date-time }
+        suggestedEnd: { type: string, format: date-time }
     MaterialInput:
       type: object
       required: [key, version, kind, name, quantity, unit]

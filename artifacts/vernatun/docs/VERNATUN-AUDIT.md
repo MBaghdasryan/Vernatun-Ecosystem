@@ -1,6 +1,6 @@
 # Vernatun — сверка с активной спецификацией
 
-Текущее дополнение: [Phase 2 — реализация и проверки](PHASE2-COMPLETION.md). Managed lifecycle исправлен; phone/SLA/visits/materials/typed photos/equipment QR/incidents реализованы и проверены API-регрессией. Signed-in QA выполняется. Phases 3–8 и production email не объявлены завершёнными. Ниже — историческая baseline-сверка.
+Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md) и [Phase 3](PHASE3-COMPLETION.md). Phase 3 закрывает backend/UI maintenance → WorkOrder, делегирование, визиты, notification links и lease policy; signed-in acceptance проверяется. 91 core-проверка и финальные 7 проверок Phase 3 прошли. Phases 4–8 и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
 
 Дата: 6 октября 2026 года.
 

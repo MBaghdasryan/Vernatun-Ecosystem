@@ -22,6 +22,8 @@ import type {
 import type {
   CategoryInput,
   CategoryUpdateInput,
+  DelegationExpirationInput,
+  DelegationResendInput,
   EmailHealth,
   EmailMessageDetail,
   EmailMessagePage,
@@ -33,13 +35,22 @@ import type {
   Invitation,
   InvitationResendInput,
   InvitationSendReceipt,
+  LeaseLifecycleInput,
   ListEmailMessagesParams,
   ListOperationalVisitsParams,
   LookupEquipmentParams,
+  MaintenanceConfigurationInput,
+  MaintenanceGenerationInput,
+  MaintenancePlanInput,
+  MaintenanceRecord,
   MaterialInput,
+  NotificationDestination,
   OperationalRequestInput,
   OperationalRow,
+  RecentAuthenticationInput,
   ResendDeliveryInput,
+  ResidentDelegationInput,
+  ResolveNotificationDestinationParams,
   SlaPolicyInput,
   UploadOperationalPhotoParams,
   VisitProposalInput,
@@ -1829,6 +1840,823 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAddWorkMaterialMutationOptions(options));
     }
+
+export const getReauthenticateResidentUrl = () => {
+
+
+
+
+  return `/api/auth/reauthenticate`
+}
+
+export const reauthenticateResident = async (recentAuthenticationInput: RecentAuthenticationInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReauthenticateResidentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recentAuthenticationInput)
+  }
+);}
+
+
+
+
+
+export const getReauthenticateResidentMutationKey = () => ['reauthenticateResident'] as const;
+
+export const getReauthenticateResidentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reauthenticateResident>>, TError,ReauthenticateResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reauthenticateResident>>, TError,ReauthenticateResidentMutationVariables, TContext> => {
+
+const mutationKey = getReauthenticateResidentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reauthenticateResident>>, ReauthenticateResidentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reauthenticateResident(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReauthenticateResidentMutationResult = NonNullable<Awaited<ReturnType<typeof reauthenticateResident>>>
+    export type ReauthenticateResidentMutationBody = BodyType<RecentAuthenticationInput>
+    export type ReauthenticateResidentMutationError = ErrorType<unknown>
+    export type ReauthenticateResidentMutationVariables = {data: BodyType<RecentAuthenticationInput>}
+
+    export const useReauthenticateResident = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reauthenticateResident>>, TError,ReauthenticateResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reauthenticateResident>>,
+        TError,
+        ReauthenticateResidentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReauthenticateResidentMutationOptions(options));
+    }
+
+export const getCreateResidentDelegationUrl = () => {
+
+
+
+
+  return `/api/delegations`
+}
+
+export const createResidentDelegation = async (residentDelegationInput: ResidentDelegationInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getCreateResidentDelegationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentDelegationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentDelegationMutationKey = () => ['createResidentDelegation'] as const;
+
+export const getCreateResidentDelegationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentDelegation>>, TError,CreateResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentDelegation>>, TError,CreateResidentDelegationMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentDelegationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentDelegation>>, CreateResidentDelegationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentDelegation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentDelegationMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentDelegation>>>
+    export type CreateResidentDelegationMutationBody = BodyType<ResidentDelegationInput>
+    export type CreateResidentDelegationMutationError = ErrorType<unknown>
+    export type CreateResidentDelegationMutationVariables = {data: BodyType<ResidentDelegationInput>}
+
+    export const useCreateResidentDelegation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentDelegation>>, TError,CreateResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentDelegation>>,
+        TError,
+        CreateResidentDelegationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentDelegationMutationOptions(options));
+    }
+
+export const getChangeDelegationExpirationUrl = (id: string,) => {
+
+
+
+
+  return `/api/delegations/${id}/expiration`
+}
+
+export const changeDelegationExpiration = async (id: string,
+    delegationExpirationInput: DelegationExpirationInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getChangeDelegationExpirationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(delegationExpirationInput)
+  }
+);}
+
+
+
+
+
+export const getChangeDelegationExpirationMutationKey = () => ['changeDelegationExpiration'] as const;
+
+export const getChangeDelegationExpirationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeDelegationExpiration>>, TError,ChangeDelegationExpirationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeDelegationExpiration>>, TError,ChangeDelegationExpirationMutationVariables, TContext> => {
+
+const mutationKey = getChangeDelegationExpirationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeDelegationExpiration>>, ChangeDelegationExpirationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeDelegationExpiration(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeDelegationExpirationMutationResult = NonNullable<Awaited<ReturnType<typeof changeDelegationExpiration>>>
+    export type ChangeDelegationExpirationMutationBody = BodyType<DelegationExpirationInput>
+    export type ChangeDelegationExpirationMutationError = ErrorType<unknown>
+    export type ChangeDelegationExpirationMutationVariables = {id: string;data: BodyType<DelegationExpirationInput>}
+
+    export const useChangeDelegationExpiration = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeDelegationExpiration>>, TError,ChangeDelegationExpirationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeDelegationExpiration>>,
+        TError,
+        ChangeDelegationExpirationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeDelegationExpirationMutationOptions(options));
+    }
+
+export const getResendResidentDelegationUrl = (id: string,) => {
+
+
+
+
+  return `/api/delegations/${id}/resend`
+}
+
+export const resendResidentDelegation = async (id: string,
+    delegationResendInput: DelegationResendInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getResendResidentDelegationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(delegationResendInput)
+  }
+);}
+
+
+
+
+
+export const getResendResidentDelegationMutationKey = () => ['resendResidentDelegation'] as const;
+
+export const getResendResidentDelegationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendResidentDelegation>>, TError,ResendResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resendResidentDelegation>>, TError,ResendResidentDelegationMutationVariables, TContext> => {
+
+const mutationKey = getResendResidentDelegationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendResidentDelegation>>, ResendResidentDelegationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resendResidentDelegation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResendResidentDelegationMutationResult = NonNullable<Awaited<ReturnType<typeof resendResidentDelegation>>>
+    export type ResendResidentDelegationMutationBody = BodyType<DelegationResendInput>
+    export type ResendResidentDelegationMutationError = ErrorType<unknown>
+    export type ResendResidentDelegationMutationVariables = {id: string;data: BodyType<DelegationResendInput>}
+
+    export const useResendResidentDelegation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendResidentDelegation>>, TError,ResendResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resendResidentDelegation>>,
+        TError,
+        ResendResidentDelegationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResendResidentDelegationMutationOptions(options));
+    }
+
+export const getTransitionResidentLeaseUrl = (id: string,
+    action: 'extend' | 'cancel',) => {
+
+
+
+
+  return `/api/leases/${id}/${action}`
+}
+
+export const transitionResidentLease = async (id: string,
+    action: 'extend' | 'cancel',
+    leaseLifecycleInput: LeaseLifecycleInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getTransitionResidentLeaseUrl(id,action),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(leaseLifecycleInput)
+  }
+);}
+
+
+
+
+
+export const getTransitionResidentLeaseMutationKey = () => ['transitionResidentLease'] as const;
+
+export const getTransitionResidentLeaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionResidentLease>>, TError,TransitionResidentLeaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof transitionResidentLease>>, TError,TransitionResidentLeaseMutationVariables, TContext> => {
+
+const mutationKey = getTransitionResidentLeaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof transitionResidentLease>>, TransitionResidentLeaseMutationVariables> = (props) => {
+          const {id,action,data} = props ?? {};
+
+          return  transitionResidentLease(id,action,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TransitionResidentLeaseMutationResult = NonNullable<Awaited<ReturnType<typeof transitionResidentLease>>>
+    export type TransitionResidentLeaseMutationBody = BodyType<LeaseLifecycleInput>
+    export type TransitionResidentLeaseMutationError = ErrorType<unknown>
+    export type TransitionResidentLeaseMutationVariables = {id: string;action: 'extend' | 'cancel';data: BodyType<LeaseLifecycleInput>}
+
+    export const useTransitionResidentLease = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionResidentLease>>, TError,TransitionResidentLeaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof transitionResidentLease>>,
+        TError,
+        TransitionResidentLeaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTransitionResidentLeaseMutationOptions(options));
+    }
+
+export const getResolveNotificationDestinationUrl = (id: string,
+    params?: ResolveNotificationDestinationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/notifications/${id}/destination?${stringifiedParams}` : `/api/notifications/${id}/destination`
+}
+
+export const resolveNotificationDestination = async (id: string,
+    params?: ResolveNotificationDestinationParams, options?: Parameters<typeof customFetch>[1]): Promise<NotificationDestination> => {
+
+  return customFetch<NotificationDestination>(getResolveNotificationDestinationUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getResolveNotificationDestinationQueryKey = (id: string,
+    params?: ResolveNotificationDestinationParams,) => {
+    return [
+    `/api/notifications/${id}/destination`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getResolveNotificationDestinationQueryOptions = <TData = Awaited<ReturnType<typeof resolveNotificationDestination>>, TError = ErrorType<void>>(id: string,
+    params?: ResolveNotificationDestinationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof resolveNotificationDestination>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getResolveNotificationDestinationQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof resolveNotificationDestination>>> = ({ signal }) => resolveNotificationDestination(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof resolveNotificationDestination>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ResolveNotificationDestinationQueryResult = NonNullable<Awaited<ReturnType<typeof resolveNotificationDestination>>>
+export type ResolveNotificationDestinationQueryError = ErrorType<void>
+
+
+
+export function useResolveNotificationDestination<TData = Awaited<ReturnType<typeof resolveNotificationDestination>>, TError = ErrorType<void>>(
+ id: string,
+    params?: ResolveNotificationDestinationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof resolveNotificationDestination>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getResolveNotificationDestinationQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateMaintenancePlanUrl = () => {
+
+
+
+
+  return `/api/maintenance`
+}
+
+export const createMaintenancePlan = async (maintenancePlanInput: MaintenancePlanInput, options?: Parameters<typeof customFetch>[1]): Promise<MaintenanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MaintenanceRecord>(getCreateMaintenancePlanUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(maintenancePlanInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMaintenancePlanMutationKey = () => ['createMaintenancePlan'] as const;
+
+export const getCreateMaintenancePlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMaintenancePlan>>, TError,CreateMaintenancePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMaintenancePlan>>, TError,CreateMaintenancePlanMutationVariables, TContext> => {
+
+const mutationKey = getCreateMaintenancePlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMaintenancePlan>>, CreateMaintenancePlanMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMaintenancePlan(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMaintenancePlanMutationResult = NonNullable<Awaited<ReturnType<typeof createMaintenancePlan>>>
+    export type CreateMaintenancePlanMutationBody = BodyType<MaintenancePlanInput>
+    export type CreateMaintenancePlanMutationError = ErrorType<unknown>
+    export type CreateMaintenancePlanMutationVariables = {data: BodyType<MaintenancePlanInput>}
+
+    export const useCreateMaintenancePlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMaintenancePlan>>, TError,CreateMaintenancePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMaintenancePlan>>,
+        TError,
+        CreateMaintenancePlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateMaintenancePlanMutationOptions(options));
+    }
+
+export const getConfigureMaintenancePlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/maintenance/${id}/configure`
+}
+
+export const configureMaintenancePlan = async (id: string,
+    maintenanceConfigurationInput: MaintenanceConfigurationInput, options?: Parameters<typeof customFetch>[1]): Promise<MaintenanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MaintenanceRecord>(getConfigureMaintenancePlanUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(maintenanceConfigurationInput)
+  }
+);}
+
+
+
+
+
+export const getConfigureMaintenancePlanMutationKey = () => ['configureMaintenancePlan'] as const;
+
+export const getConfigureMaintenancePlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof configureMaintenancePlan>>, TError,ConfigureMaintenancePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof configureMaintenancePlan>>, TError,ConfigureMaintenancePlanMutationVariables, TContext> => {
+
+const mutationKey = getConfigureMaintenancePlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof configureMaintenancePlan>>, ConfigureMaintenancePlanMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  configureMaintenancePlan(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfigureMaintenancePlanMutationResult = NonNullable<Awaited<ReturnType<typeof configureMaintenancePlan>>>
+    export type ConfigureMaintenancePlanMutationBody = BodyType<MaintenanceConfigurationInput>
+    export type ConfigureMaintenancePlanMutationError = ErrorType<unknown>
+    export type ConfigureMaintenancePlanMutationVariables = {id: string;data: BodyType<MaintenanceConfigurationInput>}
+
+    export const useConfigureMaintenancePlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof configureMaintenancePlan>>, TError,ConfigureMaintenancePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof configureMaintenancePlan>>,
+        TError,
+        ConfigureMaintenancePlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfigureMaintenancePlanMutationOptions(options));
+    }
+
+export const getGenerateMaintenanceEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/maintenance/${id}/generate`
+}
+
+export const generateMaintenanceEvent = async (id: string,
+    maintenanceGenerationInput?: MaintenanceGenerationInput, options?: Parameters<typeof customFetch>[1]): Promise<MaintenanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MaintenanceRecord>(getGenerateMaintenanceEventUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(maintenanceGenerationInput)
+  }
+);}
+
+
+
+
+
+export const getGenerateMaintenanceEventMutationKey = () => ['generateMaintenanceEvent'] as const;
+
+export const getGenerateMaintenanceEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMaintenanceEvent>>, TError,GenerateMaintenanceEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateMaintenanceEvent>>, TError,GenerateMaintenanceEventMutationVariables, TContext> => {
+
+const mutationKey = getGenerateMaintenanceEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateMaintenanceEvent>>, GenerateMaintenanceEventMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  generateMaintenanceEvent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateMaintenanceEventMutationResult = NonNullable<Awaited<ReturnType<typeof generateMaintenanceEvent>>>
+    export type GenerateMaintenanceEventMutationBody = BodyType<MaintenanceGenerationInput> | undefined
+    export type GenerateMaintenanceEventMutationError = ErrorType<unknown>
+    export type GenerateMaintenanceEventMutationVariables = {id: string;data?: BodyType<MaintenanceGenerationInput>}
+
+    export const useGenerateMaintenanceEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMaintenanceEvent>>, TError,GenerateMaintenanceEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateMaintenanceEvent>>,
+        TError,
+        GenerateMaintenanceEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getGenerateMaintenanceEventMutationOptions(options));
+    }
+
+export const getGetMaintenanceEventsUrl = (id: string,) => {
+
+
+
+
+  return `/api/maintenance/${id}/events`
+}
+
+export const getMaintenanceEvents = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<MaintenanceRecord[]> => {
+
+  return customFetch<MaintenanceRecord[]>(getGetMaintenanceEventsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMaintenanceEventsQueryKey = (id: string,) => {
+    return [
+    `/api/maintenance/${id}/events`
+    ] as const;
+    }
+
+
+export const getGetMaintenanceEventsQueryOptions = <TData = Awaited<ReturnType<typeof getMaintenanceEvents>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMaintenanceEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMaintenanceEventsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMaintenanceEvents>>> = ({ signal }) => getMaintenanceEvents(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMaintenanceEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMaintenanceEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getMaintenanceEvents>>>
+export type GetMaintenanceEventsQueryError = ErrorType<unknown>
+
+
+
+export function useGetMaintenanceEvents<TData = Awaited<ReturnType<typeof getMaintenanceEvents>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMaintenanceEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMaintenanceEventsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getLookupEquipmentUrl = (params: LookupEquipmentParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -3,8 +3,8 @@ import {subscriptionPolicy} from './subscription-policy.js';
 // Append-only evidence + unique request/kind/level prevents repeat alerts across workers/restarts.
 export async function runSlaEscalations(){
  return transaction(async db=>{
-  const work=(await db.query(`SELECT d.*,r.organization_id,r.sla_snapshot,u.building_id,u.id AS unit_id,w.paused_at
-   FROM request_sla_deadlines d JOIN resident_requests r ON r.id=d.request_id JOIN units u ON u.id=r.unit_id LEFT JOIN work_orders w ON w.request_id=r.id
+  const work=(await db.query(`SELECT d.*,r.organization_id,r.sla_snapshot,COALESCE(r.building_id,u.building_id) AS building_id,u.id AS unit_id,w.paused_at
+   FROM request_sla_deadlines d JOIN resident_requests r ON r.id=d.request_id LEFT JOIN units u ON u.id=r.unit_id LEFT JOIN work_orders w ON w.request_id=r.id
    WHERE d.satisfied_at IS NULL AND d.due_at<=now()+interval '15 minutes' AND r.status<>'closed'
    AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))
    AND NOT EXISTS(SELECT 1 FROM request_escalations e WHERE e.request_id=d.request_id AND e.kind=d.kind AND e.level=CASE WHEN d.due_at<now() THEN 2 ELSE 1 END)

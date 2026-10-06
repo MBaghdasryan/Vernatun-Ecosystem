@@ -6,7 +6,7 @@
 |---|---|
 | Runtime Web/API | COMPLETE — один управляемый владелец каждого сервиса; ожидание свежей API-сборки до открытия порта; повторные рестарты и реальные authenticated маршруты проверены |
 | Phase 2: core operations | COMPLETE в операционном объёме этапа — подробности и границы проверки в PHASE2-COMPLETION.md |
-| Phase 3: maintenance и ImTun flows | PARTIAL — существующие модули восстановлены, полный цикл maintenance → WorkOrder и остальные требования этапа ещё не закрыты |
+| Phase 3: maintenance и ImTun flows | Реализация завершена; signed-in UI acceptance проверяется — maintenance → WorkOrder, delegation, visit alternatives, context-safe notification links и lease access; подробности в PHASE3-COMPLETION.md |
 | Phase 4: finance | PARTIAL — существующий учёт не означает завершение batch billing, reconciliation и allocations |
 | Phase 5: platform operations | PARTIAL — существующая консоль не означает завершение всех управляемых циклов |
 | Phase 6: community/documents/analytics | PARTIAL — требуется закрытие полного объёма мастер-промпта |
@@ -14,7 +14,7 @@
 | Phase 8: QA/security/deployment readiness | PARTIAL — текущие проверки относятся к runtime и Phase 2, не сертифицируют весь мастер-промпт |
 | Реальная доставка email | EXTERNAL BLOCKER — домен ещё не готов; реальные и тестовые письма не отправлялись |
 
-Миграция 016 применена к development только после изолированных проверок. Main seed, восстановление поверх текущей базы, удаление private bytes и production migration не выполнялись.
+Миграции 016–018 применены к development только после изолированных проверок. Для Phase 3 дополнительно совпали counts/digests прежних полей 14 таблиц. Main seed, восстановление поверх текущей базы, удаление private bytes и production migration не выполнялись.
 
 Новые платёжные провайдеры, Boon, native apps и новая панель Platform Ops не добавлялись.
 

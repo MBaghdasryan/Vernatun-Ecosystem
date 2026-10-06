@@ -43,16 +43,16 @@ hayat.get('/hayat/queue',async(req,res)=>{
    AND ($3::uuid IS NULL OR u.id=$3) AND $4::uuid IS NOT NULL
  `:`
   SELECT r.id,r.subject,r.description,COALESCE(w.status,r.status) AS status,
-   r.version,r.created_at,u.number,u.building_id,b.name AS building_name,
+   r.version,r.created_at,u.number,COALESCE(r.building_id,u.building_id) AS building_id,b.name AS building_name,
     t.name AS technician_name,w.id AS work_order_id,w.checklist,r.priority,r.source,r.category_id,w.accepted_at,w.paused_at,w.blocked_reason,
     (SELECT min(d.due_at) FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AS due_at,
     EXISTS(SELECT 1 FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND d.due_at<now() AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AND r.status<>'closed' AS overdue,
     (SELECT starts_at FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_start,
     (SELECT ends_at FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_end,
     (SELECT status FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_status
-  FROM resident_requests r JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=u.building_id
+  FROM resident_requests r LEFT JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=COALESCE(r.building_id,u.building_id)
   LEFT JOIN work_orders w ON w.request_id=r.id LEFT JOIN users t ON t.id=w.technician_id
-  WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2)
+  WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR COALESCE(r.building_id,u.building_id)=$2)
    AND ($3::uuid IS NULL OR u.id=$3)
    AND (${technician?'w.technician_id=$4':'$4::uuid IS NOT NULL'})
  `;

@@ -1,5 +1,11 @@
 # Vernatun — октябрь 2026
 
+## Phase 3 — maintenance и ImTun lifecycle
+
+Добавлены циклическое обслуживание через общий WorkOrder и manager verification, системные building-scoped работы, безопасная генерация по циклам, история оборудования, действия владельца для delegation expiration/resend и recent auth, предложения визита от техника и альтернативы жителя, разрешённые notification destinations с явным context switch, серверная lease access policy и versioned extend/cancel.
+
+Миграции 017–018 прошли изолированную проверку и development preservation check для 14 таблиц. Общая core-регрессия: 91 проверка без ошибок; финальный Phase 3: 7 проверок/групп без ошибок. Реальные письма, main seed, private-byte deletion и production migration не выполнялись. Подробнее: [PHASE3-COMPLETION.md](PHASE3-COMPLETION.md).
+
 ## Core operations и managed runtime
 
 Один управляемый owner для Web/API; добавочная миграция 016 после изолированных проверок; телефонный intake, категории/приоритеты/SLA, история визитов, действия техника, материалы, типизированные приватные фото, equipment QR/manual lookup и инциденты. Новые incident bytes включены в inventory/backup. Старые offline receipts сохраняют fingerprint. Реальные email не отправлялись. Подробные проверки и известные ограничения: PHASE2-COMPLETION.md.

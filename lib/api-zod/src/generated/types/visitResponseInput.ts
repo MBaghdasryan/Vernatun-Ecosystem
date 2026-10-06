@@ -16,4 +16,6 @@ export interface VisitResponseInput {
   action: VisitResponseInputAction;
   /** @maxLength 4000 */
   note?: string;
+  suggestedStart?: Date;
+  suggestedEnd?: Date;
 }

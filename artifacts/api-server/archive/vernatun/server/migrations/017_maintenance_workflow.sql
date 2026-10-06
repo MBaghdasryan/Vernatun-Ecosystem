@@ -35,19 +35,30 @@ ALTER TABLE maintenance_plans
  ADD FOREIGN KEY(category_id,organization_id) REFERENCES request_categories(id,organization_id),
  ADD CHECK(frequency<>'custom' OR interval_days IS NOT NULL);
 UPDATE maintenance_plans SET anchor_on=due_on,last_completed_at=completed_at;
+-- Preserve legacy imports/fixtures that supply due_on but not the new anchor.
+CREATE FUNCTION initialize_maintenance_anchor() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN NEW.anchor_on=COALESCE(NEW.anchor_on,NEW.due_on);RETURN NEW;END $$;
+CREATE TRIGGER maintenance_anchor_default BEFORE INSERT ON maintenance_plans FOR EACH ROW EXECUTE FUNCTION initialize_maintenance_anchor();
+ALTER TABLE maintenance_plans ALTER COLUMN anchor_on SET NOT NULL;
+ALTER TABLE maintenance_plans ADD UNIQUE(id,organization_id);
+ALTER TABLE resident_requests ADD UNIQUE(id,organization_id);
+ALTER TABLE work_orders ADD UNIQUE(id,request_id);
 
 CREATE TABLE maintenance_events(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  organization_id uuid NOT NULL REFERENCES organizations(id),
- plan_id uuid NOT NULL REFERENCES maintenance_plans(id),
+ plan_id uuid NOT NULL,
  cycle_no integer NOT NULL,
  due_on date NOT NULL,
- request_id uuid NOT NULL UNIQUE REFERENCES resident_requests(id),
- work_order_id uuid NOT NULL UNIQUE REFERENCES work_orders(id),
+ request_id uuid NOT NULL UNIQUE,
+ work_order_id uuid NOT NULL UNIQUE,
  plan_snapshot jsonb NOT NULL,
  created_at timestamptz NOT NULL DEFAULT now(),
  completed_at timestamptz,
- UNIQUE(plan_id,cycle_no)
+ UNIQUE(plan_id,cycle_no),
+ FOREIGN KEY(plan_id,organization_id) REFERENCES maintenance_plans(id,organization_id),
+ FOREIGN KEY(request_id,organization_id) REFERENCES resident_requests(id,organization_id),
+ FOREIGN KEY(work_order_id,request_id) REFERENCES work_orders(id,request_id)
 );
 CREATE UNIQUE INDEX maintenance_one_open_event ON maintenance_events(plan_id) WHERE completed_at IS NULL;
 ALTER TABLE maintenance_plans ADD COLUMN current_event_id uuid REFERENCES maintenance_events(id);

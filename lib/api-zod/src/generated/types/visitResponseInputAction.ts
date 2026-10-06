@@ -12,4 +12,5 @@ export type VisitResponseInputAction = typeof VisitResponseInputAction[keyof typ
 export const VisitResponseInputAction = {
   confirm: 'confirm',
   cancel: 'cancel',
+  request_another_time: 'request_another_time',
 } as const;

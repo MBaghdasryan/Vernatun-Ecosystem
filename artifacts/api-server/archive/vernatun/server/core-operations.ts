@@ -47,9 +47,10 @@ async function incrementRequest(db:import('pg').PoolClient,req:Request,c:any,r:a
  await record(db,req,c,'request.'+action,'resident_request',r.id);
 }
 coreOperations.post('/requests/:id/visits',async(req,res)=>{
- const c=await requirePermission(req,'requests.assign'),id=uuid.parse(req.params.id),b=z.object({key:uuid,version,startsAt:time,endsAt:time}).strict().parse(req.body);
+ const current=await context(req),c=await requirePermission(req,current.permissions.includes('requests.assign')?'requests.assign':'workorders.execute'),id=uuid.parse(req.params.id),b=z.object({key:uuid,version,startsAt:time,endsAt:time}).strict().parse(req.body);
  res.json(await transaction(async db=>{
   const r=(await accessibleRequests(req,id,db,true))[0];
+  if(!c.permissions.includes('requests.assign')&&r.technician_id!==req.user!.id)throw new ApiError(403,'forbidden');
   return idempotent(db,req,b.key,b,async()=>{
    if(r.version!==b.version)throw new ApiError(409,'stale_version');if(r.status==='closed')throw new ApiError(409,'invalid_transition');
    if(Date.parse(b.startsAt)<=Date.now()||Date.parse(b.endsAt)<=Date.parse(b.startsAt)||Date.parse(b.endsAt)-Date.parse(b.startsAt)>86400000)throw new ApiError(400,'invalid_visit_window');
@@ -63,17 +64,27 @@ coreOperations.post('/requests/:id/visits',async(req,res)=>{
  }));
 });
 coreOperations.post('/requests/:id/visits/:visitId',async(req,res)=>{
- const id=uuid.parse(req.params.id),vid=uuid.parse(req.params.visitId),b=z.object({key:uuid,version,visitVersion:version,action:z.enum(['confirm','cancel']),note:z.string().trim().max(4000).default('')}).strict().parse(req.body);
+ const id=uuid.parse(req.params.id),vid=uuid.parse(req.params.visitId),b=z.object({key:uuid,version,visitVersion:version,action:z.enum(['confirm','cancel','request_another_time']),note:z.string().trim().max(4000).default(''),suggestedStart:time.optional(),suggestedEnd:time.optional()}).strict().parse(req.body);
  res.json(await transaction(async db=>{
   const r=(await accessibleRequests(req,id,db,true))[0],c=await context(req);
   const resident=c.permissions.includes('requests.own'),tech=c.permissions.includes('workorders.execute')&&r.technician_id===req.user!.id,staff=c.permissions.includes('requests.assign');
   await requirePermission(req,b.action==='confirm'?(resident?'requests.own':'workorders.execute'):staff?'requests.assign':resident?'requests.own':'workorders.execute');
+  if(b.action==='request_another_time'&&!resident)throw new ApiError(403,'forbidden');
   if(b.action==='confirm'&&!resident&&!tech||b.action==='cancel'&&!staff&&!resident&&!tech)throw new ApiError(403,'forbidden');
   return idempotent(db,req,b.key,b,async()=>{
    const v=(await db.query('SELECT * FROM request_visits WHERE id=$1 AND request_id=$2 FOR UPDATE',[vid,id])).rows[0];
    if(!v)throw new ApiError(404,'not_found');if(r.version!==b.version||v.version!==b.visitVersion)throw new ApiError(409,'stale_version');
    if(r.status==='closed'||!['proposed','confirmed'].includes(v.status))throw new ApiError(409,'invalid_transition');
    if(b.action==='cancel'&&b.note.length<3)throw new ApiError(400,'reason_required');
+   if(b.action==='request_another_time'){
+    if(b.note.length<3)throw new ApiError(400,'reason_required');
+    if((b.suggestedStart||b.suggestedEnd)&&(!b.suggestedStart||!b.suggestedEnd||Date.parse(b.suggestedStart)<=Date.now()||Date.parse(b.suggestedEnd)<=Date.parse(b.suggestedStart)||Date.parse(b.suggestedEnd)-Date.parse(b.suggestedStart)>86400000))throw new ApiError(400,'invalid_visit_window');
+    const result=(await db.query("UPDATE request_visits SET status='cancelled',version=version+1 WHERE id=$1 RETURNING *",[vid])).rows[0];
+    if(b.suggestedStart)await db.query('UPDATE resident_requests SET preferred_visit_start=$2,preferred_visit_end=$3 WHERE id=$1',[id,b.suggestedStart,b.suggestedEnd]);
+    await appendVisit(db,req,{...result,reason:b.note,suggestedStart:b.suggestedStart??null,suggestedEnd:b.suggestedEnd??null},'reschedule_requested');
+    await incrementRequest(db,req,c,r,'visit_request_another_time',b.note);
+    return {...result,request_version:r.version+1};
+   }
    if(b.action==='confirm'&&(resident?v.resident_confirmed_at:v.technician_confirmed_at))throw new ApiError(409,'already_confirmed');
    if(b.action==='confirm')v[resident?'resident_confirmed_at':'technician_confirmed_at']=new Date().toISOString();
    const status=b.action==='cancel'?'cancelled':v.technician_confirmed_at&&(!v.resident_required||v.resident_confirmed_at)?'confirmed':'proposed';
@@ -105,8 +116,8 @@ coreOperations.get('/operations/visits',async(req,res)=>{
  const c=await readScope(req),from=time.parse(req.query.from),to=time.parse(req.query.to);
  if(Date.parse(to)<=Date.parse(from)||Date.parse(to)-Date.parse(from)>62*86400000)throw new ApiError(400,'invalid_visit_window');
  res.json((await pool.query(`SELECT v.*,r.version AS request_version,r.subject,u.number,b.name AS building_name FROM request_visits v
- JOIN resident_requests r ON r.id=v.request_id JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=u.building_id LEFT JOIN work_orders w ON w.request_id=r.id
- WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3)
+ JOIN resident_requests r ON r.id=v.request_id LEFT JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=COALESCE(r.building_id,u.building_id) LEFT JOIN work_orders w ON w.request_id=r.id
+ WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR COALESCE(r.building_id,u.building_id)=$2) AND ($3::uuid IS NULL OR u.id=$3)
  AND v.status IN('proposed','confirmed') AND r.status<>'closed' AND v.starts_at<$5 AND v.ends_at>$4
  AND ($6::boolean OR ($7::boolean AND (r.author_user_id=$8 OR r.reported_for_user_id=$8 OR r.reported_for_user_id IS NULL AND r.source IN('dispatcher_phone','manager','system') AND u.id=$3)) OR ($9::boolean AND w.technician_id=$8))
  ORDER BY v.starts_at LIMIT 1000`,[c.organization_id,c.building_id,c.unit_id,from,to,c.permissions.includes('requests.read'),c.permissions.includes('requests.own'),req.user!.id,c.permissions.includes('workorders.assigned')])).rows);

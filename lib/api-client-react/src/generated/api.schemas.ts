@@ -5,6 +5,137 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface RecentAuthenticationInput {
+  /**
+     * @minLength 1
+     * @maxLength 72
+     */
+  password: string;
+  /**
+     * @minLength 6
+     * @maxLength 30
+     */
+  code?: string;
+}
+
+export type ResidentDelegationInputPermissionsItem = typeof ResidentDelegationInputPermissionsItem[keyof typeof ResidentDelegationInputPermissionsItem];
+
+
+export const ResidentDelegationInputPermissionsItem = {
+  requestsown: 'requests.own',
+  requestscreate: 'requests.create',
+  announcementsread: 'announcements.read',
+  propertiesown: 'properties.own',
+  accesscreate: 'access.create',
+} as const;
+
+export interface ResidentDelegationInput {
+  email: string;
+  phone?: string;
+  expiresAt: string;
+  permissions: ResidentDelegationInputPermissionsItem[];
+}
+
+export interface DelegationExpirationInput {
+  /** @minimum 1 */
+  version: number;
+  expiresAt: string;
+}
+
+export interface DelegationResendInput {
+  /** @minimum 1 */
+  version: number;
+}
+
+export interface LeaseLifecycleInput {
+  /** @minimum 1 */
+  version: number;
+  endsOn?: string;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason?: string;
+}
+
+export interface NotificationDestination {
+  targetContextId: string;
+  requiresSwitch: boolean;
+  destination: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  [key: string]: unknown;
+ }
+
+export type MaintenancePlanInputFrequency = typeof MaintenancePlanInputFrequency[keyof typeof MaintenancePlanInputFrequency];
+
+
+export const MaintenancePlanInputFrequency = {
+  once: 'once',
+  daily: 'daily',
+  weekly: 'weekly',
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  semiannual: 'semiannual',
+  annual: 'annual',
+  custom: 'custom',
+} as const;
+
+export type MaintenancePlanInputPriority = typeof MaintenancePlanInputPriority[keyof typeof MaintenancePlanInputPriority];
+
+
+export const MaintenancePlanInputPriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+  emergency: 'emergency',
+} as const;
+
+export interface MaintenancePlanInput {
+  assetId: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  title: string;
+  dueOn: string;
+  frequency?: MaintenancePlanInputFrequency;
+  /**
+     * @minimum 1
+     * @maximum 36600
+     * @nullable
+     */
+  intervalDays?: number | null;
+  categoryId: string;
+  priority?: MaintenancePlanInputPriority;
+  /** @maxLength 4000 */
+  instructions?: string;
+  /**
+     * @maxItems 30
+     * @items.minLength 1
+     * @items.maxLength 200
+     */
+  checklist?: string[];
+  active?: boolean;
+  automatic?: boolean;
+}
+
+export interface MaintenanceConfigurationInput {
+  /** @minimum 1 */
+  version: number;
+  active: boolean;
+  automatic: boolean;
+  categoryId?: string;
+}
+
+export interface MaintenanceGenerationInput {
+  /** @minimum 0 */
+  cycleNo?: number;
+}
+
 /**
  * Opaque binary image carried as application/octet-stream; decoded and validated on the server.
  */
@@ -179,6 +310,7 @@ export type VisitResponseInputAction = typeof VisitResponseInputAction[keyof typ
 export const VisitResponseInputAction = {
   confirm: 'confirm',
   cancel: 'cancel',
+  request_another_time: 'request_another_time',
 } as const;
 
 export interface VisitResponseInput {
@@ -190,6 +322,8 @@ export interface VisitResponseInput {
   action: VisitResponseInputAction;
   /** @maxLength 4000 */
   note?: string;
+  suggestedStart?: string;
+  suggestedEnd?: string;
 }
 
 export type MaterialInputKind = typeof MaterialInputKind[keyof typeof MaterialInputKind];
@@ -524,6 +658,10 @@ export const ListEmailMessagesProvider = {
 export type GetDispatcherSetupParams = {
 buildingId?: string;
 unitId?: string;
+};
+
+export type ResolveNotificationDestinationParams = {
+contextId?: string;
 };
 
 export type LookupEquipmentParams = {

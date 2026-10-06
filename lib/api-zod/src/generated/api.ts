@@ -398,8 +398,10 @@ export const RespondToRequestVisitBody = zod.object({
   "key": zod.string().uuid(),
   "version": zod.number().int().min(1),
   "visitVersion": zod.number().int().min(1),
-  "action": zod.enum(['confirm', 'cancel']),
-  "note": zod.string().max(respondToRequestVisitBodyNoteMax).optional()
+  "action": zod.enum(['confirm', 'cancel', 'request_another_time']),
+  "note": zod.string().max(respondToRequestVisitBodyNoteMax).optional(),
+  "suggestedStart": zod.coerce.date().optional(),
+  "suggestedEnd": zod.coerce.date().optional()
 })
 
 export const RespondToRequestVisitResponse = zod.unknown()
@@ -434,6 +436,176 @@ export const AddWorkMaterialBody = zod.object({
 })
 
 export const AddWorkMaterialResponse = zod.void()
+
+
+export const reauthenticateResidentBodyPasswordMax = 72;
+
+export const reauthenticateResidentBodyCodeMin = 6;
+export const reauthenticateResidentBodyCodeMax = 30;
+
+
+
+export const ReauthenticateResidentBody = zod.object({
+  "password": zod.string().min(1).max(reauthenticateResidentBodyPasswordMax),
+  "code": zod.string().min(reauthenticateResidentBodyCodeMin).max(reauthenticateResidentBodyCodeMax).optional()
+})
+
+export const ReauthenticateResidentResponse = zod.unknown()
+
+
+export const CreateResidentDelegationBody = zod.object({
+  "email": zod.string().email(),
+  "phone": zod.string().optional(),
+  "expiresAt": zod.coerce.date(),
+  "permissions": zod.array(zod.enum(['requests.own', 'requests.create', 'announcements.read', 'properties.own', 'access.create']))
+})
+
+export const CreateResidentDelegationResponse = zod.void()
+
+
+export const ChangeDelegationExpirationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ChangeDelegationExpirationBody = zod.object({
+  "version": zod.number().int().min(1),
+  "expiresAt": zod.coerce.date()
+})
+
+export const ChangeDelegationExpirationResponse = zod.unknown()
+
+
+export const ResendResidentDelegationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ResendResidentDelegationBody = zod.object({
+  "version": zod.number().int().min(1)
+})
+
+export const ResendResidentDelegationResponse = zod.unknown()
+
+
+export const TransitionResidentLeaseParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "action": zod.enum(['extend', 'cancel'])
+})
+
+
+export const transitionResidentLeaseBodyReasonMin = 3;
+export const transitionResidentLeaseBodyReasonMax = 1000;
+
+
+
+export const TransitionResidentLeaseBody = zod.object({
+  "version": zod.number().int().min(1),
+  "endsOn": zod.coerce.date().optional(),
+  "reason": zod.string().min(transitionResidentLeaseBodyReasonMin).max(transitionResidentLeaseBodyReasonMax).optional()
+})
+
+export const TransitionResidentLeaseResponse = zod.unknown()
+
+
+export const ResolveNotificationDestinationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ResolveNotificationDestinationQueryParams = zod.object({
+  "contextId": zod.coerce.string().uuid().optional()
+})
+
+export const ResolveNotificationDestinationResponse = zod.object({
+  "targetContextId": zod.string().uuid(),
+  "requiresSwitch": zod.boolean(),
+  "destination": zod.string()
+})
+
+
+export const createMaintenancePlanBodyTitleMin = 2;
+export const createMaintenancePlanBodyTitleMax = 160;
+
+export const createMaintenancePlanBodyFrequencyDefault = `once`;
+export const createMaintenancePlanBodyIntervalDaysMax = 36600;
+
+export const createMaintenancePlanBodyPriorityDefault = `normal`;
+export const createMaintenancePlanBodyInstructionsMax = 4000;
+
+export const createMaintenancePlanBodyChecklistItemMax = 200;
+
+export const createMaintenancePlanBodyChecklistMax = 30;
+
+export const createMaintenancePlanBodyActiveDefault = false;
+export const createMaintenancePlanBodyAutomaticDefault = false;
+
+export const CreateMaintenancePlanBody = zod.object({
+  "assetId": zod.string().uuid(),
+  "title": zod.string().min(createMaintenancePlanBodyTitleMin).max(createMaintenancePlanBodyTitleMax),
+  "dueOn": zod.coerce.date(),
+  "frequency": zod.enum(['once', 'daily', 'weekly', 'monthly', 'quarterly', 'semiannual', 'annual', 'custom']).default(createMaintenancePlanBodyFrequencyDefault),
+  "intervalDays": zod.number().int().min(1).max(createMaintenancePlanBodyIntervalDaysMax).nullish(),
+  "categoryId": zod.string().uuid(),
+  "priority": zod.enum(['low', 'normal', 'high', 'urgent', 'emergency']).default(createMaintenancePlanBodyPriorityDefault),
+  "instructions": zod.string().max(createMaintenancePlanBodyInstructionsMax).optional(),
+  "checklist": zod.array(zod.string().min(1).max(createMaintenancePlanBodyChecklistItemMax)).max(createMaintenancePlanBodyChecklistMax).optional(),
+  "active": zod.boolean().default(createMaintenancePlanBodyActiveDefault),
+  "automatic": zod.boolean().default(createMaintenancePlanBodyAutomaticDefault)
+})
+
+export const CreateMaintenancePlanResponse = zod.object({
+  "id": zod.string().uuid()
+})
+
+
+export const ConfigureMaintenancePlanParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ConfigureMaintenancePlanBody = zod.object({
+  "version": zod.number().int().min(1),
+  "active": zod.boolean(),
+  "automatic": zod.boolean(),
+  "categoryId": zod.string().uuid().optional()
+})
+
+export const ConfigureMaintenancePlanResponse = zod.object({
+  "id": zod.string().uuid()
+})
+
+
+export const GenerateMaintenanceEventParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const generateMaintenanceEventBodyCycleNoMin = 0;
+
+
+
+export const GenerateMaintenanceEventBody = zod.object({
+  "cycleNo": zod.number().int().min(generateMaintenanceEventBodyCycleNoMin).optional()
+})
+
+export const GenerateMaintenanceEventResponse = zod.object({
+  "id": zod.string().uuid()
+})
+
+
+export const GetMaintenanceEventsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetMaintenanceEventsResponseItem = zod.object({
+  "id": zod.string().uuid()
+})
+export const GetMaintenanceEventsResponse = zod.array(GetMaintenanceEventsResponseItem)
 
 
 export const lookupEquipmentQueryIdentifierMax = 160;

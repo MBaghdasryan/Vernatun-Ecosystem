@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,context,requirePermission,scopedUnit} from './access.js';
 import {transaction,idempotent} from './operations.js';
+import {activeLeasePredicate} from './lease-policy.js';
 
 export const priorities=['low','normal','high','urgent','emergency'] as const;
 const uuid=z.string().uuid(),time=z.string().datetime({offset:true});
@@ -19,6 +20,7 @@ export async function eligiblePeople(db:PoolClient|typeof pool,org:string,buildi
  JOIN role_assignments a ON a.user_id=x.id JOIN memberships m ON m.user_id=x.id AND m.organization_id=a.organization_id
  WHERE a.organization_id=$1 AND a.active AND m.active AND NOT x.blocked AND a.starts_at<=now()
  AND (a.expires_at IS NULL OR a.expires_at>now()) AND ($5::uuid IS NULL OR x.id=$5)
+ AND ${activeLeasePredicate('a')}
  AND (($4='technician' AND a.role_key='technician' AND (a.building_id IS NULL OR a.building_id=$2) AND (a.unit_id IS NULL OR a.unit_id=$3))
  OR ($4='resident' AND a.role_key IN('unit_owner','renter','family') AND a.unit_id=$3))
  AND NOT EXISTS(SELECT 1 FROM resident_delegations d WHERE d.assignment_id=a.id AND

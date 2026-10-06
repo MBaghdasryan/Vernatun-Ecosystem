@@ -2,6 +2,8 @@
 
 Дата: **6 октября 2026 года**.
 
+Актуальное дополнение: [Phase 3 — реализация, проверки и внешние ограничения](PHASE3-COMPLETION.md). Maintenance → общий WorkOrder и manager verification, delegation lifecycle, visit alternatives, notification context switch и lease policy реализованы. Signed-in UI acceptance проверяется. Ниже сохранена историческая baseline-сверка; текущие статусы этапов — в [CURRENT-COMPLETION-STATUS.md](CURRENT-COMPLETION-STATUS.md).
+
 ## Обновление после продолжения: Core operations
 
 Исправлен managed lifecycle Web/API. Реализованы business-функции Phase 2, применена добавочная миграция после изолированной проверки. Текущий подробный срез, ограничения online-form recovery и результаты проверок: [PHASE2-COMPLETION.md](PHASE2-COMPLETION.md). Signed-in QA ещё выполняется; Phase 3–8 не завершены. Реальные письма не отправлялись.
