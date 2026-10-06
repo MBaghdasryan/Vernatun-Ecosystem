@@ -24,6 +24,34 @@
       }
     },
     "parameters": {
+      "hayatUser": {
+        "name": "X-Hayat-User",
+        "in": "header",
+        "required": false,
+        "description": "Expected authenticated user for a queued offline operation; mismatch is 403 scope_changed.",
+        "schema": {"type": "string", "format": "uuid"}
+      },
+      "hayatContext": {
+        "name": "X-Hayat-Context",
+        "in": "header",
+        "required": false,
+        "description": "Expected current business context for a queued offline operation; mismatch is 403 scope_changed.",
+        "schema": {"type": "string", "format": "uuid"}
+      },
+      "photoOperation": {
+        "name": "X-Operation-Key",
+        "in": "header",
+        "required": false,
+        "description": "Immutable photo upload UUID. Same user/context/path/raw-byte hash/version replays the existing receipt; changing payload gives 409 idempotency_conflict.",
+        "schema": {"type": "string", "format": "uuid"}
+      },
+      "workVersion": {
+        "name": "X-Work-Version",
+        "in": "header",
+        "required": false,
+        "description": "Expected parent request or defect version; mismatch gives 409 stale_version unless this exact upload already committed.",
+        "schema": {"type": "integer", "minimum": 1}
+      },
       "csrf": {
         "name": "X-CSRF-Token",
         "in": "header",
@@ -1955,6 +1983,7 @@
     "/requests/{id}/photos": {
       "post": {
         "summary": "Upload private photo: JPEG, PNG, WebP; at most 6 MiB and 16 million pixels; sanitized to JPEG",
+        "description": "Offline upload supports optional account/context guards, operation receipts and expected work version. Every replay revalidates current scoped access. Successful original and replay return 201 with the same private photo ID.",
         "responses": {
           "200": {
             "description": "Success"
@@ -1976,6 +2005,10 @@
           }
         },
         "parameters": [
+          {"$ref": "#/components/parameters/hayatUser"},
+          {"$ref": "#/components/parameters/hayatContext"},
+          {"$ref": "#/components/parameters/photoOperation"},
+          {"$ref": "#/components/parameters/workVersion"},
           {
             "name": "id",
             "in": "path",
@@ -2527,8 +2560,28 @@
         "tags": [
           "field"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "description": "Versioned defect transition. Optional immutable key replays an existing receipt without another transition/history entry, after revalidating current permissions and assignment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["action", "version"],
+                "properties": {
+                  "key": {"type": "string", "format": "uuid"},
+                  "action": {"type": "string", "enum": ["start", "report", "accept", "return"]},
+                  "version": {"type": "integer", "minimum": 1},
+                  "note": {"type": "string", "maxLength": 4000, "default": ""}
+                }
+              }
+            }
+          }
+        },
         "parameters": [
+          {"$ref": "#/components/parameters/hayatUser"},
+          {"$ref": "#/components/parameters/hayatContext"},
           {
             "name": "id",
             "in": "path",
@@ -5136,11 +5189,16 @@
     "/defects/{id}/photos": {
       "post": {
         "summary": "POST /defects/{id}/photos",
+        "description": "Private image upload: JPEG/PNG/WebP up to 6 MiB, sanitized to JPEG. Optional immutable photo operation key, expected parent version, and user/context guards use the same replay protocol as request photos.",
         "tags": [
           "photos"
         ],
         "description": "Route inventory; validation and scoped authorization: server/photos.ts. Request schemas are not fully represented here.",
         "parameters": [
+          {"$ref": "#/components/parameters/hayatUser"},
+          {"$ref": "#/components/parameters/hayatContext"},
+          {"$ref": "#/components/parameters/photoOperation"},
+          {"$ref": "#/components/parameters/workVersion"},
           {
             "name": "id",
             "in": "path",

@@ -6,3 +6,4 @@
 - [Platform completion scope](platform-completion-scope.md) — active completion spec preserves shared architecture; screenshot logos do not override product/user branding.
 - [Subscription rollout](subscription-rollout.md) — restored organizations retain legacy access until a real subscription/policy is explicitly activated.
 - [Email provider boundary](email-provider-boundary.md) — Resend is selected; provider adapters must remain replaceable without rewriting business logic.
+- [HAYAT offline policy](hayat-offline-policy.md) — local work stays user/context-bound; reconnect never starts submission or grants server access.

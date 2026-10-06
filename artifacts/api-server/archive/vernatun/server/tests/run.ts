@@ -15,7 +15,9 @@ await testAdmin.query(`CREATE SCHEMA "${schema}"`);
 url.searchParams.set('options',`-c search_path=${schema},public`);
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
 let status=0;
-const checks=process.argv.includes('--phase1-only')
+const checks=process.argv.includes('--offline-only')
+ ? [['--test','server/tests/offline.test.ts']]
+ : process.argv.includes('--phase1-only')
  ? [['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--imtun-only')
  ? [['--test','server/tests/imtun.test.ts']]
@@ -25,7 +27,7 @@ const checks=process.argv.includes('--phase1-only')
  ? [['--test','server/tests/backup.test.ts']]
  : process.argv.includes('--storage-only')
  ? [['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']]
- : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
+ : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/offline.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
 if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
  checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
 }
