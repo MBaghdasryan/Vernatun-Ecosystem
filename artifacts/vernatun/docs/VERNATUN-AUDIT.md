@@ -1,6 +1,6 @@
 # Vernatun — сверка с активной спецификацией
 
-Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md) и [Phase 3](PHASE3-COMPLETION.md). Phase 3 закрывает backend/UI maintenance → WorkOrder, делегирование, визиты, notification links и lease policy; signed-in acceptance проверяется. 91 core-проверка и финальные 7 проверок Phase 3 прошли. Phases 4–8 и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
+Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md) и [Phase 3](PHASE3-COMPLETION.md). Phase 3 закрывает backend/UI maintenance → WorkOrder, делегирование, визиты, notification links и lease policy. 91 core-проверка и финальные 7 проверок Phase 3 прошли. Signed-in ImTun + browser-only fixtures проверены; manager UI acceptance заблокирован 401 сохранённых credentials. Phases 4–8 и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
 
 Дата: 6 октября 2026 года.
 

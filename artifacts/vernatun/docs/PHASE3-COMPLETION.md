@@ -1,6 +1,6 @@
 # Phase 3 — обслуживание и жизненный цикл ImTun
 
-Дата: 6 октября 2026 года.
+Дата завершения проверки: 7 октября 2026 года (Asia/Yerevan).
 
 ## Реализованный объём
 
@@ -66,7 +66,12 @@
 - Миграции 017–018 применены к development только после изолированной проверки.
 - До/после применения совпали counts и digests прежних полей 14 таблиц; seed основной базы и удаление private bytes не выполнялись.
 - Web/API перезапущены через существующие managed workflows; свежая сборка и authenticated GET-маршруты работают.
-- Signed-in браузерная проверка новых интерфейсов выполняется; до её результата UI acceptance не объявляется завершённым.
+- Signed-in браузерная проверка: владелец прошёл реальные read-only страницы ImTun; мутации проверялись browser-only перехватами без бизнес-записей.
+- Подтверждены email/optional phone/permissions в delegation form, recent-auth prompt без автоматического resubmit, notification target confirmation/cancel/re-resolution, exact requestId navigation, proposed/confirmed visit alternative и четыре lease status.
+- Для cross-context перехода, записей визитов и статусов договоров использовались явно синтетические GET/POST fixtures. Это не выдается за реальные бизнес-операции.
+- **UI acceptance PARTIAL:** сохранённые credentials управляющего и portfolio-owner получили HTTP 401; maintenance UI, manager lease controls и stale-version rebase не проверены в authenticated браузере. Аккаунты не сбрасывались и не изменялись.
+- В этом browser pass не было API 404, реальных business writes, приглашений, загрузок или писем.
+- Публичная главная страница дополнительно проверена screenshot: загружается без console errors; исходные логотипы, тексты и изображения сохранены.
 
 ## EXTERNAL BLOCKER / границы этапа
 

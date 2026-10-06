@@ -6,6 +6,8 @@
 
 Миграции 017–018 прошли изолированную проверку и development preservation check для 14 таблиц. Общая core-регрессия: 91 проверка без ошибок; финальный Phase 3: 7 проверок/групп без ошибок. Реальные письма, main seed, private-byte deletion и production migration не выполнялись. Подробнее: [PHASE3-COMPLETION.md](PHASE3-COMPLETION.md).
 
+Браузерная проверка подтвердила ImTun read-only и синтетические delegation/reauth, notification switch, visit alternatives, lease-status сценарии. Manager maintenance/lease controls пока не подтверждены: существующие данные входа вернули 401; аккаунты не сбрасывались.
+
 ## Core operations и managed runtime
 
 Один управляемый owner для Web/API; добавочная миграция 016 после изолированных проверок; телефонный intake, категории/приоритеты/SLA, история визитов, действия техника, материалы, типизированные приватные фото, equipment QR/manual lookup и инциденты. Новые incident bytes включены в inventory/backup. Старые offline receipts сохраняют fingerprint. Реальные email не отправлялись. Подробные проверки и известные ограничения: PHASE2-COMPLETION.md.

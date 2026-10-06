@@ -1,12 +1,12 @@
 # Текущее состояние продолжения мастер-промпта
 
-6 октября 2026.
+7 октября 2026 (Asia/Yerevan).
 
 | Этап | Статус текущего продолжения |
 |---|---|
 | Runtime Web/API | COMPLETE — один управляемый владелец каждого сервиса; ожидание свежей API-сборки до открытия порта; повторные рестарты и реальные authenticated маршруты проверены |
 | Phase 2: core operations | COMPLETE в операционном объёме этапа — подробности и границы проверки в PHASE2-COMPLETION.md |
-| Phase 3: maintenance и ImTun flows | Реализация завершена; signed-in UI acceptance проверяется — maintenance → WorkOrder, delegation, visit alternatives, context-safe notification links и lease access; подробности в PHASE3-COMPLETION.md |
+| Phase 3: maintenance и ImTun flows | COMPLETE implementation / PARTIAL UI acceptance — maintenance → WorkOrder, delegation, visit alternatives, notification links и lease access; ImTun проверен real read-only + synthetic browser fixtures; вход управляющего заблокирован 401; подробности в PHASE3-COMPLETION.md |
 | Phase 4: finance | PARTIAL — существующий учёт не означает завершение batch billing, reconciliation и allocations |
 | Phase 5: platform operations | PARTIAL — существующая консоль не означает завершение всех управляемых циклов |
 | Phase 6: community/documents/analytics | PARTIAL — требуется закрытие полного объёма мастер-промпта |

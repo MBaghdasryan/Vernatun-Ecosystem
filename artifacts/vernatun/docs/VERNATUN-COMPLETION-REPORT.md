@@ -2,7 +2,7 @@
 
 Дата: **6 октября 2026 года**.
 
-Актуальное дополнение: [Phase 3 — реализация, проверки и внешние ограничения](PHASE3-COMPLETION.md). Maintenance → общий WorkOrder и manager verification, delegation lifecycle, visit alternatives, notification context switch и lease policy реализованы. Signed-in UI acceptance проверяется. Ниже сохранена историческая baseline-сверка; текущие статусы этапов — в [CURRENT-COMPLETION-STATUS.md](CURRENT-COMPLETION-STATUS.md).
+Актуальное дополнение: [Phase 3 — реализация, проверки и внешние ограничения](PHASE3-COMPLETION.md). Maintenance → общий WorkOrder и manager verification, delegation lifecycle, visit alternatives, notification context switch и lease policy реализованы. Signed-in ImTun проверен в read-only режиме и на browser-only fixtures; maintenance/manager lease UI acceptance остаётся заблокированным 401 демо-credentials. Ниже сохранена историческая baseline-сверка; текущие статусы этапов — в [CURRENT-COMPLETION-STATUS.md](CURRENT-COMPLETION-STATUS.md).
 
 ## Обновление после продолжения: Core operations
 
