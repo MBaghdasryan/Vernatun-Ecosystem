@@ -94,3 +94,25 @@ The API suite exercises real App Storage, original role/scope restrictions,
 PDF/JPEG byte equality, legacy transfer and metadata preservation, repeatable
 transfer, missing/conflicting bytes, and authenticated downloads after killing
 and starting a new server process. Fixtures stay in the isolated test database.
+
+## Paired PostgreSQL / private-file backups
+
+The maintained source is actually at
+`artifacts/api-server/archive/vernatun/server/` (relative to this document:
+`archive/vernatun/server/`), not the workspace-root `archive/` directory.
+
+See [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md) for the operating procedure,
+retention policy, verified drill and limits. Available commands:
+
+- `pnpm --filter @workspace/api-server run backup:create` — explicitly create
+  one paired **development** snapshot. Briefly blocks application writes;
+  does not update application rows or live file bytes.
+- `pnpm --filter @workspace/api-server run backup:drill <backup_id>` — verify
+  that snapshot in a newly generated database and isolated private file prefix,
+  then remove only those temporary resources.
+- `pnpm --filter @workspace/api-server run test:backup` — real PostgreSQL /
+  App Storage recovery and HTTP permission checks with runner-owned fixtures.
+
+These commands are not run on server startup or post-merge. No schedule or
+production backup configuration has been enabled. Both commands reject
+`NODE_ENV=production`; they cannot be used as a production cutover shortcut.
