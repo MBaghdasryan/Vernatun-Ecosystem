@@ -4,6 +4,8 @@ import {assertConfigured,validSender,type EmailMessage,type EmailProvider,type E
 
 export class SMTPEmailProvider implements EmailProvider {
  readonly name='smtp';
+ // SMTP acceptance is not a DSN. No evidence adapter is configured here.
+ readonly capabilities={deliveryEvents:false,opens:false,clicks:false} as const;
  constructor(private readonly settings:EmailSettings,private readonly transport?:SMTPTransport){}
  isConfigured(){
   const s=this.settings;

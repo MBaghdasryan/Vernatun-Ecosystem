@@ -9,6 +9,7 @@ export {DevelopmentOutboxProvider,SMTPEmailProvider,ResendEmailProvider};
 
 class DisabledEmailProvider implements EmailProvider {
  readonly name='disabled';
+ readonly capabilities={deliveryEvents:false,opens:false,clicks:false} as const;
  isConfigured(){return false}
  async send():Promise<never>{throw new ApiError(503,'email_not_configured')}
 }

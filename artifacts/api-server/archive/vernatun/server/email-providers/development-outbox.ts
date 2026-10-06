@@ -3,6 +3,7 @@ import {assertConfigured,assertSafeEmailKey,type EmailMessage,type EmailProvider
 
 export class DevelopmentOutboxProvider implements EmailProvider {
  readonly name='outbox';
+ readonly capabilities={deliveryEvents:false,opens:false,clicks:false} as const;
  constructor(private readonly settings:EmailSettings){}
  isConfigured(){return this.settings.mode==='development'||this.settings.mode==='test'}
  async send(message:EmailMessage,key:string):Promise<ProviderReceipt>{

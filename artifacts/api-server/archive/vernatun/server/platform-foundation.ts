@@ -160,15 +160,19 @@ platformFoundation.get('/invitations',async(req,res)=>{
  const values:unknown[]=platform?[]:[c.organization_id,c.building_id,c.unit_id];
  res.json((await pool.query(`SELECT i.id,i.email,i.role_key,i.organization_id,o.name AS organization_name,
   i.expires_at,i.accepted_at,i.revoked_at,i.email_delivery_status,i.email_delivery_at,i.delegation_id,
+  d.outcome AS delivery_outcome,d.outcome_at AS delivery_outcome_at,d.provider AS delivery_provider,
+  COALESCE(d.delivery_evidence,false) AS delivery_evidence,
   CASE WHEN i.revoked_at IS NOT NULL THEN 'revoked' WHEN i.accepted_at IS NOT NULL THEN 'accepted'
    WHEN i.expires_at<=now() THEN 'expired' ELSE 'pending' END AS status
-  FROM invitations i JOIN organizations o ON o.id=i.organization_id WHERE ${platform?'TRUE':
+  FROM invitations i JOIN organizations o ON o.id=i.organization_id
+  JOIN invitation_delivery_outcomes d ON d.invitation_id=i.id WHERE ${platform?'TRUE':
    'i.organization_id=$1 AND ($2::uuid IS NULL OR i.building_id=$2) AND ($3::uuid IS NULL OR i.unit_id=$3)'}
   ORDER BY i.expires_at DESC,i.id DESC`,values)).rows);
 });
 platformFoundation.post('/invitations/:id/resend',async(req,res)=>{
  const c=await context(req),platform=c.permissions.includes('platform.invite');
  await requirePermission(req,platform?'platform.invite':'people.invite');assertEmailConfigured();
+ const body=z.object({email:z.string().email().max(254).optional()}).strict().parse(req.body??{});
  const token=randomBytes(32).toString('hex'),id=uuid.parse(req.params.id);
  const row=await transaction(async db=>{
   const i=(await db.query('SELECT * FROM invitations WHERE id=$1 FOR UPDATE',[id])).rows[0];
@@ -177,8 +181,10 @@ platformFoundation.post('/invitations/:id/resend',async(req,res)=>{
    (c.building_id&&c.building_id!==i.building_id)||(c.unit_id&&c.unit_id!==i.unit_id))throw new ApiError(403,'forbidden');
   if(i.accepted_at||i.revoked_at)throw new ApiError(409,'invalid_transition');
   const updated=(await db.query(`UPDATE invitations SET token_hash=$1,expires_at=now()+interval '48 hours',
-   email_delivery_status='unknown',email_delivery_at=NULL WHERE id=$2 RETURNING id,expires_at`,[createHash('sha256').update(token).digest('hex'),id])).rows[0];
-  await record(db,req,{...c,organization_id:i.organization_id},'invitation.resend','invitation',id);return updated;
+   email_delivery_status='unknown',email_delivery_at=NULL,current_email_attempt_id=NULL,
+   email=COALESCE($3,email) WHERE id=$2 RETURNING id,expires_at`,
+   [createHash('sha256').update(token).digest('hex'),id,body.email?.toLowerCase()??null])).rows[0];
+  await record(db,req,{...c,organization_id:i.organization_id},'invitation.resend','invitation',id,{addressChanged:!!body.email&&body.email.toLowerCase()!==i.email});return updated;
  });
  res.json({...row,...await sendInvitation(req,c,id,token)});
 });

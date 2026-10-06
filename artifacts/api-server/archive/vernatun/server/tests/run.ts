@@ -17,6 +17,8 @@ const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_
 let status=0;
 const checks=process.argv.includes('--offline-only')
  ? [['--test','server/tests/offline.test.ts']]
+ : process.argv.includes('--delivery-only')
+ ? [['--test','server/tests/email-providers.test.ts'],['--test','server/tests/email-delivery.test.ts'],['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--phase1-only')
  ? [['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--imtun-only')
@@ -29,7 +31,8 @@ const checks=process.argv.includes('--offline-only')
  ? [['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']]
  : [['--test','server/tests/security.test.ts'],['--test','server/tests/phase1.test.ts'],['--test','server/tests/hayat.test.ts'],['--test','server/tests/imtun.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/offline.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']];
 if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
- checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
+ if(!checks.some(args=>args.includes('server/tests/email-providers.test.ts')))checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
+ if(!checks.some(args=>args.includes('server/tests/email-delivery.test.ts')))checks.splice(2,0,['--test','server/tests/email-delivery.test.ts']);
 }
 try{
  for(const args of [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts'],...checks.filter(args=>!process.argv.includes('--core-only')||!args.some(a=>/\/(backup|storage|storage-inventory)\.test\.ts$/.test(a)))]){

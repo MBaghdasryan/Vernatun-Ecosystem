@@ -1,11 +1,31 @@
 import {createHash} from 'node:crypto';
 import {ReplitConnectors} from '@replit/connectors-sdk';
 import {z} from 'zod';
+import {Webhook} from 'svix';
 import {ApiError} from '../access.js';
-import {assertConfigured,validSender,type EmailMessage,type EmailProvider,type EmailSettings,type ProviderReceipt,type ResendFetch} from './types.js';
+import {assertConfigured,validSender,type EmailMessage,type EmailProvider,type EmailSettings,type ProviderReceipt,type ResendFetch,type WebhookInput,type DeliveryEvent} from './types.js';
 
 export class ResendEmailProvider implements EmailProvider {
  readonly name='resend';
+ readonly capabilities={deliveryEvents:true,opens:false,clicks:false} as const;
+ normalizeWebhook(input:WebhookInput):DeliveryEvent|null{
+  let verified:unknown;
+  // Svix 2 verifies bytes but returns void. Parse only after signature verification.
+  try{new Webhook(input.secret).verify(input.body,input.headers)}
+  catch{throw new ApiError(400,'webhook_signature_invalid')}
+  try{verified=JSON.parse(input.body)}
+  catch{throw new ApiError(400,'webhook_payload_invalid')}
+  const envelope=z.object({type:z.string()}).safeParse(verified);
+  if(!envelope.success)throw new ApiError(400,'webhook_payload_invalid');
+  const outcomes={'email.delivered':'delivered','email.bounced':'bounced','email.complained':'complained'} as const;
+  const outcome=outcomes[envelope.data.type as keyof typeof outcomes];
+  // Open/click/sent and unrelated events are deliberately not retained.
+  if(!outcome)return null;
+  const event=z.object({created_at:z.string().datetime({offset:true}),data:z.object({email_id:z.string().uuid()})}).safeParse(verified);
+  if(!event.success)throw new ApiError(400,'webhook_payload_invalid');
+  const eventId=z.string().min(1).max(200).parse(input.headers['svix-id']);
+  return {provider:this.name,scope:input.scope,eventId,messageId:event.data.data.email_id,outcome,occurredAt:event.data.created_at};
+ }
  constructor(private readonly settings:EmailSettings,private readonly fetchEmail?:ResendFetch){}
  isConfigured(){return this.settings.mode!=='test'&&validSender(this.settings.from)}
  async send(message:EmailMessage,key:string):Promise<ProviderReceipt>{

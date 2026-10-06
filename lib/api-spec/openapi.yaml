@@ -11,6 +11,90 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /invitations:
+    get:
+      operationId: listInvitations
+      summary: List invitations in the active permission scope
+      responses:
+        "200":
+          description: Scoped invitations; transport acceptance is not confirmed delivery
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+  /invitations/{id}/resend:
+    post:
+      operationId: resendInvitation
+      summary: Rotate and resend an eligible invitation, optionally correcting its email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationResendInput"
+      responses:
+        "200":
+          description: Transport receipt, not mailbox confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationSendReceipt"
+        "409":
+          description: Accepted or revoked invitations cannot be resent
+        "503":
+          description: Send failed or provider is not configured; no success receipt
+  /invitations/{id}:
+    delete:
+      operationId: revokeInvitation
+      summary: Revoke an unaccepted invitation in the active permission scope
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          description: Not found or outside the active scope
+  /email-webhooks/resend:
+    post:
+      operationId: receiveResendDeliveryEvent
+      summary: Receive signed delivery evidence; raw bytes must match the Svix signature
+      description: Only delivered, bounced and complained are retained. Opens and clicks are ignored.
+      parameters:
+        - name: svix-id
+          in: header
+          required: true
+          schema: { type: string, maxLength: 200 }
+        - name: svix-timestamp
+          in: header
+          required: true
+          schema: { type: string }
+        - name: svix-signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendDeliveryInput"
+      responses:
+        "204":
+          description: Persisted, already received, or deliberately ignored event
+        "400":
+          description: Invalid signature, timestamp or payload
+        "503":
+          description: Signing secret is not configured
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +110,63 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    Invitation:
+      type: object
+      required: [id, email, role_key, organization_id, organization_name, expires_at, status, email_delivery_status, delivery_outcome, delivery_evidence]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role_key: { type: string }
+        organization_id: { type: string, format: uuid }
+        organization_name: { type: string }
+        expires_at: { type: string, format: date-time }
+        accepted_at: { type: [string, "null"], format: date-time }
+        revoked_at: { type: [string, "null"], format: date-time }
+        delegation_id: { type: [string, "null"], format: uuid }
+        status:
+          type: string
+          enum: [pending, expired, accepted, revoked]
+        email_delivery_status:
+          type: string
+          enum: [unknown, local, sent, failed]
+        email_delivery_at: { type: [string, "null"], format: date-time }
+        delivery_outcome:
+          type: string
+          enum: [unknown, local, accepted, failed, delivered, bounced, complained]
+        delivery_outcome_at: { type: [string, "null"], format: date-time }
+        delivery_provider: { type: [string, "null"] }
+        delivery_evidence:
+          type: boolean
+          description: Adapter supports delivery evidence; does not itself mean delivered
+    InvitationResendInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+    InvitationSendReceipt:
+      type: object
+      required: [id, expires_at, delivery, provider]
+      properties:
+        id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        delivery:
+          type: string
+          enum: [local_only, smtp_accepted, resend_accepted, provider_accepted]
+        provider: { type: string }
+        messageId: { type: string }
+        url:
+          type: string
+          description: Private local-only outbox link; never returned for live delivery
+    ResendDeliveryInput:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string }
+        created_at: { type: string, format: date-time }
+        data:
+          type: object
+          properties:
+            email_id: { type: string, format: uuid }
     HealthStatus:
       type: object
       properties:

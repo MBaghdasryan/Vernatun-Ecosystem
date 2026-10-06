@@ -4,8 +4,14 @@ import {ApiError} from '../access.js';
 export type EmailMessage={to:string;subject:string;text:string;url:string};
 export type EmailSettings={mode:string;provider?:string;host?:string;port?:number;user?:string;password?:string;from?:string};
 export type ProviderReceipt={kind:'accepted';messageId?:string}|{kind:'local';url:string};
+export type DeliveryOutcome='delivered'|'bounced'|'complained';
+export type DeliveryEvent={provider:string;scope:string;eventId:string;messageId:string;outcome:DeliveryOutcome;occurredAt:string};
+export type DeliveryCapabilities={deliveryEvents:boolean;opens:false;clicks:false};
+export type WebhookInput={body:string;headers:Record<string,string>;secret:string;scope:string};
 export interface EmailProvider {
  readonly name:string;
+ readonly capabilities:DeliveryCapabilities;
+ normalizeWebhook?(input:WebhookInput):DeliveryEvent|null;
  isConfigured():boolean;
  send(message:EmailMessage,key:string):Promise<ProviderReceipt>;
 }
