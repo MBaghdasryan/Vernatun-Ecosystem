@@ -2,7 +2,7 @@
 
 Дата: **6 октября 2026 года**.
 
-Основание: `VERNATUN-PLATFORM-SPECIFICATION.md`, текущие основные исходники Web/API, восстановленные отчёты HAYAT/ImTun, текущий изолированный regression run и read-only проверки Resend/публикации.
+Основание: `VERNATUN-PLATFORM-SPECIFICATION.md`, текущие основные исходники Web/API, восстановленные отчёты HAYAT/ImTun и ранее выполненные проверки. Новое вложение мастер-промпта побайтово совпадает с сохранённой спецификацией. Этот срез — отчётная сверка: новые business features, migrations, seed, live email и тестовые прогоны ради отчёта не выполнялись. Результаты тестов ниже относятся к последним завершённым прогонам; отсутствие теста не подменяется наличием кода.
 
 **Это подробный промежуточный отчёт, не финальный acceptance и не объявление готовности к production.** Webhook delivery объединена и расширена в основном проекте: шесть событий, общий token-free журнал, Console Email, изолированные signature/idempotency tests. Live verification отложена по указанию пользователя: домен ещё не готов. Target — `https://vernatun.io/api/webhooks/resend`, не подтверждённая публикация. Детали: `RESEND-WEBHOOK.md`. Процент готовности не вычисляется: пункты существенно различаются по объёму, а наличие таблицы или экрана не означает завершённый процесс.
 
@@ -49,14 +49,15 @@
 
 ## 3. Database migrations
 
-- В основных исходниках присутствуют миграции **001–013**.
+- В основных исходниках присутствуют миграции **001–015**.
 - Восстановленные миграции не заменялись. Добавочная `013_platform_foundation.sql` ранее проверена в изоляции и применена к базе проекта.
 - Она расширяет platform foundation, subscription/module policy и защищает аудит от UPDATE/DELETE/TRUNCATE.
 - Историческая проверка до/после 013 подтвердила сохранность прежних строк/не-добавочных значений. Зафиксированный тогда baseline: 2 организации, 15 пользователей, 16 назначений ролей, 2 здания, 3 помещения, 3 счёта. Это исторический baseline, **не новый пересчёт данных текущего дня**.
 - Перед 013 создан парный SQL/file-manifest snapshot. Нулевое число зарегистрированных файлов в том snapshot не доказывает восстановление файлов, отсутствующих в источнике.
 - Объединённый HAYAT offline использует существующие operation receipts; в текущем наборе исходников новой миграции для него нет.
-- В текущем блоке отчёта **новая основная миграция не применялась**, основной seed не запускался.
-- Подготовленная отдельной задачей email delivery схема не считается применённой: её исходников в основном проекте пока нет.
+- `014_invitation_delivery.sql` объединена с текущими исходниками: attempts, receipts и append-only delivery events.
+- `015_email_operations.sql` расширяет delivery evidence до шести событий, добавляет общий token-free send ledger, health и безопасные read views. Она сначала прошла изолированную проверку, затем применена к development в предыдущем этапе.
+- При подготовке этого отчёта миграции и основной seed не запускались. Production schema не менялась.
 
 Последующие расширения схемы должны быть добавочными, сначала проходить isolated tests и сохранять старые записи/private bytes. Согласование миграций не является согласием на удаление данных или публикацию.
 
@@ -71,6 +72,7 @@
 - Atomic support-access expiry и периодическая проверка истечения.
 - Structured audit с серверными фильтрами, сортировкой и пагинацией.
 - Resend/SMTP/outbox facade, проверка provider receipt, отсутствие тихой подмены неработающего сервиса outbox.
+- Canonical Resend webhook, шесть событий, raw-body/Svix, scoped correlation/idempotency, token-free общий журнал и admin-only Email Operations API.
 - Основные восстановленные финансовые, lifecycle, import, maintenance, voting, document и field endpoints.
 - Offline headers/context/version guards и идемпотентные повторные операции фото/отчётов.
 
@@ -80,7 +82,7 @@
 
 ## 5. Frontend changes / текущие возможности
 
-Есть продуктовые оболочки, ролевые маршруты, scoped counters/queues, общие реестры и карточки; Console приглашения, audit, подписки/планы/модули; настройки TOTP; восстановленные HAYAT/ImTun.
+Есть продуктовые оболочки, ролевые маршруты, scoped counters/queues, общие реестры и карточки; Console приглашения, audit, подписки/планы/модули и Email Operations; настройки TOTP; восстановленные HAYAT/ImTun.
 
 В объединённом HAYAT добавлены `OfflineWork.tsx`, offline store/shell и локализация offline действий. Обычный Workflow сохраняется для управляющего/диспетчера.
 
@@ -155,7 +157,8 @@ Building billing batch preview/publish; bank statement import, matching, unmatch
 ### Реализовано
 
 - Ролевая платформа, существующие организации.
-- Scoped invitation list/create/revoke/resend, expiry/acceptance и начальные статусы доставки.
+- Scoped invitation list/create/revoke/resend, expiry/acceptance и отдельные lifecycle/delivery statuses.
+- Email Operations: masked message list, server filters/pagination, health, timeline; platform_admin only. Browser rendering проверен, фактических live писем пока нет.
 - Plan/subscription lifecycle и module overrides с причинами.
 - Legacy access для восстановленных организаций до явной активации новой policy.
 - Read-only после окончания разрешённого периода/grace и при запрещённых состояниях подписки, без удаления истории.
@@ -169,7 +172,7 @@ Building billing batch preview/publish; bank statement import, matching, unmatch
 - Onboarding dependencies/order/start/reopen/notes.
 - Остальные typed import strategies и полный табличный preview ошибок.
 - Все блоки platform/support dashboard.
-- Реальная email delivery проверка и последующие webhook outcomes.
+- Внешняя email activation и реальная проверка provider acceptance → signed webhook → delivered. Обработчик outcomes уже реализован и проверен на fixtures.
 
 ## 10. Security
 
@@ -183,12 +186,12 @@ Session-based auth, CSRF/permission/context guards, запрет чужих об
 - Полная проверка всех новых процессов, которые ещё не реализованы.
 - Новый полный security scan/dependency audit и production security acceptance в этом блоке не выполнялись.
 - Секрет, опубликованный в чате, требует замены. Он не скопирован в код/документы; API credentials остаются в интеграции.
-- Webhook должен проверять подпись **raw body**, timestamp/replay, event ID и scoped message correlation. Это требования к объединению/проверке готовой задачи, не утверждение о наличии handler в main.
+- Webhook уже проверяет raw-body signature/timestamp, уникальный event ID и scoped message correlation. Изолированные негативные тесты прошли; live matching сохранённого секрета реальной регистрации ещё не подтверждён.
 - Старое событие от предыдущей отправки не должно портить новую попытку или менять lifecycle приглашения/права.
 
-## 11. Tests — результаты текущего прогона
+## 11. Tests — последние завершённые проверки
 
-Все проверки ниже выполнены на текущих основных исходниках, после объединения HAYAT offline. Runner создаёт отдельную БД/случайную схему и очищает только собственные fixtures/files. Основной seed не выполнялся.
+Основной core run прошёл 76/76 до финального уточнения email receipt/health. Финальный email/Phase 1 профиль прошёл 35/35 после него. Таблица ниже объединяет покрытие этих прогонов (77 checks), а не утверждает о новом едином прогоне 77/77. Ради отчёта tests не повторялись. Runner создаёт отдельную БД/случайную схему и очищает только собственные fixtures/files. Основной seed не выполнялся.
 
 | Suite | Passed | Failed |
 |---|---:|---:|
@@ -291,7 +294,7 @@ email.delivered
 
 **Delivered не означает, что пользователь прочитал письмо или что оно находится именно в папке «Входящие».** События могут приходить повторно/не по порядку; интерфейс не должен требовать строго последовательного получения всех промежуточных событий.
 
-Перед проверкой объединить готовую delivery задачу и сверить поддержку всех четырёх событий, особенно `email.sent`, persistent message ID, signatures/replay/deduplication, older-attempt protection и provider-neutral UI.
+Delivery implementation уже объединена: проверены все шесть событий, persistent message ID, signatures/idempotency, older-attempt protection и provider-neutral UI на изолированных fixtures. Внешняя live-проверка отложена до готовности домена; наличие кода не заменяет её.
 
 Документация: https://resend.com/docs/webhooks/event-types ; https://resend.com/docs/webhooks/verify-webhooks-requests
 
@@ -325,7 +328,7 @@ email.delivered
 | 17: meetings | Базовые agenda/votes есть; shares/quorum/results/protocol остаются |
 | 18: property structure | База/таблицы есть; полный hierarchy/unit card management остаётся |
 | 19: organizations | Базовые организации/settings есть; lifecycle/card/linked views остаются |
-| 20: invitations | Код/Console есть; реальные письма/webhook/live acceptance остаются |
+| 20: invitations | Код/Console/current-attempt delivery evidence есть; реальное письмо/join end-to-end остаётся |
 | 21: password reset | Backend есть; controlled live verification остаётся |
 | 22: subscriptions | Реализованы lifecycle/grace/read-only/лимиты; полный production QA остаётся |
 | 23: modules | Plan allowlist/overrides/policy/Console реализованы |
@@ -357,9 +360,9 @@ email.delivered
 | 49: tests | Core76/76 + final email/Phase 1 35/35, types/codegen passed; отсутствующие flows не проверены |
 | 50: scenarios A–H | Частично, границы перечислены выше |
 | 51: no fake success | Provider acceptance отделён от delivery; mail/production не объявляются работающими |
-| 52: migrations | 001–013 сохранены; дальнейшие additive changes сначала isolated QA |
+| 52: migrations | 001–015 в исходниках; 014/015 объединены, 015 проверена изолированно и применена к development; production не менялась |
 | 53: demo | Main seed не запускался в текущем блоке; скриншотные числа не выдаются за реальные |
-| 54: deployment | Managed preview работает; published production отсутствует |
+| 54: deployment | Preview Web/API отвечает 200; managed-start конфликт портов требует отдельной сверки. Public production по последней проверке не подтверждён |
 | 55: observability | Health/request IDs/structured safe errors есть; полный production monitoring acceptance остаётся |
 | 56: backup | Документ/tooling/предыдущие isolated проверки есть; новый production drill не выполнен |
 | 57: OpenAPI | Архивный spec/частичные обновления есть; весь backend не описан полностью |
@@ -380,11 +383,11 @@ email.delivered
 
 1. Заменить ключ, попавший в чат, и обновить **существующее** Resend connection.
 2. Получить успешную read-only авторизацию, verified domain и соответствующий sender.
-3. Объединить delivery implementation; проверить все четыре события и security/correlation.
+3. Delivery implementation и шесть событий уже проверены изолированно; сопоставить реальное подписанное событие с message ID только на разрешённом внешнем этапе.
 4. Согласовать publication/public callback и production settings; не использовать dev URL как production endpoint.
 5. Webhook signing secret уже сохранён через Secrets; проверить соответствие созданному endpoint после готовности домена.
 6. Получить явный разрешённый test recipient и выделенный test account.
-7. Controlled live email → receipt → actual receipt; invitation → single use; reset → expiry/single use/session revocation. Не сбрасывать доступ реальных пользователей ради QA.
+7. После подтверждения готовности домена и отдельного разрешения: controlled live email → receipt → signed event → delivered; invitation/reset end-to-end только на выделенных разрешённых аккаунтах. Сейчас реальные отправки запрещены; не сбрасывать доступ реальных пользователей ради QA.
 
 ### P0: обязательная общая readiness
 
@@ -417,7 +420,9 @@ API credential и webhook signing secret — разные значения. Вк
 
 ## 17. Deployment notes / production checklist
 
-`getDeploymentInfo()` вернул: **isDeployed=false**, successful published build отсутствует, primaryUrl отсутствует. Production callback зарегистрировать сейчас нельзя без публикации; development домен не подставляется вместо него.
+Последняя выполненная проверка `getDeploymentInfo()` вернула **isDeployed=false**, successful published build и primaryUrl отсутствовали; при подготовке отчёта metadata не запрашивалась повторно. Пользователь сообщил о создании webhook и указал будущий адрес `https://vernatun.io/api/webhooks/resend`; регистрация может существовать до готовности домена, но это не доказывает доступность callback. Development домен не подставляется вместо него.
+
+Текущий read-only runtime smoke: Web `/` — HTTP200, `/api/health` — HTTP200 (`status: ok`). Одновременно менеджер managed Web/API workflows сообщает failed из-за занятого порта (23227/8080): работающие listener и корректное управление их lifecycle — разные проверки. Это отдельная незакрытая operational issue; ради отчёта процессы не уничтожались и конфигурация не менялась.
 
 После подтверждённой публикации нужно проверить доступность извне. Private/password deployment может блокировать отправителя webhook; это необходимо решить до обещания работающей доставки.
 
