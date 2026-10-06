@@ -90,6 +90,109 @@
   right: 0;
 }
 
+/* Product copy must determine card height. Do not position translated lists,
+   preview artwork or links over one another at fixed pixel offsets. */
+.ecosystem-products .product-card {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ecosystem-products .product-card h3,
+.ecosystem-products .product-card > p,
+.ecosystem-products .product-card ul {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.ecosystem-products .product-card > p {
+  min-height: 0;
+  margin: 12px 0 16px;
+}
+
+.ecosystem-products .product-card ul {
+  position: static;
+  margin: 0;
+  gap: 10px;
+}
+
+.ecosystem-products .product-card li:nth-child(4) {
+  display: flex;
+}
+
+.ecosystem-products .product-card .product-mini {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  min-height: 180px;
+  margin: 24px 0 0;
+  padding: 12px 0;
+  transform: none;
+  display: flex;
+  flex: 1 0 auto;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  overflow: visible;
+}
+
+.ecosystem-products .product-card .product-mini .laptop {
+  position: relative;
+  inset: auto;
+  width: 500px;
+  max-width: none;
+  transform: none;
+  zoom: .5;
+}
+
+.ecosystem-products .product-card .product-mini .phone {
+  position: relative;
+  inset: auto;
+  max-width: 100%;
+  transform: none;
+}
+
+.ecosystem-products .product-analytics {
+  width: 100%;
+  max-width: 250px;
+  display: grid;
+  gap: 12px;
+}
+
+.ecosystem-products .product-analytics .mini-panel {
+  height: auto;
+}
+
+.ecosystem-products .product-mini .mini-title {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ecosystem-products .product-mini .quick-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ecosystem-products .product-mini .quick-actions span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.ecosystem-products .product-card > .text-button {
+  position: static;
+  inset: auto;
+  align-self: flex-start;
+  max-width: 100%;
+  margin-top: 20px;
+  line-height: 1.5;
+}
+
+.ecosystem-products .product-card > .text-button svg {
+  flex-shrink: 0;
+}
+
 @media (min-width: 1100px) {
   .hero-background {
     width: 52%;
@@ -101,6 +204,10 @@
 }
 
 @media (max-width: 1099px) {
+  .ecosystem-products .product-card .product-mini .laptop {
+    zoom: .55;
+  }
+
   .hero-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
@@ -137,7 +244,17 @@
   }
 }
 
+@media (min-width: 768px) and (max-width: 1099px) {
+  .ecosystem-products .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 700px) {
+  .ecosystem-products .product-card .product-mini .laptop {
+    zoom: .55;
+  }
+
   .hero-devices {
     display: flex;
     justify-content: center;
@@ -177,5 +294,11 @@
     width: 186px;
     left: -29px;
     top: -104.75px;
+  }
+}
+
+@media (max-width: 370px) {
+  .ecosystem-products .product-card .product-mini .laptop {
+    zoom: .45;
   }
 }

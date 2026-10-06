@@ -18,3 +18,12 @@ explicit permission, not an automatic restoration step.
 
 **How to apply:** Treat any approval to populate development demo data as
 permission for that operation, not permission to seed on future startup or merge.
+
+For overlap corrections on the landing page, change layout only; preserve
+the supplied logos, images and text.
+
+**Why:** The user repeated this constraint when requesting fixes to the header,
+hero, footer and product cards.
+
+**How to apply:** Adjust flow, spacing, sizing and responsive placement without
+rewriting content, replacing assets or redesigning their visual identity.
