@@ -5,3 +5,4 @@
 - [Archived-script execution](archived-script-execution.md) — pnpm exec can change a nested legacy script’s working directory; preserve archive-relative paths.
 - [Platform completion scope](platform-completion-scope.md) — active completion spec preserves shared architecture; screenshot logos do not override product/user branding.
 - [Subscription rollout](subscription-rollout.md) — restored organizations retain legacy access until a real subscription/policy is explicitly activated.
+- [Email provider boundary](email-provider-boundary.md) — Resend is selected; provider adapters must remain replaceable without rewriting business logic.
