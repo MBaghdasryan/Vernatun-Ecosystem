@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+# Archived runtime writes development credentials and file bytes here.
+artifacts/api-server/.local/
+artifacts/api-server/.data/
