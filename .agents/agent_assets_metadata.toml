@@ -14,3 +14,17 @@ mtime_ms = 1791287202529
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/8d0d5c89-32a7-499a-869d-662193542d82/7276afa5-2b91-4f1e-8d78-f205ac31081b"
 storage_version_token = "1791287285060466"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "HkBecoFMt1Z4S2VOthDR-"
+uri = "file://artifacts/vernatun/docs/IMTUN-IMPLEMENTATION.md"
+type = "text"
+title = "ImTun — отчёт о восстановлении"
+description = "Что восстановлено из ZIP, результаты текущих проверок и оставшиеся ограничения."
+logical_id = "200c4ea8-7931-481e-ae57-6bdad63ebbd0"
+content_hash = "sha256:005857dd39dac3efdb50e89230f920e1f7c53cd9dc816d06ef4156d3ad58dda4"
+size = 16286
+mtime_ms = 1791288453342
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/200c4ea8-7931-481e-ae57-6bdad63ebbd0/3fc11007-41bb-4d5c-ad1f-c6417c88a9fb"
+storage_version_token = "1791288465797544"
+content_type = "text/markdown"

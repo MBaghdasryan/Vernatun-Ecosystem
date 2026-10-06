@@ -3,12 +3,14 @@ import type {Request,Response,NextFunction} from 'express';
 import {pool} from './db.js';
 import {moduleForPermission} from './roles.js';
 export class ApiError extends Error{constructor(public status:number,public code:string){super(code)}}
-export type Context={id:string;role_key:string;shell:string;organization_id:string|null;organization_name:string|null;brand_color?:string;building_id:string|null;unit_id:string|null;expires_at:string|null;permissions:string[];product?:string;products?:string[];startRoute?:string;modules?:string[]};
+export type Context={id:string;role_key:string;shell:string;organization_id:string|null;organization_name:string|null;brand_color?:string;building_id:string|null;building_name?:string|null;unit_id:string|null;unit_number?:string|null;expires_at:string|null;permissions:string[];product?:string;products?:string[];startRoute?:string;modules?:string[]};
 declare global{namespace Express{interface User{id:string;email:string;name:string;locale:'hy'|'ru'|'en';currency:'AMD'|'RUB'|'USD'}}}
 declare module 'express-session'{interface SessionData{csrf:string;contextId?:string;createdAt?:string;lastSeenAt?:string}}
-export async function contexts(userId:string):Promise<Context[]>{const r=await pool.query(`SELECT a.id,a.role_key,r.shell,a.organization_id,o.name AS organization_name,o.brand_color,a.building_id,a.unit_id,a.expires_at,
+export async function contexts(userId:string):Promise<Context[]>{const r=await pool.query(`SELECT a.id,a.role_key,r.shell,a.organization_id,o.name AS organization_name,o.brand_color,a.building_id,a.unit_id,a.expires_at,b.name AS building_name,u.number AS unit_number,
  COALESCE((SELECT to_json(d.permission_keys) FROM resident_delegations d WHERE d.assignment_id=a.id),(SELECT json_agg(permission_key ORDER BY permission_key) FROM role_permissions WHERE role_key=a.role_key),'[]') AS permissions
  FROM role_assignments a JOIN roles r ON r.key=a.role_key LEFT JOIN organizations o ON o.id=a.organization_id
+ LEFT JOIN units u ON u.id=a.unit_id AND u.organization_id=a.organization_id
+ LEFT JOIN buildings b ON b.id=COALESCE(a.building_id,u.building_id) AND b.organization_id=a.organization_id
  LEFT JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id
  WHERE a.user_id=$1 AND a.active AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now())
  AND (a.organization_id IS NULL OR m.active=true)

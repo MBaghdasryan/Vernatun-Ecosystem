@@ -121,7 +121,28 @@
         "summary": "Get identity, granted contexts and CSRF token",
         "responses": {
           "200": {
-            "description": "Success; some creation operations return 201 and deletion operations 204"
+            "description": "Identity and currently valid contexts; building_name and unit_number are server-resolved labels, not additional permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "contexts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "building_name": {"type": ["string", "null"]},
+                          "unit_number": {"type": ["string", "null"]}
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
           },
           "201": {
             "description": "Created"
