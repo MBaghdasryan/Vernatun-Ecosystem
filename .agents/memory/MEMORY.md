@@ -1,0 +1,1 @@
+- [Vernatun product model](vernatun-product-model.md) — four product portals share one platform and server-enforced permissions.
