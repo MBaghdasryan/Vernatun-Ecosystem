@@ -15,12 +15,17 @@ await testAdmin.query(`CREATE SCHEMA "${schema}"`);
 url.searchParams.set('options',`-c search_path=${schema},public`);
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_ENABLED:'true'};
 let status=0;
+const checks=process.argv.includes('--storage-only')
+ ? [['--test','server/tests/storage.test.ts']]
+ : [['--test','server/tests/security.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts'],['--test','server/tests/storage.test.ts']];
 try{
- for(const args of [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts'],['--test','server/tests/security.test.ts'],['--test','server/tests/workflow.test.ts'],['--test','server/tests/business.test.ts'],['--test','server/tests/services.test.ts'],['--test','server/tests/lifecycle.test.ts']]){
+ for(const args of [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts'],...checks]){
   const child=spawnSync(process.execPath,[cli,...args],{env,stdio:'inherit'});
   if(child.status!==0){status=child.status??1;break}
  }
 }finally{
+ const cleanup=spawnSync(process.execPath,[cli,'server/tests/storage-cleanup.ts'],{env,stdio:'inherit'});
+ if(cleanup.status!==0)status=cleanup.status??1;
  // Only this randomly named, runner-created test schema is removed.
  await testAdmin.query(`DROP SCHEMA "${schema}" CASCADE`);await testAdmin.end();
 }

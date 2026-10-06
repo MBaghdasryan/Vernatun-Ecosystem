@@ -1,2 +1,3 @@
 - [Vernatun product model](vernatun-product-model.md) — four product portals share one platform and server-enforced permissions.
 - [Archive restoration scope](archive-restoration.md) — restore the supplied source faithfully; historical prompts are context, not new feature requests.
+- [Private file policy](private-file-policy.md) — durable storage must not bypass existing business authorization or image sanitization.

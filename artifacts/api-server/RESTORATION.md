@@ -16,8 +16,8 @@ second organization's administrator, with newly generated random passwords.
 Credentials are local only, owner-readable and gitignored:
 `artifacts/api-server/.local/demo-accounts.md` and `.json`.
 Never serve these files over HTTP, include them in a build, or log their contents.
-The API workflow must run from this artifact's directory because the original
-private file and development outbox paths are relative to its working directory.
+The API workflow runs from this artifact's directory; the development outbox and
+legacy migration source paths remain relative to this working directory.
 
 ## Commands
 
@@ -45,6 +45,52 @@ hop so original secure production cookies and per-client rate limits work.
 Use the managed Publish schema flow for production, never startup DDL or the
 development migration command. Demo seed is prohibited in production.
 
-The restored source keeps its original private file storage and development-only
-password-reset outbox. This task does not configure persistent production object
-storage or email delivery. Those require separate setup before production use.
+The development-only password-reset outbox still requires email delivery setup
+before production use.
+
+## Persistent private files
+
+App Storage holds file bytes under `PRIVATE_OBJECT_DIR`; PostgreSQL keeps the
+original UUID storage keys, authors, scope, visibility and other metadata. No
+schema changes are required. The original multipart-free raw upload and download
+API contracts are unchanged. Uploads remain server-mediated so image decoding,
+size limits, CSRF and current business permissions cannot be bypassed. Download
+authorization is recalculated on every request before any bytes are fetched.
+There are no public storage routes or returned signed download URLs.
+
+The Replit sidecar supplies storage authentication; never create credential
+files. `PRIVATE_OBJECT_DIR` is required in development and deployment; the
+provisioned bucket configuration must be retained for production. Do not use a
+public search path for these files. Missing storage configuration or service
+failures are errors, never a fallback to local disk. Photo keys are scoped to
+`vernatun/photos/`, document keys to `vernatun/documents/` inside the private
+directory. Tests use a separate `vernatun-test/` prefix and clean only their own
+runner-created objects.
+
+### Transfer existing files before first use of the updated server
+
+Run from the artifact package:
+
+- `pnpm --filter @workspace/api-server run storage:migrate` — read-only preflight.
+- `pnpm --filter @workspace/api-server run storage:migrate --apply` — copy bytes
+  and verify SHA-256 after transfer; repeatable, never overwrite differing bytes.
+- Add `--source-root /path/to/.local` if the source directory is elsewhere.
+  It must contain `private-photos/` and `private-documents/`.
+
+The command checks all three tables (`request_photos`, `file_attachments`,
+`documents`), refuses to proceed if referenced bytes are absent both locally and
+remotely, keeps all local source files and never changes SQL rows. A mismatch
+stops migration. Restore a missing file from its original backup, then rerun; do
+not delete its database row to silence the error. Run the same preflight against
+the intended database and bucket before separately authorized publication.
+
+The existing post-merge setup now transfers and verifies development files after
+the already-approved SQL migrations and before workflow reconciliation. It does
+not publish, seed accounts or modify production. Production file transfer must
+be run explicitly against its intended storage/database, not the dev-only
+post-merge script.
+
+The API suite exercises real App Storage, original role/scope restrictions,
+PDF/JPEG byte equality, legacy transfer and metadata preservation, repeatable
+transfer, missing/conflicting bytes, and authenticated downloads after killing
+and starting a new server process. Fixtures stay in the isolated test database.

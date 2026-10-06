@@ -10,9 +10,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "tsx archive/vernatun/server/migrate.ts",
     "db:seed": "tsx archive/vernatun/server/seed.ts && tsx archive/vernatun/server/seed-modules.ts",
-    "test:api": "cd archive/vernatun && tsx server/tests/run.ts"
+    "test:api": "cd archive/vernatun && tsx server/tests/run.ts",
+    "test:storage": "cd archive/vernatun && tsx server/tests/run.ts --storage-only",
+    "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.2.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "bcryptjs": "^3.0.3",
