@@ -403,7 +403,7 @@ Notification catalog/preferences, white-label, все dashboard блоки, об
 | MAIL_PROVIDER | Resend выбран в shared environment; переключает адаптер |
 | EMAIL_FROM | Сохранён в shared environment; verified-domain proof ещё нет |
 | Resend API credential | В существующем connection; read-only запрос отклонён. Не переносить ключ в код |
-| RESEND_WEBHOOK_SECRET | На момент проверки отсутствует; окончательное имя сверить с объединённой реализацией |
+| RESEND_WEBHOOK_SECRET | Наличие после защищённого ввода подтверждено; значение не читалось, соответствие endpoint Resend ещё не проверено |
 | APP_ORIGIN | Для production требуется подтверждённый published origin; production URL сейчас нет |
 | SESSION_SECRET | Существующий secret; значение не читалось/не печаталось |
 | DATABASE_URL | Runtime-managed; не заменять базу |
