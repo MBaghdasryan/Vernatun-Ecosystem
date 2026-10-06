@@ -3,3 +3,4 @@
 - [Private file policy](private-file-policy.md) — durable storage must not bypass existing business authorization or image sanitization.
 - [Paired recovery](paired-recovery.md) — SQL rollback does not imply private-byte recovery; verify matched snapshots in isolation.
 - [Archived-script execution](archived-script-execution.md) — pnpm exec can change a nested legacy script’s working directory; preserve archive-relative paths.
+- [Platform completion scope](platform-completion-scope.md) — active completion spec preserves shared architecture; screenshot logos do not override product/user branding.

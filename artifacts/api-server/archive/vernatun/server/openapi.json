@@ -1420,7 +1420,7 @@
     },
     "/audit": {
       "get": {
-        "summary": "Read audit within permitted organization/platform scope",
+        "summary": "Read audit with structured details: platform.audit includes organization events; audit.read remains organization-scoped",
         "responses": {
           "200": {
             "description": "Success; some creation operations return 201 and deletion operations 204"
@@ -1458,7 +1458,7 @@
     },
     "/invitations": {
       "get": {
-        "summary": "List organization invitations without token hashes",
+        "summary": "List invitations using platform.invite across organizations or people.invite within the active organization; no tokens or hashes",
         "responses": {
           "200": {
             "description": "Success; some creation operations return 201 and deletion operations 204"
@@ -1572,7 +1572,7 @@
     },
     "/invitations/{id}": {
       "delete": {
-        "summary": "Revoke unaccepted organization invitation",
+        "summary": "Revoke an unaccepted invitation using platform.invite or scoped people.invite, with an atomic audit event",
         "responses": {
           "200": {
             "description": "Success; some creation operations return 201 and deletion operations 204"
