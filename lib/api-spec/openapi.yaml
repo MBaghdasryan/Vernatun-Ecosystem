@@ -64,11 +64,11 @@ paths:
           description: Revoked
         "404":
           description: Not found or outside the active scope
-  /email-webhooks/resend:
+  /webhooks/resend:
     post:
       operationId: receiveResendDeliveryEvent
       summary: Receive signed delivery evidence; raw bytes must match the Svix signature
-      description: Only delivered, bounced and complained are retained. Opens and clicks are ignored.
+      description: Sent, delayed, delivered, bounced, complained and failed are retained. Opens and clicks are ignored. Canonical future URL https://vernatun.io/api/webhooks/resend; domain activation and live verification are pending.
       parameters:
         - name: svix-id
           in: header
@@ -94,7 +94,75 @@ paths:
         "400":
           description: Invalid signature, timestamp or payload
         "503":
-          description: Signing secret is not configured
+          description: Signing secret is not configured or storage is temporarily unavailable; retry
+        "413":
+          description: Body exceeds 32 KiB
+        "429":
+          description: Rate limited; retry
+        "500":
+          description: Retryable persistence error
+  /email-webhooks/resend:
+    post:
+      operationId: receiveLegacyResendDeliveryEvent
+      deprecated: true
+      summary: Compatibility alias; use /webhooks/resend with the same Svix headers
+      responses:
+        "204": { description: "Persisted, duplicate or ignored event" }
+        "400": { description: Invalid signature or payload }
+        "503": { description: Not configured or temporarily unavailable }
+  /platform/email/health:
+    get:
+      operationId: getEmailHealth
+      summary: Platform-admin-only email evidence and configuration health
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Configuration is not verified credentials/domain or confirmed live delivery
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmailHealth" }
+        "400": { description: Invalid period; maximum 366 days }
+        "401": { description: Sign-in required }
+        "403": { description: Platform administrator context required }
+  /platform/email/messages:
+    get:
+      operationId: listEmailMessages
+      summary: Platform-admin-only masked message log, server-side filters and pagination
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 100000, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/EmailStatus" } }
+        - { name: provider, in: query, schema: { type: string, enum: [resend, smtp, outbox, disabled] } }
+        - { name: businessType, in: query, schema: { $ref: "#/components/schemas/EmailBusinessType" } }
+        - { name: recipient, in: query, schema: { type: string, maxLength: 254 } }
+      responses:
+        "200":
+          description: Consistent count/page snapshot; recipients masked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmailMessagePage" }
+        "400": { description: Invalid filter or pagination }
+        "401": { description: Sign-in required }
+        "403": { description: Platform administrator context required }
+  /platform/email/messages/{id}:
+    get:
+      operationId: getEmailMessage
+      summary: Platform-admin-only masked message and safe chronological delivery timeline
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: No raw payload, email body, token, URL or secret
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmailMessageDetail" }
+        "401": { description: Sign-in required }
+        "403": { description: Platform administrator context required }
+        "404": { description: Message not found }
   /healthz:
     get:
       operationId: healthCheck
@@ -110,6 +178,87 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    EmailStatus:
+      type: string
+      enum: [unknown, local, accepted, sent, delayed, delivered, bounced, complained, failed]
+    EmailBusinessType:
+      type: string
+      enum: [invitation, password_reset, delegation, notification, platform_invoice, support, other]
+    EmailMessage:
+      type: object
+      required: [id, business_type, provider, recipient_masked, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        business_type: { $ref: "#/components/schemas/EmailBusinessType" }
+        business_id: { type: [string, "null"], format: uuid }
+        provider: { type: string }
+        provider_scope: { type: string }
+        recipient_masked: { type: string }
+        provider_message_id_short: { type: [string, "null"] }
+        sender: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/EmailStatus" }
+        created_at: { type: string, format: date-time }
+        accepted_at: { type: [string, "null"], format: date-time }
+        last_event_at: { type: [string, "null"], format: date-time }
+    EmailMessagePage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/EmailMessage" } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+    EmailMessageDetail:
+      type: object
+      required: [message, events]
+      properties:
+        message: { $ref: "#/components/schemas/EmailMessage" }
+        events:
+          type: array
+          items:
+            type: object
+            required: [event_type, outcome, occurred_at, received_at, safe_metadata]
+            properties:
+              event_type: { type: string }
+              outcome: { $ref: "#/components/schemas/EmailStatus" }
+              occurred_at: { type: string, format: date-time }
+              received_at: { type: string, format: date-time }
+              safe_metadata: { type: object, additionalProperties: { type: string } }
+    EmailHealth:
+      type: object
+      required: [provider, providerStatus, sender, period, counts, deliveryRate, webhook, liveVerification]
+      properties:
+        provider: { type: string }
+        providerStatus: { type: string, enum: [configured_unverified, not_configured] }
+        sender: { type: [string, "null"] }
+        period:
+          type: object
+          required: [from, to]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        counts: { type: object, additionalProperties: { type: integer } }
+        deliveryRate:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+          description: Fraction of accepted-send cohort currently in delivered aggregate status; excludes local and unknown
+        lastAccepted: { type: [string, "null"], format: date-time }
+        lastDelivered: { type: [string, "null"], format: date-time }
+        lastBounce: { type: [string, "null"], format: date-time }
+        lastComplaint: { type: [string, "null"], format: date-time }
+        lastFailure: { type: [string, "null"], format: date-time }
+        liveVerification: { type: string, enum: [not_performed] }
+        webhook:
+          type: object
+          required: [configured, signatureVerificationReady, recentFailures]
+          properties:
+            configured: { type: boolean }
+            signatureVerificationReady: { type: boolean }
+            lastEventReceived: { type: [string, "null"], format: date-time }
+            lastValidEvent: { type: [string, "null"], format: date-time }
+            lastInvalidSignature: { type: [string, "null"], format: date-time }
+            recentFailures: { type: integer }
     Invitation:
       type: object
       required: [id, email, role_key, organization_id, organization_name, expires_at, status, email_delivery_status, delivery_outcome, delivery_evidence]
@@ -132,7 +281,7 @@ components:
         email_delivery_at: { type: [string, "null"], format: date-time }
         delivery_outcome:
           type: string
-          enum: [unknown, local, accepted, failed, delivered, bounced, complained]
+          enum: [unknown, local, accepted, sent, delayed, failed, delivered, bounced, complained]
         delivery_outcome_at: { type: [string, "null"], format: date-time }
         delivery_provider: { type: [string, "null"] }
         delivery_evidence:

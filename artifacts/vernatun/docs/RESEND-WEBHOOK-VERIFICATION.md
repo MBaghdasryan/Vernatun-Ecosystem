@@ -1,48 +1,24 @@
-# Resend webhook — фактическая проверка
+# Resend webhook — текущая проверка
 
-Проверка выполнена 6 октября 2026 года в текущем основном проекте Vernatun. Секреты и API key в этот документ не включены.
-
-## Результаты
+Дата: 6 октября 2026 года. Заменяет срез до объединения реализации.
 
 | Проверка | Результат |
 |---|---|
-| Код endpoint `/api/webhooks/resend` | Не обнаружен в основных серверных исходниках |
-| Проверка `svix-id`, `svix-timestamp`, `svix-signature` | Не реализована в проверенном основном коде |
-| Raw request body | Общий `express.json()` установлен до API middleware; специального raw-body webhook route нет |
-| Пробный POST без подписи, с пустым JSON | HTTP 403, `csrf_invalid` — ответ общего CSRF-фильтра, не результат проверки Svix |
-| Idempotency webhook / повторная доставка | Проверить невозможно без объединённой реализации |
-| `RESEND_WEBHOOK_SECRET` | После защищённого ввода наличие подтверждено; значение не читалось, соответствие секрету endpoint Resend ещё не проверено |
-| Доступ интеграции Resend, read-only `/domains` | HTTP 400, `validation_error`, `API key is invalid` |
-| Production deployment | Отсутствует согласно deployment service |
-| Точный production URL webhook | Пока отсутствует; путь должен быть `/api/webhooks/resend` на фактическом опубликованном адресе |
-| Live verification одного письма | Не выполнена; отправлено 0 писем |
+| Canonical endpoint | В основном коде: POST `/api/webhooks/resend` |
+| Target URL | `https://vernatun.io/api/webhooks/resend`, задан пользователем; домен ещё не готов |
+| Signature / raw body | Svix, три headers, исходные байты до JSON/session/CSRF; изолированные fixtures прошли |
+| Events | sent, delivered, delivery_delayed, bounced, complained, failed |
+| Idempotency / ordering | Проверены; уникальный svix-id в account scope, детерминированный aggregate |
+| Generic send ledger | Добавлен без token/body/URL; прежние invitation attempts/receipts сохранены |
+| Console | `/console/email`, platform_admin only; список, фильтры, health, timeline |
+| Browser QA | Desktop 1280px / phone 390px; реальный empty/health, filters, navigation/guest access; timeline — только временные browser GET fixtures |
+| Signing secret | Наличие подтверждено; значение не читалось; live соответствие ещё не подтверждено |
+| Webhook registration | По сообщению пользователя создан; API-проверки регистрации не было |
+| Provider credentials/domain | Live authorization/domain/sender не подтверждены; последнее ранее выполненное read-only обращение вернуло invalid API key |
+| Final isolated email/Phase 1 tests | 35/35; реальных provider calls нет |
+| Main development schema | Проверенная migration 015 применена; production schema не менялась |
+| Live signed event | Нет подтверждения |
+| Live delivered / bounce / complaint | Не выполнялись |
+| Real test emails | 0 — пользователь запретил отправку до готовности домена |
 
-## Запрошенные события
-
-Все шесть событий пока **не подтверждены в основном проекте**:
-
-- `email.sent`
-- `email.delivered`
-- `email.delivery_delayed`
-- `email.bounced`
-- `email.complained`
-- `email.failed`
-
-После объединения проверить подпись исходных байтов до JSON parsing, ограничение размера, допустимый timestamp, повторную обработку одного `svix-id`, атомарность записи, корреляцию provider message ID с попыткой отправки и отсутствие влияния старой попытки на новую.
-
-Webhook не должен требовать browser session/CSRF token. Его выделенный маршрут должен проверять подпись самостоятельно, не отключая CSRF защиту остальных API. События, поступившие не по порядку, не должны переводить подтверждённую доставку обратно в `sent`. `delivered` подтверждает приём сервером получателя, не попадание во «Входящие» и не прочтение.
-
-## Что нужно для продолжения
-
-1. В готовой задаче «Показывать приглашения, чьи письма не дошли до адресата» выбрать **Apply changes to main version**; на доске задач доступно **Apply changes** в меню карточки. Подтверждение в чате само по себе не переносит исходники.
-2. `RESEND_WEBHOOK_SECRET` уже сохранён через защищённую форму. При проверке подписи подтвердить его соответствие endpoint Resend; наличие секрета само по себе не доказывает соответствие или замену ранее раскрытого значения.
-3. Исправить API key в существующей интеграции Resend. Дополнительная интеграция и ключ в исходниках не нужны.
-4. Получить фактический публичный production URL после публикации и проверить доступность callback. Development preview не является production webhook URL.
-5. Указать один разрешённый адрес получателя для безопасного тестового письма без паролей, reset/invitation tokens и изменения прав пользователей.
-
-После устранения блокеров: отдельно проверить авторизацию, verified sender domain, endpoint signature/replay tests, затем отправить ровно одно письмо, сохранить provider message ID и сопоставить реальные события. API acceptance не заменяет подтверждение доставки. Негативные события проверяются изолированными подписанными fixtures, а не провоцированием реальных жалоб или bounce.
-
-## Связанные документы
-
-- `VERNATUN-COMPLETION-REPORT.md` — полная сверка мастер-промпта.
-- `EMAIL-SETUP.md` — архитектура и настройки почтового слоя.
+Подробный контракт, политика состояний, setup и отложенная live-проверка: `RESEND-WEBHOOK.md`.

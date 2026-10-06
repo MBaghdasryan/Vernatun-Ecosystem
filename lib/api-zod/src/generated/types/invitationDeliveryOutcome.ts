@@ -13,6 +13,8 @@ export const InvitationDeliveryOutcome = {
   unknown: 'unknown',
   local: 'local',
   accepted: 'accepted',
+  sent: 'sent',
+  delayed: 'delayed',
   failed: 'failed',
   delivered: 'delivered',
   bounced: 'bounced',

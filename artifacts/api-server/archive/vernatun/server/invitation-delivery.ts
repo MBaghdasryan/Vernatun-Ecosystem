@@ -2,7 +2,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import type {Request} from 'express';
 import {transaction,record} from './operations.js';
 import {ApiError,type Context} from './access.js';
-import {deliverEmail,settingsFromEnvironment,createEmailProvider,type EmailDelivery} from './email.js';
+import {deliverEmail,settingsFromEnvironment,createEmailProvider,EmailAcceptancePersistenceError,type EmailDelivery} from './email.js';
 import {config} from './config.js';
 import {emailProviderScope} from './email-delivery-events.js';
 
@@ -23,8 +23,11 @@ export async function sendInvitation(req:Request,c:Context,id:string,token:strin
  let delivery:EmailDelivery;
  try{
   delivery=await deliverEmail({to:invitation.email,subject:'Vernatun · Invitation / Հրավեր / Приглашение',
-   text:`Vernatun invitation / Հրավեր / Приглашение.\nOpen the link to accept / Բացեք հղումը / Откройте ссылку.\nValid until / Մինչև / Действует до: ${new Date(invitation.expires_at).toISOString()}\n${url}`,url},'invitation-'+attemptId,{...options,settings});
+   text:`Vernatun invitation / Հրավեր / Приглашение.\nOpen the link to accept / Բացեք հղումը / Откройте ссылку.\nValid until / Մինչև / Действует до: ${new Date(invitation.expires_at).toISOString()}\n${url}`,url},'invitation-'+attemptId,
+   {...options,settings,business:{type:'invitation',id,organizationId:invitation.organization_id}});
  }catch(e){
+  // Observability persistence failure after acceptance is not transport failure.
+  if(e instanceof EmailAcceptancePersistenceError)throw e;
   await transaction(async db=>{
    await db.query(`INSERT INTO invitation_email_receipts(attempt_id,provider,provider_scope,outcome) VALUES($1,$2,$3,'failed')`,[attemptId,provider.name,scope]);
    await db.query("UPDATE invitations SET email_delivery_status='failed',email_delivery_at=now() WHERE id=$1 AND token_hash=$2 AND current_email_attempt_id=$3",[id,hash,attemptId]);

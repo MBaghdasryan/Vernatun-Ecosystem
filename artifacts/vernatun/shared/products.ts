@@ -22,7 +22,7 @@ export function allowedProducts(c:{role_key:string;permissions:readonly string[]
 const osViews=['finance','budgets','expenses','leases','handovers','defects','subscriptions','properties','units','people','invitations','modules','audit','imports','documents','invoices','support','support-cases'];
 const hayatViews=['requests','properties','units','people','assets','announcements','meetings','passes','defects','documents','audit'];
 const imtunViews=['finance','invoices','requests','meters','announcements','documents','passes','delegations','meetings','leases','properties'];
-const consoleViews=['organizations','invitations','subscriptions','onboarding','support-cases','support','audit','properties','units','requests','imports'];
+const consoleViews=['organizations','invitations','subscriptions','onboarding','support-cases','support','audit','properties','units','requests','imports','email'];
 export function viewInProduct(product:Product,view:string){return ['overview','settings','notifications'].includes(view)||(product==='os'?osViews:product==='hayat'?hayatViews:product==='imtun'?imtunViews:consoleViews).includes(view)}
 const aliases:Record<string,string>={payments:'finance',access:'passes',team:'people','work-orders':'requests',maintenance:'assets',reports:'invoices'};
 export function routeView(path:string,query:string,role:string){const q=new URLSearchParams(query).get('view');if(q)return q;const slug=path.split('/')[2];if(!slug||path===startRoute(role)||Object.values(roleRoutes).some(x=>x[1]===slug))return 'overview';return aliases[slug]??slug}

@@ -1,5 +1,14 @@
 # Vernatun — октябрь 2026
 
+## Email Operations и шесть Resend событий
+
+- Объединённая delivery модель расширена без переписывания provider adapters и без дублирования event store. Canonical route `/api/webhooks/resend`, прежний route — совместимый alias.
+- Добавлены sent/delayed/failed, безопасные классификации bounce, token-free общий журнал, `/console/email` только для platform_admin, masked log/filter/pagination/timeline и технический health.
+- Receipt persistence после acceptance не выдаётся за transport failure. Webhook не меняет invitation/reset validity, roles или account block.
+- Migration 015 проверена изолированно и применена к development. Core76/76 и финальный email/Phase 1 профиль35/35, types/codegen прошли.
+- Target пользователя — `https://vernatun.io/api/webhooks/resend`. Домен ещё не готов; реальные письма не отправлялись и production readiness не заявляется.
+- Подробности: `RESEND-WEBHOOK.md`, `RESEND-WEBHOOK-VERIFICATION.md`.
+
 ## 6 октября — текущий подробный completion report
 
 - Создан `VERNATUN-COMPLETION-REPORT.md`: 17 acceptance-разделов, сверка всего мастер-промпта, scenarios A–H, live-mail results и production checklist.

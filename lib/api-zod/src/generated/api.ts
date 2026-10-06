@@ -24,7 +24,7 @@ export const ListInvitationsResponseItem = zod.object({
   "status": zod.enum(['pending', 'expired', 'accepted', 'revoked']),
   "email_delivery_status": zod.enum(['unknown', 'local', 'sent', 'failed']),
   "email_delivery_at": zod.coerce.date().nullish(),
-  "delivery_outcome": zod.enum(['unknown', 'local', 'accepted', 'failed', 'delivered', 'bounced', 'complained']),
+  "delivery_outcome": zod.enum(['unknown', 'local', 'accepted', 'sent', 'delayed', 'failed', 'delivered', 'bounced', 'complained']),
   "delivery_outcome_at": zod.coerce.date().nullish(),
   "delivery_provider": zod.string().nullish(),
   "delivery_evidence": zod.boolean().describe('Adapter supports delivery evidence; does not itself mean delivered')
@@ -68,7 +68,7 @@ export const RevokeInvitationResponse = zod.void()
 
 
 /**
- * Only delivered, bounced and complained are retained. Opens and clicks are ignored.
+ * Sent, delayed, delivered, bounced, complained and failed are retained. Opens and clicks are ignored. Canonical future URL https://vernatun.io/api/webhooks/resend; domain activation and live verification are pending.
  * @summary Receive signed delivery evidence; raw bytes must match the Svix signature
  */
 export const receiveResendDeliveryEventHeaderSvixIdMax = 200;
@@ -90,6 +90,130 @@ export const ReceiveResendDeliveryEventBody = zod.object({
 })
 
 export const ReceiveResendDeliveryEventResponse = zod.void()
+
+
+/**
+ * @deprecated
+ * @summary Compatibility alias; use /webhooks/resend with the same Svix headers
+ */
+export const ReceiveLegacyResendDeliveryEventResponse = zod.void()
+
+
+/**
+ * @summary Platform-admin-only email evidence and configuration health
+ */
+export const GetEmailHealthQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
+
+export const getEmailHealthResponseDeliveryRateMin = 0;
+export const getEmailHealthResponseDeliveryRateMax = 1;
+
+
+
+export const GetEmailHealthResponse = zod.object({
+  "provider": zod.string(),
+  "providerStatus": zod.enum(['configured_unverified', 'not_configured']),
+  "sender": zod.string().nullable(),
+  "period": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "counts": zod.record(zod.string(), zod.number().int()),
+  "deliveryRate": zod.number().min(getEmailHealthResponseDeliveryRateMin).max(getEmailHealthResponseDeliveryRateMax).nullable().describe('Fraction of accepted-send cohort currently in delivered aggregate status; excludes local and unknown'),
+  "lastAccepted": zod.coerce.date().nullish(),
+  "lastDelivered": zod.coerce.date().nullish(),
+  "lastBounce": zod.coerce.date().nullish(),
+  "lastComplaint": zod.coerce.date().nullish(),
+  "lastFailure": zod.coerce.date().nullish(),
+  "liveVerification": zod.enum(['not_performed']),
+  "webhook": zod.object({
+  "configured": zod.boolean(),
+  "signatureVerificationReady": zod.boolean(),
+  "lastEventReceived": zod.coerce.date().nullish(),
+  "lastValidEvent": zod.coerce.date().nullish(),
+  "lastInvalidSignature": zod.coerce.date().nullish(),
+  "recentFailures": zod.number().int()
+})
+})
+
+
+/**
+ * @summary Platform-admin-only masked message log, server-side filters and pagination
+ */
+export const listEmailMessagesQueryPageDefault = 1;
+export const listEmailMessagesQueryPageMax = 100000;
+
+export const listEmailMessagesQueryPageSizeDefault = 20;
+export const listEmailMessagesQueryPageSizeMax = 100;
+
+export const listEmailMessagesQueryRecipientMax = 254;
+
+
+
+export const ListEmailMessagesQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "page": zod.coerce.number().int().min(1).max(listEmailMessagesQueryPageMax).default(listEmailMessagesQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listEmailMessagesQueryPageSizeMax).default(listEmailMessagesQueryPageSizeDefault),
+  "status": zod.enum(['unknown', 'local', 'accepted', 'sent', 'delayed', 'delivered', 'bounced', 'complained', 'failed']).optional(),
+  "provider": zod.enum(['resend', 'smtp', 'outbox', 'disabled']).optional(),
+  "businessType": zod.enum(['invitation', 'password_reset', 'delegation', 'notification', 'platform_invoice', 'support', 'other']).optional(),
+  "recipient": zod.coerce.string().max(listEmailMessagesQueryRecipientMax).optional()
+})
+
+export const ListEmailMessagesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "business_type": zod.enum(['invitation', 'password_reset', 'delegation', 'notification', 'platform_invoice', 'support', 'other']),
+  "business_id": zod.string().uuid().nullish(),
+  "provider": zod.string(),
+  "provider_scope": zod.string().optional(),
+  "recipient_masked": zod.string(),
+  "provider_message_id_short": zod.string().nullish(),
+  "sender": zod.string().nullish(),
+  "status": zod.enum(['unknown', 'local', 'accepted', 'sent', 'delayed', 'delivered', 'bounced', 'complained', 'failed']),
+  "created_at": zod.coerce.date(),
+  "accepted_at": zod.coerce.date().nullish(),
+  "last_event_at": zod.coerce.date().nullish()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int()
+})
+
+
+/**
+ * @summary Platform-admin-only masked message and safe chronological delivery timeline
+ */
+export const GetEmailMessageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetEmailMessageResponse = zod.object({
+  "message": zod.object({
+  "id": zod.string().uuid(),
+  "business_type": zod.enum(['invitation', 'password_reset', 'delegation', 'notification', 'platform_invoice', 'support', 'other']),
+  "business_id": zod.string().uuid().nullish(),
+  "provider": zod.string(),
+  "provider_scope": zod.string().optional(),
+  "recipient_masked": zod.string(),
+  "provider_message_id_short": zod.string().nullish(),
+  "sender": zod.string().nullish(),
+  "status": zod.enum(['unknown', 'local', 'accepted', 'sent', 'delayed', 'delivered', 'bounced', 'complained', 'failed']),
+  "created_at": zod.coerce.date(),
+  "accepted_at": zod.coerce.date().nullish(),
+  "last_event_at": zod.coerce.date().nullish()
+}),
+  "events": zod.array(zod.object({
+  "event_type": zod.string(),
+  "outcome": zod.enum(['unknown', 'local', 'accepted', 'sent', 'delayed', 'delivered', 'bounced', 'complained', 'failed']),
+  "occurred_at": zod.coerce.date(),
+  "received_at": zod.coerce.date(),
+  "safe_metadata": zod.record(zod.string(), zod.string())
+}))
+})
 
 
 /**

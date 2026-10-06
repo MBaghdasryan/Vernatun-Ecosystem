@@ -1,4 +1,4 @@
-import {assertEmailConfigured,deliverEmail,emailProviderState} from './email.js';
+import {assertEmailConfigured,deliverEmail,emailProviderState,EmailAcceptancePersistenceError} from './email.js';
 import {transaction} from './operations.js';
 import {subscriptionPolicy} from './subscription-policy.js';
 import {verifyMfa} from './mfa.js';
@@ -39,8 +39,8 @@ auth.post('/forgot-password',limit,async(req,res)=>{
   await db.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id,details) VALUES($1,'auth.password.reset.request','user',$2,'{}')",[req.user?.id??null,user.id]);return {id:reset.id,userId:user.id,token};
  });
  if(prepared){const url=config.APP_ORIGIN+'/reset-password?token='+prepared.token;
-  try{const sent=await deliverEmail({to:email.toLowerCase(),subject:'Vernatun · Password reset / Գաղտնաբառ / Пароль',text:'Reset link / Վերականգնման հղում / Ссылка восстановления (30 minutes):\n'+url,url},'reset-'+prepared.userId);await audit(req.user?.id??null,null,'auth.password.reset.delivery','user',prepared.userId,{result:'success',delivery:sent.delivery})}
-  catch{await transaction(async db=>{await db.query('UPDATE password_resets SET used_at=COALESCE(used_at,now()) WHERE id=$1',[prepared.id]);await db.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id,details) VALUES($1,'auth.password.reset.delivery.failed','user',$2,$3)",[req.user?.id??null,prepared.userId,JSON.stringify({result:'failure'})])})}
+  try{const sent=await deliverEmail({to:email.toLowerCase(),subject:'Vernatun · Password reset / Գաղտնաբառ / Пароль',text:'Reset link / Վերականգնման հղում / Ссылка восстановления (30 minutes):\n'+url,url},'reset-'+prepared.userId,{business:{type:'password_reset',id:prepared.id}});await audit(req.user?.id??null,null,'auth.password.reset.delivery','user',prepared.userId,{result:'success',delivery:sent.delivery})}
+  catch(error){if(!(error instanceof EmailAcceptancePersistenceError))await transaction(async db=>{await db.query('UPDATE password_resets SET used_at=COALESCE(used_at,now()) WHERE id=$1',[prepared.id]);await db.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id,details) VALUES($1,'auth.password.reset.delivery.failed','user',$2,$3)",[req.user?.id??null,prepared.userId,JSON.stringify({result:'failure'})])})}
  }
  // Acknowledges a request, not email delivery; do not enumerate registered addresses on SMTP recipient failure.
  res.json({message:'reset_if_exists',provider:emailProviderState()});

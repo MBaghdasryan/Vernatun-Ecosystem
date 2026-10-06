@@ -5,6 +5,138 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type EmailStatus = typeof EmailStatus[keyof typeof EmailStatus];
+
+
+export const EmailStatus = {
+  unknown: 'unknown',
+  local: 'local',
+  accepted: 'accepted',
+  sent: 'sent',
+  delayed: 'delayed',
+  delivered: 'delivered',
+  bounced: 'bounced',
+  complained: 'complained',
+  failed: 'failed',
+} as const;
+
+export type EmailBusinessType = typeof EmailBusinessType[keyof typeof EmailBusinessType];
+
+
+export const EmailBusinessType = {
+  invitation: 'invitation',
+  password_reset: 'password_reset',
+  delegation: 'delegation',
+  notification: 'notification',
+  platform_invoice: 'platform_invoice',
+  support: 'support',
+  other: 'other',
+} as const;
+
+export interface EmailMessage {
+  id: string;
+  business_type: EmailBusinessType;
+  /** @nullable */
+  business_id?: string | null;
+  provider: string;
+  provider_scope?: string;
+  recipient_masked: string;
+  /** @nullable */
+  provider_message_id_short?: string | null;
+  /** @nullable */
+  sender?: string | null;
+  status: EmailStatus;
+  created_at: string;
+  /** @nullable */
+  accepted_at?: string | null;
+  /** @nullable */
+  last_event_at?: string | null;
+}
+
+export interface EmailMessagePage {
+  items: EmailMessage[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export type EmailMessageDetailEventsItemSafeMetadata = {[key: string]: string};
+
+export type EmailMessageDetailEventsItem = {
+  event_type: string;
+  outcome: EmailStatus;
+  occurred_at: string;
+  received_at: string;
+  safe_metadata: EmailMessageDetailEventsItemSafeMetadata;
+};
+
+export interface EmailMessageDetail {
+  message: EmailMessage;
+  events: EmailMessageDetailEventsItem[];
+}
+
+export type EmailHealthProviderStatus = typeof EmailHealthProviderStatus[keyof typeof EmailHealthProviderStatus];
+
+
+export const EmailHealthProviderStatus = {
+  configured_unverified: 'configured_unverified',
+  not_configured: 'not_configured',
+} as const;
+
+export type EmailHealthPeriod = {
+  from: string;
+  to: string;
+};
+
+export type EmailHealthCounts = {[key: string]: number};
+
+export type EmailHealthLiveVerification = typeof EmailHealthLiveVerification[keyof typeof EmailHealthLiveVerification];
+
+
+export const EmailHealthLiveVerification = {
+  not_performed: 'not_performed',
+} as const;
+
+export type EmailHealthWebhook = {
+  configured: boolean;
+  signatureVerificationReady: boolean;
+  /** @nullable */
+  lastEventReceived?: string | null;
+  /** @nullable */
+  lastValidEvent?: string | null;
+  /** @nullable */
+  lastInvalidSignature?: string | null;
+  recentFailures: number;
+};
+
+export interface EmailHealth {
+  provider: string;
+  providerStatus: EmailHealthProviderStatus;
+  /** @nullable */
+  sender: string | null;
+  period: EmailHealthPeriod;
+  counts: EmailHealthCounts;
+  /**
+     * Fraction of accepted-send cohort currently in delivered aggregate status; excludes local and unknown
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  deliveryRate: number | null;
+  /** @nullable */
+  lastAccepted?: string | null;
+  /** @nullable */
+  lastDelivered?: string | null;
+  /** @nullable */
+  lastBounce?: string | null;
+  /** @nullable */
+  lastComplaint?: string | null;
+  /** @nullable */
+  lastFailure?: string | null;
+  liveVerification: EmailHealthLiveVerification;
+  webhook: EmailHealthWebhook;
+}
+
 export type InvitationStatus = typeof InvitationStatus[keyof typeof InvitationStatus];
 
 
@@ -32,6 +164,8 @@ export const InvitationDeliveryOutcome = {
   unknown: 'unknown',
   local: 'local',
   accepted: 'accepted',
+  sent: 'sent',
+  delayed: 'delayed',
   failed: 'failed',
   delivered: 'delivered',
   bounced: 'bounced',
@@ -102,4 +236,41 @@ export interface ResendDeliveryInput {
 export interface HealthStatus {
   status: string;
 }
+
+export type GetEmailHealthParams = {
+from?: string;
+to?: string;
+};
+
+export type ListEmailMessagesParams = {
+from?: string;
+to?: string;
+/**
+ * @minimum 1
+ * @maximum 100000
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+status?: EmailStatus;
+provider?: ListEmailMessagesProvider;
+businessType?: EmailBusinessType;
+/**
+ * @maxLength 254
+ */
+recipient?: string;
+};
+
+export type ListEmailMessagesProvider = typeof ListEmailMessagesProvider[keyof typeof ListEmailMessagesProvider];
+
+
+export const ListEmailMessagesProvider = {
+  resend: 'resend',
+  smtp: 'smtp',
+  outbox: 'outbox',
+  disabled: 'disabled',
+} as const;
 

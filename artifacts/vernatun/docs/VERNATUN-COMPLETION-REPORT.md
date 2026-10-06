@@ -4,7 +4,7 @@
 
 Основание: `VERNATUN-PLATFORM-SPECIFICATION.md`, текущие основные исходники Web/API, восстановленные отчёты HAYAT/ImTun, текущий изолированный regression run и read-only проверки Resend/публикации.
 
-**Это подробный промежуточный отчёт, не финальный acceptance и не объявление готовности к production.** Реализованная в отдельной задаче доставка webhook ещё не объединена с основными исходниками и не считается работающей функцией платформы. Процент готовности не вычисляется: пункты существенно различаются по объёму, а наличие таблицы или экрана не означает завершённый процесс.
+**Это подробный промежуточный отчёт, не финальный acceptance и не объявление готовности к production.** Webhook delivery объединена и расширена в основном проекте: шесть событий, общий token-free журнал, Console Email, изолированные signature/idempotency tests. Live verification отложена по указанию пользователя: домен ещё не готов. Target — `https://vernatun.io/api/webhooks/resend`, не подтверждённая публикация. Детали: `RESEND-WEBHOOK.md`. Процент готовности не вычисляется: пункты существенно различаются по объёму, а наличие таблицы или экрана не означает завершённый процесс.
 
 ## 1. Executive summary
 
@@ -21,14 +21,14 @@
 - Реализованы создание/отзыв/повторная отправка приглашений и серверная логика password reset.
 - Общий `EmailProvider` имеет отдельные Resend, SMTP и DevelopmentOutbox адаптеры. Бизнес-логика не привязана к Resend.
 - Защищённое файловое хранилище, проверка доступа и очистка изображений сохранены.
-- Текущий core regression: **61 passed / 0 failed**. Проверки типов Web/API и production Web build прошли.
+- Основной core regression: **76 passed / 0 failed**; финальный email/Phase 1 профиль после уточнения: **35/35** (providers 8, delivery 16, Phase 1 11), совокупность suites покрывает 77 checks. Workspace/API types и обновлённый codegen прошли. Ранее production Web build прошёл; это не production publication.
 
 ### Чего нельзя заявлять
 
 - Весь мастер-промпт **не завершён**; фазы 2–8 имеют существенные незакрытые требования.
-- Реальная доставка Resend **не подтверждена**: подключённая интеграция возвращает `API key is invalid`.
-- Webhook в основном проекте **не реализован/не активирован** на момент этого среза. Есть отдельная реализация со статусом «реализована», требующая объединения и последующей проверки.
-- Проект **не опубликован**, production URL отсутствует. Callback на development URL не выдаётся за production webhook.
+- Реальная доставка Resend **не подтверждена**: домен ещё не готов, live-проверка запрещена для текущего этапа. Последняя ранее выполненная проверка connection вернула `API key is invalid`; новую авторизацию не заявляем подтверждённой.
+- Webhook реализован и проверен изолированно, но production activation/live signed event ещё не подтверждены.
+- Активная публичная publication не подтверждена. Целевой будущий адрес пользователя — `https://vernatun.io/api/webhooks/resend`; development URL не выдаётся за production webhook.
 - Все 14 ролевых dashboard не воспроизведены в полном функциональном составе референсов.
 - Сценарии A–H не пройдены целиком; нельзя заменять их проверку текущими базовыми тестами.
 
@@ -202,7 +202,8 @@ Session-based auth, CSRF/permission/context guards, запрет чужих об
 | business | 6 | 0 |
 | services | 4 | 0 |
 | lifecycle | 2 | 0 |
-| **Core total** | **61** | **0** |
+| Delivery evidence / Email Operations | 16 | 0 |
+| **Совокупное актуальное покрытие suites** | **77** | **0** |
 
 Web TypeScript — passed. API TypeScript — passed. Production Web build — passed. `/api/health` — OK.
 
@@ -217,6 +218,7 @@ node --import tsx server/tests/run.ts --core-only
 
 ## 12. Browser QA
 
+- Новый `/console/email` проверен с авторизацией на desktop1280/phone390: реальный health/empty, filters/pagination, guest 401 и org-admin hidden navigation. Backend role403 также покрыт isolated regression. Timeline rendering проверен временными browser-only fixtures и не считается live evidence; после снятия interception вернулся реальный пустой список.
 - Текущий публичный preview проверен screenshot на 1366×900: главная страница загрузилась, ошибок browser console нет. Это не интерактивный E2E защищённых ролей.
 - Ранее защищённые Console-экраны invitations/audit/subscription/modules проверены на desktop/mobile; результаты описаны в `VERNATUN-AUDIT.md`, не переименовываются в новый прогон.
 - В объединённом `HAYAT-IMPLEMENTATION.md` описан отдельный offline browser pass на изолированном API: reload/drafts/files, reconnect без POST, explicit sync, conflicts, unknown response retry, account/context isolation и offline logout. Это отдельный исторический результат реализации.
@@ -243,8 +245,8 @@ node --import tsx server/tests/run.ts --core-only
 
 | Проверка | Результат |
 |---|---|
-| Resend authentication | **FAIL/BLOCKED**: read-only GET /domains → 400 validation_error, `API key is invalid` |
-| Domain verification | **Не проверено**: список доменов недоступен из-за авторизации |
+| Resend authentication | Последняя ранее выполненная проверка: GET /domains → 400 validation_error, `API key is invalid`; новый live check не выполнялся |
+| Domain verification | Домен ещё не готов по сообщению пользователя; live отправка отложена |
 | Sender verification | EMAIL_FROM сохранён; подтверждение принадлежности verified domain **не выполнено** |
 | Test email API acceptance | **Не выполнено**, live receipt/message ID отсутствует |
 | Actual mailbox receipt | **Не подтверждено** |
@@ -252,9 +254,9 @@ node --import tsx server/tests/run.ts --core-only
 | Invitation acceptance | Isolated backend tests есть; live end-to-end **не проверен** |
 | Password reset email | Backend готов, live письмо **не проверено** |
 | Password reset completion | Isolated single-use/session tests есть; live end-to-end **не проверен** |
-| Bounce/delivery webhook tracking | Отдельная реализация не объединена; handler/ledger в основном проекте **не обнаружены** |
+| Bounce/delivery webhook tracking | Объединён и расширен: canonical route, шесть событий, generic store, Console; isolated QA прошла, live отложен |
 
-Реальных писем в текущем блоке отправлено: **0**. Авторизованный test recipient/выделенный тестовый account для live reset ещё не предоставлены. Existing accounts/sessions ради live QA не изменялись.
+Реальных писем в текущем блоке отправлено: **0**, live-проверка отложена по прямому указанию пользователя до готовности домена. Пользователь сообщил о регистрации webhook; API-проверка регистрации не проводилась.
 
 ### Сохранённая архитектура
 
@@ -280,7 +282,7 @@ email.sent
 email.delivered
 ```
 
-Также нужны `email.bounced` и `email.complained`. По официальной документации:
+В коде также поддержаны `email.delivery_delayed`, `email.bounced`, `email.complained`, `email.failed`. По официальной документации:
 
 - `email.sent`: успешный запрос, Resend пытается доставить сообщение;
 - `email.delivered`: сообщение принято **почтовым сервером адресата**;
@@ -352,7 +354,7 @@ email.delivered
 | 46: timezone | Asia/Yerevan база/Console conversion есть; все новые flows требуют проверки |
 | 47: responsive | Адаптивная база есть; все роли на пяти ширинах не проверены полностью |
 | 48: accessibility | База есть; полный keyboard/focus/labels/contrast acceptance не выполнен |
-| 49: tests | Current core61/61, types/build passed; отсутствующие flows не проверены |
+| 49: tests | Core76/76 + final email/Phase 1 35/35, types/codegen passed; отсутствующие flows не проверены |
 | 50: scenarios A–H | Частично, границы перечислены выше |
 | 51: no fake success | Provider acceptance отделён от delivery; mail/production не объявляются работающими |
 | 52: migrations | 001–013 сохранены; дальнейшие additive changes сначала isolated QA |
@@ -380,7 +382,7 @@ email.delivered
 2. Получить успешную read-only авторизацию, verified domain и соответствующий sender.
 3. Объединить delivery implementation; проверить все четыре события и security/correlation.
 4. Согласовать publication/public callback и production settings; не использовать dev URL как production endpoint.
-5. Настроить webhook signing secret через Secrets, не чат/код.
+5. Webhook signing secret уже сохранён через Secrets; проверить соответствие созданному endpoint после готовности домена.
 6. Получить явный разрешённый test recipient и выделенный test account.
 7. Controlled live email → receipt → actual receipt; invitation → single use; reset → expiry/single use/session revocation. Не сбрасывать доступ реальных пользователей ради QA.
 
@@ -421,13 +423,13 @@ API credential и webhook signing secret — разные значения. Вк
 
 - [x] Сохранены архитектура, авторизация, исходные данные и product logos.
 - [x] Текущие Web/API type checks.
-- [x] Current core regression61/61.
+- [x] Core76/76 + финальный email/Phase 1 35/35.
 - [x] Production Web build.
 - [x] Managed preview / API health.
 - [x] Общий заменяемый EmailProvider.
 - [ ] Исправный и заменённый после раскрытия Resend credential.
 - [ ] Verified sending domain/sender.
-- [ ] Объединённая и проверенная webhook реализация всех четырёх событий.
+- [x] Объединённая webhook реализация всех шести событий; изолированные fixtures проверены. Live verification ещё не выполнена.
 - [ ] Published production URL и подходящая external visibility.
 - [ ] Signing secret/signature/replay/deduplication проверены в рабочей среде.
 - [ ] Authorized live email/invitation/reset tests.
@@ -438,4 +440,4 @@ API credential и webhook signing secret — разные значения. Вк
 - [ ] Полный OpenAPI, leads backend и безопасный production monitoring.
 - [ ] Актуальная production backup/restore проверка.
 
-**Следующее действие:** объединить готовую delivery задачу и обновить ключ существующего Resend connection. После этого сверить webhook код с четырьмя запрошенными событиями и обновить этот отчёт результатами реальных проверок, а не предположениями.
+**Следующее действие по email:** дождаться готовности домена, подтвердить публичную publication и valid sender/connection; только после отдельного разрешения выполнить одно реальное письмо и сопоставить подписанные события. Сейчас реальные отправки запрещены пользователем и не выполняются.

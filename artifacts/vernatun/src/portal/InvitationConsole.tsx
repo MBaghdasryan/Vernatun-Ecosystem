@@ -17,7 +17,7 @@ export default function InvitationConsole({c,language}:{c:RoleContext;language:L
  const list=loaded?.contextId===c.id?loaded.rows:undefined;
  const [orgs,setOrgs]=useState<Row[]>([]),[blds,setBlds]=useState<Row[]>([]),[units,setUnits]=useState<Row[]>([]);
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState<Row>(),[role,setRole]=useState(platform?'org_admin':''),[bld,setBld]=useState('');
- const [editing,setEditing]=useState(''),[address,setAddress]=useState('');
+ const [outcome,setOutcome]=useState('all'),[editing,setEditing]=useState(''),[address,setAddress]=useState('');
  const load=useCallback(async()=>{try{const rows=await request<Row[]>('/invitations');if(activeContext.current===c.id){setLoaded({contextId:c.id,rows});setError('')}}catch(e){if(activeContext.current===c.id)setError(errText(language,e))}},[language,c.id]);
  useEffect(()=>{void load();setNotice(undefined);setEditing('')},[load]);
  useEffect(()=>{const timer=window.setInterval(()=>{if(!busy&&document.visibilityState==='visible')void load()},30000);return()=>window.clearInterval(timer)},[load,busy]);
@@ -44,8 +44,8 @@ export default function InvitationConsole({c,language}:{c:RoleContext;language:L
    {!platform&&<label>{t('building')}<select name="buildingId" required={needsUnit||!!c.building_id} value={bld} onChange={e=>setBld(e.target.value)}><option value="">—</option>{blds.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
    {needsUnit&&<label>{t('unit')}<select name="unitId" required defaultValue=""><option value="">—</option>{units.filter(u=>!bld||u.building_id===bld).map(u=><option key={u.id} value={u.id}>{u.building_name} · {u.number}</option>)}</select></label>}
    <button className="p-button orange" disabled={busy||!role}>{t('create')}</button></form>
-  <section className="p-card"><h3>{t('invitations')}</h3>{!list?<p role="status">{t('loading')}</p>:<div className="cx-scroll"><table className="cx-table"><thead><tr><th>{t('email')}</th><th>{t('role')}</th><th>{t('organization')}</th><th>{t('expires')}</th><th>{t('status')}</th><th>{t('delivery')}</th><th/></tr></thead><tbody>
-   {list.map(i=><tr key={i.id}><td>{i.email}</td><td>{roleName(language,i.role_key)}</td><td>{i.organization_name??'—'}</td><td>{fmtDate(i.expires_at,language)}</td><td>{t(i.status)}</td>
+  <section className="p-card"><h3>{t('invitations')}</h3><label className="cx-form">{t('deliveryFilter')}<select value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="all">{t('all')}</option>{['unknown','local','accepted','sent','delayed','delivered','bounced','complained','failed'].map(o=><option key={o} value={o}>{t('delivery_'+o)}</option>)}</select></label>{!list?<p role="status">{t('loading')}</p>:<div className="cx-scroll"><table className="cx-table"><thead><tr><th>{t('email')}</th><th>{t('role')}</th><th>{t('organization')}</th><th>{t('expires')}</th><th>{t('status')}</th><th>{t('delivery')}</th><th/></tr></thead><tbody>
+   {list.filter(i=>outcome==='all'||(i.delivery_outcome??'unknown')===outcome).map(i=><tr key={i.id}><td>{i.email}</td><td>{roleName(language,i.role_key)}</td><td>{i.organization_name??'—'}</td><td>{fmtDate(i.expires_at,language)}</td><td>{t(i.status)}</td>
    <td><span role="status">{t('delivery_'+(i.delivery_outcome??'unknown'))}</span>
     {i.delivery_outcome_at&&<><br/><small>{fmtDate(i.delivery_outcome_at,language)}</small></>}
     {i.delivery_outcome==='accepted'&&<><br/><small>{t('smtpNote')}</small></>}

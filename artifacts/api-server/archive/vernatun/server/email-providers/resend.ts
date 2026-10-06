@@ -17,14 +17,23 @@ export class ResendEmailProvider implements EmailProvider {
   catch{throw new ApiError(400,'webhook_payload_invalid')}
   const envelope=z.object({type:z.string()}).safeParse(verified);
   if(!envelope.success)throw new ApiError(400,'webhook_payload_invalid');
-  const outcomes={'email.delivered':'delivered','email.bounced':'bounced','email.complained':'complained'} as const;
-  const outcome=outcomes[envelope.data.type as keyof typeof outcomes];
-  // Open/click/sent and unrelated events are deliberately not retained.
+  const outcomes={'email.sent':'sent','email.delivery_delayed':'delayed','email.delivered':'delivered',
+   'email.bounced':'bounced','email.complained':'complained','email.failed':'failed'} as const;
+  const outcome=Object.hasOwn(outcomes,envelope.data.type)?outcomes[envelope.data.type as keyof typeof outcomes]:undefined;
+  // Open/click and unrelated events are deliberately not retained.
   if(!outcome)return null;
   const event=z.object({created_at:z.string().datetime({offset:true}),data:z.object({email_id:z.string().uuid()})}).safeParse(verified);
   if(!event.success)throw new ApiError(400,'webhook_payload_invalid');
-  const eventId=z.string().min(1).max(200).parse(input.headers['svix-id']);
-  return {provider:this.name,scope:input.scope,eventId,messageId:event.data.data.email_id,outcome,occurredAt:event.data.created_at};
+  const eventId=z.string().regex(/^[A-Za-z0-9_-]{1,200}$/).parse(input.headers['svix-id']);
+  // Provider free-form diagnostics can contain addresses, tokens or message
+  // contents. Retain only known bounce classification codes, never raw text.
+  const bounce=(verified as {data?:{bounce?:{type?:unknown;subType?:unknown}}}).data?.bounce;
+  const safeMetadata:Record<string,string>={};
+  const codes=new Set(['Permanent','Transient','Undetermined','Hard','Soft','General','NoEmail','Suppressed','MailboxFull','MessageTooLarge','ContentRejected','AttachmentRejected']);
+  for(const [key,value] of Object.entries(bounce??{})){
+   if(['type','subType'].includes(key)&&typeof value==='string'&&codes.has(value))safeMetadata[key]=value;
+  }
+  return {provider:this.name,scope:input.scope,eventId,messageId:event.data.data.email_id,outcome,occurredAt:event.data.created_at,safeMetadata};
  }
  constructor(private readonly settings:EmailSettings,private readonly fetchEmail?:ResendFetch){}
  isConfigured(){return this.settings.mode!=='test'&&validSender(this.settings.from)}

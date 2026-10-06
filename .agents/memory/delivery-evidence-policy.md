@@ -15,6 +15,16 @@ provider-account scopes stable within an account and distinct when accounts
 change; the signing secret and account scope must change together on account
 replacement.
 
+Receipt persistence failure after provider acceptance is not failed transport.
+Keep it unconfirmed; observability failure must not invalidate an already mailed
+reset or trigger an automatic resend.
+
+**Why:** Delivery and database writes have separate failure boundaries. Treating
+an accepted message as failed can invalidate a usable reset or send duplicates.
+
+**How to apply:** Separate pre-acceptance transport errors from post-acceptance
+recording errors in the common email layer, independently of the provider.
+
 Do not assume Svix signature verification returns parsed JSON.
 
 **Why:** Svix 2 verifies successfully but returns void, unlike the return value

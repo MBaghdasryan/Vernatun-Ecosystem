@@ -20,10 +20,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  EmailHealth,
+  EmailMessageDetail,
+  EmailMessagePage,
+  GetEmailHealthParams,
   HealthStatus,
   Invitation,
   InvitationResendInput,
   InvitationSendReceipt,
+  ListEmailMessagesParams,
   ResendDeliveryInput
 } from './api.schemas';
 
@@ -299,11 +304,11 @@ export const getReceiveResendDeliveryEventUrl = () => {
 
 
 
-  return `/api/email-webhooks/resend`
+  return `/api/webhooks/resend`
 }
 
 /**
- * Only delivered, bounced and complained are retained. Opens and clicks are ignored.
+ * Sent, delayed, delivered, bounced, complained and failed are retained. Opens and clicks are ignored. Canonical future URL https://vernatun.io/api/webhooks/resend; domain activation and live verification are pending.
  * @summary Receive signed delivery evidence; raw bytes must match the Svix signature
  */
 export const receiveResendDeliveryEvent = async (resendDeliveryInput: ResendDeliveryInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
@@ -382,6 +387,327 @@ export const useReceiveResendDeliveryEvent = <TError = ErrorType<void>,
       > => {
       return useMutation(getReceiveResendDeliveryEventMutationOptions(options));
     }
+
+export const getReceiveLegacyResendDeliveryEventUrl = () => {
+
+
+
+
+  return `/api/email-webhooks/resend`
+}
+
+/**
+ * @deprecated
+ * @summary Compatibility alias; use /webhooks/resend with the same Svix headers
+ */
+export const receiveLegacyResendDeliveryEvent = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getReceiveLegacyResendDeliveryEventUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReceiveLegacyResendDeliveryEventMutationKey = () => ['receiveLegacyResendDeliveryEvent'] as const;
+
+export const getReceiveLegacyResendDeliveryEventMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>, TError,void, TContext> => {
+
+const mutationKey = getReceiveLegacyResendDeliveryEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>, void> = () => {
+
+
+          return  receiveLegacyResendDeliveryEvent(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReceiveLegacyResendDeliveryEventMutationResult = NonNullable<Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>>
+
+    export type ReceiveLegacyResendDeliveryEventMutationError = ErrorType<void>
+
+
+    /**
+ * @deprecated
+ * @summary Compatibility alias; use /webhooks/resend with the same Svix headers
+ */
+export const useReceiveLegacyResendDeliveryEvent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof receiveLegacyResendDeliveryEvent>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getReceiveLegacyResendDeliveryEventMutationOptions(options));
+    }
+
+export const getGetEmailHealthUrl = (params?: GetEmailHealthParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/email/health?${stringifiedParams}` : `/api/platform/email/health`
+}
+
+/**
+ * @summary Platform-admin-only email evidence and configuration health
+ */
+export const getEmailHealth = async (params?: GetEmailHealthParams, options?: Parameters<typeof customFetch>[1]): Promise<EmailHealth> => {
+
+  return customFetch<EmailHealth>(getGetEmailHealthUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmailHealthQueryKey = (params?: GetEmailHealthParams,) => {
+    return [
+    `/api/platform/email/health`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEmailHealthQueryOptions = <TData = Awaited<ReturnType<typeof getEmailHealth>>, TError = ErrorType<void>>(params?: GetEmailHealthParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmailHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmailHealthQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmailHealth>>> = ({ signal }) => getEmailHealth(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmailHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmailHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getEmailHealth>>>
+export type GetEmailHealthQueryError = ErrorType<void>
+
+
+/**
+ * @summary Platform-admin-only email evidence and configuration health
+ */
+
+export function useGetEmailHealth<TData = Awaited<ReturnType<typeof getEmailHealth>>, TError = ErrorType<void>>(
+ params?: GetEmailHealthParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmailHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmailHealthQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEmailMessagesUrl = (params?: ListEmailMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/email/messages?${stringifiedParams}` : `/api/platform/email/messages`
+}
+
+/**
+ * @summary Platform-admin-only masked message log, server-side filters and pagination
+ */
+export const listEmailMessages = async (params?: ListEmailMessagesParams, options?: Parameters<typeof customFetch>[1]): Promise<EmailMessagePage> => {
+
+  return customFetch<EmailMessagePage>(getListEmailMessagesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmailMessagesQueryKey = (params?: ListEmailMessagesParams,) => {
+    return [
+    `/api/platform/email/messages`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEmailMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listEmailMessages>>, TError = ErrorType<void>>(params?: ListEmailMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmailMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmailMessagesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmailMessages>>> = ({ signal }) => listEmailMessages(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmailMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEmailMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listEmailMessages>>>
+export type ListEmailMessagesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Platform-admin-only masked message log, server-side filters and pagination
+ */
+
+export function useListEmailMessages<TData = Awaited<ReturnType<typeof listEmailMessages>>, TError = ErrorType<void>>(
+ params?: ListEmailMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmailMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEmailMessagesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEmailMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/email/messages/${id}`
+}
+
+/**
+ * @summary Platform-admin-only masked message and safe chronological delivery timeline
+ */
+export const getEmailMessage = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EmailMessageDetail> => {
+
+  return customFetch<EmailMessageDetail>(getGetEmailMessageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmailMessageQueryKey = (id: string,) => {
+    return [
+    `/api/platform/email/messages/${id}`
+    ] as const;
+    }
+
+
+export const getGetEmailMessageQueryOptions = <TData = Awaited<ReturnType<typeof getEmailMessage>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmailMessage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmailMessageQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmailMessage>>> = ({ signal }) => getEmailMessage(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmailMessage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmailMessageQueryResult = NonNullable<Awaited<ReturnType<typeof getEmailMessage>>>
+export type GetEmailMessageQueryError = ErrorType<void>
+
+
+/**
+ * @summary Platform-admin-only masked message and safe chronological delivery timeline
+ */
+
+export function useGetEmailMessage<TData = Awaited<ReturnType<typeof getEmailMessage>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmailMessage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmailMessageQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 

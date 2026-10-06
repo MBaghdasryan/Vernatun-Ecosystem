@@ -27,7 +27,7 @@ delivery_accepted:['Փոստային ծառայությունն ընդունել
 delivery_unknown:['Առաքման հաստատում չկա','Доставка не подтверждена','Delivery unconfirmed'],
 delivery_local:['Միայն տեղական, նամակ չի ուղարկվել','Только локально, письмо не отправлено','Local only, no email sent'],
 delivery_failed:['Ուղարկումը ձախողվել է','Ошибка отправки','Send failed'],
-delivery_delivered:['Առաքված է','Доставлено','Delivered'],
+delivery_sent:['Ուղարկված է փոստային ծառայության կողմից','Отправлено почтовым сервисом','Sent by mail service'],delivery_delayed:['Առաքումը ուշանում է','Доставка задерживается','Delivery delayed'],deliveryFilter:['Առաքման արդյունք','Результат доставки','Delivery outcome'],delivery_delivered:['Առաքված է','Доставлено','Delivered'],
 delivery_bounced:['Մերժված է ստացողի սերվերի կողմից','Отклонено сервером адресата','Bounced'],
 delivery_complained:['Նշված է որպես սպամ','Жалоба на спам','Reported as spam'],
 deliveredNote:['Ստացողի փոստային սերվերն ընդունել է նամակը։ Սա կարդալու հաստատում չէ։','Сервер адресата принял письмо. Это не подтверждение прочтения.','Recipient mail server accepted the email. This is not a read receipt.'],

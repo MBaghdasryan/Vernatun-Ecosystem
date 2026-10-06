@@ -4,9 +4,11 @@
 
 **Это промежуточный аудит и отчёт о первых исправлениях, не объявление о завершении всех фаз и не сертификат production readiness.**
 
-Актуальный подробный срез: `VERNATUN-COMPLETION-REPORT.md`. После объединения HAYAT offline текущий core run прошёл **61/61**. Webhook delivery задача отмечена как реализованная отдельно, но не объединена; в основных исходниках handler отсутствует. Resend read-only auth всё ещё возвращает `API key is invalid`, публикации нет.
+Актуальный подробный срез: `VERNATUN-COMPLETION-REPORT.md`; email — `RESEND-WEBHOOK.md`. HAYAT offline и invitation delivery объединены. Webhook расширен до шести событий, общего token-free журнала и Console Email. Основной regression прошёл 76/76, финальное уточнение email/Phase 1 — 35/35; суммарное актуальное покрытие suites — 77 checks. Workspace/API types и codegen прошли. Проверенная migration 015 применена только к development. Домен ещё не готов по сообщению пользователя; реальные письма не отправляются, live verification не выполнена. Target `https://vernatun.io/api/webhooks/resend` не выдаётся за активную публикацию.
 
 Активный текст задания сохранён без изменений в `VERNATUN-PLATFORM-SPECIFICATION.md`. Все 15 приложенных изображений просмотрены как ориентиры состава экранов. Показанные на них суммы, даты, имена, графики и статусы интеграций не переносятся в рабочие данные.
+
+Email Console browser QA: admin reached `/console/email`, реальный health и пустой список, корректные filter/pagination GET, guest 401, org-admin hidden nav; desktop1280/phone390 без page overflow. Detail/timeline отображение отдельно проверено временными browser-only fixtures, затем восстановлены реальные GET. Main business data и письма ради этой проверки не создавались; никакое mock evidence не считается live доставкой.
 
 ## Архитектура и ограничения
 

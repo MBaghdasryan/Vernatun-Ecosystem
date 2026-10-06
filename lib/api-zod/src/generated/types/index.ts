@@ -6,6 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './emailBusinessType';
+export * from './emailHealth';
+export * from './emailHealthCounts';
+export * from './emailHealthLiveVerification';
+export * from './emailHealthPeriod';
+export * from './emailHealthProviderStatus';
+export * from './emailHealthWebhook';
+export * from './emailMessage';
+export * from './emailMessageDetail';
+export * from './emailMessageDetailEventsItem';
+export * from './emailMessageDetailEventsItemSafeMetadata';
+export * from './emailMessagePage';
+export * from './emailStatus';
+export * from './getEmailHealthParams';
 export * from './healthStatus';
 export * from './invitation';
 export * from './invitationDeliveryOutcome';
@@ -14,5 +28,7 @@ export * from './invitationResendInput';
 export * from './invitationSendReceipt';
 export * from './invitationSendReceiptDelivery';
 export * from './invitationStatus';
+export * from './listEmailMessagesParams';
+export * from './listEmailMessagesProvider';
 export * from './resendDeliveryInput';
 export * from './resendDeliveryInputData';

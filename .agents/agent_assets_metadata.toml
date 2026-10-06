@@ -61,14 +61,14 @@ content_type = "text/markdown"
 id = "qcDDHUdWc9KWcoOHaxnG3"
 uri = "file://artifacts/vernatun/docs/VERNATUN-COMPLETION-REPORT.md"
 type = "text"
-title = "Vernatun — подробный отчёт по мастер-промпту"
-description = "Что работает, что реализовано частично и что осталось: все пункты мастер-промпта, 61/61 тестов, email-проверки, сценарии A–H и production checklist. Webhook ожидает объединения готовой реализации."
+title = "Vernatun — обновлённый отчёт по мастер-промпту"
+description = "Обновлены статус email/webhook, проверки и оставшиеся требования платформы. Production readiness не заявляется."
 logical_id = "dbf77b19-5ca8-4085-88a9-ae0606b451fd"
-content_hash = "sha256:d4c20164e08e3b0d13f6446cd778873d04cdf750a5ccd0c093427aad96495a2f"
-size = 43021
-mtime_ms = 1791300359333
-storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/dbf77b19-5ca8-4085-88a9-ae0606b451fd/198d307a-5356-4482-9c7c-87f7ffd5ee40"
-storage_version_token = "1791300412016967"
+content_hash = "sha256:f70d887fc3b7eabf1f0866dd3908d0363641bc023a7fe7f5389cc62f1f37473e"
+size = 44843
+mtime_ms = 1791305430072
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/dbf77b19-5ca8-4085-88a9-ae0606b451fd/f3b67a73-9da8-4329-ad20-6f089f43d45b"
+storage_version_token = "1791305526795960"
 content_type = "text/markdown"
 
 [[outputs]]
@@ -83,4 +83,18 @@ size = 5389
 mtime_ms = 1791302795515
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/f5071ff1-6255-4507-8b9c-df24c5e88e95/293bfa89-aa3b-47f6-b92a-e666f3dbc237"
 storage_version_token = "1791302847355515"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "LoyU0FUokZM_xcrmK3qKc"
+uri = "file://artifacts/vernatun/docs/RESEND-WEBHOOK.md"
+type = "text"
+title = "Vernatun — email lifecycle и webhook"
+description = "Шесть событий, подпись, idempotency, общий журнал, Console, проверки и отложенное подключение домена. Реальных отправок — 0."
+logical_id = "d57a1e7c-8e74-4406-a8da-5e6c3f8cdcb6"
+content_hash = "sha256:b234050a70349e1ab6bacea609abb9603b88d7003d03bebd72842b9b22f852e1"
+size = 15388
+mtime_ms = 1791305425289
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/d57a1e7c-8e74-4406-a8da-5e6c3f8cdcb6/3794bcfd-85ba-4ccb-9c66-a4a1e7ca2e39"
+storage_version_token = "1791305525504202"
 content_type = "text/markdown"
