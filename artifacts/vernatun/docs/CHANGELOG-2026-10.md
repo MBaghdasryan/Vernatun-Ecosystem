@@ -1,5 +1,11 @@
 # Vernatun — октябрь 2026
 
+## Phase 4 — batch billing и банковская сверка
+
+Добавлены предпросмотр/черновик/атомарная публикация пакетов счетов, CSV-import evidence с явным mapping и minor/major units, duplicate/conflict validation, предложения соответствий без автопроводок, подтверждение бухгалтером, multi-invoice allocations и append-only account credit. Поиск и серверная пагинация банковской очереди; собственные авансы ImTun без доступа к банковским строкам. Старый финансовый workflow сохранён.
+
+98 isolated core checks и 3 pure CSV/money/date checks прошли. Миграция 019 применена development после isolated tests; counts/digests прежних полей 9 финансовых таблиц совпали. Main seed, production migration, реальные тестовые начисления/оплаты и письма не выполнялись. Границы и итог browser QA: [PHASE4-COMPLETION.md](PHASE4-COMPLETION.md).
+
 ## Phase 3 — maintenance и ImTun lifecycle
 
 Добавлены циклическое обслуживание через общий WorkOrder и manager verification, системные building-scoped работы, безопасная генерация по циклам, история оборудования, действия владельца для delegation expiration/resend и recent auth, предложения визита от техника и альтернативы жителя, разрешённые notification destinations с явным context switch, серверная lease access policy и versioned extend/cancel.

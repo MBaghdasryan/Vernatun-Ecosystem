@@ -723,3 +723,219 @@ export const GetIncidentEvidenceParams = zod.object({
 export const GetIncidentEvidenceResponse = zod.unknown()
 
 
+export const PreviewBillingBatchBody = zod.object({
+  "buildingId": zod.string().uuid(),
+  "period": zod.coerce.date(),
+  "tariffId": zod.string().uuid()
+})
+
+export const PreviewBillingBatchResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListBillingBatchesResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListBillingBatchesResponse = zod.array(ListBillingBatchesResponseItem)
+
+
+export const CreateBillingDraftBody = zod.object({
+  "buildingId": zod.string().uuid(),
+  "period": zod.coerce.date(),
+  "tariffId": zod.string().uuid()
+}).and(zod.object({
+  "key": zod.string().uuid()
+}))
+
+export const CreateBillingDraftResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const TransitionBillingBatchParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "action": zod.enum(['publish', 'cancel'])
+})
+
+
+export const transitionBillingBatchBodyAcceptWarningsDefault = false;
+
+export const TransitionBillingBatchBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "acceptWarnings": zod.boolean().default(transitionBillingBatchBodyAcceptWarningsDefault)
+})
+
+export const TransitionBillingBatchResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const previewBankImportBodyAccountMin = 2;
+export const previewBankImportBodyAccountMax = 160;
+
+export const previewBankImportBodyTransactionsItemExternalIdMax = 160;
+
+export const previewBankImportBodyTransactionsItemAmountMinorRegExp = new RegExp('^-?[1-9][0-9]{0,13}$');
+export const previewBankImportBodyTransactionsItemPayerTextMax = 200;
+
+export const previewBankImportBodyTransactionsItemPurposeMax = 1000;
+
+export const previewBankImportBodyTransactionsMax = 1000;
+
+
+
+export const PreviewBankImportBody = zod.object({
+  "key": zod.string().uuid(),
+  "account": zod.string().min(previewBankImportBodyAccountMin).max(previewBankImportBodyAccountMax),
+  "transactions": zod.array(zod.object({
+  "externalId": zod.string().min(1).max(previewBankImportBodyTransactionsItemExternalIdMax),
+  "date": zod.coerce.date(),
+  "amountMinor": zod.string().regex(previewBankImportBodyTransactionsItemAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "payerText": zod.string().max(previewBankImportBodyTransactionsItemPayerTextMax),
+  "purpose": zod.string().max(previewBankImportBodyTransactionsItemPurposeMax),
+  "rawPayload": zod.record(zod.string(), zod.string()).optional()
+})).min(1).max(previewBankImportBodyTransactionsMax)
+})
+
+export const PreviewBankImportResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListBankImportsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListBankImportsResponse = zod.array(ListBankImportsResponseItem)
+
+
+export const commitBankImportBodyAccountMin = 2;
+export const commitBankImportBodyAccountMax = 160;
+
+export const commitBankImportBodyTransactionsItemExternalIdMax = 160;
+
+export const commitBankImportBodyTransactionsItemAmountMinorRegExp = new RegExp('^-?[1-9][0-9]{0,13}$');
+export const commitBankImportBodyTransactionsItemPayerTextMax = 200;
+
+export const commitBankImportBodyTransactionsItemPurposeMax = 1000;
+
+export const commitBankImportBodyTransactionsMax = 1000;
+
+
+
+export const CommitBankImportBody = zod.object({
+  "key": zod.string().uuid(),
+  "account": zod.string().min(commitBankImportBodyAccountMin).max(commitBankImportBodyAccountMax),
+  "transactions": zod.array(zod.object({
+  "externalId": zod.string().min(1).max(commitBankImportBodyTransactionsItemExternalIdMax),
+  "date": zod.coerce.date(),
+  "amountMinor": zod.string().regex(commitBankImportBodyTransactionsItemAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "payerText": zod.string().max(commitBankImportBodyTransactionsItemPayerTextMax),
+  "purpose": zod.string().max(commitBankImportBodyTransactionsItemPurposeMax),
+  "rawPayload": zod.record(zod.string(), zod.string()).optional()
+})).min(1).max(commitBankImportBodyTransactionsMax)
+})
+
+export const CommitBankImportResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const listBankTransactionsQueryPageDefault = 0;
+export const listBankTransactionsQueryPageMin = 0;
+
+export const listBankTransactionsQueryLimitDefault = 100;
+export const listBankTransactionsQueryLimitMax = 100;
+
+export const listBankTransactionsQuerySearchMax = 100;
+
+
+
+export const ListBankTransactionsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(listBankTransactionsQueryPageMin).default(listBankTransactionsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listBankTransactionsQueryLimitMax).default(listBankTransactionsQueryLimitDefault),
+  "status": zod.enum(['matched', 'partially_matched', 'unmatched', 'ignored']).optional(),
+  "search": zod.coerce.string().max(listBankTransactionsQuerySearchMax).optional()
+})
+
+export const ListBankTransactionsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListBankTransactionsResponse = zod.array(ListBankTransactionsResponseItem)
+
+
+export const SuggestBankMatchesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SuggestBankMatchesQueryParams = zod.object({
+  "unitId": zod.coerce.string().uuid().optional(),
+  "payerId": zod.coerce.string().uuid().optional()
+})
+
+export const SuggestBankMatchesResponseItem = zod.record(zod.string(), zod.unknown())
+export const SuggestBankMatchesResponse = zod.array(SuggestBankMatchesResponseItem)
+
+
+export const ConfirmBankTransactionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const confirmBankTransactionBodyAllocationsItemAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,13}$');
+export const confirmBankTransactionBodyAllocationsMax = 100;
+
+
+
+export const ConfirmBankTransactionBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "unitId": zod.string().uuid(),
+  "payerId": zod.string().uuid(),
+  "allocations": zod.array(zod.object({
+  "invoiceId": zod.string().uuid(),
+  "amountMinor": zod.string().regex(confirmBankTransactionBodyAllocationsItemAmountMinorRegExp)
+})).max(confirmBankTransactionBodyAllocationsMax)
+})
+
+export const ConfirmBankTransactionResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const IgnoreBankTransactionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const ignoreBankTransactionBodyReasonMin = 3;
+export const ignoreBankTransactionBodyReasonMax = 1000;
+
+
+
+export const IgnoreBankTransactionBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "reason": zod.string().min(ignoreBankTransactionBodyReasonMin).max(ignoreBankTransactionBodyReasonMax)
+})
+
+export const IgnoreBankTransactionResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListFinanceAccountsQueryParams = zod.object({
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const ListFinanceAccountsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListFinanceAccountsResponse = zod.array(ListFinanceAccountsResponseItem)
+
+
+export const ListAccountCreditsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListAccountCreditsResponse = zod.array(ListAccountCreditsResponseItem)
+
+
+export const AllocateAccountCreditParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const allocateAccountCreditBodyAllocationsItemAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,13}$');
+export const allocateAccountCreditBodyAllocationsMax = 100;
+
+
+
+export const AllocateAccountCreditBody = zod.object({
+  "key": zod.string().uuid(),
+  "allocations": zod.array(zod.object({
+  "invoiceId": zod.string().uuid(),
+  "amountMinor": zod.string().regex(allocateAccountCreditBodyAllocationsItemAmountMinorRegExp)
+})).min(1).max(allocateAccountCreditBodyAllocationsMax)
+})
+
+export const AllocateAccountCreditResponse = zod.record(zod.string(), zod.unknown())
+
+

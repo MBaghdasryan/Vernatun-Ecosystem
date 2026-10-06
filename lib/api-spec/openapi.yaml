@@ -581,8 +581,174 @@ paths:
           content:
             image/jpeg:
               schema: {type: string, format: binary}
+  /finance/batches/preview:
+    post:
+      operationId: previewBillingBatch
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingBatchInput" } } } }
+      responses:
+        "200": { description: Scoped calculation without ledger writes, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/batches:
+    get:
+      operationId: listBillingBatches
+      responses:
+        "200": { description: Scoped batches, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+    post:
+      operationId: createBillingDraft
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingDraftInput" } } } }
+      responses:
+        "201": { description: Frozen draft without invoices, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/batches/{id}/{action}:
+    post:
+      operationId: transitionBillingBatch
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [publish, cancel] } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingPublicationInput" } } } }
+      responses:
+        "200": { description: Atomic publication or draft cancellation, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/bank/imports/preview:
+    post:
+      operationId: previewBankImport
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BankImportInput" } } } }
+      responses:
+        "200": { description: Import validation and duplicate/conflict evidence, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/bank/imports:
+    get:
+      operationId: listBankImports
+      responses:
+        "200": { description: Imported statement metadata, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+    post:
+      operationId: commitBankImport
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BankImportInput" } } } }
+      responses:
+        "201": { description: Atomic import only; no payments confirmed, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/bank/transactions:
+    get:
+      operationId: listBankTransactions
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [matched, partially_matched, unmatched, ignored] } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+      responses:
+        "200": { description: Transactions with current allocation status, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /finance/bank/transactions/{id}/suggestions:
+    get:
+      operationId: suggestBankMatches
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: unitId, in: query, schema: { type: string, format: uuid } }
+        - { name: payerId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Suggestions never automatically confirm money, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /finance/bank/transactions/{id}/confirm:
+    post:
+      operationId: confirmBankTransaction
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BankConfirmationInput" } } } }
+      responses:
+        "200": { description: "Payment, allocations and unit-account credit in one transaction", content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/bank/transactions/{id}/ignore:
+    post:
+      operationId: ignoreBankTransaction
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BankIgnoreInput" } } } }
+      responses:
+        "200": { description: Unconfirmed transaction ignored with audit reason, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/accounts:
+    get:
+      operationId: listFinanceAccounts
+      parameters:
+        - { name: unitId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Real current or recorded historical payers for the scoped unit, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /finance/credits:
+    get:
+      operationId: listAccountCredits
+      responses:
+        "200": { description: Available credit from immutable payments less allocations, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /finance/credits/{id}/allocate:
+    post:
+      operationId: allocateAccountCredit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreditAllocationInput" } } } }
+      responses:
+        "200": { description: Append-only credit allocation, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
 components:
   schemas:
+    FinanceRecord:
+      type: object
+      additionalProperties: true
+    BillingBatchInput:
+      type: object
+      required: [buildingId, period, tariffId]
+      properties:
+        buildingId: { type: string, format: uuid }
+        period: { type: string, format: date }
+        tariffId: { type: string, format: uuid }
+    BillingDraftInput:
+      allOf:
+        - { $ref: "#/components/schemas/BillingBatchInput" }
+        - type: object
+          required: [key]
+          properties:
+            key: { type: string, format: uuid }
+    BillingPublicationInput:
+      type: object
+      required: [key, version]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        acceptWarnings: { type: boolean, default: false }
+    BankEntryInput:
+      type: object
+      required: [externalId, date, amountMinor, currency, payerText, purpose]
+      properties:
+        externalId: { type: string, minLength: 1, maxLength: 160 }
+        date: { type: string, format: date }
+        amountMinor: { type: string, pattern: "^-?[1-9][0-9]{0,13}$" }
+        currency: { type: string, enum: [AMD, RUB, USD] }
+        payerText: { type: string, maxLength: 200 }
+        purpose: { type: string, maxLength: 1000 }
+        rawPayload: { type: object, additionalProperties: { type: string } }
+    BankImportInput:
+      type: object
+      required: [key, account, transactions]
+      properties:
+        key: { type: string, format: uuid }
+        account: { type: string, minLength: 2, maxLength: 160 }
+        transactions: { type: array, minItems: 1, maxItems: 1000, items: { $ref: "#/components/schemas/BankEntryInput" } }
+    InvoiceAllocationInput:
+      type: object
+      required: [invoiceId, amountMinor]
+      properties:
+        invoiceId: { type: string, format: uuid }
+        amountMinor: { type: string, pattern: "^[1-9][0-9]{0,13}$" }
+    BankConfirmationInput:
+      type: object
+      required: [key, version, unitId, payerId, allocations]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        unitId: { type: string, format: uuid }
+        payerId: { type: string, format: uuid }
+        allocations: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/InvoiceAllocationInput" } }
+    BankIgnoreInput:
+      type: object
+      required: [key, version, reason]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    CreditAllocationInput:
+      type: object
+      required: [key, allocations]
+      properties:
+        key: { type: string, format: uuid }
+        allocations: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/InvoiceAllocationInput" } }
     RecentAuthenticationInput:
       type: object
       required: [password]

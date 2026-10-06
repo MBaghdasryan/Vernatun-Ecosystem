@@ -112,3 +112,17 @@ mtime_ms = 1791306093083
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/20175367-a194-4654-a397-41dbb06943ba/4892ebe0-bba7-4e3b-a85b-38951a6ed123"
 storage_version_token = "1791306198266196"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "BKhPQYnqY4xJfNOXkwSIj"
+uri = "file://artifacts/vernatun/docs/PHASE4-COMPLETION.md"
+type = "text"
+title = "Vernatun — отчёт Phase 4"
+description = "Реализованные финансовые функции, результаты проверок, сохранность данных и оставшиеся ограничения."
+logical_id = "6c378d17-3d0f-4c9f-a82c-ab90a9e46e5f"
+content_hash = "sha256:51ec76bb207d1e916016ade8e68cad643fa21ab6803dabc9bb01e99cb0f0db92"
+size = 12055
+mtime_ms = 1791321268043
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/6c378d17-3d0f-4c9f-a82c-ab90a9e46e5f/ee04cbd0-db11-473b-9d15-4d0b2676eb72"
+storage_version_token = "1791321307364454"
+content_type = "text/markdown"

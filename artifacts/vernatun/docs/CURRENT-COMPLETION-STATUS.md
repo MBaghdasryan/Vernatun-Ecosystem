@@ -7,7 +7,7 @@
 | Runtime Web/API | COMPLETE — один управляемый владелец каждого сервиса; ожидание свежей API-сборки до открытия порта; повторные рестарты и реальные authenticated маршруты проверены |
 | Phase 2: core operations | COMPLETE в операционном объёме этапа — подробности и границы проверки в PHASE2-COMPLETION.md |
 | Phase 3: maintenance и ImTun flows | COMPLETE implementation / PARTIAL UI acceptance — maintenance → WorkOrder, delegation, visit alternatives, notification links и lease access; ImTun проверен real read-only + synthetic browser fixtures; вход управляющего заблокирован 401; подробности в PHASE3-COMPLETION.md |
-| Phase 4: finance | PARTIAL — существующий учёт не означает завершение batch billing, reconciliation и allocations |
+| Phase 4: finance | COMPLETE в business-объёме этапа — batch preview/draft/atomic publish, CSV evidence/reconciliation, multi-invoice allocation и account credit; проверки и границы в PHASE4-COMPLETION.md |
 | Phase 5: platform operations | PARTIAL — существующая консоль не означает завершение всех управляемых циклов |
 | Phase 6: community/documents/analytics | PARTIAL — требуется закрытие полного объёма мастер-промпта |
 | Phase 7: storage/notifications/branding/limited PWA | PARTIAL — в частности, новые online-intents/фото телефонной заявки пока RAM-only; persistent IndexedDB работа техника сохранена |

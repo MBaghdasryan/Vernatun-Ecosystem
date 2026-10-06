@@ -1,6 +1,6 @@
 # Vernatun — сверка с активной спецификацией
 
-Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md) и [Phase 3](PHASE3-COMPLETION.md). Phase 3 закрывает backend/UI maintenance → WorkOrder, делегирование, визиты, notification links и lease policy. 91 core-проверка и финальные 7 проверок Phase 3 прошли. Signed-in ImTun + browser-only fixtures проверены; manager UI acceptance заблокирован 401 сохранённых credentials. Phases 4–8 и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
+Текущие дополнения: [Phase 2](PHASE2-COMPLETION.md), [Phase 3](PHASE3-COMPLETION.md) и [Phase 4](PHASE4-COMPLETION.md). Phase 4 реализует массовые начисления, CSV-выписки, явную сверку бухгалтером, multi-invoice allocations и авансы. 98 core-проверок и 3 CSV/money/date tests прошли. Миграция 019 проверена изолированно и применена development с preservation check 9 финансовых таблиц. Финансовый browser pass завершён на fixtures: публикация, import, allocations, frozen/idempotent retry и own/mobile credit подтверждены; successful browser Ignore outcome не подтверждён из-за unresolved fixture/transport результата, хотя real isolated API scenario прошёл. Сохраняется отдельный manager UI acceptance blocker Phase 3: 401 исходных demo credentials. Phases 5–8, production acceptance и реальная email delivery не объявлены завершёнными. Ниже — историческая baseline-сверка.
 
 Дата: 6 октября 2026 года.
 

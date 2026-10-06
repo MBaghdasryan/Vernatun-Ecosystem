@@ -5,6 +5,103 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface FinanceRecord { [key: string]: unknown }
+
+export interface BillingBatchInput {
+  buildingId: string;
+  period: string;
+  tariffId: string;
+}
+
+export type BillingDraftInput = BillingBatchInput & {
+  key: string;
+};
+
+export interface BillingPublicationInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  acceptWarnings?: boolean;
+}
+
+export type BankEntryInputCurrency = typeof BankEntryInputCurrency[keyof typeof BankEntryInputCurrency];
+
+
+export const BankEntryInputCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type BankEntryInputRawPayload = {[key: string]: string};
+
+export interface BankEntryInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  externalId: string;
+  date: string;
+  /** @pattern ^-?[1-9][0-9]{0,13}$ */
+  amountMinor: string;
+  currency: BankEntryInputCurrency;
+  /** @maxLength 200 */
+  payerText: string;
+  /** @maxLength 1000 */
+  purpose: string;
+  rawPayload?: BankEntryInputRawPayload;
+}
+
+export interface BankImportInput {
+  key: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  account: string;
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  transactions: BankEntryInput[];
+}
+
+export interface InvoiceAllocationInput {
+  invoiceId: string;
+  /** @pattern ^[1-9][0-9]{0,13}$ */
+  amountMinor: string;
+}
+
+export interface BankConfirmationInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  unitId: string;
+  payerId: string;
+  /** @maxItems 100 */
+  allocations: InvoiceAllocationInput[];
+}
+
+export interface BankIgnoreInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export interface CreditAllocationInput {
+  key: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  allocations: InvoiceAllocationInput[];
+}
+
 export interface RecentAuthenticationInput {
   /**
      * @minLength 1
@@ -689,4 +786,40 @@ export const UploadOperationalPhotoPhotoType = {
   after: 'after',
   evidence: 'evidence',
 } as const;
+
+export type ListBankTransactionsParams = {
+/**
+ * @minimum 0
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+status?: ListBankTransactionsStatus;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListBankTransactionsStatus = typeof ListBankTransactionsStatus[keyof typeof ListBankTransactionsStatus];
+
+
+export const ListBankTransactionsStatus = {
+  matched: 'matched',
+  partially_matched: 'partially_matched',
+  unmatched: 'unmatched',
+  ignored: 'ignored',
+} as const;
+
+export type SuggestBankMatchesParams = {
+unitId?: string;
+payerId?: string;
+};
+
+export type ListFinanceAccountsParams = {
+unitId: string;
+};
 

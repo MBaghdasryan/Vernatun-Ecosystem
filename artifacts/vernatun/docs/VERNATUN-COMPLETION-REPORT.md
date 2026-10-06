@@ -1,5 +1,9 @@
 # Vernatun Completion Report — фактическое состояние проекта
 
+## Последнее дополнение: Phase 4, 7 октября 2026
+
+Массовые начисления, импорт выписок, явная банковская сверка, частичные multi-invoice allocations и account credit реализованы в существующих Vernatun OS/ImTun. 98 isolated core checks и 3 CSV/money/calendar tests прошли. Миграция development применена после изолированной проверки с подтверждённой сохранностью 9 финансовых таблиц. [Подробный отчёт и ограничения](PHASE4-COMPLETION.md). Финансовый browser QA завершён на fixtures: основные денежные формы и mobile own-view проверены, successful Ignore outcome остаётся непроверенным в браузере; API сценарий прошёл изолированно. Phase 5–8 и production acceptance пока не завершены. Даты и утверждения о незавершённых фазах ниже относятся к историческим срезам.
+
 Дата: **6 октября 2026 года**.
 
 Актуальное дополнение: [Phase 3 — реализация, проверки и внешние ограничения](PHASE3-COMPLETION.md). Maintenance → общий WorkOrder и manager verification, delegation lifecycle, visit alternatives, notification context switch и lease policy реализованы. Signed-in ImTun проверен в read-only режиме и на browser-only fixtures; maintenance/manager lease UI acceptance остаётся заблокированным 401 демо-credentials. Ниже сохранена историческая baseline-сверка; текущие статусы этапов — в [CURRENT-COMPLETION-STATUS.md](CURRENT-COMPLETION-STATUS.md).
