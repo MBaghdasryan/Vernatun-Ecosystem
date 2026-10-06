@@ -15,10 +15,13 @@ export async function postgresTool(tool:'pg_dump'|'pg_restore',connectionString:
     PGSSLMODE:url.searchParams.get('sslmode')||'prefer',PGOPTIONS:url.searchParams.get('options')||''};
   await new Promise<void>((resolve,reject)=>{
     const child=spawn(tool,args,{env,stdio:['ignore','ignore','pipe']});
-    // pg diagnostics can contain private table values; intentionally don't log them.
-    child.stderr.resume();
+    // Diagnostics may contain private values. Report only a fixed classification.
+    let publicSchemaExists=false;
+    child.stderr.on('data',chunk=>{
+      if(String(chunk).includes('schema "public" already exists'))publicSchemaExists=true;
+    });
     child.once('error',()=>reject(new Error(`${tool} could not start`)));
-    child.once('close',code=>code===0?resolve():reject(new Error(`${tool} failed (exit ${code}); check tool version, connection and schema dependencies`)));
+    child.once('close',code=>code===0?resolve():reject(new Error(`${tool} failed (exit ${code}); ${publicSchemaExists?'empty target public schema already exists':'check tool version, connection and schema dependencies'}`)));
   });
 }
 export async function tableFingerprints(db:PoolClient|Client,schema:string,names:string[]){

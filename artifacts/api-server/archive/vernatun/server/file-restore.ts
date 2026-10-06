@@ -45,8 +45,15 @@ export async function withIsolatedRestore<T>(id:string,inspect:(context:RestoreC
     await admin.connect();adminConnected=true;
     await admin.query(`CREATE DATABASE ${identifier(name)} TEMPLATE template0`);
     createdDatabase=true;
-    await postgresTool('pg_restore',target.toString(),['--exit-on-error','--single-transaction','--no-owner','--no-acl',`--dbname=${name}`,join(work,'database.dump')]);
     await db.connect();connected=true;
+    if(manifest.schema==='public'){
+      // template0 may already contain public. Remove it only in this newly
+      // allocated, empty scratch database; never in the working database.
+      const existing=(await db.query("SELECT count(*)::int AS count FROM pg_class WHERE relnamespace='public'::regnamespace")).rows[0].count;
+      if(existing!==0)throw new Error('Restored target unexpectedly contains relations');
+      await db.query('DROP SCHEMA public');
+    }
+    await postgresTool('pg_restore',target.toString(),['--exit-on-error','--single-transaction','--no-owner','--no-acl',`--dbname=${name}`,join(work,'database.dump')]);
     const tables=(await db.query('SELECT tablename AS name FROM pg_tables WHERE schemaname=$1 ORDER BY tablename',[manifest.schema])).rows.map(r=>r.name);
     if(JSON.stringify(await tableFingerprints(db,manifest.schema,tables))!==JSON.stringify(manifest.tables))
       throw new Error('Restored database fingerprint mismatch');

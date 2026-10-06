@@ -16,6 +16,19 @@ second organization's administrator, with newly generated random passwords.
 Credentials are local only, owner-readable and gitignored:
 `artifacts/api-server/.local/demo-accounts.md` and `.json`.
 Never serve these files over HTTP, include them in a build, or log their contents.
+These generated credential files are historical, not authoritative for accounts
+subsequently imported from an export.
+
+On 2026-10-06, with the user's explicit approval, the attached database export
+was compared against development and merged additively: 194 missing rows in
+21 tables were inserted. All exported schema columns already existed. Existing
+roles/permissions and migration timestamps were preserved; no existing row was
+overwritten or deleted. The imported accounts retain the export's password
+hashes. All imported rows and preservation of pre-existing rows were verified
+within the same transaction. A paired development snapshot was captured and
+successfully restored in isolation before the merge. The export contained no
+document/photo metadata or file bytes; excluded security/session tables were
+not populated, and no seed was rerun.
 The API workflow runs from this artifact's directory; the development outbox and
 legacy migration source paths remain relative to this working directory.
 
