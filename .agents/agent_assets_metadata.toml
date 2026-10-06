@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "6IJvEtkim1mCC9cI3DIlm"
+uri = "file://artifacts/vernatun/docs/HAYAT-IMPLEMENTATION.md"
+type = "text"
+title = "HAYAT — отчёт о восстановлении"
+description = "Актуальный список восстановленных функций, ограничений и выполненных проверок."
+logical_id = "8d0d5c89-32a7-499a-869d-662193542d82"
+content_hash = "sha256:e9d23d63ed4f0a9bdb4e5f84c8cc4baf03d239fa500ccd18cbe23972ace36250"
+size = 14221
+mtime_ms = 1791287202529
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/8d0d5c89-32a7-499a-869d-662193542d82/7276afa5-2b91-4f1e-8d78-f205ac31081b"
+storage_version_token = "1791287285060466"
+content_type = "text/markdown"

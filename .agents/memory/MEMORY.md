@@ -2,3 +2,4 @@
 - [Archive restoration scope](archive-restoration.md) — restore the supplied source faithfully; historical prompts are context, not new feature requests.
 - [Private file policy](private-file-policy.md) — durable storage must not bypass existing business authorization or image sanitization.
 - [Paired recovery](paired-recovery.md) — SQL rollback does not imply private-byte recovery; verify matched snapshots in isolation.
+- [Archived-script execution](archived-script-execution.md) — pnpm exec can change a nested legacy script’s working directory; preserve archive-relative paths.
