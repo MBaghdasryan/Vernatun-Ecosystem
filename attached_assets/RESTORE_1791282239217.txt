@@ -1,0 +1,13 @@
+Vernatun — export 2026-10-06
+
+Restore into a NEW empty PostgreSQL 16 database:
+createdb -U postgres vernatun_restored
+psql -U postgres -d vernatun_restored -v ON_ERROR_STOP=1 -f vernatun-database.sql
+
+Schema and application data exported. Data excluded: session, password_resets, invitations, mfa_credentials, auth_rate_limits, visitor_passes, access_events, support_access_grants, operation_receipts.
+MFA must be enrolled again. Invitations, passes and support grants must be reissued.
+Do not run demo seed after restore.
+Uploaded files are outside SQL and are not included.
+Keep this export private: it includes application data and password hashes.
+Saved demo passwords verified: 15/15.
+Restore has not been executed or tested.
