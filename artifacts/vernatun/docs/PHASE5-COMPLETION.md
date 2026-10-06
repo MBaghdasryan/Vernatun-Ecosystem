@@ -6,7 +6,7 @@
 
 **COMPLETE — реализация серверных и интерфейсных циклов Phase 5 и изолированные регрессионные проверки.**
 
-**PARTIAL — браузерная приёмка:** карточка организации проверена после реального входа platform admin; stale-version save проверен на synthetic ответе, черновик сохранился; status dialog требует причину и acknowledgment. Один общий проход остановился на дефекте onboarding route. Исправление подтверждено двумя pure routing regressions и узким browser pass: click/reload/direct navigation/Overview → Onboarding показывают actual catalog/progress. Остальные перечисленные ниже browser journeys ещё не подтверждены. Backend persistence, authorization и rollback проверены отдельно; бизнес-изменения для browser QA не отправляются в текущую базу.
+**COMPLETE — целевая браузерная приёмка Phase 5:** организация и исправленная маршрутизация, staff/customer conversation и ограничения, resident mapping, finance-only imports, явный exact-intent retry после 503, зависимости и cascade-reopen внедрения, мобильные conversation/reopen screens проверены. Бизнес-изменения выполнялись только в synthetic fixtures, не в текущей базе. Это не полная матрица всех ролей и устройств: точные границы и доказательства — в [PHASE5-BROWSER-ACCEPTANCE.md](PHASE5-BROWSER-ACCEPTANCE.md).
 
 **EXTERNAL BLOCKER — production/email:** production не мигрировалась и не публиковалась. Домен отправки ещё не готов; реальные и тестовые письма запрещены пользователем и не отправлялись.
 
@@ -92,11 +92,19 @@ Typed XLSX для всех пяти types, создание новых identity 
 - Org card Version 1/Active, modules/users/audit rendered.
 - Synthetic `409 stale_version` показал ошибку и сохранил профильный draft.
 - Status dialog показал Suspended/Archived, disabled submit до reason ≥3 и acknowledgment; действие отменено, live status не изменялся.
-- Support queue filters rendered, но очередь была пустой; conversation/assignment/attachment transitions не проверены браузером.
+- Первоначальная live support queue была пустой. Продолжение приёмки использовало populated synthetic fixtures и подтвердило переписку, resolve/reopen, внутренние заметки, legacy unknown metadata, ограничения неназначенного support и customer attachment-sharing acknowledgment.
 - Обнаружен route defect: `/console/onboarding` ошибочно интерпретировался как role home alias и отображал overview. Он исправлен; **2 pure route tests passed**, frontend TypeScript и production build после исправления успешны.
 - Узкая повторная проверка успешно подтвердила исправленный route/state: click, reload и direct navigation показали onboarding catalog, pending step и `0 / 1`; Overview → Onboarding возвращает именно workflow. Evidence: `ygjmlo`, `gp3aap`, `spzzof`. Не является вторым полным browser pass; steps не менялись.
 
-**Не подтверждены браузером:** customer/internal conversation visibility, legacy unknown metadata rendering, assignment/resolve/reopen, sharing checkbox/download, onboarding transitions/dependent cascade, accountant typed imports/503 exact-intent retry, resident mapping и 390px responsive matrix. Их серверные гарантии проверены isolated tests, но это не подмена UI acceptance.
+Продолжение подтвердило resident mapping с явными `rentMinor=0`/AMD, отсутствие opening balances у org-admin и finance-only imports у реально вошедшего accountant. Invalid preview не разрешает confirm. Valid preview требует acknowledgment; первый synthetic confirm 503 не повторялся автоматически, явный Retry отправил идентичные method/path/body bytes, key/version и показал committed/version 2.
+
+Onboarding A10→B20→C30 проверен на blocking prerequisites, completion/start и cascade-reopen с причиной/acknowledgment. После cascade сохранены версии и event history; progress вернулся к 0/3. На 390px доступны support conversation/composer и onboarding reopen/history; переполнения viewport не найдено. Mobile preview/mapping проверены отдельно; phone confirm→503→Retry не проходился отдельным циклом.
+
+После успешного Retry обнаружен stale `service_unavailable` alert. Исправлены оба success callbacks typed preview/confirm: старый action error очищается, acknowledgment сбрасывается. Исправление подтверждено inspection, frontend TypeScript и production build; повторный browser pass для этого небольшого изменения не запускался.
+
+**Границы:** новые данные не записывались в текущую базу; case-scoped attachment href и consent подтверждены, но private bytes не скачивались. Assignment controls/права проверены серверными тестами, не исчерпывающей браузерной матрицей. Полная responsive/a11y/14-role приёмка остаётся Phase 8.
+
+Во время приёмки потерян browser worker и остановились managed Web/API. Они восстановлены без изменения кода; fresh anonymous capture подтвердил login, финальное focused продолжение завершилось без 502. Временный `/tmp` digest baseline также исчез: предыдущий доказанный migration/read-only comparison 17 таблиц остаётся действительным, но новое after-run digest comparison не заявляется. Read-only audit query не нашёл non-auth business events с начала приёмки.
 
 В overview также замечены duplicate React child-key warnings `openSupport`: это отдельный dashboard acceptance gap Phase 8, не причина исправленного route defect.
 

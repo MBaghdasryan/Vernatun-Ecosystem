@@ -8,7 +8,7 @@
 | Phase 2: core operations | COMPLETE в операционном объёме этапа — подробности и границы проверки в PHASE2-COMPLETION.md |
 | Phase 3: maintenance и ImTun flows | COMPLETE implementation / PARTIAL UI acceptance — maintenance → WorkOrder, delegation, visit alternatives, notification links и lease access; ImTun проверен real read-only + synthetic browser fixtures; вход управляющего заблокирован 401; подробности в PHASE3-COMPLETION.md |
 | Phase 4: finance | COMPLETE в business-объёме этапа — batch preview/draft/atomic publish, CSV evidence/reconciliation, multi-invoice allocation и account credit; проверки и границы в PHASE4-COMPLETION.md |
-| Phase 5: platform operations | COMPLETE implementation / PARTIAL browser acceptance — organization lifecycle/card, append-only support/queue, onboarding dependencies/reopen и пять typed imports; route defect исправлен, остальные browser gaps перечислены в PHASE5-COMPLETION.md |
+| Phase 5: platform operations | COMPLETE implementation / COMPLETE targeted browser acceptance — organization lifecycle/card, support conversation/privacy, onboarding dependencies/cascade и пять typed imports; exact-intent 503 retry и выбранные 390px screens проверены. Границы fixtures/private bytes/mobile matrix — PHASE5-BROWSER-ACCEPTANCE.md |
 | Phase 6: community/documents/analytics | PARTIAL — требуется закрытие полного объёма мастер-промпта |
 | Phase 7: storage/notifications/branding/limited PWA | PARTIAL — в частности, новые online-intents/фото телефонной заявки пока RAM-only; persistent IndexedDB работа техника сохранена |
 | Phase 8: QA/security/deployment readiness | PARTIAL — текущие проверки относятся к runtime и Phase 2, не сертифицируют весь мастер-промпт |
