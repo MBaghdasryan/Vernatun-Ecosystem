@@ -6,6 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './availabilityBlock';
+export * from './availabilityBlockChange';
+export * from './availabilityBlockChangeAction';
+export * from './availabilityBlockChangeKind';
+export * from './availabilityBlockInput';
+export * from './availabilityBlockInputKind';
+export * from './availabilityBlockInputScope';
+export * from './availabilityBlockKind';
+export * from './availabilityUnit';
 export * from './bankConfirmationInput';
 export * from './bankEntryInput';
 export * from './bankEntryInputCurrency';
@@ -92,6 +101,7 @@ export * from './getRoleInsightsParams';
 export * from './getScopedRecordPageDirection';
 export * from './getScopedRecordPageFilter';
 export * from './getScopedRecordPageParams';
+export * from './getStaffAvailabilityParams';
 export * from './healthStatus';
 export * from './iamAccessInput';
 export * from './iamAccessInputMethod';
@@ -208,6 +218,9 @@ export * from './scopedRecord';
 export * from './scopedRecordPage';
 export * from './scopedRecordPageDirection';
 export * from './slaPolicyInput';
+export * from './staffAvailability';
+export * from './staffAvailabilityPerson';
+export * from './staffAvailabilityPersonStatus';
 export * from './suggestBankMatchesParams';
 export * from './updateEmployeeAssignment200';
 export * from './updateOrganizationBrandingBody';

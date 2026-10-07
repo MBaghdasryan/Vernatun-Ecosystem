@@ -1,4 +1,5 @@
 import {notificationCenter} from './notification-center.js';
+import {staffAvailability} from './staff-availability.js';
 import {branding} from './branding.js';
 import {portfolioObjects} from './portfolio-objects.js';
 import {platformFoundation} from './platform-foundation.js';
@@ -65,6 +66,7 @@ app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['G
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});
 app.use('/api/auth',auth);app.use('/api/mfa',mfaPolicy);app.use('/api/mfa',mfa);
 app.use('/api',leads);
+app.use('/api',staffAvailability);
 app.use('/api',pagedRecords);
 app.use('/api',documentVersions);app.use('/api',ownership);app.use('/api',governance);app.use('/api',portfolioAnalytics);
 app.use('/api',notificationCenter);app.use('/api',branding);app.use('/api',portfolioObjects);

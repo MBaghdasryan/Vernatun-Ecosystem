@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AvailabilityBlock,
+  AvailabilityBlockChange,
+  AvailabilityBlockInput,
+  AvailabilityUnit,
   BankConfirmationInput,
   BankIgnoreInput,
   BankImportInput,
@@ -70,6 +74,7 @@ import type {
   GetRoleInsights200,
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
+  GetStaffAvailabilityParams,
   HealthStatus,
   IamAccessInput,
   IamAccountStatusInput,
@@ -136,6 +141,7 @@ import type {
   SaveOperatingBudgetBody,
   ScopedRecordPage,
   SlaPolicyInput,
+  StaffAvailability,
   SuggestBankMatchesParams,
   UpdateEmployeeAssignment200,
   UpdateOrganizationBrandingBody,
@@ -175,6 +181,320 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetAvailabilityOptionsUrl = () => {
+
+
+
+
+  return `/api/operations/availability/options`
+}
+
+export const getAvailabilityOptions = async ( options?: Parameters<typeof customFetch>[1]): Promise<AvailabilityUnit[]> => {
+
+  return customFetch<AvailabilityUnit[]>(getGetAvailabilityOptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAvailabilityOptionsQueryKey = () => {
+    return [
+    `/api/operations/availability/options`
+    ] as const;
+    }
+
+
+export const getGetAvailabilityOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getAvailabilityOptions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvailabilityOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAvailabilityOptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAvailabilityOptions>>> = ({ signal }) => getAvailabilityOptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAvailabilityOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAvailabilityOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getAvailabilityOptions>>>
+export type GetAvailabilityOptionsQueryError = ErrorType<unknown>
+
+
+
+export function useGetAvailabilityOptions<TData = Awaited<ReturnType<typeof getAvailabilityOptions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvailabilityOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAvailabilityOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetStaffAvailabilityUrl = (params: GetStaffAvailabilityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/operations/availability?${stringifiedParams}` : `/api/operations/availability`
+}
+
+export const getStaffAvailability = async (params: GetStaffAvailabilityParams, options?: Parameters<typeof customFetch>[1]): Promise<StaffAvailability> => {
+
+  return customFetch<StaffAvailability>(getGetStaffAvailabilityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStaffAvailabilityQueryKey = (params?: GetStaffAvailabilityParams,) => {
+    return [
+    `/api/operations/availability`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetStaffAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof getStaffAvailability>>, TError = ErrorType<unknown>>(params: GetStaffAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStaffAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStaffAvailabilityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStaffAvailability>>> = ({ signal }) => getStaffAvailability(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStaffAvailability>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStaffAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof getStaffAvailability>>>
+export type GetStaffAvailabilityQueryError = ErrorType<unknown>
+
+
+
+export function useGetStaffAvailability<TData = Awaited<ReturnType<typeof getStaffAvailability>>, TError = ErrorType<unknown>>(
+ params: GetStaffAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStaffAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStaffAvailabilityQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAvailabilityBlockUrl = () => {
+
+
+
+
+  return `/api/operations/availability`
+}
+
+export const createAvailabilityBlock = async (availabilityBlockInput: AvailabilityBlockInput, options?: Parameters<typeof customFetch>[1]): Promise<AvailabilityBlock> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AvailabilityBlock>(getCreateAvailabilityBlockUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(availabilityBlockInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAvailabilityBlockMutationKey = () => ['createAvailabilityBlock'] as const;
+
+export const getCreateAvailabilityBlockMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvailabilityBlock>>, TError,CreateAvailabilityBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAvailabilityBlock>>, TError,CreateAvailabilityBlockMutationVariables, TContext> => {
+
+const mutationKey = getCreateAvailabilityBlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAvailabilityBlock>>, CreateAvailabilityBlockMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAvailabilityBlock(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAvailabilityBlockMutationResult = NonNullable<Awaited<ReturnType<typeof createAvailabilityBlock>>>
+    export type CreateAvailabilityBlockMutationBody = BodyType<AvailabilityBlockInput>
+    export type CreateAvailabilityBlockMutationError = ErrorType<unknown>
+    export type CreateAvailabilityBlockMutationVariables = {data: BodyType<AvailabilityBlockInput>}
+
+    export const useCreateAvailabilityBlock = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvailabilityBlock>>, TError,CreateAvailabilityBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAvailabilityBlock>>,
+        TError,
+        CreateAvailabilityBlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAvailabilityBlockMutationOptions(options));
+    }
+
+export const getChangeAvailabilityBlockUrl = (id: string,) => {
+
+
+
+
+  return `/api/operations/availability/${id}/change`
+}
+
+export const changeAvailabilityBlock = async (id: string,
+    availabilityBlockChange: AvailabilityBlockChange, options?: Parameters<typeof customFetch>[1]): Promise<AvailabilityBlock> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AvailabilityBlock>(getChangeAvailabilityBlockUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(availabilityBlockChange)
+  }
+);}
+
+
+
+
+
+export const getChangeAvailabilityBlockMutationKey = () => ['changeAvailabilityBlock'] as const;
+
+export const getChangeAvailabilityBlockMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAvailabilityBlock>>, TError,ChangeAvailabilityBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeAvailabilityBlock>>, TError,ChangeAvailabilityBlockMutationVariables, TContext> => {
+
+const mutationKey = getChangeAvailabilityBlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeAvailabilityBlock>>, ChangeAvailabilityBlockMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeAvailabilityBlock(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeAvailabilityBlockMutationResult = NonNullable<Awaited<ReturnType<typeof changeAvailabilityBlock>>>
+    export type ChangeAvailabilityBlockMutationBody = BodyType<AvailabilityBlockChange>
+    export type ChangeAvailabilityBlockMutationError = ErrorType<unknown>
+    export type ChangeAvailabilityBlockMutationVariables = {id: string;data: BodyType<AvailabilityBlockChange>}
+
+    export const useChangeAvailabilityBlock = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAvailabilityBlock>>, TError,ChangeAvailabilityBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeAvailabilityBlock>>,
+        TError,
+        ChangeAvailabilityBlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeAvailabilityBlockMutationOptions(options));
+    }
 
 export const getGetDefectCollaborationUrl = (id: string,
     params?: GetDefectCollaborationParams,) => {

@@ -1311,6 +1311,112 @@ export interface HealthStatus {
   status: string;
 }
 
+export type AvailabilityBlockInputScope = typeof AvailabilityBlockInputScope[keyof typeof AvailabilityBlockInputScope];
+
+
+export const AvailabilityBlockInputScope = {
+  building: 'building',
+  unit: 'unit',
+} as const;
+
+export type AvailabilityBlockInputKind = typeof AvailabilityBlockInputKind[keyof typeof AvailabilityBlockInputKind];
+
+
+export const AvailabilityBlockInputKind = {
+  shift: 'shift',
+  absence: 'absence',
+} as const;
+
+export interface AvailabilityBlockInput {
+  key: string;
+  unitId: string;
+  technicianId: string;
+  scope: AvailabilityBlockInputScope;
+  kind: AvailabilityBlockInputKind;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface AvailabilityUnit {
+  id: string;
+  number: string;
+  building_id: string;
+  building_name: string;
+}
+
+export type AvailabilityBlockChangeAction = typeof AvailabilityBlockChangeAction[keyof typeof AvailabilityBlockChangeAction];
+
+
+export const AvailabilityBlockChangeAction = {
+  update: 'update',
+  cancel: 'cancel',
+} as const;
+
+export type AvailabilityBlockChangeKind = typeof AvailabilityBlockChangeKind[keyof typeof AvailabilityBlockChangeKind];
+
+
+export const AvailabilityBlockChangeKind = {
+  shift: 'shift',
+  absence: 'absence',
+} as const;
+
+export interface AvailabilityBlockChange {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: AvailabilityBlockChangeAction;
+  kind?: AvailabilityBlockChangeKind;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export type AvailabilityBlockKind = typeof AvailabilityBlockKind[keyof typeof AvailabilityBlockKind];
+
+
+export const AvailabilityBlockKind = {
+  shift: 'shift',
+  absence: 'absence',
+} as const;
+
+export interface AvailabilityBlock {
+  id: string;
+  building_id: string;
+  /** @nullable */
+  unit_id: string | null;
+  technician_id: string;
+  kind: AvailabilityBlockKind;
+  starts_at: string;
+  ends_at: string;
+  version: number;
+  /** @nullable */
+  cancelled_at: string | null;
+  canEdit?: boolean;
+}
+
+export type StaffAvailabilityPersonStatus = typeof StaffAvailabilityPersonStatus[keyof typeof StaffAvailabilityPersonStatus];
+
+
+export const StaffAvailabilityPersonStatus = {
+  unknown: 'unknown',
+  available_in_scope: 'available_in_scope',
+  busy: 'busy',
+  absent: 'absent',
+} as const;
+
+export interface StaffAvailabilityPerson {
+  id: string;
+  name: string;
+  status: StaffAvailabilityPersonStatus;
+  visitCount: number;
+}
+
+export interface StaffAvailability {
+  canManage: boolean;
+  canManageBuilding: boolean;
+  people: StaffAvailabilityPerson[];
+  blocks: AvailabilityBlock[];
+}
+
 export interface DefectMessageInput {
   key: string;
   /**
@@ -1386,6 +1492,12 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetStaffAvailabilityParams = {
+unitId: string;
+from: string;
+to: string;
+};
 
 export type GetDefectCollaborationParams = {
 before?: string;

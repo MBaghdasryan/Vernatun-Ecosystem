@@ -1,0 +1,25 @@
+.sa-root{margin-top:16px}
+.sa-note{color:#5b7079;font-size:13px;line-height:1.45}
+.sa-root>.sa-note{border-left:3px solid #ee8128;padding:8px 12px;background:#fdf5ee;border-radius:0 8px 8px 0;color:#183343}
+.sa-empty{padding:16px;border:1px dashed #ccd7db;border-radius:10px;color:#5b7079;text-align:center}
+.sa-ok{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#eaf5ef;border:1px solid #bfdfcc;border-radius:8px;color:#1d5a3a}
+.sa-ok button{background:none;border:0;font-size:18px;cursor:pointer;color:inherit}
+.sa-skel{display:grid;gap:8px}.sa-skel i{display:block;height:44px;border-radius:10px;background:linear-gradient(90deg,#eef3f4,#f7f9fa,#eef3f4);background-size:200% 100%;animation:sa-sh 1.2s linear infinite}
+@keyframes sa-sh{to{background-position:-200% 0}}
+.sa-people,.sa-blocks{list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}
+.sa-people li,.sa-blocks li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;background:#f7f9fa;border:1px solid #dce5e8;border-radius:10px;color:#183343;overflow-wrap:anywhere}
+.sa-people strong{flex:1 1 140px}.sa-blocks strong{flex:1 1 120px}
+.sa-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#183343;color:#fff;font-weight:600}
+.sa-badge,.sa-kind{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;border:1px solid}
+.sa-unknown{background:#f1f3f4;color:#5b7079;border-color:#d6dcdf}
+.sa-available_in_scope{background:#eaf5ef;color:#1d5a3a;border-color:#bfdfcc}
+.sa-busy{background:#fdf1e6;color:#9a4a0c;border-color:#f3c9a1}
+.sa-absent{background:#fbeaea;color:#8c2424;border-color:#eebcbc}
+.sa-k-shift{background:#e9f0f6;color:#183343;border-color:#c6d5e2}.sa-k-absence{background:#fbeaea;color:#8c2424;border-color:#eebcbc}
+.sa-cancelled{opacity:.6}.sa-cancelled span:not(.sa-kind){text-decoration:line-through}
+.sa-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:18px}.sa-head h4{margin:0}
+.sa-form{margin:12px 0;padding:14px;border:1px solid #ccd7db;border-radius:12px;background:#fff}.sa-form h4{margin:0}
+.sa-actions{display:flex;flex-wrap:wrap;gap:8px}.sa-actions button{min-height:44px}
+.sa-primary{background:#183343!important;color:#fff!important}.sa-danger{color:#8c2424!important;border-color:#eebcbc!important}
+.sa-root :is(button,input,select):focus-visible{outline:3px solid #ee8128;outline-offset:2px}
+@media (max-width:600px){.sa-blocks li>button{width:100%}}

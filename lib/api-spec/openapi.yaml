@@ -11,6 +11,49 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /operations/availability/options:
+    get:
+      operationId: getAvailabilityOptions
+      responses:
+        '200':
+          description: Units within the reader scope; technicians only get units from their work orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/AvailabilityUnit'}
+  /operations/availability:
+    get:
+      operationId: getStaffAvailability
+      parameters:
+        - {in: query, name: unitId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: from, required: true, schema: {type: string, format: date-time}}
+        - {in: query, name: to, required: true, schema: {type: string, format: date-time}}
+      responses:
+        '200':
+          description: Scoped interval availability; absence of shifts is unknown, never free
+          content: {application/json: {schema: {$ref: '#/components/schemas/StaffAvailability'}}}
+    post:
+      operationId: createAvailabilityBlock
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AvailabilityBlockInput'}}}
+      responses:
+        '201':
+          description: Saved block, or the existing receipt on retry
+          content: {application/json: {schema: {$ref: '#/components/schemas/AvailabilityBlock'}}}
+  /operations/availability/{id}/change:
+    post:
+      operationId: changeAvailabilityBlock
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AvailabilityBlockChange'}}}
+      responses:
+        '200':
+          description: Versioned change or cancellation, no hard deletion
+          content: {application/json: {schema: {$ref: '#/components/schemas/AvailabilityBlock'}}}
   /defects/{id}/collaboration:
     get:
       operationId: getDefectCollaboration
@@ -2376,6 +2419,71 @@ components:
           type: string
       required:
         - status
+    AvailabilityBlockInput:
+      type: object
+      additionalProperties: false
+      required: [key,unitId,technicianId,scope,kind,startsAt,endsAt]
+      properties:
+        key: {type: string, format: uuid}
+        unitId: {type: string, format: uuid}
+        technicianId: {type: string, format: uuid}
+        scope: {type: string, enum: [building,unit]}
+        kind: {type: string, enum: [shift,absence]}
+        startsAt: {type: string, format: date-time}
+        endsAt: {type: string, format: date-time}
+    AvailabilityUnit:
+      type: object
+      required: [id,number,building_id,building_name]
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: string}
+        building_id: {type: string, format: uuid}
+        building_name: {type: string}
+    AvailabilityBlockChange:
+      type: object
+      additionalProperties: false
+      required: [key,version,action]
+      properties:
+        key: {type: string, format: uuid}
+        version: {type: integer, minimum: 1}
+        action: {type: string, enum: [update,cancel]}
+        kind: {type: string, enum: [shift,absence]}
+        startsAt: {type: string, format: date-time}
+        endsAt: {type: string, format: date-time}
+    AvailabilityBlock:
+      type: object
+      required: [id,building_id,unit_id,technician_id,kind,starts_at,ends_at,version,cancelled_at]
+      properties:
+        id: {type: string, format: uuid}
+        building_id: {type: string, format: uuid}
+        unit_id: {type: [string,'null'], format: uuid}
+        technician_id: {type: string, format: uuid}
+        kind: {type: string, enum: [shift,absence]}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: string, format: date-time}
+        version: {type: integer}
+        cancelled_at: {type: [string,'null'], format: date-time}
+        canEdit: {type: boolean}
+    StaffAvailabilityPerson:
+      type: object
+      required: [id,name,status,visitCount]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        status: {type: string, enum: [unknown,available_in_scope,busy,absent]}
+        visitCount: {type: integer}
+    StaffAvailability:
+      type: object
+      required: [canManage,canManageBuilding,people,blocks]
+      properties:
+        canManage: {type: boolean}
+        canManageBuilding: {type: boolean}
+        people:
+          type: array
+          items: {$ref: '#/components/schemas/StaffAvailabilityPerson'}
+        blocks:
+          type: array
+          items: {$ref: '#/components/schemas/AvailabilityBlock'}
     DefectMessageInput:
       type: object
       additionalProperties: false

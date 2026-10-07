@@ -8,6 +8,99 @@
 import * as zod from 'zod';
 
 
+export const GetAvailabilityOptionsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "number": zod.string(),
+  "building_id": zod.string().uuid(),
+  "building_name": zod.string()
+})
+export const GetAvailabilityOptionsResponse = zod.array(GetAvailabilityOptionsResponseItem)
+
+
+export const GetStaffAvailabilityQueryParams = zod.object({
+  "unitId": zod.coerce.string().uuid(),
+  "from": zod.date(),
+  "to": zod.date()
+})
+
+export const GetStaffAvailabilityResponse = zod.object({
+  "canManage": zod.boolean(),
+  "canManageBuilding": zod.boolean(),
+  "people": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "status": zod.enum(['unknown', 'available_in_scope', 'busy', 'absent']),
+  "visitCount": zod.number().int()
+})),
+  "blocks": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "building_id": zod.string().uuid(),
+  "unit_id": zod.string().uuid().nullable(),
+  "technician_id": zod.string().uuid(),
+  "kind": zod.enum(['shift', 'absence']),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "version": zod.number().int(),
+  "cancelled_at": zod.coerce.date().nullable(),
+  "canEdit": zod.boolean().optional()
+}))
+})
+
+
+export const CreateAvailabilityBlockBody = zod.object({
+  "key": zod.string().uuid(),
+  "unitId": zod.string().uuid(),
+  "technicianId": zod.string().uuid(),
+  "scope": zod.enum(['building', 'unit']),
+  "kind": zod.enum(['shift', 'absence']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date()
+})
+
+export const CreateAvailabilityBlockResponse = zod.object({
+  "id": zod.string().uuid(),
+  "building_id": zod.string().uuid(),
+  "unit_id": zod.string().uuid().nullable(),
+  "technician_id": zod.string().uuid(),
+  "kind": zod.enum(['shift', 'absence']),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "version": zod.number().int(),
+  "cancelled_at": zod.coerce.date().nullable(),
+  "canEdit": zod.boolean().optional()
+})
+
+
+export const ChangeAvailabilityBlockParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ChangeAvailabilityBlockBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.enum(['update', 'cancel']),
+  "kind": zod.enum(['shift', 'absence']).optional(),
+  "startsAt": zod.coerce.date().optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+
+export const ChangeAvailabilityBlockResponse = zod.object({
+  "id": zod.string().uuid(),
+  "building_id": zod.string().uuid(),
+  "unit_id": zod.string().uuid().nullable(),
+  "technician_id": zod.string().uuid(),
+  "kind": zod.enum(['shift', 'absence']),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "version": zod.number().int(),
+  "cancelled_at": zod.coerce.date().nullable(),
+  "canEdit": zod.boolean().optional()
+})
+
+
 /**
  * Assigned-contractor or scoped defect-reader access only. Evidence is not access to the general document catalog.
  */
