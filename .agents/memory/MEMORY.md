@@ -9,5 +9,6 @@
 - [Delivery evidence policy](delivery-evidence-policy.md) — acceptance is not delivery; no opens/clicks tracking; Svix verification may return void.
 - [HAYAT offline policy](hayat-offline-policy.md) — local work stays user/context-bound; reconnect never starts submission or grants server access.
 - [Managed runtime ownership](runtime-ownership.md) — artifact-relative commands and one direct process owner prevent orphan listeners during managed restarts.
+- [Binary upload QA](binary-upload-qa.md) — respond before body capture; a stalled mutation guard is not proof of an application upload failure.
 - [Resident lifecycle policy](resident-lifecycle-policy.md) — lease enforcement activates with recorded periods; common-area maintenance needs system provenance and manager acceptance.
 - [Financial ledger locking](finance-ledger-locking.md) — lock immutable parents before re-reading balances; same-invoice tests can hide credit races.

@@ -86,6 +86,11 @@ export const PlatformCaseInputPriority = {
   urgent: 'urgent',
 } as const;
 
+export type PlatformCaseInputAttachmentVersionsItem = {
+  documentId: string;
+  versionId: string;
+};
+
 export interface PlatformCaseInput {
   key: string;
   /**
@@ -102,7 +107,14 @@ export interface PlatformCaseInput {
   category?: string;
   /** @maxItems 10 */
   attachmentIds?: string[];
+  /** @maxItems 10 */
+  attachmentVersions?: PlatformCaseInputAttachmentVersionsItem[];
 }
+
+export type PlatformCaseMessageAttachmentVersionsItem = {
+  documentId: string;
+  versionId: string;
+};
 
 export interface PlatformCaseMessage {
   key: string;
@@ -116,6 +128,8 @@ export interface PlatformCaseMessage {
   internal?: boolean;
   /** @maxItems 10 */
   attachmentIds?: string[];
+  /** @maxItems 10 */
+  attachmentVersions?: PlatformCaseMessageAttachmentVersionsItem[];
 }
 
 export type PlatformCaseChangeStatus = typeof PlatformCaseChangeStatus[keyof typeof PlatformCaseChangeStatus];
@@ -955,6 +969,243 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
 
+export type GetGovernanceSettings200 = {
+  timezone: string;
+};
+
+export type ListOwnershipsParams = {
+unitId?: string;
+};
+
+export type ListOwnerships200Item = { [key: string]: unknown };
+
+export type CreateOwnershipBody = {
+  key: string;
+  unitId: string;
+  userId: string;
+  startsOn: string;
+  /** @nullable */
+  endsOn?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  shareBasisPoints: number;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  basis: string;
+  basisDocumentId?: string;
+};
+
+export type CreateOwnership201 = { [key: string]: unknown };
+
+export type ListOwnershipCandidates200Item = { [key: string]: unknown };
+
+export type EndOwnershipBody = {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  endsOn: string;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+};
+
+export type EndOwnership200 = { [key: string]: unknown };
+
+export type ListGovernanceMeetings200Item = { [key: string]: unknown };
+
+export type CreateGovernanceMeetingBodyAgendaItemVotingType = typeof CreateGovernanceMeetingBodyAgendaItemVotingType[keyof typeof CreateGovernanceMeetingBodyAgendaItemVotingType];
+
+
+export const CreateGovernanceMeetingBodyAgendaItemVotingType = {
+  yes_no: 'yes_no',
+  single_choice: 'single_choice',
+} as const;
+
+export type CreateGovernanceMeetingBodyAgendaItem = {
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  votingType: CreateGovernanceMeetingBodyAgendaItemVotingType;
+  /**
+     * @minItems 2
+     * @maxItems 10
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  options: string[];
+  passOption: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  passBasisPoints: number;
+};
+
+export type CreateGovernanceMeetingBody = {
+  key: string;
+  buildingId: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  /** @maxLength 8000 */
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  quorumBasisPoints: number;
+  /** @maxItems 20 */
+  documentIds?: string[];
+  /**
+     * @minItems 1
+     * @maxItems 20
+     */
+  agenda: CreateGovernanceMeetingBodyAgendaItem[];
+};
+
+export type CreateGovernanceMeeting201 = { [key: string]: unknown };
+
+export type GetGovernanceMeeting200 = { [key: string]: unknown };
+
+export type ChangeGovernanceMeetingBodyAction = typeof ChangeGovernanceMeetingBodyAction[keyof typeof ChangeGovernanceMeetingBodyAction];
+
+
+export const ChangeGovernanceMeetingBodyAction = {
+  publish: 'publish',
+  cancel: 'cancel',
+  finalize: 'finalize',
+} as const;
+
+export type ChangeGovernanceMeetingBody = {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: ChangeGovernanceMeetingBodyAction;
+  /** @maxLength 1000 */
+  reason?: string;
+};
+
+export type ChangeGovernanceMeeting200 = { [key: string]: unknown };
+
+export type CastWeightedVoteBody = {
+  key: string;
+  eligibilityId: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  selectedOption: string;
+};
+
+export type CastWeightedVote201 = { [key: string]: unknown };
+
+export type ListDocumentVersions200Item = { [key: string]: unknown };
+
+export type UploadDocumentVersionParams = {
+key: string;
+/**
+ * @minimum 1
+ */
+version: number;
+/**
+ * @minLength 2
+ * @maxLength 160
+ */
+title: string;
+/**
+ * @minLength 2
+ * @maxLength 100
+ */
+category: string;
+visibility: UploadDocumentVersionVisibility;
+relatedType?: UploadDocumentVersionRelatedType;
+relatedId?: string;
+};
+
+export type UploadDocumentVersionVisibility = typeof UploadDocumentVersionVisibility[keyof typeof UploadDocumentVersionVisibility];
+
+
+export const UploadDocumentVersionVisibility = {
+  staff: 'staff',
+  residents: 'residents',
+  unit_owner: 'unit_owner',
+} as const;
+
+export type UploadDocumentVersionRelatedType = typeof UploadDocumentVersionRelatedType[keyof typeof UploadDocumentVersionRelatedType];
+
+
+export const UploadDocumentVersionRelatedType = {
+  building: 'building',
+  unit: 'unit',
+  meeting: 'meeting',
+} as const;
+
+export type UploadDocumentVersion201 = { [key: string]: unknown };
+
+export type GetPortfolioAnalyticsParams = {
+from: string;
+to: string;
+currency?: GetPortfolioAnalyticsCurrency;
+buildingId?: string;
+propertyId?: string;
+};
+
+export type GetPortfolioAnalyticsCurrency = typeof GetPortfolioAnalyticsCurrency[keyof typeof GetPortfolioAnalyticsCurrency];
+
+
+export const GetPortfolioAnalyticsCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type GetPortfolioAnalytics200 = { [key: string]: unknown };
+
+export type GetContractorScorecardParams = {
+from: string;
+to: string;
+buildingId?: string;
+propertyId?: string;
+};
+
+export type GetContractorScorecard200Item = { [key: string]: unknown };
+
+export type ListOperatingBudgets200Item = { [key: string]: unknown };
+
+export type SaveOperatingBudgetBodyCurrency = typeof SaveOperatingBudgetBodyCurrency[keyof typeof SaveOperatingBudgetBodyCurrency];
+
+
+export const SaveOperatingBudgetBodyCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type SaveOperatingBudgetBody = {
+  key: string;
+  buildingId: string;
+  period: string;
+  currency: SaveOperatingBudgetBodyCurrency;
+  /** @pattern ^\d{1,14}$ */
+  amountMinor: string;
+  /** @minimum 1 */
+  version?: number;
+};
+
+export type SaveOperatingBudget200 = { [key: string]: unknown };
+
 export type GetEmailHealthParams = {
 from?: string;
 to?: string;
@@ -1114,4 +1365,8 @@ export const ListPlatformCasesOverdue = {
   true: 'true',
   false: 'false',
 } as const;
+
+export type DownloadPlatformCaseAttachmentParams = {
+versionId?: string;
+};
 

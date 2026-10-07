@@ -1,4 +1,5 @@
 import LeaseManage from './LeaseManage';
+import DocumentsConsole from './DocumentVersions';
 import SupportConsole from './SupportConsole';
 import OnboardingConsole from './OnboardingConsole';
 import {useState,useEffect,type ReactNode,type FormEvent} from 'react';
@@ -22,4 +23,4 @@ const LS={future:{hy:'Սպասվող',ru:'Будущий',en:'Upcoming'},active:
 export function leaseStatus(l:Record<string,any>,language:Language){const today=YEREVAN_TODAY();const k=l.cancelled_at?'cancelled':String(l.starts_on).slice(0,10)>today?'future':String(l.ends_on).slice(0,10)<today?'expired':'active';return LS[k][language]}
 
 type LifeProps={c:RoleContext;view:string;language:Language;currency:Currency};
-export default function Lifecycle(p:LifeProps){if(p.view==='support-cases')return <SupportConsole key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='onboarding')return <OnboardingConsole key={p.c.id} c={p.c} language={p.language}/>;return <LegacyLifecycle {...p}/>}
+export default function Lifecycle(p:LifeProps){if(p.view==='support-cases')return <SupportConsole key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='onboarding')return <OnboardingConsole key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='documents'&&p.c.permissions.includes('documents.read'))return <DocumentsConsole key={p.c.id} c={p.c} language={p.language} legacy={<LegacyLifecycle {...p}/>}/>;return <LegacyLifecycle {...p}/>}

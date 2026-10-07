@@ -105,7 +105,9 @@ test('Legacy migration verifies bytes, is repeatable, preserves all metadata and
   const key=randomUUID(),photoKey=randomUUID()+'.jpg',defectKey=randomUUID()+'.jpg';
   const pdf=Buffer.from('%PDF-1.4\nlegacy bytes\n%%EOF');
   const photo=await sharp({create:{width:8,height:8,channels:3,background:'#ffffff'}}).jpeg().toBuffer();
-  const doc=(await pool.query(`INSERT INTO documents(organization_id,building_id,unit_id,title,visibility,storage_key,media_type,uploaded_by) VALUES($1,$2,$3,'Legacy','unit_owner',$4,'application/pdf',$5) RETURNING *`,[seeded.fixtures.orgA,seeded.fixtures.ba,seeded.fixtures.ua,key,seeded.accounts.org_admin.id])).rows[0];
+  const inserted=(await pool.query(`INSERT INTO documents(organization_id,building_id,unit_id,title,visibility,storage_key,media_type,uploaded_by) VALUES($1,$2,$3,'Legacy','unit_owner',$4,'application/pdf',$5) RETURNING id`,[seeded.fixtures.orgA,seeded.fixtures.ba,seeded.fixtures.ua,key,seeded.accounts.org_admin.id])).rows[0];
+  // Capture committed metadata after the AFTER INSERT version-pointer trigger.
+  const doc=(await pool.query('SELECT * FROM documents WHERE id=$1',[inserted.id])).rows[0];
   const request=(await pool.query('SELECT id FROM resident_requests LIMIT 1')).rows[0].id;
   const defect=(await pool.query('SELECT id FROM defects LIMIT 1')).rows[0].id;
   const p=(await pool.query('INSERT INTO request_photos(request_id,author_id,storage_key) VALUES($1,$2,$3) RETURNING *',[request,seeded.accounts.unit_owner.id,photoKey])).rows[0];

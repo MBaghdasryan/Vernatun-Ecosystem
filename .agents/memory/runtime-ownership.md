@@ -28,6 +28,12 @@ verify a fresh capture and public asset responses, then resume only unfinished
 checks with the mutation guard reinstalled. A previous context's 502 alone does
 not establish an application defect.
 
+After a worker interruption, previous successful tool/helper messages are not proof that all edits and temporary evidence still exist.
+
+**Why:** Some earlier route wiring and UI edits were absent on reopening, and temporary test logs disappeared after a worker recycle.
+
+**How to apply:** Check specific source markers and service status before continuing. Restore only the existing services; do not seed/reset data or repeat migrations to compensate for a lost worker.
+
 Keep preservation evidence that must survive QA outside temporary directories;
 store only counts/digests, never raw rows or credentials.
 

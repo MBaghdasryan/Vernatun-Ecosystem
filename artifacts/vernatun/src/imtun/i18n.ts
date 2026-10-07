@@ -13,5 +13,5 @@ const strings = {
  new:['Ուղարկված է','Отправлена','Submitted'], assignedStatus:['Մասնագետը նշանակված է','Назначен исполнитель','Technician assigned'], in_progress:['Ընթացքում է','В работе','In progress'], review:['Ստուգման փուլում','На проверке','Under review'], resident_review:['Սպասում է հաստատման','Ожидает вашего подтверждения','Awaiting your confirmation'], closed:['Փակված է','Закрыта','Closed'],
  privacy:['Գաղտնիություն','Конфиденциальность','Privacy'], terms:['Օգտագործման պայմաններ','Условия использования','Terms'], contacts:['Կապ','Контакты дома','Building contacts'], support:['Կառավարող կազմակերպություն','Управляющая организация','Management team'], back:['Վերադառնալ տուն','На главную','Back home'],
 } as const;
-export type ResidentKey=keyof typeof strings;
-export const rt=(language:Language,key:ResidentKey)=>strings[key][language==='hy'?0:language==='ru'?1:2];
+export type ResidentKey=keyof typeof strings|'ownership';
+export const rt=(language:Language,key:ResidentKey)=>(key==='ownership'?['Սեփականություն','Собственность','Ownership']:strings[key])[language==='hy'?0:language==='ru'?1:2];

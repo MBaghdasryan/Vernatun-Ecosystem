@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlatformCaseMessageAttachmentVersionsItem } from './platformCaseMessageAttachmentVersionsItem';
 
 export interface PlatformCaseMessage {
   key: string;
@@ -18,4 +19,6 @@ export interface PlatformCaseMessage {
   internal?: boolean;
   /** @maxItems 10 */
   attachmentIds?: string[];
+  /** @maxItems 10 */
+  attachmentVersions?: PlatformCaseMessageAttachmentVersionsItem[];
 }

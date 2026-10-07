@@ -1,6 +1,6 @@
 # Vernatun — что выполнено из мастер-промпта
 
-Актуальное продолжение: [PHASE2-COMPLETION.md](PHASE2-COMPLETION.md). Runtime исправлен, Core operations реализованы; сохраняются отмеченные ограничения и ожидание signed-in QA. Остальные этапы остаются незавершёнными. Матрица ниже относится к предыдущему baseline-срезу.
+Актуальное продолжение: [CURRENT-COMPLETION-STATUS.md](CURRENT-COMPLETION-STATUS.md), [PHASE6-COMPLETION.md](PHASE6-COMPLETION.md). Phase 2–6 реализованы в описанных границах; Phase 6 имеет ограниченную браузерную приёмку и ограничения восстановленной модели. Phase 7/8 и production acceptance не завершены. Матрица ниже сохранена как исторический baseline-срез и не заменяет актуальные отчёты.
 
 Дата: 6 октября 2026 года.
 

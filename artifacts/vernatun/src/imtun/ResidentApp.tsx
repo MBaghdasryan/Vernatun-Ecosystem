@@ -13,8 +13,8 @@ import {rt,type ResidentKey} from './i18n';
 import './resident.css';
 type Row=Record<string,any>;
 type Props={session:AuthState;c:RoleContext;language:Language;currency:Currency;setLanguage:(l:Language)=>void;setCurrency:(c:Currency)=>void;onSwitch:()=>void;onLogout:()=>void;security:ReactNode};
-const names:Record<string,ResidentKey>={overview:'home',finance:'payments',requests:'requests',settings:'profile',meters:'meters',passes:'passes',documents:'documents',meetings:'meetings',delegations:'family',announcements:'news',notifications:'notifications',leases:'lease'};
-const icons={overview:Home,finance:CreditCard,requests:Wrench,settings:UserRound};
+const names:Record<string,ResidentKey>={ownership:'ownership',overview:'home',finance:'payments',requests:'requests',settings:'profile',meters:'meters',passes:'passes',documents:'documents',meetings:'meetings',delegations:'family',announcements:'news',notifications:'notifications',leases:'lease'};
+const icons={overview:Home,finance:CreditCard,requests:Wrench,ownership:Building2,settings:UserRound};
 export default function ResidentApp({session,c,language,currency,setLanguage,setCurrency,onSwitch,onLogout,security}:Props){
  const t=(k:ResidentKey)=>rt(language,k),brand=tenantBrand(c);
  const [view,setView]=useState(()=>routeView(location.pathname,location.search,c.role_key));

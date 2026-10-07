@@ -1,0 +1,14 @@
+.portal-root .p6-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 14px}
+.portal-root .p6-kpi{border:1px solid var(--p-border);border-radius:11px;background:#fff;padding:12px 14px;display:grid;gap:3px;min-width:0}
+.portal-root .p6-kpi small{color:var(--p-muted);font-size:12px}
+.portal-root .p6-kpi strong{font-size:18px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.portal-root .p6-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.portal-root .p6-scroll{overflow-x:auto;max-width:100%}
+.portal-root .p6-scroll table{min-width:640px}
+.portal-root .p6-empty{display:grid;justify-items:center;gap:8px;padding:28px 12px;color:var(--p-muted);text-align:center;border:1px dashed var(--p-border);border-radius:12px}
+.portal-root .p6-empty span{width:34px;height:34px;border-radius:50%;border:2px solid var(--p-orange);opacity:.55}
+.portal-root .p6-agenda{border:1px solid var(--p-border);border-radius:11px;padding:12px;display:grid;gap:10px;margin:0 0 10px;background:#fff}
+.portal-root .p6-legacy{border-left:4px solid #e2b255;padding-left:12px}
+.portal-root .p6-opt{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.portal-root .p6-pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+@media(max-width:560px){.portal-root .p6-kpis{grid-template-columns:1fr 1fr}.portal-root .p6-scroll table{min-width:560px}}

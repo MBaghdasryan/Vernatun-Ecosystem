@@ -1,3 +1,9 @@
+# Phase 6 — 7 октября 2026
+
+Доли/периоды/основания и immutable history; weighted meetings с eligibility snapshot, quorum, защищёнными голосами и приватным Unicode protocol; version-aware документы и pinned support consent; exact-money portfolio analytics/planning budgets; contractor defect-history scorecard и независимый reopen.
+
+Миграция 021 только development после isolated validation; исходные поля/counts/digests 23 таблиц совпали. Phase 6 8/8, backup 2/2, storage 2/2, inventory 5/5. Браузер: реальные кабинеты, read-only факты и guarded 503 binary replay/abandon с равенством query/key/байтов. Полная role/UI и production приёмка не заявляются. Main seed, бизнес-записи тестирования, production и email не выполнялись. Детали/ограничения: [PHASE6-COMPLETION.md](PHASE6-COMPLETION.md).
+
 # Vernatun — октябрь 2026
 
 ## Phase 5 — organization lifecycle, поддержка, внедрение, typed imports

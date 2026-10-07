@@ -7,3 +7,11 @@ export type { ListFinanceAccountsParams } from "./generated/types/listFinanceAcc
 export type { ListBankTransactionsParams } from "./generated/types/listBankTransactionsParams";
 export type { SuggestBankMatchesParams } from "./generated/types/suggestBankMatchesParams";
 export * from "./generated/types";
+export type { CastWeightedVoteBody } from "./generated/types/castWeightedVoteBody";
+export type { ChangeGovernanceMeetingBody } from "./generated/types/changeGovernanceMeetingBody";
+export type { CreateGovernanceMeetingBody } from "./generated/types/createGovernanceMeetingBody";
+export type { CreateOwnershipBody } from "./generated/types/createOwnershipBody";
+export type { EndOwnershipBody } from "./generated/types/endOwnershipBody";
+export type { SaveOperatingBudgetBody } from "./generated/types/saveOperatingBudgetBody";
+export type { UploadDocumentVersionParams } from "./generated/types/uploadDocumentVersionParams";
+export type { DownloadPlatformCaseAttachmentParams } from "./generated/types/downloadPlatformCaseAttachmentParams";

@@ -12,17 +12,17 @@ field.get('/defects/contractors',async(req,res)=>{const c=await requirePermissio
 field.post('/defects',async(req,res)=>{const c=await requirePermission(req,'defects.manage');const b=z.object({unitId:uuid,subject:z.string().trim().min(3).max(160),location:z.string().trim().min(1).max(200),description:z.string().max(4000).default(''),contractorId:uuid,dueOn:z.string().date()}).strict().parse(req.body);const unit=await scopedUnit(c,b.unitId);res.status(201).json(await transaction(async db=>{const valid=await db.query(`SELECT a.id FROM role_assignments a JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id JOIN users x ON x.id=a.user_id WHERE a.user_id=$1 AND a.organization_id=$2 AND a.role_key='contractor' AND a.active AND m.active AND NOT x.blocked AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) AND (a.building_id IS NULL OR a.building_id=$3) AND (a.unit_id IS NULL OR a.unit_id=$4) FOR SHARE OF a,m,x`,[b.contractorId,c.organization_id,unit.building_id,unit.id]);if(!valid.rowCount)throw new ApiError(403,'forbidden');const d=(await db.query('INSERT INTO defects(organization_id,unit_id,subject,location,description,contractor_id,due_on,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[c.organization_id,b.unitId,b.subject,b.location,b.description,b.contractorId,b.dueOn,req.user!.id])).rows[0];await record(db,req,c,'defect.create','defect',d.id);return d}))});
 field.get('/defects/:id',async(req,res)=>{const d=(await defect(req,uuid.parse(req.params.id)))[0];res.json({...d,photos:(await pool.query('SELECT id,created_at FROM file_attachments WHERE defect_id=$1',[d.id])).rows,history:(await pool.query('SELECT h.*,u.name AS actor FROM defect_history h JOIN users u ON u.id=h.actor_id WHERE defect_id=$1 ORDER BY created_at',[d.id])).rows})});
 field.post('/defects/:id/transition',async(req,res)=>{
- const b=z.object({key:uuid.optional(),action:z.enum(['start','report','accept','return']),version:z.number().int().positive(),note:z.string().trim().max(4000).default('')}).strict().parse(req.body);
+ const b=z.object({key:uuid.optional(),action:z.enum(['start','report','accept','return','reopen']),version:z.number().int().positive(),note:z.string().trim().max(4000).default('')}).strict().parse(req.body);
  res.json(await transaction(async db=>{
   const d=(await defect(req,uuid.parse(req.params.id),db))[0];
   const c=await requirePermission(req,['start','report'].includes(b.action)?'defects.execute':'defects.accept');
-  if(['start','report'].includes(b.action)&&d.contractor_id!==req.user!.id||['accept','return'].includes(b.action)&&d.contractor_id===req.user!.id)throw new ApiError(403,'forbidden');
+  if(['start','report'].includes(b.action)&&d.contractor_id!==req.user!.id||['accept','return','reopen'].includes(b.action)&&d.contractor_id===req.user!.id)throw new ApiError(403,'forbidden');
   const run=async()=>{
    if(d.version!==b.version)throw new ApiError(409,'stale_version');
-   const from={start:'assigned',report:'in_progress',accept:'review',return:'review'}[b.action];
+   const from={start:'assigned',report:'in_progress',accept:'review',return:'review',reopen:'accepted'}[b.action];
    if(d.status!==from)throw new ApiError(409,'invalid_transition');
-   if(['report','return'].includes(b.action)&&b.note.length<5)throw new ApiError(400,'reason_required');
-   const to={start:'in_progress',report:'review',accept:'accepted',return:'in_progress'}[b.action];
+   if(['report','return','reopen'].includes(b.action)&&b.note.length<5)throw new ApiError(400,'reason_required');
+   const to={start:'in_progress',report:'review',accept:'accepted',return:'in_progress',reopen:'assigned'}[b.action];
    const r=(await db.query('UPDATE defects SET status=$1,version=version+1,report=CASE WHEN $2 THEN $3 ELSE report END WHERE id=$4 RETURNING *',[to,b.action==='report',b.note,d.id])).rows[0];
    await db.query('INSERT INTO defect_history(defect_id,actor_id,action,note) VALUES($1,$2,$3,$4)',[d.id,req.user!.id,b.action,b.note]);
    await record(db,req,c,'defect.'+b.action,'defect',d.id);return r;

@@ -11,6 +11,219 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /governance/settings:
+    get:
+      operationId: getGovernanceSettings
+      responses:
+        "200": { description: Organization calendar timezone, content: { application/json: { schema: { type: object, required: [timezone], properties: { timezone: { type: string } } } } } }
+  /ownerships:
+    get:
+      operationId: listOwnerships
+      parameters:
+        - { in: query, name: unitId, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Scoped ownership periods and immutable history, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+    post:
+      operationId: createOwnership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, unitId, userId, startsOn, shareBasisPoints, basis]
+              properties:
+                key: { type: string, format: uuid }
+                unitId: { type: string, format: uuid }
+                userId: { type: string, format: uuid }
+                startsOn: { type: string, format: date }
+                endsOn: { type: [string, "null"], format: date }
+                shareBasisPoints: { type: integer, minimum: 1, maximum: 10000 }
+                basis: { type: string, minLength: 3, maxLength: 1000 }
+                basisDocumentId: { type: string, format: uuid }
+      responses:
+        "201": { description: Created period, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /ownerships/candidates:
+    get:
+      operationId: listOwnershipCandidates
+      responses:
+        "200": { description: Active registered organization members, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+  /ownerships/{id}/end:
+    post:
+      operationId: endOwnership
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, version, endsOn, reason]
+              properties:
+                key: { type: string, format: uuid }
+                version: { type: integer, minimum: 1 }
+                endsOn: { type: string, format: date }
+                reason: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        "200": { description: Ended period with retained history, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /governance/meetings:
+    get:
+      operationId: listGovernanceMeetings
+      responses:
+        "200": { description: Scoped weighted meetings, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+    post:
+      operationId: createGovernanceMeeting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, buildingId, title, description, startsAt, endsAt, quorumBasisPoints, agenda]
+              properties:
+                key: { type: string, format: uuid }
+                buildingId: { type: string, format: uuid }
+                title: { type: string, minLength: 2, maxLength: 200 }
+                description: { type: string, maxLength: 8000 }
+                startsAt: { type: string, format: date-time }
+                endsAt: { type: string, format: date-time }
+                quorumBasisPoints: { type: integer, minimum: 1, maximum: 10000 }
+                documentIds: { type: array, maxItems: 20, items: { type: string, format: uuid } }
+                agenda:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [title, votingType, options, passOption, passBasisPoints]
+                    properties:
+                      title: { type: string, minLength: 2, maxLength: 200 }
+                      votingType: { type: string, enum: [yes_no, single_choice] }
+                      options: { type: array, minItems: 2, maxItems: 10, items: { type: string, minLength: 1, maxLength: 100 } }
+                      passOption: { type: string }
+                      passBasisPoints: { type: integer, minimum: 1, maximum: 10000 }
+      responses:
+        "201": { description: Created draft, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /governance/meetings/{id}:
+    get:
+      operationId: getGovernanceMeeting
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Meeting agenda, own eligibility and weighted result", content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /governance/meetings/{id}/actions:
+    post:
+      operationId: changeGovernanceMeeting
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, version, action]
+              properties:
+                key: { type: string, format: uuid }
+                version: { type: integer, minimum: 1 }
+                action: { type: string, enum: [publish, cancel, finalize] }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "200": { description: "Versioned action, finalize returns protected protocol document ID", content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /governance/agenda/{id}/vote:
+    post:
+      operationId: castWeightedVote
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, eligibilityId, selectedOption]
+              properties:
+                key: { type: string, format: uuid }
+                eligibilityId: { type: string, format: uuid }
+                selectedOption: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        "201": { description: Immutable weighted ballot, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /documents/{id}/versions:
+    get:
+      operationId: listDocumentVersions
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Authorized immutable version metadata, no storage keys", content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+    post:
+      operationId: uploadDocumentVersion
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: key, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: version, required: true, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: title, required: true, schema: { type: string, minLength: 2, maxLength: 160 } }
+        - { in: query, name: category, required: true, schema: { type: string, minLength: 2, maxLength: 100 } }
+        - { in: query, name: visibility, required: true, schema: { type: string, enum: [staff, residents, unit_owner] } }
+        - { in: query, name: relatedType, schema: { type: string, enum: [building, unit, meeting] } }
+        - { in: query, name: relatedId, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/octet-stream: { schema: { type: string, format: binary } } }
+      responses:
+        "201": { description: New version with previous-version link, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /documents/{id}/versions/{versionId}/download:
+    get:
+      operationId: downloadDocumentVersion
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: versionId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Private bytes subject to current scope and version visibility, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+  /portfolio/analytics:
+    get:
+      operationId: getPortfolioAnalytics
+      parameters:
+        - { in: query, name: from, required: true, schema: { type: string, format: date } }
+        - { in: query, name: to, required: true, schema: { type: string, format: date } }
+        - { in: query, name: currency, schema: { type: string, enum: [AMD, RUB, USD] } }
+        - { in: query, name: buildingId, schema: { type: string, format: uuid } }
+        - { in: query, name: propertyId, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Exact minor-unit aggregates, definitions, buildings and real monthly series", content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /contractors/scorecard:
+    get:
+      operationId: getContractorScorecard
+      parameters:
+        - { in: query, name: from, required: true, schema: { type: string, format: date } }
+        - { in: query, name: to, required: true, schema: { type: string, format: date } }
+        - { in: query, name: buildingId, schema: { type: string, format: uuid } }
+        - { in: query, name: propertyId, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Real scoped work/defect metrics with explicit historical limitations, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+  /portfolio/budgets:
+    get:
+      operationId: listOperatingBudgets
+      responses:
+        "200": { description: Scoped recorded budgets, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
+    post:
+      operationId: saveOperatingBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, buildingId, period, currency, amountMinor]
+              properties:
+                key: { type: string, format: uuid }
+                buildingId: { type: string, format: uuid }
+                period: { type: string, format: date }
+                currency: { type: string, enum: [AMD, RUB,USD] }
+                amountMinor: { type: string, pattern: '^\d{1,14}$' }
+                version: { type: integer, minimum: 1 }
+      responses:
+        "200": { description: Recorded budget with CAS and audit, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
   /invitations:
     get:
       operationId: listInvitations
@@ -742,6 +955,8 @@ paths:
       - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       operationId: downloadPlatformCaseAttachment
+      parameters:
+        - { name: versionId, in: query, schema: { type: string, format: uuid } }
       responses:
         '200':
           description: Explicitly shared case document; private/no-store. Unassigned ordinary support cannot download.
@@ -894,6 +1109,15 @@ components:
         priority: { type: string, enum: [low, normal, high, urgent], default: normal }
         category: { type: string, default: general }
         attachmentIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+        attachmentVersions:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [documentId, versionId]
+            properties:
+              documentId: { type: string, format: uuid }
+              versionId: { type: string, format: uuid }
     PlatformCaseMessage:
       type: object
       required: [key, version, body]
@@ -903,6 +1127,15 @@ components:
         body: { type: string, minLength: 1, maxLength: 8000 }
         internal: { type: boolean, default: false }
         attachmentIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+        attachmentVersions:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [documentId, versionId]
+            properties:
+              documentId: { type: string, format: uuid }
+              versionId: { type: string, format: uuid }
     PlatformCaseChange:
       type: object
       required: [key, version]

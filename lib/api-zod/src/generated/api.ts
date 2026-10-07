@@ -8,6 +8,239 @@
 import * as zod from 'zod';
 
 
+export const GetGovernanceSettingsResponse = zod.object({
+  "timezone": zod.string()
+})
+
+
+export const ListOwnershipsQueryParams = zod.object({
+  "unitId": zod.coerce.string().uuid().optional()
+})
+
+export const ListOwnershipsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOwnershipsResponse = zod.array(ListOwnershipsResponseItem)
+
+
+export const createOwnershipBodyShareBasisPointsMax = 10000;
+
+export const createOwnershipBodyBasisMin = 3;
+export const createOwnershipBodyBasisMax = 1000;
+
+
+
+export const CreateOwnershipBody = zod.object({
+  "key": zod.string().uuid(),
+  "unitId": zod.string().uuid(),
+  "userId": zod.string().uuid(),
+  "startsOn": zod.coerce.date(),
+  "endsOn": zod.coerce.date().nullish(),
+  "shareBasisPoints": zod.number().int().min(1).max(createOwnershipBodyShareBasisPointsMax),
+  "basis": zod.string().min(createOwnershipBodyBasisMin).max(createOwnershipBodyBasisMax),
+  "basisDocumentId": zod.string().uuid().optional()
+})
+
+export const CreateOwnershipResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListOwnershipCandidatesResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOwnershipCandidatesResponse = zod.array(ListOwnershipCandidatesResponseItem)
+
+
+export const EndOwnershipParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const endOwnershipBodyReasonMin = 3;
+export const endOwnershipBodyReasonMax = 1000;
+
+
+
+export const EndOwnershipBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "endsOn": zod.coerce.date(),
+  "reason": zod.string().min(endOwnershipBodyReasonMin).max(endOwnershipBodyReasonMax)
+})
+
+export const EndOwnershipResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListGovernanceMeetingsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListGovernanceMeetingsResponse = zod.array(ListGovernanceMeetingsResponseItem)
+
+
+export const createGovernanceMeetingBodyTitleMin = 2;
+export const createGovernanceMeetingBodyTitleMax = 200;
+
+export const createGovernanceMeetingBodyDescriptionMax = 8000;
+
+export const createGovernanceMeetingBodyQuorumBasisPointsMax = 10000;
+
+export const createGovernanceMeetingBodyDocumentIdsMax = 20;
+
+export const createGovernanceMeetingBodyAgendaItemTitleMin = 2;
+export const createGovernanceMeetingBodyAgendaItemTitleMax = 200;
+
+export const createGovernanceMeetingBodyAgendaItemOptionsItemMax = 100;
+
+export const createGovernanceMeetingBodyAgendaItemOptionsMin = 2;
+export const createGovernanceMeetingBodyAgendaItemOptionsMax = 10;
+
+export const createGovernanceMeetingBodyAgendaItemPassBasisPointsMax = 10000;
+
+export const createGovernanceMeetingBodyAgendaMax = 20;
+
+
+
+export const CreateGovernanceMeetingBody = zod.object({
+  "key": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "title": zod.string().min(createGovernanceMeetingBodyTitleMin).max(createGovernanceMeetingBodyTitleMax),
+  "description": zod.string().max(createGovernanceMeetingBodyDescriptionMax),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "quorumBasisPoints": zod.number().int().min(1).max(createGovernanceMeetingBodyQuorumBasisPointsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(createGovernanceMeetingBodyDocumentIdsMax).optional(),
+  "agenda": zod.array(zod.object({
+  "title": zod.string().min(createGovernanceMeetingBodyAgendaItemTitleMin).max(createGovernanceMeetingBodyAgendaItemTitleMax),
+  "votingType": zod.enum(['yes_no', 'single_choice']),
+  "options": zod.array(zod.string().min(1).max(createGovernanceMeetingBodyAgendaItemOptionsItemMax)).min(createGovernanceMeetingBodyAgendaItemOptionsMin).max(createGovernanceMeetingBodyAgendaItemOptionsMax),
+  "passOption": zod.string(),
+  "passBasisPoints": zod.number().int().min(1).max(createGovernanceMeetingBodyAgendaItemPassBasisPointsMax)
+})).min(1).max(createGovernanceMeetingBodyAgendaMax)
+})
+
+export const CreateGovernanceMeetingResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetGovernanceMeetingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetGovernanceMeetingResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangeGovernanceMeetingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const changeGovernanceMeetingBodyReasonMax = 1000;
+
+
+
+export const ChangeGovernanceMeetingBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.enum(['publish', 'cancel', 'finalize']),
+  "reason": zod.string().max(changeGovernanceMeetingBodyReasonMax).optional()
+})
+
+export const ChangeGovernanceMeetingResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const CastWeightedVoteParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const castWeightedVoteBodySelectedOptionMax = 100;
+
+
+
+export const CastWeightedVoteBody = zod.object({
+  "key": zod.string().uuid(),
+  "eligibilityId": zod.string().uuid(),
+  "selectedOption": zod.string().min(1).max(castWeightedVoteBodySelectedOptionMax)
+})
+
+export const CastWeightedVoteResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListDocumentVersionsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListDocumentVersionsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListDocumentVersionsResponse = zod.array(ListDocumentVersionsResponseItem)
+
+
+export const UploadDocumentVersionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const uploadDocumentVersionQueryTitleMin = 2;
+export const uploadDocumentVersionQueryTitleMax = 160;
+
+export const uploadDocumentVersionQueryCategoryMin = 2;
+export const uploadDocumentVersionQueryCategoryMax = 100;
+
+
+
+export const UploadDocumentVersionQueryParams = zod.object({
+  "key": zod.coerce.string().uuid(),
+  "version": zod.coerce.number().int().min(1),
+  "title": zod.coerce.string().min(uploadDocumentVersionQueryTitleMin).max(uploadDocumentVersionQueryTitleMax),
+  "category": zod.coerce.string().min(uploadDocumentVersionQueryCategoryMin).max(uploadDocumentVersionQueryCategoryMax),
+  "visibility": zod.enum(['staff', 'residents', 'unit_owner']),
+  "relatedType": zod.enum(['building', 'unit', 'meeting']).optional(),
+  "relatedId": zod.coerce.string().uuid().optional()
+})
+
+export const UploadDocumentVersionResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const DownloadDocumentVersionParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "versionId": zod.coerce.string().uuid()
+})
+
+export const DownloadDocumentVersionResponse = zod.unknown()
+
+
+export const GetPortfolioAnalyticsQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "buildingId": zod.coerce.string().uuid().optional(),
+  "propertyId": zod.coerce.string().uuid().optional()
+})
+
+export const GetPortfolioAnalyticsResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetContractorScorecardQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date(),
+  "buildingId": zod.coerce.string().uuid().optional(),
+  "propertyId": zod.coerce.string().uuid().optional()
+})
+
+export const GetContractorScorecardResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetContractorScorecardResponse = zod.array(GetContractorScorecardResponseItem)
+
+
+export const ListOperatingBudgetsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOperatingBudgetsResponse = zod.array(ListOperatingBudgetsResponseItem)
+
+
+export const saveOperatingBudgetBodyAmountMinorRegExp = new RegExp('^\\d{1,14}$');
+
+
+
+export const SaveOperatingBudgetBody = zod.object({
+  "key": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "period": zod.coerce.date(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "amountMinor": zod.string().regex(saveOperatingBudgetBodyAmountMinorRegExp),
+  "version": zod.number().int().min(1).optional()
+})
+
+export const SaveOperatingBudgetResponse = zod.record(zod.string(), zod.unknown())
+
+
 /**
  * @summary List invitations in the active permission scope
  */
@@ -1039,6 +1272,8 @@ export const createPlatformCaseBodyPriorityDefault = `normal`;
 export const createPlatformCaseBodyCategoryDefault = `general`;
 export const createPlatformCaseBodyAttachmentIdsMax = 10;
 
+export const createPlatformCaseBodyAttachmentVersionsMax = 10;
+
 
 
 export const CreatePlatformCaseBody = zod.object({
@@ -1047,7 +1282,11 @@ export const CreatePlatformCaseBody = zod.object({
   "body": zod.string().min(1).max(createPlatformCaseBodyBodyMax),
   "priority": zod.enum(['low', 'normal', 'high', 'urgent']).default(createPlatformCaseBodyPriorityDefault),
   "category": zod.string().default(createPlatformCaseBodyCategoryDefault),
-  "attachmentIds": zod.array(zod.string().uuid()).max(createPlatformCaseBodyAttachmentIdsMax).optional()
+  "attachmentIds": zod.array(zod.string().uuid()).max(createPlatformCaseBodyAttachmentIdsMax).optional(),
+  "attachmentVersions": zod.array(zod.object({
+  "documentId": zod.string().uuid(),
+  "versionId": zod.string().uuid()
+})).max(createPlatformCaseBodyAttachmentVersionsMax).optional()
 })
 
 export const CreatePlatformCaseResponse = zod.record(zod.string(), zod.unknown())
@@ -1065,6 +1304,10 @@ export const DownloadPlatformCaseAttachmentParams = zod.object({
   "documentId": zod.coerce.string().uuid()
 })
 
+export const DownloadPlatformCaseAttachmentQueryParams = zod.object({
+  "versionId": zod.coerce.string().uuid().optional()
+})
+
 export const DownloadPlatformCaseAttachmentResponse = zod.unknown()
 
 
@@ -1078,6 +1321,8 @@ export const appendPlatformCaseMessageBodyBodyMax = 8000;
 export const appendPlatformCaseMessageBodyInternalDefault = false;
 export const appendPlatformCaseMessageBodyAttachmentIdsMax = 10;
 
+export const appendPlatformCaseMessageBodyAttachmentVersionsMax = 10;
+
 
 
 export const AppendPlatformCaseMessageBody = zod.object({
@@ -1085,7 +1330,11 @@ export const AppendPlatformCaseMessageBody = zod.object({
   "version": zod.number().int().min(1),
   "body": zod.string().min(1).max(appendPlatformCaseMessageBodyBodyMax),
   "internal": zod.boolean().default(appendPlatformCaseMessageBodyInternalDefault),
-  "attachmentIds": zod.array(zod.string().uuid()).max(appendPlatformCaseMessageBodyAttachmentIdsMax).optional()
+  "attachmentIds": zod.array(zod.string().uuid()).max(appendPlatformCaseMessageBodyAttachmentIdsMax).optional(),
+  "attachmentVersions": zod.array(zod.object({
+  "documentId": zod.string().uuid(),
+  "versionId": zod.string().uuid()
+})).max(appendPlatformCaseMessageBodyAttachmentVersionsMax).optional()
 })
 
 export const AppendPlatformCaseMessageResponse = zod.record(zod.string(), zod.unknown())

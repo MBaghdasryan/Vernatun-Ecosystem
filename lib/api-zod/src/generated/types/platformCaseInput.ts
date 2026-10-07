@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlatformCaseInputAttachmentVersionsItem } from './platformCaseInputAttachmentVersionsItem';
 import type { PlatformCaseInputPriority } from './platformCaseInputPriority';
 
 export interface PlatformCaseInput {
@@ -23,4 +24,6 @@ export interface PlatformCaseInput {
   category?: string;
   /** @maxItems 10 */
   attachmentIds?: string[];
+  /** @maxItems 10 */
+  attachmentVersions?: PlatformCaseInputAttachmentVersionsItem[];
 }

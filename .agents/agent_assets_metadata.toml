@@ -154,3 +154,17 @@ mtime_ms = 1791328044025
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/d7b9dcd6-407a-4690-bae8-84c4f1e4b624/d933f10b-0c64-4c66-8157-d65494f2c0b1"
 storage_version_token = "1791328159638444"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "8joj0uKy9KKoxMhiFjfTo"
+uri = "file://artifacts/vernatun/docs/PHASE6-COMPLETION.md"
+type = "text"
+title = "Phase 6 — подробный отчёт"
+description = "Что реализовано, доказательства проверки, сохранность development-данных и оставшиеся ограничения."
+logical_id = "44fcb8c1-547f-4656-ba1a-3d530f7e8c49"
+content_hash = "sha256:eea6f5950c497481d3d5f3a359327e16980dfa43706d7532826f83103e69725c"
+size = 18423
+mtime_ms = 1791335437645
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/44fcb8c1-547f-4656-ba1a-3d530f7e8c49/174fee43-ce22-42c9-b01a-59811c9d9da5"
+storage_version_token = "1791335479679226"
+content_type = "text/markdown"
