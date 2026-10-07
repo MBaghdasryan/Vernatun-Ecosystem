@@ -63,6 +63,24 @@ Client read timeouts are not a guarantee of PostgreSQL query cancellation.
 Retention/archive policies and external log drains remain to implement before
 high-volume production use.
 
+## Error Center
+
+The existing System Console includes an Errors tab. Only retained `error` and
+`fatal` events are grouped, using category, service, event, route template, method,
+HTTP status, safe error code and job name. Group metadata never includes raw
+exception messages, credentials or request payloads.
+
+Groups expose counts, affected identities, first/last observation, last request
+and safe event details. Marking resolved requires `logs.manage` as well as
+`logs.read`; the update and immutable audit entry use one database transaction.
+Stale revisions/event counts are rejected. Any additional retained occurrence
+reopens the group. “Resolved” is an administrator's acknowledgement, not a claim
+that the underlying software has been repaired.
+
+Details display at most the latest 50 events. Full operational history remains
+in Logs. Historical application versions and sanitized stack capture are not
+implemented; the UI explicitly reports these fields as not recorded.
+
 ## Backups, restore, cache
 
 Existing developer/test backup utilities are unchanged. No new backup button,

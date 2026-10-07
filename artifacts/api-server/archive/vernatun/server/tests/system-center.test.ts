@@ -31,7 +31,7 @@ before(async()=>{
 });
 after(async()=>{server.close();server.closeAllConnections();await new Promise(r=>setTimeout(r,100));await pool.end()});
 test('platform-only granular rights; tenants, support and anonymous denied',async()=>{
- for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs']){
+ for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs','/system/errors']){
   assert.equal((await new Client().call(route)).status,401);
   assert.equal((await support.call(route)).status,403);
   assert.equal((await org.call(route)).status,403);
@@ -41,6 +41,46 @@ test('platform-only granular rights; tenants, support and anonymous denied',asyn
  assert.equal((await admin.call('/system/logs')).status,403);
  assert.equal((await admin.call('/system/overview')).status,200);
  await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key='logs.read'",[admin.assignment]);
+});
+test('error groups retain safe evidence, resolve with concurrency guards and reopen on recurrence',async()=>{
+ const event={category:'system',event:'qa_error_group',level:'error',error:'QA_FAILURE',endpoint:'/qa/:id',method:'GET',status:500};
+ await recordSystemEvent({...event,actor:admin.user,contextId:admin.assignment,requestId:'11111111-1111-4111-8111-111111111111'});
+ await recordSystemEvent({...event,actor:org.user,contextId:org.assignment,requestId:'22222222-2222-4222-8222-222222222222'});
+ const find=async()=>{const r=await admin.call('/system/errors');assert.equal(r.status,200);return r.data.items.find((g:any)=>g.message==='QA_FAILURE')};
+ const group=await find();assert.ok(group);assert.equal(group.occurrences,2);assert.equal(group.status,'open');
+ assert.equal(group.affectedUsers,2);assert.equal(group.affectedOrganizations,1);
+ assert.equal(group.latestRequestId,'22222222-2222-4222-8222-222222222222');
+ const path='/system/errors/'+group.fingerprint;
+ assert.equal((await support.call(path)).status,403);assert.equal((await org.call(path)).status,403);
+ assert.equal((await admin.call('/system/errors/not-a-fingerprint')).status,400);
+ assert.equal((await admin.call('/system/errors/'+ '0'.repeat(32))).status,404);
+ const detail=await admin.call(path);assert.equal(detail.status,200);
+ assert.equal(detail.data.events.items.length,2);assert.equal(detail.data.stackTrace,null);
+ assert.equal(detail.data.applicationVersion,null);assert.equal(detail.data.environment,'test');
+ const body=(g:any,status='resolved')=>({status,lastEventId:g.lastEventId,occurrences:g.occurrences,revision:g.revision});
+ await pool.query(`INSERT INTO iam_assignment_rules(assignment_id,permission_key,effect,reason,created_by) VALUES($1,'logs.manage','deny','QA resolution denial',$2)`,[admin.assignment,admin.user]);
+ assert.equal((await admin.call(path,'PATCH',body(group))).status,403);
+ assert.equal((await admin.call(path)).status,200);
+ await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key='logs.manage'",[admin.assignment]);
+ assert.equal((await support.call(path,'PATCH',body(group))).status,403);
+ const resolved=await admin.call(path,'PATCH',body(group));assert.equal(resolved.status,200);assert.equal(resolved.data.status,'resolved');
+ assert.equal(resolved.data.revision,1);
+ assert.ok((await admin.call('/system/errors?status=resolved')).data.items.some((g:any)=>g.fingerprint===group.fingerprint));
+ assert.equal((await admin.call(path,'PATCH',body(group))).status,409);
+ await recordSystemEvent(event);
+ const recurred=await find();assert.equal(recurred.status,'open');assert.equal(recurred.occurrences,3);
+ assert.equal((await admin.call(path,'PATCH',body(resolved.data))).status,409);
+ const racing=await Promise.all([admin.call(path,'PATCH',body(recurred)),admin.call(path,'PATCH',body(recurred))]);
+ assert.deepEqual(racing.map(r=>r.status).sort(),[200,409]);
+ const again=await find();assert.equal(again.status,'resolved');
+ const reopened=await admin.call(path,'PATCH',body(again,'open'));assert.equal(reopened.status,200);assert.equal(reopened.data.status,'open');
+ const audits=await pool.query("SELECT details FROM audit_events WHERE action='system.error.status' AND details->>'fingerprint'=$1",[group.fingerprint]);
+ assert.equal(audits.rowCount,3);
+ assert.equal((await admin.call('/system/errors?status=other')).status,400);
+ // A separate route template has its own fingerprint, and many groups paginate.
+ await pool.query(`INSERT INTO system_log_events(category,level,event,endpoint) SELECT 'system','fatal','qa_many','/qa/'||i FROM generate_series(1,52) i`);
+ const page=await admin.call('/system/errors');assert.equal(page.data.items.length,50);assert.equal(page.data.hasMore,true);
+ assert.ok((await admin.call('/system/errors?page=2')).data.items.length>0);
 });
 test('overview observations real and unavailable values explicit',async()=>{
  const r=await admin.call('/system/overview');assert.equal(r.status,200);

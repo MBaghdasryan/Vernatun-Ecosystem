@@ -18,3 +18,4 @@
 - [Unit plan versions](unit-plan-policy.md) — replacement images never inherit coordinates automatically; preserve old plans and private-byte references.
 - [Floor readiness](floor-readiness-policy.md) — explicit floor mappings only; readiness requires evidence and never automatically changes handover state.
 - [Accessible table overflow](accessible-table-overflow.md) — hidden labels can escape a scrolling table unless their positioned ancestor is inside its scroll container.
+- [Operations error lifecycle](operations-error-lifecycle.md) — resolved acknowledges observed events; recurrence and future retention must respect concurrent-event watermarks.

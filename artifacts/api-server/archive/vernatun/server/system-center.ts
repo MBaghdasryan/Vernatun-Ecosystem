@@ -9,6 +9,7 @@ import {logQueue} from './system-observability.js';
 import {systemQuery} from './system-query.js';
 import {emailProviderState} from './email.js';
 import {storageMode} from './storage-providers.js';
+import {registerSystemErrors} from './system-errors.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -54,6 +55,7 @@ async function overview(){
 }
 systemCenter.get('/system/overview',async(req,res)=>{await permit(req,'system.read');res.json(await overview())});
 systemCenter.get('/system/health',async(req,res)=>{await permit(req,'system.health.read');res.json(await overview())});
+registerSystemErrors(systemCenter,permit);
 const query=z.object({
  page:z.coerce.number().int().min(1).max(10000).default(1),from:z.string().datetime().optional(),to:z.string().datetime().optional(),
  level:z.enum(['info','warning','error','fatal']).optional(),

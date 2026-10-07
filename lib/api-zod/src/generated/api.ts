@@ -8,6 +8,107 @@
 import * as zod from 'zod';
 
 
+export const GetSystemErrorsQueryParams = zod.object({
+  "page": zod.coerce.number().int().optional(),
+  "status": zod.enum(['open', 'resolved']).optional()
+})
+
+export const GetSystemErrorsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "fingerprint": zod.string(),
+  "message": zod.string(),
+  "service": zod.string(),
+  "category": zod.string(),
+  "firstSeen": zod.string(),
+  "lastSeen": zod.string(),
+  "occurrences": zod.number().int(),
+  "affectedUsers": zod.number().int(),
+  "affectedOrganizations": zod.number().int(),
+  "latestRequestId": zod.string().nullable(),
+  "lastEventId": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "revision": zod.number().int()
+})),
+  "page": zod.number().int(),
+  "hasMore": zod.boolean()
+})
+
+
+export const GetSystemErrorParams = zod.object({
+  "fingerprint": zod.coerce.string()
+})
+
+export const GetSystemErrorResponse = zod.object({
+  "group": zod.object({
+  "fingerprint": zod.string(),
+  "message": zod.string(),
+  "service": zod.string(),
+  "category": zod.string(),
+  "firstSeen": zod.string(),
+  "lastSeen": zod.string(),
+  "occurrences": zod.number().int(),
+  "affectedUsers": zod.number().int(),
+  "affectedOrganizations": zod.number().int(),
+  "latestRequestId": zod.string().nullable(),
+  "lastEventId": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "revision": zod.number().int()
+}),
+  "events": zod.object({
+  "page": zod.number().int(),
+  "hasMore": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "category": zod.string(),
+  "level": zod.string(),
+  "service": zod.string(),
+  "event": zod.string(),
+  "requestId": zod.string().nullable(),
+  "actorId": zod.string().nullable(),
+  "organizationId": zod.string().nullable(),
+  "endpoint": zod.string().nullable(),
+  "method": zod.string().nullable(),
+  "status": zod.number().int().nullable(),
+  "latencyMs": zod.number().int().nullable(),
+  "errorCode": zod.string().nullable(),
+  "job": zod.string().nullable()
+}))
+}),
+  "environment": zod.string(),
+  "applicationVersion": zod.string().nullable(),
+  "stackTrace": zod.string().nullable()
+})
+
+
+export const UpdateSystemErrorParams = zod.object({
+  "fingerprint": zod.coerce.string()
+})
+
+export const UpdateSystemErrorBody = zod.object({
+  "status": zod.enum(['open', 'resolved']),
+  "lastEventId": zod.string(),
+  "occurrences": zod.number().int(),
+  "revision": zod.number().int()
+})
+
+export const UpdateSystemErrorResponse = zod.object({
+  "fingerprint": zod.string(),
+  "message": zod.string(),
+  "service": zod.string(),
+  "category": zod.string(),
+  "firstSeen": zod.string(),
+  "lastSeen": zod.string(),
+  "occurrences": zod.number().int(),
+  "affectedUsers": zod.number().int(),
+  "affectedOrganizations": zod.number().int(),
+  "latestRequestId": zod.string().nullable(),
+  "lastEventId": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "revision": zod.number().int()
+})
+
+
 export const GetSystemOverviewResponse = zod.object({
   "observedAt": zod.string(),
   "status": zod.enum(['healthy', 'warning', 'critical']),

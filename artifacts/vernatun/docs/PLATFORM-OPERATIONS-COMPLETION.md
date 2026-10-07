@@ -11,7 +11,7 @@ Status after the first implementation increment. The eight-phase prompt is
 | Logs | PARTIAL | Real + isolated tests | API/auth/security metadata and jobs; filters/paging; no external log drain |
 | Log exports | PARTIAL | Real + isolated API tests | JSON/CSV download UI; applied filters; mandatory range ≤31 days, ≤5000 rows and ≤5 MiB; audited; large background exports not implemented |
 | Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or stacks in new log store |
-| Error Center | NOT IMPLEMENTED | — | No grouped-error detail center yet; errors visible in logs |
+| Error Center | PARTIAL | Real + isolated API tests | Grouping, counts, affected users/organizations, latest request, details and audited open/resolved lifecycle implemented; raw messages/stacks and historical app versions deliberately not captured |
 | Jobs | PARTIAL | Real + isolated tests | Existing three periodic jobs instrumented; no persistent queue/retry/cancel |
 | Backup | PARTIAL | Existing real CLI | Developer/test paired SQL + files tools, no Operations UI/policies yet |
 | Restore | PARTIAL | Existing isolated tools | No production restore workflow introduced |
@@ -70,3 +70,27 @@ Do not equate existing CLI support with a completed administrative workflow.
 - Type checks passed for API and web. The download buttons have not yet had a
   separate authenticated browser acceptance pass; previous browser acceptance
   above applies to the original Logs flow, not this export increment.
+
+### Error Center increment
+
+- `/console/system/errors`: grouped error/fatal records from retained operational
+  history, open/resolved filters, 50-group pagination and latest 50 event details.
+- Fingerprints use stable metadata, not actor IDs or arbitrary exception text.
+  Message is the safe error code or event name. First/last seen, occurrences,
+  affected user/organization counts and latest request ID are real aggregates.
+- Viewing requires `logs.read`; changes additionally require `logs.manage`.
+  Default status-management permission belongs only to platform admin.
+- Resolution records and audit entries commit atomically. Revision plus event
+  watermark checks reject stale updates (409); concurrent updates are serialized.
+  New events reopen resolved groups without deleting their resolution history.
+- Application version and stack trace explicitly display “not recorded”; the
+  environment label refers to the current runtime, not reconstructed event history.
+- Six isolated API test groups passed, including recurrence, concurrent status
+  changes, permission denial, detail lookup, paging and export regression coverage.
+  Migration preservation checks passed for 13 legacy tables before and after
+  applying the additive development migration. No production migration was run.
+- Authenticated browser acceptance passed on an isolated QA schema: direct
+  navigation, a three-occurrence group and details, resolve confirmation,
+  resolved filter, persisted state after reload, reopen, open filter, Back/Forward.
+  At 390px, document width equals client width (375px); wide tables scroll locally.
+  Support-role denial was covered by API tests, not repeated in this browser pass.

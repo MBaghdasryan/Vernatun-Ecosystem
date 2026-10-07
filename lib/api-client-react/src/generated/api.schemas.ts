@@ -38,35 +38,50 @@ export interface SystemOverview {
   metrics: SystemMetric[];
 }
 
-export type SystemLogExportInputFormat = typeof SystemLogExportInputFormat[keyof typeof SystemLogExportInputFormat];
+export type SystemErrorStateInputStatus = typeof SystemErrorStateInputStatus[keyof typeof SystemErrorStateInputStatus];
 
 
-export const SystemLogExportInputFormat = {
-  json: 'json',
-  csv: 'csv',
+export const SystemErrorStateInputStatus = {
+  open: 'open',
+  resolved: 'resolved',
 } as const;
 
-export interface SystemLogExportInput {
-  format: SystemLogExportInputFormat;
-  from: string;
-  to: string;
-  level?: string;
-  category?: string;
-  user?: string;
-  organization?: string;
-  requestId?: string;
-  status?: number;
-  endpoint?: string;
-  errorCode?: string;
-  job?: string;
-  q?: string;
+export interface SystemErrorStateInput {
+  status: SystemErrorStateInputStatus;
+  lastEventId: string;
+  occurrences: number;
+  revision: number;
 }
 
-export interface SystemLogExport {
-  filename: string;
-  contentType: string;
-  content: string;
-  rows: number;
+export type SystemErrorGroupStatus = typeof SystemErrorGroupStatus[keyof typeof SystemErrorGroupStatus];
+
+
+export const SystemErrorGroupStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface SystemErrorGroup {
+  fingerprint: string;
+  message: string;
+  service: string;
+  category: string;
+  firstSeen: string;
+  lastSeen: string;
+  occurrences: number;
+  affectedUsers: number;
+  affectedOrganizations: number;
+  /** @nullable */
+  latestRequestId: string | null;
+  lastEventId: string;
+  status: SystemErrorGroupStatus;
+  revision: number;
+}
+
+export interface SystemErrors {
+  items: SystemErrorGroup[];
+  page: number;
+  hasMore: boolean;
 }
 
 export interface SystemLog {
@@ -100,6 +115,47 @@ export interface SystemLogs {
   page: number;
   hasMore: boolean;
   items: SystemLog[];
+}
+
+export interface SystemErrorDetail {
+  group: SystemErrorGroup;
+  events: SystemLogs;
+  environment: string;
+  /** @nullable */
+  applicationVersion: string | null;
+  /** @nullable */
+  stackTrace: string | null;
+}
+
+export type SystemLogExportInputFormat = typeof SystemLogExportInputFormat[keyof typeof SystemLogExportInputFormat];
+
+
+export const SystemLogExportInputFormat = {
+  json: 'json',
+  csv: 'csv',
+} as const;
+
+export interface SystemLogExportInput {
+  format: SystemLogExportInputFormat;
+  from: string;
+  to: string;
+  level?: string;
+  category?: string;
+  user?: string;
+  organization?: string;
+  requestId?: string;
+  status?: number;
+  endpoint?: string;
+  errorCode?: string;
+  job?: string;
+  q?: string;
+}
+
+export interface SystemLogExport {
+  filename: string;
+  contentType: string;
+  content: string;
+  rows: number;
 }
 
 export type SystemJobStatus = typeof SystemJobStatus[keyof typeof SystemJobStatus];
@@ -1744,6 +1800,19 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetSystemErrorsParams = {
+page?: number;
+status?: GetSystemErrorsStatus;
+};
+
+export type GetSystemErrorsStatus = typeof GetSystemErrorsStatus[keyof typeof GetSystemErrorsStatus];
+
+
+export const GetSystemErrorsStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
 
 export type GetSystemLogsParams = {
 /**

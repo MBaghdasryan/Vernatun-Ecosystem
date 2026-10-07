@@ -11,6 +11,45 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/errors:
+    get:
+      operationId: getSystemErrors
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: status, in: query, schema: {type: string, enum: [open, resolved]}}
+      responses:
+        "200":
+          description: Grouped error and fatal events, across retained operational history
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemErrors"}
+  /system/errors/{fingerprint}:
+    get:
+      operationId: getSystemError
+      parameters:
+        - {name: fingerprint, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Safe metadata and latest 50 related events; no raw stack or request body
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemErrorDetail"}
+    patch:
+      operationId: updateSystemError
+      parameters:
+        - {name: fingerprint, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SystemErrorStateInput"}
+      responses:
+        "200":
+          description: Audited status change; fresh events automatically reopen the group
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemErrorGroup"}
+        "409": {description: Events or resolution changed; reload before trying again}
   /system/overview:
     get:
       operationId: getSystemOverview
@@ -1801,6 +1840,47 @@ components:
         observedAt: {type: string}
         status: {type: string, enum: [healthy, warning, critical]}
         metrics: {type: array, items: {$ref: "#/components/schemas/SystemMetric"}}
+    SystemErrorStateInput:
+      type: object
+      required: [status, lastEventId, occurrences, revision]
+      properties:
+        status: {type: string, enum: [open, resolved]}
+        lastEventId: {type: string}
+        occurrences: {type: integer}
+        revision: {type: integer}
+    SystemErrorGroup:
+      type: object
+      required: [fingerprint, message, service, category, firstSeen, lastSeen, occurrences, affectedUsers, affectedOrganizations, latestRequestId, lastEventId, status, revision]
+      properties:
+        fingerprint: {type: string}
+        message: {type: string}
+        service: {type: string}
+        category: {type: string}
+        firstSeen: {type: string}
+        lastSeen: {type: string}
+        occurrences: {type: integer}
+        affectedUsers: {type: integer}
+        affectedOrganizations: {type: integer}
+        latestRequestId: {type: [string, "null"]}
+        lastEventId: {type: string}
+        status: {type: string, enum: [open, resolved]}
+        revision: {type: integer}
+    SystemErrors:
+      type: object
+      required: [items, page, hasMore]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/SystemErrorGroup"}}
+        page: {type: integer}
+        hasMore: {type: boolean}
+    SystemErrorDetail:
+      type: object
+      required: [group, events, environment, applicationVersion, stackTrace]
+      properties:
+        group: {$ref: "#/components/schemas/SystemErrorGroup"}
+        events: {$ref: "#/components/schemas/SystemLogs"}
+        environment: {type: string}
+        applicationVersion: {type: [string, "null"]}
+        stackTrace: {type: [string, "null"]}
     SystemLogExportInput:
       type: object
       required: [format, from, to]

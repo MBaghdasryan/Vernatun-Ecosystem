@@ -75,6 +75,7 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  GetSystemErrorsParams,
   GetSystemJobsParams,
   GetSystemLogsParams,
   HandoverFloorAssignment,
@@ -149,6 +150,10 @@ import type {
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
+  SystemErrorDetail,
+  SystemErrorGroup,
+  SystemErrorStateInput,
+  SystemErrors,
   SystemJobs,
   SystemLogExport,
   SystemLogExportInput,
@@ -196,6 +201,238 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSystemErrorsUrl = (params?: GetSystemErrorsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/errors?${stringifiedParams}` : `/api/system/errors`
+}
+
+export const getSystemErrors = async (params?: GetSystemErrorsParams, options?: Parameters<typeof customFetch>[1]): Promise<SystemErrors> => {
+
+  return customFetch<SystemErrors>(getGetSystemErrorsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemErrorsQueryKey = (params?: GetSystemErrorsParams,) => {
+    return [
+    `/api/system/errors`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSystemErrorsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemErrors>>, TError = ErrorType<unknown>>(params?: GetSystemErrorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemErrors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemErrorsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemErrors>>> = ({ signal }) => getSystemErrors(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemErrors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemErrorsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemErrors>>>
+export type GetSystemErrorsQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemErrors<TData = Awaited<ReturnType<typeof getSystemErrors>>, TError = ErrorType<unknown>>(
+ params?: GetSystemErrorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemErrors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemErrorsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemErrorUrl = (fingerprint: string,) => {
+
+
+
+
+  return `/api/system/errors/${fingerprint}`
+}
+
+export const getSystemError = async (fingerprint: string, options?: Parameters<typeof customFetch>[1]): Promise<SystemErrorDetail> => {
+
+  return customFetch<SystemErrorDetail>(getGetSystemErrorUrl(fingerprint),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemErrorQueryKey = (fingerprint: string,) => {
+    return [
+    `/api/system/errors/${fingerprint}`
+    ] as const;
+    }
+
+
+export const getGetSystemErrorQueryOptions = <TData = Awaited<ReturnType<typeof getSystemError>>, TError = ErrorType<unknown>>(fingerprint: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemError>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemErrorQueryKey(fingerprint);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemError>>> = ({ signal }) => getSystemError(fingerprint, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: fingerprint !== null && fingerprint !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemError>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemErrorQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemError>>>
+export type GetSystemErrorQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemError<TData = Awaited<ReturnType<typeof getSystemError>>, TError = ErrorType<unknown>>(
+ fingerprint: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemError>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemErrorQueryOptions(fingerprint,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSystemErrorUrl = (fingerprint: string,) => {
+
+
+
+
+  return `/api/system/errors/${fingerprint}`
+}
+
+export const updateSystemError = async (fingerprint: string,
+    systemErrorStateInput: SystemErrorStateInput, options?: Parameters<typeof customFetch>[1]): Promise<SystemErrorGroup> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SystemErrorGroup>(getUpdateSystemErrorUrl(fingerprint),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemErrorStateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSystemErrorMutationKey = () => ['updateSystemError'] as const;
+
+export const getUpdateSystemErrorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemError>>, TError,UpdateSystemErrorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSystemError>>, TError,UpdateSystemErrorMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSystemErrorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystemError>>, UpdateSystemErrorMutationVariables> = (props) => {
+          const {fingerprint,data} = props ?? {};
+
+          return  updateSystemError(fingerprint,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSystemErrorMutationResult = NonNullable<Awaited<ReturnType<typeof updateSystemError>>>
+    export type UpdateSystemErrorMutationBody = BodyType<SystemErrorStateInput>
+    export type UpdateSystemErrorMutationError = ErrorType<void>
+    export type UpdateSystemErrorMutationVariables = {fingerprint: string;data: BodyType<SystemErrorStateInput>}
+
+    export const useUpdateSystemError = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemError>>, TError,UpdateSystemErrorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSystemError>>,
+        TError,
+        UpdateSystemErrorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSystemErrorMutationOptions(options));
+    }
 
 export const getGetSystemOverviewUrl = () => {
 

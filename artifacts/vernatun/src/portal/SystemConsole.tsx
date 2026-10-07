@@ -7,11 +7,12 @@ import './console.css';
 import './system-console.css';
 import {createSystemLogExport} from '@workspace/api-client-react';
 import {getCsrfHeaders} from './client';
+import SystemErrors from './SystemErrors';
 
-type Tab='overview'|'health'|'logs'|'jobs';
+type Tab='overview'|'health'|'logs'|'errors'|'jobs';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
- system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],jobs:['Առաջադրանքներ','Задания','Jobs'],
+ system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
  healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
  warning:['Զգուշացում','Предупреждение','Warning'],critical:['Կրիտիկական','Критично','Critical'],
  running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],interrupted:['Ընդհատված','Прервано','Interrupted'],
@@ -50,7 +51,7 @@ export const systemLabel=(l:Language)=>S.system[L(l)];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
 type Perm='system.health.read'|'logs.read'|'jobs.read';
-const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'jobs',perm:'jobs.read'}];
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'}];
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
 
 // Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
@@ -148,7 +149,7 @@ function Jobs({ck,l}:{ck:string;l:Language}){
   </section>}</div>;
 }
 
-export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='jobs'?s:'overview'}
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'?s:'overview'}
 export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
  const l=language;const tx=(k:string)=>S[k][L(l)];
  const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
@@ -166,7 +167,8 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
    {current==='overview'&&<Metrics key={ck+':o'} kind="overview" ck={ck} l={l}/>}
    {current==='health'&&<Metrics key={ck+':h'} kind="health" ck={ck} l={l}/>}
    {current==='logs'&&<Logs key={ck+':l'} ck={ck} l={l} canExport={c.permissions.includes('logs.export')}/>}
-   {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
+   {current==='errors'&&<SystemErrors key={ck+':e'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
+    {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
   </div>
  </div>;
 }
