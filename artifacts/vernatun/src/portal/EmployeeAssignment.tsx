@@ -47,7 +47,7 @@ export default function EmployeeAssignment({id,language,onClose,onSaved,Modal,Er
  const [busy,setBusy]=useState(false);const busyRef=useRef(false);const [error,setError]=useState<unknown>();const [conflict,setConflict]=useState(false);const [formError,setFormError]=useState('');
  useEffect(()=>{let live=true;setDetail(undefined);setLoadError(undefined);request<Detail>('/roles/'+id).then(d=>{if(!live)return;const a=d.assignment;setDetail(d);setRole(a.role_key);setBuildingId(a.building_id??'');setUnitId(a.unit_id??'');setStarts(toLocalInput(a.starts_at));setExpires(toLocalInput(a.expires_at));setStartsEdited(false);setExpiresEdited(false);setConflict(false);setError(undefined);setFormError('')}).catch(e=>{if(live)setLoadError(e)});return()=>{live=false}},[id,loadRev]);
  const editable=!!detail?.editable;
- useEffect(()=>{if(!editable)return;let live=true;setRefError(undefined);Promise.all([request<Building[]>('/properties'),request<UnitRow[]>('/units')]).then(([b,u])=>{if(live){setBuildings(Array.isArray(b)?b:[]);setUnits(Array.isArray(u)?u:[])}}).catch(e=>{if(live)setRefError(e)});return()=>{live=false}},[editable]);
+ useEffect(()=>{if(!editable)return;let live=true;setRefError(undefined);request<{buildings:Building[];units:UnitRow[]}>('/roles/'+id+'/options').then(d=>{if(live){setBuildings(d.buildings);setUnits(d.units)}}).catch(e=>{if(live)setRefError(e)});return()=>{live=false}},[editable,id,loadRev]);
   function changeRole(r:string){setRole(r)}
  async function submit(e:FormEvent){e.preventDefault();if(busyRef.current||!detail)return;setFormError('');setError(undefined);
   const a=detail.assignment;

@@ -31,6 +31,37 @@ before(async()=>{
  adminAssignment=(await pool.query("SELECT * FROM role_assignments WHERE user_id=$1 AND role_key='org_admin'",[seeded.accounts.org_admin.id])).rows[0];
 });
 after(async()=>{server.close();server.closeAllConnections();await pool.end()});
+test('platform scope editor and resource debugger share tenant checks without business access',async()=>{
+ const platform=await new Client().login('platform_admin');
+ const a=(await pool.query("SELECT * FROM role_assignments WHERE user_id=$1 AND role_key='technician'",[seeded.accounts.technician.id])).rows[0];
+ const detail=await platform.call('/roles/'+a.id);assert.equal(detail.status,200);assert.equal(detail.data.editable,true);
+ const options=await platform.call('/roles/'+a.id+'/options');assert.equal(options.status,200);
+ const unit=options.data.units[0];assert.ok(unit);
+ assert.deepEqual(Object.keys(unit).sort(),['building_id','id','number']);
+ const values={version:detail.data.assignment.version,roleKey:'manager',buildingId:unit.building_id,unitId:unit.id,startsAt:a.starts_at,expiresAt:null};
+ assert.equal((await platform.call('/roles/'+a.id,'PATCH',values)).status,200);
+ assert.equal((await platform.call('/roles/'+a.id,'PATCH',values)).status,409);
+ const assigned=new Client();await assigned.call('/auth/session');
+ const u=seeded.accounts.technician;
+ const login=await assigned.call('/auth/login','POST',{email:u.email,password:u.password});
+ assert.equal(login.status,200);await assigned.call('/auth/context','POST',{id:a.id});
+ const foreign=(await pool.query('SELECT id FROM units WHERE organization_id<>$1 LIMIT 1',[a.organization_id])).rows[0];
+ for(const [id,status] of [[unit.id,200],[foreign.id,404]] as const){
+  assert.equal((await assigned.call('/units/'+id)).status,status);
+  const explanation=await platform.call('/iam/assignments/'+a.id+'/access','POST',{method:'GET',unitId:id});
+  assert.equal(explanation.status,200);assert.equal(explanation.data.resource.allowed,status===200);
+  assert.equal(explanation.data.resource.unit,undefined);
+ }
+ assert.equal((await platform.call('/units/'+unit.id)).status,403);
+ assert.equal((await platform.call('/invoices')).status,403);
+ assert.equal((await other.call('/roles/'+a.id+'/options')).status,404);
+ const admin=(await platform.call('/roles/'+adminAssignment.id)).data.assignment;
+ assert.equal((await platform.call('/iam/assignments/'+admin.id+'/status','POST',{version:admin.version,status:'suspended',reason:'Last administrator test'})).status,409);
+ const card=(await platform.call('/iam/users/'+u.id)).data;
+ assert.ok(card.sessions.length);assert.match(card.sessions[0].id,/^[a-f0-9]{32}$/);
+ assert.equal((await platform.call('/iam/users/'+u.id+'/logout','POST',{sessionId:card.sessions[0].id,reason:'Isolated session revocation'})).status,204);
+ assert.equal((await assigned.call('/units/'+unit.id)).status,401);
+});
 async function updateBody(id=assignment.id){
  const r=await org.call('/roles/'+id);assert.equal(r.status,200);
  const a=r.data.assignment;
@@ -154,4 +185,50 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  assert.equal((await pool.query('SELECT blocked FROM users WHERE id=$1',[a.user_id])).rows[0].blocked,false);
  assert.equal((await org.call('/iam/users/'+seeded.accounts.manager.id+'/logout','POST',{reason:'Not platform administrator'})).status,403);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM roles')).rows[0].n,14);
+});
+test('profiles cannot bypass module, subscription or required MFA gates',async()=>{
+ const platform=await new Client().login('platform_admin'),m=await new Client().login('manager');
+ const a=(await pool.query("SELECT * FROM role_assignments WHERE user_id=$1 AND role_key='manager'",[seeded.accounts.manager.id])).rows[0];
+ const oldModule=(await pool.query("SELECT * FROM module_entitlements WHERE organization_id=$1 AND module='documents'",[a.organization_id])).rows[0];
+ try{
+  await pool.query("UPDATE module_entitlements SET override_state='disabled' WHERE organization_id=$1 AND module='documents'",[a.organization_id]);
+  assert.equal((await m.call('/documents')).status,403);
+  const explanation=await platform.call('/iam/assignments/'+a.id+'/access');
+  assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='documents.read').reason,'module_disabled');
+ }finally{await pool.query("UPDATE module_entitlements SET override_state=$2 WHERE organization_id=$1 AND module='documents'",[a.organization_id,oldModule.override_state])}
+ const oldOrg=(await pool.query('SELECT subscription_enforced FROM organizations WHERE id=$1',[a.organization_id])).rows[0];
+ const subscriptions=(await pool.query('SELECT id,status FROM subscriptions WHERE organization_id=$1',[a.organization_id])).rows;
+ try{
+  await pool.query('UPDATE organizations SET subscription_enforced=true WHERE id=$1',[a.organization_id]);
+  await pool.query("UPDATE subscriptions SET status='paused' WHERE organization_id=$1",[a.organization_id]);
+  const explanation=await platform.call('/iam/assignments/'+a.id+'/access','POST',{method:'PATCH'});
+  assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='properties.read').reason,'subscription_restricted');
+  assert.equal((await org.call('/roles/'+a.id,'PATCH',await updateBody(a.id))).status,403);
+ }finally{
+  await pool.query('UPDATE organizations SET subscription_enforced=$2 WHERE id=$1',[a.organization_id,oldOrg.subscription_enforced]);
+  for(const s of subscriptions)await pool.query('UPDATE subscriptions SET status=$2 WHERE id=$1',[s.id,s.status]);
+ }
+ const unit=(await pool.query('SELECT id FROM units WHERE organization_id=$1 LIMIT 1',[a.organization_id])).rows[0];
+ const additional=(await pool.query("INSERT INTO role_assignments(user_id,organization_id,role_key) VALUES($1,$2,'accountant') RETURNING id",[a.user_id,a.organization_id])).rows[0];
+ try{
+  const current=(await org.call('/roles/'+a.id)).data.assignment;
+  assert.equal((await org.call('/iam/assignments/'+a.id+'/status','POST',{version:current.version,status:'suspended',reason:'Isolate one assignment only'})).status,204);
+  const session=await m.call('/auth/session');
+  assert.ok(session.data.contexts.some((c:any)=>c.id===additional.id));
+  assert.ok(!session.data.contexts.some((c:any)=>c.id===a.id));
+  assert.equal((await m.call('/auth/context','POST',{id:additional.id})).status,200);
+  assert.equal((await m.call('/properties')).status,200);
+ }finally{
+  const current=(await org.call('/roles/'+a.id)).data.assignment;
+  await org.call('/iam/assignments/'+a.id+'/status','POST',{version:current.version,status:'active',reason:'Restore test assignment'});
+  await pool.query('DELETE FROM role_assignments WHERE id=$1',[additional.id]);
+ }
+ const policy=(await pool.query("INSERT INTO mfa_policies(organization_id,role_key,required,enforce_after) VALUES($1,'org_admin',true,now()-interval '1 minute') RETURNING id",[a.organization_id])).rows[0];
+ try{
+  const actual=await org.call('/units/'+unit.id);
+  assert.equal(actual.status,403);
+  const explanation=await platform.call('/iam/assignments/'+adminAssignment.id+'/access','POST',{method:'GET',unitId:unit.id});
+  assert.equal(explanation.data.resource.allowed,false);
+  assert.equal(explanation.data.resource.reason,'mfa_enrollment_required');
+ }finally{await pool.query('DELETE FROM mfa_policies WHERE id=$1',[policy.id])}
 });

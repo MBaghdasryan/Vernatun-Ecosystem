@@ -9,4 +9,7 @@ import type { IamAccessInputMethod } from './iamAccessInputMethod';
 
 export interface IamAccessInput {
   method: IamAccessInputMethod;
+  unitId?: string;
+  /** @pattern ^[a-f0-9]{32}$ */
+  sessionId?: string;
 }

@@ -8,6 +8,16 @@
 import * as zod from 'zod';
 
 
+/**
+ * IAM-only building and unit identifiers and labels. Does not grant tenant business-data access.
+ */
+export const GetAssignmentScopeOptionsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetAssignmentScopeOptionsResponse = zod.record(zod.string(), zod.unknown())
+
+
 export const GetIamCatalogResponse = zod.record(zod.string(), zod.unknown())
 
 
@@ -141,8 +151,13 @@ export const SimulateIamAccessParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const simulateIamAccessBodySessionIdRegExp = new RegExp('^[a-f0-9]{32}$');
+
+
 export const SimulateIamAccessBody = zod.object({
-  "method": zod.enum(['GET', 'POST', 'PATCH', 'DELETE'])
+  "method": zod.enum(['GET', 'POST', 'PATCH', 'DELETE']),
+  "unitId": zod.string().uuid().optional(),
+  "sessionId": zod.string().regex(simulateIamAccessBodySessionIdRegExp).optional()
 })
 
 export const SimulateIamAccessResponse = zod.record(zod.string(), zod.unknown())

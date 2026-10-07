@@ -5,6 +5,9 @@ import {context,contexts,requirePermission,ApiError,type Context} from './access
 import {roleCatalog,organizationDelegableRoles} from './roles.js';
 import {transaction,record} from './operations.js';
 import {assignmentPermissions,permissionCatalog,permissionDecision,exceptionalGrantAllowlist} from './iam-evaluator.js';
+import {unitReadDecision} from './iam-resource.js';
+import {policyState} from './mfa-policy.js';
+import {preserveAdministrator} from './assignment-management.js';
 export const iam=Router();
 const uuid=z.string().uuid(),reason=z.string().trim().min(5).max(1000);
 const isPlatform=(c:Context)=>c.role_key==='platform_admin'&&!c.organization_id;
@@ -13,9 +16,9 @@ async function actor(req:Request,readOnly=false){
  const decision=await permissionDecision(c,isPlatform(c)?'organizations.manage':'roles.assign',readOnly?'GET':req.method);
  if(!decision.allowed)throw new ApiError(403,decision.reason);return c;
 }
-async function target(req:Request,id:string,readOnly=false){
+async function target(req:Request,id:string,readOnly=false,db?:any){
  const c=await actor(req,readOnly);
- const a=(await pool.query('SELECT *,xmin::text AS version FROM role_assignments WHERE id=$1',[id])).rows[0];
+ const a=(await (db??pool).query('SELECT *,xmin::text AS version FROM role_assignments WHERE id=$1'+(db?' FOR UPDATE':''),[id])).rows[0];
  if(!a||(!isPlatform(c)&&(a.organization_id!==c.organization_id||
   (c.building_id&&c.building_id!==a.building_id)||(c.unit_id&&c.unit_id!==a.unit_id))))throw new ApiError(404,'not_found');
  return {c,a};
@@ -90,7 +93,11 @@ iam.get('/iam/users/:id',async(req,res)=>{
  const history=(await pool.query(`SELECT action,entity_id,details,created_at FROM audit_events
  WHERE (entity_type='role_assignment' AND entity_id=ANY($1::text[]))
  OR ($2 AND entity_type='user' AND entity_id=$3) ORDER BY created_at DESC LIMIT 100`,[ids,isPlatform(c),id])).rows;
- res.json({user,assignments,sessions,history,platform:isPlatform(c)});
+ res.json({user,assignments:assignments.map(a=>({...a,
+  canEditScope:a.user_id!==req.user!.id&&a.active&&!!a.organization_id&&!['unit_owner','renter','family','support','platform_admin'].includes(a.role_key),
+  canChangePolicy:a.user_id!==req.user!.id&&a.active&&!!a.organization_id&&!['org_admin','unit_owner','renter','family','support','platform_admin'].includes(a.role_key),
+  canChangeStatus:a.user_id!==req.user!.id&&a.assignment_status!=='revoked'&&!['unit_owner','renter','family','support','platform_admin'].includes(a.role_key)})),
+ sessions,history,platform:isPlatform(c),canManageAccount:isPlatform(c)&&id!==req.user!.id});
 });
 async function accountAction(req:Request,id:string,b:{status?:string;sessionId?:string;reason:string}){
  const c=await actor(req);if(!isPlatform(c)||id===req.user!.id)throw new ApiError(403,'forbidden');
@@ -125,18 +132,37 @@ iam.post('/users/:id/block',async(req,res)=>{await accountAction(req,uuid.parse(
 async function explainAccess(req:Request,res:Response){
  const {c,a}=await target(req,uuid.parse(req.params.id),true);
  const active=(await contexts(a.user_id)).find(x=>x.id===a.id);
- const catalog=permissionCatalog(),method=req.method==='POST'?z.object({method:z.enum(['GET','POST','PATCH','DELETE'])}).strict().parse(req.body).method:'GET';
+ const input=z.object({method:z.enum(['GET','POST','PATCH','DELETE']),unitId:uuid.optional(),sessionId:z.string().regex(/^[a-f0-9]{32}$/).optional()}).strict().parse(req.method==='POST'?req.body:{method:'GET'});
+ const catalog=permissionCatalog(),method=input.method;
  const evaluations=await Promise.all(catalog.map(async permission=>({permission,...(active?await permissionDecision(active,permission,method):{allowed:false,reason:'inactive_context'})})));
  const evaluated=await assignmentPermissions({...a,permissions:[...roleCatalog[a.role_key as keyof typeof roleCatalog].permissions]});
+ let resource:null|Record<string,unknown>=null;
+ if(input.unitId){
+  const decision=await unitReadDecision(active,input.unitId);
+  // Never reveal another user's reusable session ID or tenant unit data.
+  const session=input.sessionId&&isPlatform(c)?(await pool.query(`SELECT sess FROM session
+   WHERE md5(sid)=$1 AND sess->'passport'->>'user'=$2 AND sess->>'contextId'=$3 AND expire>now()`,
+   [input.sessionId,a.user_id,a.id])).rows[0]?.sess:undefined;
+  if(input.sessionId&&!isPlatform(c))throw new ApiError(403,'forbidden');
+  const mfa=active?await policyState({user:{id:a.user_id},session:session??{}} as Request,active):null;
+  const sessionReason=input.sessionId&&!session?'session_unavailable':
+   mfa?.enforced&&!mfa.enrolled?'mfa_enrollment_required':
+   mfa?.enforced&&!mfa.verified?(session?'mfa_verification_required':'target_session_required'):null;
+  resource={kind:'unit',id:input.unitId,operation:'GET /units/:id',
+   allowed:decision.allowed&&!sessionReason,
+   conditional:decision.allowed&&sessionReason==='target_session_required',
+   reason:decision.allowed?(sessionReason??decision.reason):decision.reason,
+   sessionChecked:!!session,scopeAllowed:decision.allowed};
+ }
  res.json({assignmentId:a.id,active:!!active,scope:{organizationId:a.organization_id,buildingId:a.building_id,unitId:a.unit_id},
- ...evaluated,evaluations,method,limit:'Permission/module/subscription explanation only. Resource ownership, workflow state, and current-session MFA must still pass the endpoint checks.',viewer:isPlatform(c)?'platform':'organization'});
+ ...evaluated,evaluations,method,resource,limit:'Permission matrix is not a workflow authorization. Unit read uses the production unit endpoint evaluator and current account/assignment/lifecycle scope. Enforced MFA requires a verified target session. Other business mutations retain their endpoint-specific state checks.',viewer:isPlatform(c)?'platform':'organization'});
 }
 iam.get('/iam/assignments/:id/access',explainAccess);
 iam.post('/iam/assignments/:id/access',explainAccess);
 iam.post('/iam/assignments/:id/policy',async(req,res)=>{
  const id=uuid.parse(req.params.id),b=z.object({version:z.string(),profileId:uuid.nullable(),denies:z.array(z.string()).max(100),grants:z.array(z.string()).max(10),reason,expiresAt:z.string().datetime({offset:true}).nullable()}).strict().parse(req.body);
  res.json(await transaction(async db=>{
-  await lockIam(db);const {c,a}=await target(req,id);
+  await lockIam(db);const {c,a}=await target(req,id,false,db);
   if(a.user_id===req.user!.id||!a.organization_id||['platform_admin','support','org_admin','unit_owner','renter','family'].includes(a.role_key))throw new ApiError(403,'forbidden');
   if(!a.active||a.version!==b.version)throw new ApiError(409,'concurrent_change');
   if(b.expiresAt&&Date.parse(b.expiresAt)<=Date.now())throw new ApiError(400,'invalid_dates');
@@ -154,19 +180,20 @@ iam.post('/iam/assignments/:id/policy',async(req,res)=>{
   for(const [effect,keys] of [['deny',b.denies],['grant',b.grants]] as const)
    for(const key of new Set(keys))await db.query('INSERT INTO iam_assignment_rules(assignment_id,permission_key,effect,reason,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6)',[id,key,effect,b.reason,b.expiresAt,req.user!.id]);
   const savedRules=(await db.query('SELECT permission_key,effect,reason,expires_at FROM iam_assignment_rules WHERE assignment_id=$1',[id])).rows;
-  await record(db,req,c,'iam.assignment.policy','role_assignment',id,{before:{profileId:a.profile_id,rules:previous},after:{profileId:b.profileId,rules:savedRules},reason:b.reason});
+  await record(db,req,{...c,organization_id:a.organization_id},'iam.assignment.policy','role_assignment',id,{before:{profileId:a.profile_id,rules:previous},after:{profileId:b.profileId,rules:savedRules},reason:b.reason});
   return {saved:true};
  }));
 });
 iam.post('/iam/assignments/:id/status',async(req,res)=>{
  const id=uuid.parse(req.params.id),b=z.object({version:z.string(),status:z.enum(['active','suspended','revoked']),reason}).strict().parse(req.body);
  await transaction(async db=>{
-  await lockIam(db);const {c,a}=await target(req,id);
-  if(a.user_id===req.user!.id||['platform_admin','org_admin','unit_owner','renter','family','support'].includes(a.role_key))throw new ApiError(403,'forbidden');
+  await lockIam(db);const {c,a}=await target(req,id,false,db);
+   if(a.user_id===req.user!.id||['platform_admin','unit_owner','renter','family','support'].includes(a.role_key))throw new ApiError(403,'forbidden');
   if(a.version!==b.version)throw new ApiError(409,'concurrent_change');
   if(a.assignment_status==='revoked')throw new ApiError(409,'revoked_assignment');
+   if(b.status!=='active')await preserveAdministrator(db,a);
   await db.query('UPDATE role_assignments SET assignment_status=$2 WHERE id=$1',[id,b.status]);
-  await record(db,req,c,'iam.assignment.status','role_assignment',id,{before:a.assignment_status,after:b.status,reason:b.reason});
+   await record(db,req,{...c,organization_id:a.organization_id},'iam.assignment.status','role_assignment',id,{before:a.assignment_status,after:b.status,reason:b.reason});
  });
  res.status(204).end();
 });

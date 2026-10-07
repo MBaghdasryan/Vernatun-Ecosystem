@@ -170,6 +170,80 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetAssignmentScopeOptionsUrl = (id: string,) => {
+
+
+
+
+  return `/api/roles/${id}/options`
+}
+
+/**
+ * IAM-only building and unit identifiers and labels. Does not grant tenant business-data access.
+ */
+export const getAssignmentScopeOptions = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+  return customFetch<IamRecord>(getGetAssignmentScopeOptionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAssignmentScopeOptionsQueryKey = (id: string,) => {
+    return [
+    `/api/roles/${id}/options`
+    ] as const;
+    }
+
+
+export const getGetAssignmentScopeOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getAssignmentScopeOptions>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssignmentScopeOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssignmentScopeOptionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssignmentScopeOptions>>> = ({ signal }) => getAssignmentScopeOptions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssignmentScopeOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAssignmentScopeOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getAssignmentScopeOptions>>>
+export type GetAssignmentScopeOptionsQueryError = ErrorType<void>
+
+
+
+export function useGetAssignmentScopeOptions<TData = Awaited<ReturnType<typeof getAssignmentScopeOptions>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssignmentScopeOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAssignmentScopeOptionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetIamCatalogUrl = () => {
 
 

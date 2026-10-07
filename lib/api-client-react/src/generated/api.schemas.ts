@@ -17,6 +17,9 @@ export const IamAccessInputMethod = {
 
 export interface IamAccessInput {
   method: IamAccessInputMethod;
+  unitId?: string;
+  /** @pattern ^[a-f0-9]{32}$ */
+  sessionId?: string;
 }
 
 export interface IamRecord { [key: string]: unknown }

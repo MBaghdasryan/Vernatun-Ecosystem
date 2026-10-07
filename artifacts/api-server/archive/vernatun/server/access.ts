@@ -6,6 +6,7 @@ import {subscriptionPolicy} from './subscription-policy.js';
 import {activeLeasePredicate} from './lease-policy.js';
 import {assertMfaContext} from './mfa-policy.js';
 import {assignmentPermissions,permissionDecision} from './iam-evaluator.js';
+import {scopedUnitRow,unitReadDecision} from './iam-resource.js';
 export class ApiError extends Error{constructor(public status:number,public code:string){super(code)}}
 export type Context={id:string;role_key:string;shell:string;organization_id:string|null;organization_name:string|null;brand_color?:string;building_id:string|null;building_name?:string|null;unit_id:string|null;unit_number?:string|null;expires_at:string|null;permissions:string[];product?:string;products?:string[];startRoute?:string;modules?:string[]};
 declare global{namespace Express{interface User{id:string;email:string;name:string;locale:'hy'|'ru'|'en';currency:'AMD'|'RUB'|'USD'}}}
@@ -30,4 +31,9 @@ export function requireAuth(req:Request,_res:Response,next:NextFunction){
 }
 export async function context(req:Request):Promise<Context>{if(!req.user)throw new ApiError(401,'unauthenticated');const available=await contexts(req.user.id);const c=available.find(c=>c.id===req.session.contextId);if(!c)throw new ApiError(403,'context_required');await assertMfaContext(req,c);return c;}
 export async function requirePermission(req:Request,permission:string){const c=await context(req);const decision=await permissionDecision(c,permission,req.method);if(!decision.allowed)throw new ApiError(403,decision.reason);return c;}
-export async function scopedUnit(c:Context,id:string){if(!c.organization_id)throw new ApiError(403,'forbidden');const r=await pool.query('SELECT * FROM units WHERE id=$1 AND organization_id=$2 AND ($3::uuid IS NULL OR building_id=$3) AND ($4::uuid IS NULL OR id=$4)',[id,c.organization_id,c.building_id,c.unit_id]);if(!r.rows[0])throw new ApiError(404,'not_found');return r.rows[0];}
+export async function scopedUnit(c:Context,id:string){if(!c.organization_id)throw new ApiError(403,'forbidden');const unit=await scopedUnitRow(c,id);if(!unit)throw new ApiError(404,'not_found');return unit;}
+export async function requireUnitRead(req:Request,id:string){
+ const result=await unitReadDecision(await context(req),id);
+ if(!result.allowed)throw new ApiError(result.reason==='not_found'?404:403,result.reason);
+ return result.unit;
+}

@@ -11,6 +11,15 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /roles/{id}/options:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getAssignmentScopeOptions
+      description: IAM-only building and unit identifiers and labels. Does not grant tenant business-data access.
+      responses:
+        '200': { description: Scope selectors, content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '404': { description: Assignment outside authorized scope }
   /iam/catalog:
     get:
       operationId: getIamCatalog
@@ -1550,6 +1559,8 @@ components:
       required: [method]
       properties:
         method: { type: string, enum: [GET, POST, PATCH, DELETE] }
+        unitId: { type: string, format: uuid }
+        sessionId: { type: string, pattern: '^[a-f0-9]{32}$' }
     IamRecord:
       type: object
       additionalProperties: true

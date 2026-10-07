@@ -14,6 +14,7 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
  const [card,setCard]=useState<any>(),[userId,setUserId]=useState<string>(),[scopeId,setScopeId]=useState<string>();
  const [draft,setDraft]=useState<any>(),[matrixRole,setMatrixRole]=useState('manager'),[policy,setPolicy]=useState<any>();
  const [access,setAccess]=useState<any>(),[accessId,setAccessId]=useState<string>(),[method,setMethod]=useState('GET');
+ const [unitDraft,setUnitDraft]=useState(''),[unitId,setUnitId]=useState(''),[sessionId,setSessionId]=useState('');
  const [action,setAction]=useState<{kind:string;id:string;status?:string;sessionId?:string;version?:string}>(),[reason,setReason]=useState('');
  const refresh=()=>setRevision(v=>v+1);
  useEffect(()=>{let live=true;setLoading(true);setError(undefined);
@@ -25,9 +26,9 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
   request('/iam/users/'+userId).then(d=>{if(live)setCard(d)}).catch(setError);return()=>{live=false};
  },[userId,revision]);
  useEffect(()=>{if(!accessId)return;let live=true;setAccess(undefined);
-  request('/iam/assignments/'+accessId+'/access','POST',{method}).then(d=>{if(live)setAccess(d)}).catch(setError);
+  request('/iam/assignments/'+accessId+'/access','POST',{method,...(unitId?{unitId}:{}),...(sessionId?{sessionId}:{})}).then(d=>{if(live)setAccess(d)}).catch(setError);
   return()=>{live=false};
- },[accessId,method,revision]);
+ },[accessId,method,revision,unitId,sessionId]);
  async function run(fn:()=>Promise<unknown>,done:()=>void){
   if(busy)return;setBusy(true);setError(undefined);
   try{await fn();done();refresh()}catch(e){setError(e)}finally{setBusy(false)}
@@ -57,16 +58,16 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
   </main>
   {userId&&<Modal title={users} onClose={()=>setUserId(undefined)}>{errorBox}{!card?<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>:<>
    <h2>{card.user.name}</h2><p>{card.user.email} · {statusLabel(card.user.account_status)} · MFA: {card.user.mfa_enabled?'✓':'—'}</p>
-   {platform&&<div className="iam-row">{['active','locked','disabled'].map(status=>button(statusLabel(status),()=>{setReason('');setAction({kind:'account',id:card.user.id,status})},status===card.user.account_status))}{button(tr('Ավարտել բոլոր սեանսները','Завершить все сессии','Force logout'),()=>{setReason('');setAction({kind:'logout',id:card.user.id})})}</div>}
+   {card.canManageAccount&&<div className="iam-row">{['active','locked','disabled'].map(status=>button(statusLabel(status),()=>{setReason('');setAction({kind:'account',id:card.user.id,status})},status===card.user.account_status))}{button(tr('Ավարտել բոլոր սեանսները','Завершить все сессии','Force logout'),()=>{setReason('');setAction({kind:'logout',id:card.user.id})})}</div>}
    <h3>{tr('Նշանակումներ','Назначения','Assignments')}</h3>{card.assignments.map((a:any)=><section className="iam-record" key={a.id}><strong>{roleName(language,a.role_key)} · {a.organization_name??'Vernatun Console'}</strong><span>{statusLabel(a.assignment_status)} · {a.building_id??tr('Ամբողջ կազմակերպությունը','Вся организация','Organization-wide')} · {a.expires_at?new Date(a.expires_at).toLocaleString():tr('Անժամկետ','Бессрочно','No expiration')}</span><div className="iam-row">
-    {!platform&&button(tr('Դեր և սահմաններ','Роль и границы','Role and scope'),()=>setScopeId(a.id))}
+    {a.canEditScope&&button(tr('Դեր և սահմաններ','Роль и границы','Role and scope'),()=>setScopeId(a.id))}
     {button(tr('Փաստացի հասանելիություն','Эффективный доступ','Effective access'),()=>setAccessId(a.id))}
-    {!['org_admin','platform_admin','support','unit_owner','renter','family'].includes(a.role_key)&&<>
+    {a.canChangePolicy&&<>
      {button(tr('Սահմանափակումներ','Ограничения','Restrictions'),async()=>{try{const d=await request<any>('/iam/assignments/'+a.id+'/access');setPolicy({id:a.id,version:a.version,baseRole:a.role_key,profileId:a.profile_id??'',denies:d.rules.filter((r:any)=>r.effect==='deny').map((r:any)=>r.permission_key),grants:d.rules.filter((r:any)=>r.effect==='grant').map((r:any)=>r.permission_key),reason:'',expiresAt:''})}catch(e){setError(e)}})}
-     {a.assignment_status!=='revoked'&&['active','suspended','revoked'].filter(s=>s!==a.assignment_status).map(status=>button(statusLabel(status),()=>{setReason('');setAction({kind:'assignment',id:a.id,status,version:a.version})}))}
     </>}
+    {a.canChangeStatus&&['active','suspended','revoked'].filter(s=>s!==a.assignment_status).map(status=>button(statusLabel(status),()=>{setReason('');setAction({kind:'assignment',id:a.id,status,version:a.version})}))}
    </div></section>)}
-   {platform&&<><h3>{tr('Սեանսներ','Сессии','Sessions')}</h3>{card.sessions.length?card.sessions.map((s:any)=><div className="iam-record" key={s.id}><span>{s.created_at??'—'} → {new Date(s.expire).toLocaleString()}</span>{button(tr('Ավարտել','Завершить','Revoke'),()=>{setReason('');setAction({kind:'logout',id:card.user.id,sessionId:s.id})})}</div>):<p>{tr('Ակտիվ սեանսներ չկան','Активных сессий нет','No active sessions')}</p>}</>}
+   {platform&&<><h3>{tr('Սեանսներ','Сессии','Sessions')}</h3>{card.sessions.length?card.sessions.map((s:any)=><div className="iam-record" key={s.id}><span>{s.created_at??'—'} → {new Date(s.expire).toLocaleString()}</span>{card.canManageAccount&&button(tr('Ավարտել','Завершить','Revoke'),()=>{setReason('');setAction({kind:'logout',id:card.user.id,sessionId:s.id})})}</div>):<p>{tr('Ակտիվ սեանսներ չկան','Активных сессий нет','No active sessions')}</p>}</>}
    <h3>{tr('Վերջին փոփոխություններ','Последние изменения','Recent changes')}</h3>{card.history.map((h:any,i:number)=><details key={i}><summary>{new Date(h.created_at).toLocaleString()} · {h.action}</summary><pre>{JSON.stringify(h.details,null,2)}</pre></details>)}
   </>}</Modal>}
   {scopeId&&<EmployeeAssignment id={scopeId} language={language} onClose={()=>setScopeId(undefined)} onSaved={refresh} Modal={Modal} ErrorNotice={ErrorNotice}/>}
@@ -85,7 +86,15 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
    <label>{tr('Մինչև','До','Expires')}<input type="datetime-local" required={platform&&policy.grants.length>0} value={policy.expiresAt} onChange={e=>setPolicy({...policy,expiresAt:e.target.value})}/></label>
    <label>{tr('Պատճառ','Причина','Reason')}<textarea required minLength={5} maxLength={1000} value={policy.reason} onChange={e=>setPolicy({...policy,reason:e.target.value})}/></label><button className="p-button orange" disabled={busy}>{save}</button>
   </form></Modal>}
-  {accessId&&<Modal title={tr('Հասանելիության բացատրություն','Объяснение доступа','Access explanation')} onClose={()=>setAccessId(undefined)}>{errorBox}<label>{tr('Գործողություն','Метод запроса','Request method')}<select value={method} onChange={e=>setMethod(e.target.value)}>{['GET','POST','PATCH','DELETE'].map(m=><option key={m}>{m}</option>)}</select></label><p>{tr('Սա թույլտվությունների, մոդուլների և բաժանորդագրության ստուգում է։ Օբյեկտի իրավունքը, գործարքի վիճակը և ընթացիկ սեանսի MFA-ը ստուգվում են առանձին։','Проверка прав, модулей и подписки. Доступ к конкретному объекту, состояние операции и MFA текущей сессии проверяются дополнительно в API.','Checks permissions, modules and subscription. Resource ownership, workflow state and current-session MFA are separately enforced by the endpoint.')}</p>{access?<><pre>{JSON.stringify(access.scope,null,2)}</pre><div className="iam-table"><table><tbody>{access.evaluations.map((p:any)=><tr key={p.permission}><td><code>{p.permission}</code></td><td>{p.allowed?'✓':'—'} {p.reason}</td></tr>)}</tbody></table></div></>:<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>}</Modal>}
+  {accessId&&<Modal title={tr('Հասանելիության բացատրություն','Объяснение доступа','Access explanation')} onClose={()=>{setAccessId(undefined);setUnitId('');setUnitDraft('');setSessionId('')}}>
+   {errorBox}<label>{tr('Գործողություն','Метод запроса','Request method')}<select value={method} onChange={e=>setMethod(e.target.value)}>{['GET','POST','PATCH','DELETE'].map(m=><option key={m}>{m}</option>)}</select></label>
+   <form onSubmit={e=>{e.preventDefault();setUnitId(unitDraft.trim());refresh()}}><label>{tr('Տարածքի ID · GET /units/:id','ID помещения · GET /units/:id','Unit ID · GET /units/:id')}<input value={unitDraft} onChange={e=>setUnitDraft(e.target.value)} placeholder="UUID" pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"/></label>
+    {platform&&<label>{tr('Օգտատիրոջ սեանս · MFA','Сессия пользователя · MFA','Target session · MFA')}<select value={sessionId} onChange={e=>setSessionId(e.target.value)}><option value="">{tr('Չի ընտրված','Не выбрана','Not selected')}</option>{card?.sessions.map((s:any)=><option key={s.id} value={s.id}>{new Date(s.expire).toLocaleString()} · {s.id.slice(0,8)}</option>)}</select></label>}
+    <button className="p-button">{tr('Ստուգել','Проверить','Check')}</button>
+   </form>
+   <p>{tr('Մատրիցան ստուգում է իրավունքները, մոդուլները և բաժանորդագրությունը։ Տարածքի ընթերցումը օգտագործում է API-ի նույն ստուգումը։ Այլ գործարքների վիճակը ստուգվում է դրանց endpoint-ում։','Матрица проверяет права, модули и подписку. Чтение помещения использует тот же серверный расчёт, что GET /units/:id. Без подтверждённой сессии обязательная MFA даёт условный результат. Проверки состояния других бизнес-операций выполняются их endpoint.','The matrix checks permissions, modules and subscription. Unit read uses the same evaluator as GET /units/:id. Enforced MFA is conditional without a verified target session. Other workflow state checks remain in their endpoints.')}</p>
+   {access?<><pre>{JSON.stringify(access.scope,null,2)}</pre>{access.resource&&<p role="status"><strong>{access.resource.conditional?tr('Պայմանական','Условно','Conditional'):access.resource.allowed?tr('Թույլատրված է','Разрешено','Allowed'):tr('Արգելված է','Запрещено','Denied')}</strong> · {access.resource.reason} · {access.resource.operation}</p>}<div className="iam-table"><table><tbody>{access.evaluations.map((p:any)=><tr key={p.permission}><td><code>{p.permission}</code></td><td>{p.allowed?'✓':'—'} {p.reason}</td></tr>)}</tbody></table></div></>:!error&&<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>}
+  </Modal>}
   {action&&<Modal title={tr('Հաստատել փոփոխությունը','Подтвердить изменение','Confirm change')} onClose={()=>setAction(undefined)}>{errorBox}<form onSubmit={e=>{e.preventDefault();void run(()=>action.kind==='assignment'?request('/iam/assignments/'+action.id+'/status','POST',{version:action.version,status:action.status,reason}):request('/iam/users/'+action.id+(action.kind==='account'?'/status':'/logout'),'POST',{reason,...(action.status?{status:action.status}:{}),...(action.sessionId?{sessionId:action.sessionId}:{})}),()=>setAction(undefined))}}><p>{action.status?statusLabel(action.status):tr('Սեանսները կավարտվեն','Сессии будут завершены','Sessions will be ended')}</p><label>{tr('Պատճառ','Причина','Reason')}<textarea required minLength={5} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label><div className="iam-row">{button(cancel,()=>setAction(undefined))}<button className="p-button orange" disabled={busy}>{save}</button></div></form></Modal>}
  </div>;
 }
