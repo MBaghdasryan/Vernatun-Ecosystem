@@ -32,3 +32,9 @@ description: Active completion requirements and how role-specific reference scre
 **Why:** Пользователь повторно уточнил «Do not postpone IAM again» и потребовал реальные изменения кода в каждой итерации.
 
 **How to apply:** Сначала IAM foundation → Platform Admin UI → Organization Admin UI. Затем shared shell и ролевые панели в заданном промптом порядке. Для прогресса использовать COMPLETE / PARTIAL / EXTERNAL BLOCKER / INTENTIONALLY NOT ALLOWED с отдельными API, browser и negative-permission доказательствами.
+
+После передачи двух новых промптов пользователь явно выбрал: сначала завершить экраны и приёмку ролей, затем Platform Operations Center, затем Payments & Utility Billing.
+
+**Why:** Пользователь подтвердил этот порядок, несмотря на объём новых промптов; новые документы не отменяют незавершённую приёмку.
+
+**How to apply:** Не заменять реализацию оставшихся функций ролей баннерами «недоступно» и не объявлять полный этап принятым по одному успешному smoke-тесту главных экранов.

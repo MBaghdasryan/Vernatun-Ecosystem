@@ -17,6 +17,8 @@ const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_
 let status=0;
 const checks=process.argv.includes('--browser-only')
  ? [['server/tests/browser-sandbox.ts']]
+ : process.argv.includes('--role-dashboards-only')
+ ? [['--test','server/tests/role-dashboards.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
  : process.argv.includes('--phase8-only')

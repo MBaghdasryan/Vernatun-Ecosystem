@@ -1311,6 +1311,21 @@ export interface HealthStatus {
   status: string;
 }
 
+export type RoleInsightCardCurrency = typeof RoleInsightCardCurrency[keyof typeof RoleInsightCardCurrency];
+
+
+export const RoleInsightCardCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export interface RoleInsightCard {
+  key: string;
+  value: string;
+  currency?: RoleInsightCardCurrency;
+}
+
 /**
  * Authorized platform record; sensitive nested records remain permission-filtered.
  */
@@ -1320,6 +1335,27 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetRoleInsightsParams = {
+currency?: GetRoleInsightsCurrency;
+/**
+ * @pattern ^\d{4}-(0[1-9]|1[0-2])$
+ */
+period?: string;
+};
+
+export type GetRoleInsightsCurrency = typeof GetRoleInsightsCurrency[keyof typeof GetRoleInsightsCurrency];
+
+
+export const GetRoleInsightsCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type GetRoleInsights200 = {
+  cards: RoleInsightCard[];
+};
 
 export type ListIamUsersParams = {
 /**

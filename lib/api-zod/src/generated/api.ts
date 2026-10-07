@@ -9,6 +9,26 @@ import * as zod from 'zod';
 
 
 /**
+ * Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
+ */
+export const getRoleInsightsQueryPeriodRegExp = new RegExp('^\\d{4}-(0[1-9]|1[0-2])$');
+
+
+export const GetRoleInsightsQueryParams = zod.object({
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "period": zod.coerce.string().regex(getRoleInsightsQueryPeriodRegExp).optional()
+})
+
+export const GetRoleInsightsResponse = zod.object({
+  "cards": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.string(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional()
+}))
+})
+
+
+/**
  * IAM-only building and unit identifiers and labels. Does not grant tenant business-data access.
  */
 export const GetAssignmentScopeOptionsParams = zod.object({

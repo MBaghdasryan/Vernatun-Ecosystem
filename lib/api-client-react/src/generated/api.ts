@@ -63,6 +63,8 @@ import type {
   GetPortfolioAnalyticsParams,
   GetPrivateBrandLogoParams,
   GetPrivateStorageStatus200,
+  GetRoleInsights200,
+  GetRoleInsightsParams,
   GetScopedRecordPageParams,
   HealthStatus,
   IamAccessInput,
@@ -169,6 +171,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetRoleInsightsUrl = (params?: GetRoleInsightsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/role-insights?${stringifiedParams}` : `/api/role-insights`
+}
+
+/**
+ * Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
+ */
+export const getRoleInsights = async (params?: GetRoleInsightsParams, options?: Parameters<typeof customFetch>[1]): Promise<GetRoleInsights200> => {
+
+  return customFetch<GetRoleInsights200>(getGetRoleInsightsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoleInsightsQueryKey = (params?: GetRoleInsightsParams,) => {
+    return [
+    `/api/role-insights`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRoleInsightsQueryOptions = <TData = Awaited<ReturnType<typeof getRoleInsights>>, TError = ErrorType<void>>(params?: GetRoleInsightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoleInsights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoleInsightsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoleInsights>>> = ({ signal }) => getRoleInsights(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoleInsights>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoleInsightsQueryResult = NonNullable<Awaited<ReturnType<typeof getRoleInsights>>>
+export type GetRoleInsightsQueryError = ErrorType<void>
+
+
+
+export function useGetRoleInsights<TData = Awaited<ReturnType<typeof getRoleInsights>>, TError = ErrorType<void>>(
+ params?: GetRoleInsightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoleInsights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoleInsightsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAssignmentScopeOptionsUrl = (id: string,) => {
 
