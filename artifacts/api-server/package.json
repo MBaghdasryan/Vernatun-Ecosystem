@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:unit-plans": "cd archive/vernatun && node --import tsx server/tests/run.ts --unit-plans-only",
     "test:availability": "cd archive/vernatun && node --import tsx server/tests/run.ts --availability-only",
     "test:phase8": "cd archive/vernatun && tsx server/tests/run.ts --phase8-only",
     "test:phase7": "cd archive/vernatun && tsx server/tests/run.ts --phase7-only",

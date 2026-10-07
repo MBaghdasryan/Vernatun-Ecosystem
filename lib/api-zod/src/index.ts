@@ -1,4 +1,5 @@
 export * from "./generated/api";
+export type { UploadUnitPlanParams } from "./generated/types/uploadUnitPlanParams";
 export type { GetDefectCollaborationParams } from "./generated/types/getDefectCollaborationParams";
 // Explicitly select the transport query type when Orval also emits its Zod
 // inference alias; keep both schema values and the existing model exports.

@@ -15,3 +15,4 @@
 - [Rate-limit namespaces](rate-limit-namespaces.md) — independent persistent limiters must not share request budgets.
 - [Transaction connection budget](transaction-connection-budget.md) — authorization must not wait for a second pooled connection while all slots are held by transactions.
 - [Staff availability](staff-availability-policy.md) — scoped shifts and absences cannot prove company-wide free time; missing planning means unknown.
+- [Unit plan versions](unit-plan-policy.md) — replacement images never inherit coordinates automatically; preserve old plans and private-byte references.

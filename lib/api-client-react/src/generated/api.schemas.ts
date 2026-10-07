@@ -5,6 +5,66 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface UnitPlanReceipt {
+  id: string;
+  revision: number;
+}
+
+export interface UnitPlanMarker {
+  defectId: string;
+  x: number;
+  y: number;
+}
+
+export interface UnitPlanDefect {
+  id: string;
+  subject: string;
+  location: string;
+  status: string;
+}
+
+export interface UnitPlanCurrent {
+  id: string;
+  revision: number;
+  createdAt: string;
+  markers: UnitPlanMarker[];
+}
+
+export interface UnitPlanView {
+  unitId: string;
+  canManage: boolean;
+  plan: UnitPlanCurrent | null;
+  defects: UnitPlanDefect[];
+}
+
+export type UnitPlanChangeAction = typeof UnitPlanChangeAction[keyof typeof UnitPlanChangeAction];
+
+
+export const UnitPlanChangeAction = {
+  mark: 'mark',
+  unmark: 'unmark',
+  remove: 'remove',
+} as const;
+
+export interface UnitPlanChange {
+  key: string;
+  planId: string;
+  /** @minimum 0 */
+  revision: number;
+  action: UnitPlanChangeAction;
+  defectId?: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  x?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  y?: number;
+}
+
 export type IamAccessInputMethod = typeof IamAccessInputMethod[keyof typeof IamAccessInputMethod];
 
 
@@ -1492,6 +1552,15 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type UploadUnitPlanParams = {
+key: string;
+/**
+ * @minimum 0
+ */
+revision: number;
+planId?: string;
+};
 
 export type GetStaffAvailabilityParams = {
 unitId: string;

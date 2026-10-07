@@ -8,6 +8,90 @@
 import * as zod from 'zod';
 
 
+export const GetUnitPlanParams = zod.object({
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const GetUnitPlanResponse = zod.object({
+  "unitId": zod.string(),
+  "canManage": zod.boolean(),
+  "plan": zod.union([zod.object({
+  "id": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "markers": zod.array(zod.object({
+  "defectId": zod.string(),
+  "x": zod.number(),
+  "y": zod.number()
+}))
+}),zod.null()]),
+  "defects": zod.array(zod.object({
+  "id": zod.string(),
+  "subject": zod.string(),
+  "location": zod.string(),
+  "status": zod.string()
+}))
+})
+
+
+export const ChangeUnitPlanParams = zod.object({
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const changeUnitPlanBodyRevisionMin = 0;
+
+export const changeUnitPlanBodyXMin = 0;
+export const changeUnitPlanBodyXMax = 1;
+
+export const changeUnitPlanBodyYMin = 0;
+export const changeUnitPlanBodyYMax = 1;
+
+
+
+export const ChangeUnitPlanBody = zod.object({
+  "key": zod.string().uuid(),
+  "planId": zod.string().uuid(),
+  "revision": zod.number().int().min(changeUnitPlanBodyRevisionMin),
+  "action": zod.enum(['mark', 'unmark', 'remove']),
+  "defectId": zod.string().uuid().optional(),
+  "x": zod.number().min(changeUnitPlanBodyXMin).max(changeUnitPlanBodyXMax).optional(),
+  "y": zod.number().min(changeUnitPlanBodyYMin).max(changeUnitPlanBodyYMax).optional()
+})
+
+export const ChangeUnitPlanResponse = zod.object({
+  "id": zod.string(),
+  "revision": zod.number().int()
+})
+
+
+export const UploadUnitPlanParams = zod.object({
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const uploadUnitPlanQueryRevisionMin = 0;
+
+
+
+export const UploadUnitPlanQueryParams = zod.object({
+  "key": zod.coerce.string().uuid(),
+  "revision": zod.coerce.number().int().min(uploadUnitPlanQueryRevisionMin),
+  "planId": zod.coerce.string().uuid().optional()
+})
+
+export const UploadUnitPlanResponse = zod.object({
+  "id": zod.string(),
+  "revision": zod.number().int()
+})
+
+
+export const GetUnitPlanImageParams = zod.object({
+  "unitId": zod.coerce.string().uuid(),
+  "planId": zod.coerce.string().uuid()
+})
+
+export const GetUnitPlanImageResponse = zod.unknown()
+
+
 export const GetAvailabilityOptionsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "number": zod.string(),

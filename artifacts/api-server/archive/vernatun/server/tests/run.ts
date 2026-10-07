@@ -17,6 +17,8 @@ const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_
 let status=0;
 const checks=process.argv.includes('--browser-only')
  ? [['server/tests/browser-sandbox.ts']]
+ : process.argv.includes('--unit-plans-only')
+ ? [['--test','server/tests/unit-plans.test.ts']]
  : process.argv.includes('--availability-only')
  ? [['--test','server/tests/staff-availability.test.ts']]
  : process.argv.includes('--defect-collaboration-only')
@@ -63,6 +65,7 @@ if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
  if(!checks.some(args=>args.includes('server/tests/email-delivery.test.ts')))checks.splice(2,0,['--test','server/tests/email-delivery.test.ts']);
 }
 if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
+ checks.push(['--test','server/tests/unit-plans.test.ts']);
  checks.push(['--test','server/tests/assignment-management.test.ts']);
  checks.push(['--test','server/tests/defect-collaboration.test.ts']);
  checks.push(['--test','server/tests/staff-availability.test.ts']);
@@ -72,7 +75,9 @@ if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
  checks.push(['--test','server/tests/phase6.test.ts']);
 }
 try{
- const setup=process.argv.includes('--availability-only')
+ const setup=process.argv.includes('--unit-plans-only')
+  ? [['server/migrate.ts','--through=025'],['server/seed.ts'],['server/seed-modules.ts'],['server/iam-preservation.ts','--capture'],['server/migrate.ts'],['server/iam-preservation.ts']]
+  : process.argv.includes('--availability-only')
   ? [['server/migrate.ts','--through=024'],['server/seed.ts'],['server/seed-modules.ts'],['server/iam-preservation.ts','--capture'],['server/migrate.ts'],['server/iam-preservation.ts']]
   : process.argv.includes('--iam-only')
   ? [['server/migrate.ts','--through=023'],['server/seed.ts'],['server/seed-modules.ts'],['server/iam-preservation.ts','--capture'],['server/migrate.ts'],['server/iam-preservation.ts']]

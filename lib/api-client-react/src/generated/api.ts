@@ -143,6 +143,9 @@ import type {
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
+  UnitPlanChange,
+  UnitPlanReceipt,
+  UnitPlanView,
   UpdateEmployeeAssignment200,
   UpdateOrganizationBrandingBody,
   UpdatePortfolioObjectBody,
@@ -150,6 +153,7 @@ import type {
   UploadDocumentVersionParams,
   UploadOperationalPhotoParams,
   UploadOrganizationLogoParams,
+  UploadUnitPlanParams,
   VisitProposalInput,
   VisitResponseInput,
   WorkTransitionInput
@@ -181,6 +185,328 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetUnitPlanUrl = (unitId: string,) => {
+
+
+
+
+  return `/api/unit-plans/${unitId}`
+}
+
+export const getUnitPlan = async (unitId: string, options?: Parameters<typeof customFetch>[1]): Promise<UnitPlanView> => {
+
+  return customFetch<UnitPlanView>(getGetUnitPlanUrl(unitId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnitPlanQueryKey = (unitId: string,) => {
+    return [
+    `/api/unit-plans/${unitId}`
+    ] as const;
+    }
+
+
+export const getGetUnitPlanQueryOptions = <TData = Awaited<ReturnType<typeof getUnitPlan>>, TError = ErrorType<unknown>>(unitId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnitPlanQueryKey(unitId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnitPlan>>> = ({ signal }) => getUnitPlan(unitId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: unitId !== null && unitId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnitPlan>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnitPlanQueryResult = NonNullable<Awaited<ReturnType<typeof getUnitPlan>>>
+export type GetUnitPlanQueryError = ErrorType<unknown>
+
+
+
+export function useGetUnitPlan<TData = Awaited<ReturnType<typeof getUnitPlan>>, TError = ErrorType<unknown>>(
+ unitId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnitPlanQueryOptions(unitId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeUnitPlanUrl = (unitId: string,) => {
+
+
+
+
+  return `/api/unit-plans/${unitId}`
+}
+
+export const changeUnitPlan = async (unitId: string,
+    unitPlanChange: UnitPlanChange, options?: Parameters<typeof customFetch>[1]): Promise<UnitPlanReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UnitPlanReceipt>(getChangeUnitPlanUrl(unitId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(unitPlanChange)
+  }
+);}
+
+
+
+
+
+export const getChangeUnitPlanMutationKey = () => ['changeUnitPlan'] as const;
+
+export const getChangeUnitPlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUnitPlan>>, TError,ChangeUnitPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeUnitPlan>>, TError,ChangeUnitPlanMutationVariables, TContext> => {
+
+const mutationKey = getChangeUnitPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeUnitPlan>>, ChangeUnitPlanMutationVariables> = (props) => {
+          const {unitId,data} = props ?? {};
+
+          return  changeUnitPlan(unitId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeUnitPlanMutationResult = NonNullable<Awaited<ReturnType<typeof changeUnitPlan>>>
+    export type ChangeUnitPlanMutationBody = BodyType<UnitPlanChange>
+    export type ChangeUnitPlanMutationError = ErrorType<unknown>
+    export type ChangeUnitPlanMutationVariables = {unitId: string;data: BodyType<UnitPlanChange>}
+
+    export const useChangeUnitPlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUnitPlan>>, TError,ChangeUnitPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeUnitPlan>>,
+        TError,
+        ChangeUnitPlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeUnitPlanMutationOptions(options));
+    }
+
+export const getUploadUnitPlanUrl = (unitId: string,
+    params: UploadUnitPlanParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/unit-plans/${unitId}/image?${stringifiedParams}` : `/api/unit-plans/${unitId}/image`
+}
+
+export const uploadUnitPlan = async (unitId: string,
+    uploadUnitPlanBody: Blob,
+    params: UploadUnitPlanParams, options?: Parameters<typeof customFetch>[1]): Promise<UnitPlanReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UnitPlanReceipt>(getUploadUnitPlanUrl(unitId,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
+    body: uploadUnitPlanBody
+  }
+);}
+
+
+
+
+
+export const getUploadUnitPlanMutationKey = () => ['uploadUnitPlan'] as const;
+
+export const getUploadUnitPlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadUnitPlan>>, TError,UploadUnitPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadUnitPlan>>, TError,UploadUnitPlanMutationVariables, TContext> => {
+
+const mutationKey = getUploadUnitPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadUnitPlan>>, UploadUnitPlanMutationVariables> = (props) => {
+          const {unitId,data,params} = props ?? {};
+
+          return  uploadUnitPlan(unitId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadUnitPlanMutationResult = NonNullable<Awaited<ReturnType<typeof uploadUnitPlan>>>
+    export type UploadUnitPlanMutationBody = BodyType<Blob>
+    export type UploadUnitPlanMutationError = ErrorType<unknown>
+    export type UploadUnitPlanMutationVariables = {unitId: string;data: BodyType<Blob>;params: UploadUnitPlanParams}
+
+    export const useUploadUnitPlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadUnitPlan>>, TError,UploadUnitPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadUnitPlan>>,
+        TError,
+        UploadUnitPlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadUnitPlanMutationOptions(options));
+    }
+
+export const getGetUnitPlanImageUrl = (unitId: string,
+    planId: string,) => {
+
+
+
+
+  return `/api/unit-plans/${unitId}/${planId}/image`
+}
+
+export const getUnitPlanImage = async (unitId: string,
+    planId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetUnitPlanImageUrl(unitId,planId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnitPlanImageQueryKey = (unitId: string,
+    planId: string,) => {
+    return [
+    `/api/unit-plans/${unitId}/${planId}/image`
+    ] as const;
+    }
+
+
+export const getGetUnitPlanImageQueryOptions = <TData = Awaited<ReturnType<typeof getUnitPlanImage>>, TError = ErrorType<unknown>>(unitId: string,
+    planId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitPlanImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnitPlanImageQueryKey(unitId,planId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnitPlanImage>>> = ({ signal }) => getUnitPlanImage(unitId,planId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: unitId !== null && unitId !== undefined && planId !== null && planId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnitPlanImage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnitPlanImageQueryResult = NonNullable<Awaited<ReturnType<typeof getUnitPlanImage>>>
+export type GetUnitPlanImageQueryError = ErrorType<unknown>
+
+
+
+export function useGetUnitPlanImage<TData = Awaited<ReturnType<typeof getUnitPlanImage>>, TError = ErrorType<unknown>>(
+ unitId: string,
+    planId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitPlanImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnitPlanImageQueryOptions(unitId,planId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAvailabilityOptionsUrl = () => {
 
