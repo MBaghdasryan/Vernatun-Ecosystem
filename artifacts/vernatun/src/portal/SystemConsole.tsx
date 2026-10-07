@@ -12,6 +12,7 @@ import SystemErrors from './SystemErrors';
 type Tab='overview'|'health'|'logs'|'errors'|'jobs';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
+ emailEvidence:['Էլփոստի ցուցանիշները բոլոր մատակարարների պահպանված տվյալներն են, ոչ կենդանի ստուգում։ Ընդունումը առաքում չէ։ 24 ժամվա հաշվիչները հաշվում են եզակի նամակները՝ ըստ իրադարձության տեսակի․ մեկ նամակը կարող է լինել մի քանի հաշվիչում։ Անհայտ արդյունքը հաստատված ձախողում չէ։','Почтовые показатели — сохранённые данные всех провайдеров, не проверка соединения. Принятие не означает доставку. За 24 часа считаются уникальные письма по каждому типу события; одно письмо может попасть в несколько счётчиков. Неизвестный результат — не подтверждённый сбой.','Email metrics use retained evidence across all providers, not a live probe. Acceptance is not delivery. Each 24-hour event counter counts distinct messages; one message may appear in multiple counters. An unknown result is not a confirmed failure.'],
  system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
  healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
  warning:['Զգուշացում','Предупреждение','Warning'],critical:['Կրիտիկական','Критично','Critical'],
@@ -34,6 +35,14 @@ const S:Record<string,[string,string,string]>={
  exportDone:['Ֆայլը պատրաստ է։','Файл подготовлен для скачивания.','File prepared for download.'],
 };
 const M:Record<string,[string,string,string]>={
+ email_last_accepted:['Վերջին ընդունումը մատակարարի կողմից','Последнее принятие провайдером','Last provider acceptance'],
+ email_last_sent:['Վերջին հաստատված ուղարկումը','Последняя подтверждённая отправка','Last confirmed send'],
+ email_last_delivered:['Վերջին հաստատված առաքումը','Последняя подтверждённая доставка','Last confirmed delivery'],
+ email_failed_24h:['Ձախողված նամակներ · 24 ժամ','Письма с событием failed · 24 ч','Messages with failed event · 24h'],
+ email_bounced_24h:['Վերադարձված նամակներ · 24 ժամ','Возвраты писем · 24 ч','Bounced messages · 24h'],
+ email_complained_24h:['Բողոքներ · 24 ժամ','Жалобы на письма · 24 ч','Complained messages · 24h'],
+ email_delayed_24h:['Հետաձգված նամակներ · 24 ժամ','Задержки писем · 24 ч','Delayed messages · 24h'],
+ email_unknown_24h:['Անհայտ արդյունքով նամակներ · 24 ժամ','Неизвестный результат отправки · 24 ч','Unknown send outcomes · 24h'],
  environment:['Միջավայր','Окружение','Environment'],node:['Node.js տարբերակ','Версия Node.js','Node.js version'],uptime_seconds:['Աշխատանքի ժամանակ (վ)','Время работы (с)','Uptime (seconds)'],started_at:['Գործարկման պահ','Время запуска','Started at'],api:['API','API','API'],
  application_version:['Հավելվածի տարբերակ','Версия приложения','Application version'],frontend_version:['Frontend տարբերակ','Версия фронтенда','Frontend version'],build_version:['Build տարբերակ','Версия сборки','Build version'],git_commit:['Git commit','Git-коммит','Git commit'],
  storage:['Պահոց','Хранилище','Storage'],cache:['Քեշ','Кэш','Cache'],integrations:['Ինտեգրումներ','Интеграции','Integrations'],last_backup:['Վերջին պահուստային պատճեն','Последняя резервная копия','Last backup'],backup_storage:['Պահուստային պահոց','Хранилище резервных копий','Backup storage'],
@@ -79,6 +88,7 @@ function Metrics({kind,ck,l}:{kind:'overview'|'health';ck:string;l:Language}){
  return <section className="p-card sc-card" aria-busy={q.loading}>
   <div className="sc-head"><div><span className="sc-label">{tx('aggregate')}</span><Pill s={d.status} l={l}/></div><div><span className="sc-label">{tx('observedAt')}</span><strong data-testid="text-observed-at">{fmtDate(d.observedAt,l)}</strong></div><button className="p-button small" onClick={q.reload} disabled={q.loading} data-testid={'button-refresh-'+kind}>{tx('refresh')}</button></div>
   {d.metrics.length?<ul className="sc-metrics">{d.metrics.map(m=><li key={m.key} data-testid={'row-metric-'+m.key}><span className="sc-mkey">{M[m.key]?.[L(l)]??m.key}</span><strong className={m.value===null?'sc-null':''} data-testid={'text-metric-value-'+m.key}>{m.value??tx('unavailable')}</strong><Pill s={m.status} l={l}/></li>)}</ul>:<p className="sc-empty" data-testid="text-empty">{tx('noMetrics')}</p>}
+  <p className="sc-note">{tx('emailEvidence')}</p>
   <p className="sc-note">{tx('autoRefresh')}</p>
  </section>;
 }

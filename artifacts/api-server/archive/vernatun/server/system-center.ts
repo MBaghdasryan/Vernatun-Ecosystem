@@ -11,6 +11,7 @@ import {emailProviderState} from './email.js';
 import {storageMode} from './storage-providers.js';
 import {registerSystemErrors} from './system-errors.js';
 import {apiBuildId} from './system-diagnostics.js';
+import {emailHealthMetrics} from './system-email-health.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -53,7 +54,8 @@ async function overview(){
    WHERE started_at>now()-interval '24 hours'`,query_timeout:3000});
   metrics.push(...['running','failed','interrupted'].map(key=>({key:'jobs_'+key,value:String(r.rows[0][key]),status:key!=='running'&&r.rows[0][key]>0?'degraded' as const:'healthy' as const})));
  }catch{metrics.push({key:'jobs',value:null,status:'unavailable'})}
- return {observedAt:new Date().toISOString(),status:metrics.some(m=>m.status==='down')?'critical':metrics.some(m=>m.status==='degraded'||m.status==='unavailable')?'warning':'healthy',metrics};
+ metrics.push(...await emailHealthMetrics());
+ return {observedAt:new Date().toISOString(),status:metrics.some(m=>m.status==='down')?'critical':metrics.some(m=>m.status==='degraded'||m.status==='unavailable'||m.status==='not_configured')?'warning':'healthy',metrics};
 }
 systemCenter.get('/system/overview',async(req,res)=>{await permit(req,'system.read');res.json(await overview())});
 systemCenter.get('/system/health',async(req,res)=>{await permit(req,'system.health.read');res.json(await overview())});

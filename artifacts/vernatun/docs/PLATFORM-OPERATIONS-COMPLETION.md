@@ -40,6 +40,26 @@ Next scope in prompt order: finish Phase 1 source coverage/health evidence and
 log retention, then Phase 2 Backup Center using existing paired snapshot tools.
 Do not equate existing CLI support with a completed administrative workflow.
 
+### Email health evidence
+
+- Overview and Health show last provider acceptance, confirmed sent and confirmed
+  delivered timestamps separately, plus rolling 24-hour failed/bounced/complained/
+  delayed message counters and recently created unknown transport outcomes.
+- These are historical observations across all providers and account scopes, not
+  a connectivity probe or proof that the current sending domain is ready.
+  The UI explains this distinction in Armenian, Russian and English.
+- Each event counter counts distinct matched accepted messages, not webhook calls.
+  A message can appear in several categories. Event counters use occurrence time;
+  unknown outcomes use message creation time. Unknown does not mean failed.
+- Local outbox and unmatched webhook events cannot establish delivery. Query
+  failures return unavailable values, not zero counts; no recipients, sender
+  addresses, scopes, message identifiers or SQL errors reach these metrics.
+- No provider calls, sends, schema changes or production modifications. Eight
+  isolated System API test groups and API/web type checks passed. Existing
+  polling, access checks and refresh buttons cover these added metric rows.
+- Remaining Phase 1 scope includes storage health, other source coverage,
+  retention and large background exports; email connectivity remains unprobed.
+
 ## Acceptance evidence for this increment
 
 - Isolated System API suite: four test groups passed; migration preservation

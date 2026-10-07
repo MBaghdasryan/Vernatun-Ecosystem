@@ -7,6 +7,7 @@ import {config} from '../config.js';
 import {observedJob,recordSystemEvent,safeCode} from '../system-observability.js';
 import {logCsvCell} from '../system-center.js';
 import {safeErrorStack,apiBuildId} from '../system-diagnostics.js';
+import {emailHealthMetrics} from '../system-email-health.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
@@ -42,6 +43,47 @@ test('platform-only granular rights; tenants, support and anonymous denied',asyn
  assert.equal((await admin.call('/system/logs')).status,403);
  assert.equal((await admin.call('/system/overview')).status,200);
  await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key='logs.read'",[admin.assignment]);
+});
+test('email health distinguishes retained acceptance, delivery and unknown outcomes without sending',async()=>{
+ const empty=await emailHealthMetrics();
+ const get=(rows:any[],key:string)=>rows.find(x=>x.key===key);
+ assert.equal(get(empty,'email_last_delivered').value,null);
+ const scope='system-health-qa';
+ const insert=async(message:string,status='accepted',evidence=true)=>{
+  await pool.query(`INSERT INTO email_messages(provider,provider_scope,delivery_evidence,business_type,recipient,
+   provider_message_id,transport_status,accepted_at)
+   VALUES('qa',$1,$2,'other','PRIVATE_RECIPIENT@example.invalid',$3,$4,CASE WHEN $4='accepted' THEN now() ELSE NULL END)`,
+  [scope,evidence,message,status]);
+ };
+ await insert('accepted');await insert('unknown','unknown');await insert('local','local',false);
+ const accepted=await emailHealthMetrics();
+ assert.ok(get(accepted,'email_last_accepted').value);
+ assert.equal(get(accepted,'email_last_delivered').value,null);
+ const event=async(id:string,message:string,outcome:string,age='0 hours')=>{
+  await pool.query(`INSERT INTO email_delivery_events(provider,provider_scope,event_id,message_id,outcome,occurred_at)
+   VALUES('qa',$1,$2,$3,$4,now()-$5::interval)`,[scope,id,message,outcome,age]);
+ };
+ await event('sent','accepted','sent');await event('delivered','accepted','delivered');
+ await event('bounce1','accepted','bounced');await event('bounce2','accepted','bounced');
+ await event('failed-old','accepted','failed','25 hours');
+ await event('unmatched','not-recorded','failed');await event('local','local','failed');
+ await event('complaint','accepted','complained');await event('delay','accepted','delayed');
+ const r=await admin.call('/system/health');assert.equal(r.status,200);
+ const metrics=r.data.metrics;
+ assert.ok(get(metrics,'email_last_sent').value);assert.ok(get(metrics,'email_last_delivered').value);
+ assert.equal(get(metrics,'email_bounced_24h').value,'1');
+ assert.equal(get(metrics,'email_failed_24h').value,'0');
+ assert.equal(get(metrics,'email_complained_24h').value,'1');
+ assert.equal(get(metrics,'email_delayed_24h').value,'1');
+ assert.equal(get(metrics,'email_unknown_24h').status,'degraded');
+ assert.equal(r.data.status,'warning');
+ assert.ok(!JSON.stringify(r.data).includes('PRIVATE_RECIPIENT'));
+ // Unavailable must never be rendered as zero; this mock cannot send anything.
+ const original=pool.query;
+ try{
+  pool.query=(()=>{throw Error('PRIVATE_DATABASE_ERROR')}) as typeof pool.query;
+  assert.ok((await emailHealthMetrics()).every(m=>m.value===null&&m.status==='unavailable'));
+ }finally{pool.query=original}
 });
 test('error groups retain safe evidence, resolve with concurrency guards and reopen on recurrence',async()=>{
  const event={category:'system',event:'qa_error_group',level:'error',error:'QA_FAILURE',endpoint:'/qa/:id',method:'GET',status:500};

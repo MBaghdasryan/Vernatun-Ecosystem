@@ -63,6 +63,21 @@ Client read timeouts are not a guarantee of PostgreSQL query cancellation.
 Retention/archive policies and external log drains remain to implement before
 high-volume production use.
 
+## Email evidence in Overview / Health
+
+The metrics expose separately the latest acceptance, sent and delivered evidence.
+Rolling 24-hour counters count distinct messages per event type, using event
+occurrence time; unknown transport outcomes use creation time. Values aggregate
+retained history across providers, not just the currently configured provider.
+No email is sent and no external provider connection is tested by this screen.
+
+Only events matching an accepted message by provider, account scope and message ID
+can contribute delivery evidence. Local outbox and unmatched events are excluded.
+Absent timestamps or failed reads are unavailable; successfully queried empty
+counts are zero. Recent adverse evidence and unknown outcomes produce warning
+indicators, not claims of a provider outage. Recipients and account scopes are
+never returned in metrics.
+
 ## Error Center
 
 The existing System Console includes an Errors tab. Only retained `error` and
