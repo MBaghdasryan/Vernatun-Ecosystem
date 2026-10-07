@@ -8,6 +8,161 @@
 import * as zod from 'zod';
 
 
+export const submitLandingLeadBodyNameMin = 2;
+export const submitLandingLeadBodyNameMax = 120;
+
+export const submitLandingLeadBodyContactMax = 254;
+
+export const submitLandingLeadBodyOrganizationMax = 160;
+
+export const submitLandingLeadBodyProductInterestMax = 80;
+
+export const submitLandingLeadBodyAudienceMax = 160;
+
+export const submitLandingLeadBodyMessageMax = 2000;
+
+export const submitLandingLeadBodyWebsiteMax = 0;
+
+
+
+export const SubmitLandingLeadBody = zod.object({
+  "name": zod.string().min(submitLandingLeadBodyNameMin).max(submitLandingLeadBodyNameMax),
+  "contact": zod.string().max(submitLandingLeadBodyContactMax).describe('Valid email or 7-15 digit phone.'),
+  "organization": zod.string().max(submitLandingLeadBodyOrganizationMax).optional(),
+  "productInterest": zod.string().min(1).max(submitLandingLeadBodyProductInterestMax),
+  "audience": zod.string().max(submitLandingLeadBodyAudienceMax),
+  "message": zod.string().max(submitLandingLeadBodyMessageMax).optional(),
+  "consent": zod.literal(true),
+  "language": zod.enum(['hy', 'ru', 'en']),
+  "website": zod.string().max(submitLandingLeadBodyWebsiteMax).optional().describe('Empty honeypot only.')
+})
+
+export const SubmitLandingLeadResponse = zod.object({
+  "received": zod.literal(true),
+  "id": zod.string().uuid()
+})
+
+
+export const getLandingLeadsQueryPageDefault = 1;
+export const getLandingLeadsQueryPageMax = 10000;
+
+export const getLandingLeadsQueryPageSizeDefault = 25;
+export const getLandingLeadsQueryPageSizeMax = 100;
+
+export const getLandingLeadsQueryQMax = 160;
+
+
+
+export const GetLandingLeadsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).max(getLandingLeadsQueryPageMax).default(getLandingLeadsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(getLandingLeadsQueryPageSizeMax).default(getLandingLeadsQueryPageSizeDefault),
+  "q": zod.coerce.string().max(getLandingLeadsQueryQMax).optional(),
+  "sort": zod.enum(['created_at', 'name']).optional(),
+  "direction": zod.enum(['asc', 'desc']).optional(),
+  "language": zod.enum(['hy', 'ru', 'en']).optional()
+})
+
+export const GetLandingLeadsResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "contact": zod.string(),
+  "organization": zod.string().nullish(),
+  "product_interest": zod.string(),
+  "audience": zod.string(),
+  "message": zod.string().nullish(),
+  "consent": zod.boolean(),
+  "language": zod.enum(['hy', 'ru', 'en']),
+  "created_at": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int()
+})
+
+
+export const GetMfaPolicyResponse = zod.object({
+  "policy": zod.object({
+  "required": zod.boolean(),
+  "enforceAfter": zod.coerce.date().nullable(),
+  "version": zod.number().int()
+}),
+  "enrolled": zod.boolean(),
+  "verified": zod.boolean().describe('MFA proof no older than 15 minutes.'),
+  "enforced": zod.boolean(),
+  "canManage": zod.boolean()
+})
+
+
+export const updateMfaPolicyBodyVersionMin = 0;
+
+export const updateMfaPolicyBodyReasonMin = 8;
+export const updateMfaPolicyBodyReasonMax = 1000;
+
+
+
+export const UpdateMfaPolicyBody = zod.object({
+  "required": zod.boolean(),
+  "enforceAfter": zod.coerce.date().nullable(),
+  "version": zod.number().int().min(updateMfaPolicyBodyVersionMin),
+  "reason": zod.string().min(updateMfaPolicyBodyReasonMin).max(updateMfaPolicyBodyReasonMax)
+})
+
+export const UpdateMfaPolicyResponse = zod.object({
+  "required": zod.boolean(),
+  "enforceAfter": zod.coerce.date().nullable(),
+  "version": zod.number().int()
+})
+
+
+export const GetScopedRecordPageParams = zod.object({
+  "resource": zod.enum(['organizations', 'properties', 'units', 'people', 'invitations', 'audit'])
+})
+
+export const getScopedRecordPageQueryPageDefault = 1;
+export const getScopedRecordPageQueryPageMax = 10000;
+
+export const getScopedRecordPageQueryPageSizeDefault = 25;
+export const getScopedRecordPageQueryPageSizeMax = 100;
+
+export const getScopedRecordPageQueryQMax = 160;
+
+export const getScopedRecordPageQuerySortMax = 40;
+
+
+
+export const GetScopedRecordPageQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).max(getScopedRecordPageQueryPageMax).default(getScopedRecordPageQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(getScopedRecordPageQueryPageSizeMax).default(getScopedRecordPageQueryPageSizeDefault),
+  "q": zod.coerce.string().max(getScopedRecordPageQueryQMax).optional(),
+  "sort": zod.coerce.string().max(getScopedRecordPageQuerySortMax).optional().describe('Per-resource allowlisted column only.'),
+  "direction": zod.enum(['asc', 'desc']).optional(),
+  "filter": zod.enum(['all', 'true', 'false']).optional()
+})
+
+export const GetScopedRecordPageResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "id": zod.string().uuid()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "sort": zod.string(),
+  "direction": zod.enum(['asc', 'desc'])
+})
+
+
+export const GetPrivateBrandLogoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPrivateBrandLogoQueryParams = zod.object({
+  "key": zod.coerce.string()
+})
+
+export const GetPrivateBrandLogoResponse = zod.unknown()
+
+
 export const GetNotificationCatalogResponse = zod.object({
   "events": zod.array(zod.object({
   "code": zod.string(),

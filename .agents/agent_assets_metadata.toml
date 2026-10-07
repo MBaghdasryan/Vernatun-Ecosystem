@@ -182,3 +182,17 @@ mtime_ms = 1791339645674
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/c2323a22-5c49-4e36-ae3d-2bf0a91244ea/61f08562-40ea-4d13-8b45-7fef7b46ca75"
 storage_version_token = "1791339679170604"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "TFWQyC2mvTn0ZlTy5XCIb"
+uri = "file://artifacts/vernatun/docs/PHASE8-READINESS-REPORT.md"
+type = "text"
+title = "Phase 8 — подробный отчёт"
+description = "Что реализовано и проверено, что осталось, ограничения браузерной приёмки и production readiness."
+logical_id = "b942f602-a085-41bc-a380-e12b3d87d11c"
+content_hash = "sha256:b7bb303798d914227db10f912493df9690af668118e082e079848cda559d770e"
+size = 11591
+mtime_ms = 1791354509243
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/b942f602-a085-41bc-a380-e12b3d87d11c/6f48c813-7c7a-4648-8e27-9966f88ab21b"
+storage_version_token = "1791354609744321"
+content_type = "text/markdown"

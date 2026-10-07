@@ -4,7 +4,7 @@ import {config} from './config.js';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 if(config.NODE_ENV!=='development')throw new Error('Development only');
-const path=resolve('../../.local/qa/'+(process.argv.includes('--phase7')?'phase7':'phase6')+'-preservation.json');
+const path=resolve('../../.local/qa/'+(process.argv.includes('--phase8')?'phase8':process.argv.includes('--phase7')?'phase7':'phase6')+'-preservation.json');
 const names=['users','organizations','memberships','role_assignments','buildings','units','ownerships','meetings','agenda_items','votes','documents','support_cases','support_messages','invoices','payments','payment_allocations','adjustments','leases','occupancies','defects','defect_history','work_orders','resident_requests'];
 const compare=process.argv.includes('--compare'),baseline:any=compare?JSON.parse(await readFile(path,'utf8')):{capturedAt:new Date().toISOString(),tables:{}};
 const checked:any={};

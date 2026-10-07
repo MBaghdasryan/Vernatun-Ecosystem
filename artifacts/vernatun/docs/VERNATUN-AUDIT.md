@@ -1,6 +1,11 @@
 # Vernatun — сверка с активной спецификацией
 
 ## Актуальное дополнение: Phase 7 и grouping портфеля
+## Актуальное дополнение: Phase 8 — PARTIAL
+
+См. [Phase 8 readiness report](PHASE8-READINESS-REPORT.md): работающие leads/MFA/scoped record foundations, проверки и явные ограничения. Static API inventory: 228 операций / 110 documented / 118 gaps. Dependency scan: 0 critical, 1 high (upstream braces tooling); SAST/privacy без замечаний. Полная визуальная/сквозная приёмка и production-ready не заявляются.
+
+## Состояние предыдущего этапа: Phase 7 и grouping портфеля
 
 Каталог 21 событий + explicit account-security policy; in-app preference delivery flags; blocked email intentions; fresh-context notification links; CAS preferences; organization branding с raster sanitization/private logo; App Storage/Local/S3 provider boundary; static-only PWA manifest/icons/fallback. Объекты портфеля — самостоятельная scoped dimension с CRUD, atomic building assignments, empty-only delete и новым `portfolioObjectId`; legacy alias сохранён.
 

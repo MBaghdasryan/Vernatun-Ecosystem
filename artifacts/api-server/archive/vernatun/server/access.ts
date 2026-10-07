@@ -4,6 +4,7 @@ import {pool} from './db.js';
 import {moduleForPermission} from './roles.js';
 import {subscriptionPolicy} from './subscription-policy.js';
 import {activeLeasePredicate} from './lease-policy.js';
+import {assertMfaContext} from './mfa-policy.js';
 export class ApiError extends Error{constructor(public status:number,public code:string){super(code)}}
 export type Context={id:string;role_key:string;shell:string;organization_id:string|null;organization_name:string|null;brand_color?:string;building_id:string|null;building_name?:string|null;unit_id:string|null;unit_number?:string|null;expires_at:string|null;permissions:string[];product?:string;products?:string[];startRoute?:string;modules?:string[]};
 declare global{namespace Express{interface User{id:string;email:string;name:string;locale:'hy'|'ru'|'en';currency:'AMD'|'RUB'|'USD'}}}
@@ -26,6 +27,6 @@ export function requireAuth(req:Request,_res:Response,next:NextFunction){
  }
  next();
 }
-export async function context(req:Request):Promise<Context>{if(!req.user)throw new ApiError(401,'unauthenticated');const available=await contexts(req.user.id);const c=available.find(c=>c.id===req.session.contextId);if(!c)throw new ApiError(403,'context_required');return c;}
+export async function context(req:Request):Promise<Context>{if(!req.user)throw new ApiError(401,'unauthenticated');const available=await contexts(req.user.id);const c=available.find(c=>c.id===req.session.contextId);if(!c)throw new ApiError(403,'context_required');await assertMfaContext(req,c);return c;}
 export async function requirePermission(req:Request,permission:string){const c=await context(req);if(!c.permissions.includes(permission))throw new ApiError(403,'forbidden');if(c.organization_id){const policy=await subscriptionPolicy(c.organization_id);const mod=moduleForPermission(permission);if(mod&&!policy.modules.includes(mod))throw new ApiError(403,'module_disabled');if(policy.readOnly&&!['GET','HEAD','OPTIONS'].includes(req.method)&&!['support.cases.create','support.access.approve'].includes(permission))throw new ApiError(403,'subscription_restricted')}return c;}
 export async function scopedUnit(c:Context,id:string){if(!c.organization_id)throw new ApiError(403,'forbidden');const r=await pool.query('SELECT * FROM units WHERE id=$1 AND organization_id=$2 AND ($3::uuid IS NULL OR building_id=$3) AND ($4::uuid IS NULL OR id=$4)',[id,c.organization_id,c.building_id,c.unit_id]);if(!r.rows[0])throw new ApiError(404,'not_found');return r.rows[0];}

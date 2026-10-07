@@ -7,6 +7,8 @@ export type { ListFinanceAccountsParams } from "./generated/types/listFinanceAcc
 export type { ListBankTransactionsParams } from "./generated/types/listBankTransactionsParams";
 export type { SuggestBankMatchesParams } from "./generated/types/suggestBankMatchesParams";
 export * from "./generated/types";
+// Orval emits these operation-query aliases in both generated modules.
+export type {GetPrivateBrandLogoParams,GetScopedRecordPageParams} from "./generated/types";
 export type { CastWeightedVoteBody } from "./generated/types/castWeightedVoteBody";
 export type { ChangeGovernanceMeetingBody } from "./generated/types/changeGovernanceMeetingBody";
 export type { CreateGovernanceMeetingBody } from "./generated/types/createGovernanceMeetingBody";

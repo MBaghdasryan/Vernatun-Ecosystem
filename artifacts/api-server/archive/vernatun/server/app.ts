@@ -45,6 +45,9 @@ import {emailWebhooks} from './email-delivery-events.js';
 import {emailOperations} from './email-operations.js';
 import {coreOperations} from './core-operations.js';
 import {operationIncidents} from './operation-incidents.js';
+import {mfaPolicy} from './mfa-policy.js';
+import {leads} from './leads.js';
+import {pagedRecords} from './paged-records.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 // Only this signed, raw-body endpoint bypasses session CSRF.
 app.use('/api/webhooks',emailWebhooks);
@@ -60,7 +63,9 @@ app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgS
 app.use(passport.initialize());app.use(passport.session());
 app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['GET','HEAD','OPTIONS'].includes(req.method))return next();const origin=req.headers.origin;if(origin&&origin!==config.APP_ORIGIN)return next(new ApiError(403,'csrf_invalid'));const expected=req.session.csrf;const actual=req.get('X-CSRF-Token');if(!expected||!actual||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return next(new ApiError(403,'csrf_invalid'));next()});
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});
-app.use('/api/auth',auth);app.use('/api/mfa',mfa);
+app.use('/api/auth',auth);app.use('/api/mfa',mfaPolicy);app.use('/api/mfa',mfa);
+app.use('/api',leads);
+app.use('/api',pagedRecords);
 app.use('/api',documentVersions);app.use('/api',ownership);app.use('/api',governance);app.use('/api',portfolioAnalytics);
 app.use('/api',notificationCenter);app.use('/api',branding);app.use('/api',portfolioObjects);
 app.use('/api',platformFoundation);app.use('/api',coreOperations);app.use('/api',operationIncidents);app.use('/api',photos);app.use('/api',workflow);app.use('/api',finance);app.use('/api',field);app.use('/api',residentLifecycle);app.use('/api',notificationLinks);app.use('/api',grants);app.use('/api',maintenance);app.use('/api',services);app.use('/api',imports);app.use('/api',lifecycle);app.use('/api',documents);app.use('/api',reporting);app.use('/api',insights);app.use('/api',api);

@@ -55,16 +55,22 @@ import type {
   GetEmailHealthParams,
   GetGovernanceMeeting200,
   GetGovernanceSettings200,
+  GetLandingLeadsParams,
   GetNotificationCatalog200,
   GetPortfolioAnalytics200,
   GetPortfolioAnalyticsParams,
+  GetPrivateBrandLogoParams,
   GetPrivateStorageStatus200,
+  GetScopedRecordPageParams,
   HealthStatus,
   IncidentInput,
   IncidentTransitionInput,
   Invitation,
   InvitationResendInput,
   InvitationSendReceipt,
+  LandingLeadInput,
+  LandingLeadPage,
+  LandingLeadReceipt,
   LeaseLifecycleInput,
   ListBankTransactionsParams,
   ListDocumentVersions200Item,
@@ -83,6 +89,9 @@ import type {
   MaintenancePlanInput,
   MaintenanceRecord,
   MaterialInput,
+  MfaPolicy,
+  MfaPolicyInput,
+  MfaPolicyState,
   NotificationDestination,
   NotificationPreferences,
   OperationalRequestInput,
@@ -109,6 +118,7 @@ import type {
   ResolveNotificationDestinationParams,
   SaveOperatingBudget200,
   SaveOperatingBudgetBody,
+  ScopedRecordPage,
   SlaPolicyInput,
   SuggestBankMatchesParams,
   UpdateOrganizationBrandingBody,
@@ -148,6 +158,485 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getSubmitLandingLeadUrl = () => {
+
+
+
+
+  return `/api/leads`
+}
+
+export const submitLandingLead = async (landingLeadInput: LandingLeadInput, options?: Parameters<typeof customFetch>[1]): Promise<LandingLeadReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LandingLeadReceipt>(getSubmitLandingLeadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(landingLeadInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitLandingLeadMutationKey = () => ['submitLandingLead'] as const;
+
+export const getSubmitLandingLeadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLandingLead>>, TError,SubmitLandingLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitLandingLead>>, TError,SubmitLandingLeadMutationVariables, TContext> => {
+
+const mutationKey = getSubmitLandingLeadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitLandingLead>>, SubmitLandingLeadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitLandingLead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitLandingLeadMutationResult = NonNullable<Awaited<ReturnType<typeof submitLandingLead>>>
+    export type SubmitLandingLeadMutationBody = BodyType<LandingLeadInput>
+    export type SubmitLandingLeadMutationError = ErrorType<void>
+    export type SubmitLandingLeadMutationVariables = {data: BodyType<LandingLeadInput>}
+
+    export const useSubmitLandingLead = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLandingLead>>, TError,SubmitLandingLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitLandingLead>>,
+        TError,
+        SubmitLandingLeadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitLandingLeadMutationOptions(options));
+    }
+
+export const getGetLandingLeadsUrl = (params?: GetLandingLeadsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/leads?${stringifiedParams}` : `/api/leads`
+}
+
+export const getLandingLeads = async (params?: GetLandingLeadsParams, options?: Parameters<typeof customFetch>[1]): Promise<LandingLeadPage> => {
+
+  return customFetch<LandingLeadPage>(getGetLandingLeadsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLandingLeadsQueryKey = (params?: GetLandingLeadsParams,) => {
+    return [
+    `/api/leads`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLandingLeadsQueryOptions = <TData = Awaited<ReturnType<typeof getLandingLeads>>, TError = ErrorType<void>>(params?: GetLandingLeadsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLandingLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLandingLeadsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLandingLeads>>> = ({ signal }) => getLandingLeads(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLandingLeads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLandingLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof getLandingLeads>>>
+export type GetLandingLeadsQueryError = ErrorType<void>
+
+
+
+export function useGetLandingLeads<TData = Awaited<ReturnType<typeof getLandingLeads>>, TError = ErrorType<void>>(
+ params?: GetLandingLeadsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLandingLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLandingLeadsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMfaPolicyUrl = () => {
+
+
+
+
+  return `/api/mfa/policy`
+}
+
+export const getMfaPolicy = async ( options?: Parameters<typeof customFetch>[1]): Promise<MfaPolicyState> => {
+
+  return customFetch<MfaPolicyState>(getGetMfaPolicyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMfaPolicyQueryKey = () => {
+    return [
+    `/api/mfa/policy`
+    ] as const;
+    }
+
+
+export const getGetMfaPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getMfaPolicy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMfaPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMfaPolicyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMfaPolicy>>> = ({ signal }) => getMfaPolicy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMfaPolicy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMfaPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getMfaPolicy>>>
+export type GetMfaPolicyQueryError = ErrorType<unknown>
+
+
+
+export function useGetMfaPolicy<TData = Awaited<ReturnType<typeof getMfaPolicy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMfaPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMfaPolicyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateMfaPolicyUrl = () => {
+
+
+
+
+  return `/api/mfa/policy`
+}
+
+export const updateMfaPolicy = async (mfaPolicyInput: MfaPolicyInput, options?: Parameters<typeof customFetch>[1]): Promise<MfaPolicy> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MfaPolicy>(getUpdateMfaPolicyUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(mfaPolicyInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateMfaPolicyMutationKey = () => ['updateMfaPolicy'] as const;
+
+export const getUpdateMfaPolicyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMfaPolicy>>, TError,UpdateMfaPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMfaPolicy>>, TError,UpdateMfaPolicyMutationVariables, TContext> => {
+
+const mutationKey = getUpdateMfaPolicyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMfaPolicy>>, UpdateMfaPolicyMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMfaPolicy(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMfaPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updateMfaPolicy>>>
+    export type UpdateMfaPolicyMutationBody = BodyType<MfaPolicyInput>
+    export type UpdateMfaPolicyMutationError = ErrorType<void>
+    export type UpdateMfaPolicyMutationVariables = {data: BodyType<MfaPolicyInput>}
+
+    export const useUpdateMfaPolicy = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMfaPolicy>>, TError,UpdateMfaPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMfaPolicy>>,
+        TError,
+        UpdateMfaPolicyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateMfaPolicyMutationOptions(options));
+    }
+
+export const getGetScopedRecordPageUrl = (resource: 'organizations' | 'properties' | 'units' | 'people' | 'invitations' | 'audit',
+    params?: GetScopedRecordPageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/paged/${resource}?${stringifiedParams}` : `/api/paged/${resource}`
+}
+
+export const getScopedRecordPage = async (resource: 'organizations' | 'properties' | 'units' | 'people' | 'invitations' | 'audit',
+    params?: GetScopedRecordPageParams, options?: Parameters<typeof customFetch>[1]): Promise<ScopedRecordPage> => {
+
+  return customFetch<ScopedRecordPage>(getGetScopedRecordPageUrl(resource,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScopedRecordPageQueryKey = (resource: 'organizations' | 'properties' | 'units' | 'people' | 'invitations' | 'audit',
+    params?: GetScopedRecordPageParams,) => {
+    return [
+    `/api/paged/${resource}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetScopedRecordPageQueryOptions = <TData = Awaited<ReturnType<typeof getScopedRecordPage>>, TError = ErrorType<void>>(resource: 'organizations' | 'properties' | 'units' | 'people' | 'invitations' | 'audit',
+    params?: GetScopedRecordPageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScopedRecordPage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScopedRecordPageQueryKey(resource,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScopedRecordPage>>> = ({ signal }) => getScopedRecordPage(resource,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: resource !== null && resource !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScopedRecordPage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScopedRecordPageQueryResult = NonNullable<Awaited<ReturnType<typeof getScopedRecordPage>>>
+export type GetScopedRecordPageQueryError = ErrorType<void>
+
+
+
+export function useGetScopedRecordPage<TData = Awaited<ReturnType<typeof getScopedRecordPage>>, TError = ErrorType<void>>(
+ resource: 'organizations' | 'properties' | 'units' | 'people' | 'invitations' | 'audit',
+    params?: GetScopedRecordPageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScopedRecordPage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScopedRecordPageQueryOptions(resource,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPrivateBrandLogoUrl = (id: string,
+    params: GetPrivateBrandLogoParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/organizations/${id}/branding/logo?${stringifiedParams}` : `/api/organizations/${id}/branding/logo`
+}
+
+export const getPrivateBrandLogo = async (id: string,
+    params: GetPrivateBrandLogoParams, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetPrivateBrandLogoUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivateBrandLogoQueryKey = (id: string,
+    params?: GetPrivateBrandLogoParams,) => {
+    return [
+    `/api/organizations/${id}/branding/logo`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPrivateBrandLogoQueryOptions = <TData = Awaited<ReturnType<typeof getPrivateBrandLogo>>, TError = ErrorType<void>>(id: string,
+    params: GetPrivateBrandLogoParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateBrandLogo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivateBrandLogoQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivateBrandLogo>>> = ({ signal }) => getPrivateBrandLogo(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivateBrandLogo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivateBrandLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivateBrandLogo>>>
+export type GetPrivateBrandLogoQueryError = ErrorType<void>
+
+
+
+export function useGetPrivateBrandLogo<TData = Awaited<ReturnType<typeof getPrivateBrandLogo>>, TError = ErrorType<void>>(
+ id: string,
+    params: GetPrivateBrandLogoParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateBrandLogo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivateBrandLogoQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetNotificationCatalogUrl = () => {
 

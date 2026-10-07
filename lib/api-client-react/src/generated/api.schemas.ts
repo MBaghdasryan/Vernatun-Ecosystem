@@ -5,6 +5,133 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type LandingLeadInputLanguage = typeof LandingLeadInputLanguage[keyof typeof LandingLeadInputLanguage];
+
+
+export const LandingLeadInputLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export interface LandingLeadInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * Valid email or 7-15 digit phone.
+     * @maxLength 254
+     */
+  contact: string;
+  /** @maxLength 160 */
+  organization?: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  productInterest: string;
+  /** @maxLength 160 */
+  audience: string;
+  /** @maxLength 2000 */
+  message?: string;
+  consent: true;
+  language: LandingLeadInputLanguage;
+  /**
+     * Empty honeypot only.
+     * @maxLength 0
+     */
+  website?: string;
+}
+
+export interface LandingLeadReceipt {
+  received: true;
+  id: string;
+}
+
+export type LandingLeadLanguage = typeof LandingLeadLanguage[keyof typeof LandingLeadLanguage];
+
+
+export const LandingLeadLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export interface LandingLead {
+  id: string;
+  name: string;
+  contact: string;
+  /** @nullable */
+  organization?: string | null;
+  product_interest: string;
+  audience: string;
+  /** @nullable */
+  message?: string | null;
+  consent: boolean;
+  language: LandingLeadLanguage;
+  created_at: string;
+}
+
+export interface LandingLeadPage {
+  rows: LandingLead[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface MfaPolicy {
+  required: boolean;
+  /** @nullable */
+  enforceAfter: string | null;
+  version: number;
+}
+
+export interface MfaPolicyInput {
+  required: boolean;
+  /** @nullable */
+  enforceAfter: string | null;
+  /** @minimum 0 */
+  version: number;
+  /**
+     * @minLength 8
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export interface MfaPolicyState {
+  policy: MfaPolicy;
+  enrolled: boolean;
+  /** MFA proof no older than 15 minutes. */
+  verified: boolean;
+  enforced: boolean;
+  canManage: boolean;
+}
+
+export interface ScopedRecord {
+  id: string;
+  [key: string]: unknown;
+ }
+
+export type ScopedRecordPageDirection = typeof ScopedRecordPageDirection[keyof typeof ScopedRecordPageDirection];
+
+
+export const ScopedRecordPageDirection = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export interface ScopedRecordPage {
+  rows: ScopedRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  sort: string;
+  direction: ScopedRecordPageDirection;
+}
+
 /**
  * Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.
  */
@@ -1040,6 +1167,96 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetLandingLeadsParams = {
+/**
+ * @minimum 1
+ * @maximum 10000
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+/**
+ * @maxLength 160
+ */
+q?: string;
+sort?: GetLandingLeadsSort;
+direction?: GetLandingLeadsDirection;
+language?: GetLandingLeadsLanguage;
+};
+
+export type GetLandingLeadsSort = typeof GetLandingLeadsSort[keyof typeof GetLandingLeadsSort];
+
+
+export const GetLandingLeadsSort = {
+  created_at: 'created_at',
+  name: 'name',
+} as const;
+
+export type GetLandingLeadsDirection = typeof GetLandingLeadsDirection[keyof typeof GetLandingLeadsDirection];
+
+
+export const GetLandingLeadsDirection = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export type GetLandingLeadsLanguage = typeof GetLandingLeadsLanguage[keyof typeof GetLandingLeadsLanguage];
+
+
+export const GetLandingLeadsLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export type GetScopedRecordPageParams = {
+/**
+ * @minimum 1
+ * @maximum 10000
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+/**
+ * @maxLength 160
+ */
+q?: string;
+/**
+ * Per-resource allowlisted column only.
+ * @maxLength 40
+ */
+sort?: string;
+direction?: GetScopedRecordPageDirection;
+filter?: GetScopedRecordPageFilter;
+};
+
+export type GetScopedRecordPageDirection = typeof GetScopedRecordPageDirection[keyof typeof GetScopedRecordPageDirection];
+
+
+export const GetScopedRecordPageDirection = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export type GetScopedRecordPageFilter = typeof GetScopedRecordPageFilter[keyof typeof GetScopedRecordPageFilter];
+
+
+export const GetScopedRecordPageFilter = {
+  all: 'all',
+  true: 'true',
+  false: 'false',
+} as const;
+
+export type GetPrivateBrandLogoParams = {
+key: string;
+};
 
 export type GetNotificationCatalog200EventsItem = {
   code: string;

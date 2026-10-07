@@ -1,6 +1,13 @@
 # Vernatun Completion Report — фактическое состояние проекта
 
 ## Актуальное дополнение: Phase 7
+## Актуальное дополнение: Phase 8 — PARTIAL
+
+Реальная landing-заявка и LeadsConsole, управляемая MFA-политика без автоматического включения, scoped SQL paging шести ресурсов, исправление дублирующихся role metrics и security dependency remediation реализованы. Проверено: 6 новых API tests, 114 core regression, types/build, browser lead save → admin search; 23 исходные бизнес-таблицы сохранены.
+
+Полная Phase 8 пока не закрыта: оставшиеся растущие списки, 118 static OpenAPI gaps, timezone scan, authenticated responsive/a11y/MFA matrix, A–H browser journeys и production prerequisites. Подробности: [PHASE8-READINESS-REPORT.md](PHASE8-READINESS-REPORT.md).
+
+## Состояние предыдущего этапа: Phase 7
 
 Основная реализация уведомлений/preferences, scoped branding, provider abstraction и ограниченного PWA выполнена. Реальные объекты портфеля с CRUD, CAS, привязкой/отвязкой зданий и независимым фильтром реализованы; прежнее ограничение Phase 6 о grouping снято. См. [подробный отчёт](PHASE7-COMPLETION-REPORT.md).
 

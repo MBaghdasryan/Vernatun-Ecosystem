@@ -15,7 +15,11 @@ await testAdmin.query(`CREATE SCHEMA "${schema}"`);
 url.searchParams.set('options',`-c search_path=${schema},public`);
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
 let status=0;
-const checks=process.argv.includes('--offline-only')
+const checks=process.argv.includes('--browser-only')
+ ? [['server/tests/browser-sandbox.ts']]
+ : process.argv.includes('--phase8-only')
+ ? [['--test','server/tests/phase8.test.ts']]
+ : process.argv.includes('--offline-only')
  ? [['--test','server/tests/offline.test.ts']]
  : process.argv.includes('--phase7-only')
  ? [['--test','server/tests/phase7.test.ts']]

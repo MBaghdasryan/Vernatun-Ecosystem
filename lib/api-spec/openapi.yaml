@@ -11,6 +11,96 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /leads:
+    post:
+      operationId: submitLandingLead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LandingLeadInput' }
+      responses:
+        "201":
+          description: Stored in the first-party database, not email delivery.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LandingLeadReceipt' }
+        "400": { description: Validation or honeypot rejection }
+        "403": { description: CSRF or origin rejected }
+        "429": { description: Rate limited }
+    get:
+      operationId: getLandingLeads
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: q, in: query, schema: { type: string, maxLength: 160 } }
+        - { name: sort, in: query, schema: { type: string, enum: [created_at, name] } }
+        - { name: direction, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: language, in: query, schema: { type: string, enum: [hy, ru, en] } }
+      responses:
+        "200":
+          description: Separate leads.read permission in platform context.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LandingLeadPage' }
+        "403": { description: Forbidden }
+  /mfa/policy:
+    get:
+      operationId: getMfaPolicy
+      responses:
+        "200":
+          description: Current context policy, enrollment, recent proof and management capability.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaPolicyState' }
+    put:
+      operationId: updateMfaPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaPolicyInput' }
+      responses:
+        "200":
+          description: CAS update; required activation at least 24 hours ahead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaPolicy' }
+        "400": { description: Invalid rollout date or input }
+        "403": { description: "Privilege, subscription or recent MFA proof required" }
+        "409": { description: Version conflict }
+  /paged/{resource}:
+    get:
+      operationId: getScopedRecordPage
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string, enum: [organizations, properties, units, people, invitations, audit] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: q, in: query, schema: { type: string, maxLength: 160 } }
+        - { name: sort, in: query, schema: { type: string, maxLength: 40 }, description: Per-resource allowlisted column only. }
+        - { name: direction, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: filter, in: query, schema: { type: string, enum: [all, "true", "false"] } }
+      responses:
+        "200":
+          description: Fresh authorized scope; SQL paging and stable tie-breaker.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScopedRecordPage' }
+        "400": { description: Invalid query or unsupported sort }
+        "403": { description: Forbidden }
+  /organizations/{id}/branding/logo:
+    get:
+      operationId: getPrivateBrandLogo
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: key, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Current sanitized logo, active organization context, private no-store.
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "404": { description: Not accessible or not the current logo }
   /notifications/catalog:
     get:
       operationId: getNotificationCatalog
@@ -1297,6 +1387,89 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    LandingLeadInput:
+      type: object
+      additionalProperties: false
+      required: [name, contact, productInterest, audience, consent, language]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        contact: { type: string, maxLength: 254, description: Valid email or 7-15 digit phone. }
+        organization: { type: string, maxLength: 160 }
+        productInterest: { type: string, minLength: 1, maxLength: 80 }
+        audience: { type: string, maxLength: 160 }
+        message: { type: string, maxLength: 2000 }
+        consent: { type: boolean, enum: [true] }
+        language: { type: string, enum: [hy, ru, en] }
+        website: { type: string, maxLength: 0, description: Empty honeypot only. }
+    LandingLeadReceipt:
+      type: object
+      required: [received, id]
+      properties:
+        received: { type: boolean, enum: [true] }
+        id: { type: string, format: uuid }
+    LandingLead:
+      type: object
+      required: [id, name, contact, product_interest, audience, consent, language, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        contact: { type: string }
+        organization: { type: [string, "null"] }
+        product_interest: { type: string }
+        audience: { type: string }
+        message: { type: [string, "null"] }
+        consent: { type: boolean }
+        language: { type: string, enum: [hy, ru, en] }
+        created_at: { type: string, format: date-time }
+    LandingLeadPage:
+      type: object
+      required: [rows, total, page, pageSize]
+      properties:
+        rows: { type: array, items: { $ref: '#/components/schemas/LandingLead' } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+    MfaPolicy:
+      type: object
+      required: [required, enforceAfter, version]
+      properties:
+        required: { type: boolean }
+        enforceAfter: { type: [string, "null"], format: date-time }
+        version: { type: integer }
+    MfaPolicyInput:
+      type: object
+      additionalProperties: false
+      required: [required, enforceAfter, version, reason]
+      properties:
+        required: { type: boolean }
+        enforceAfter: { type: [string, "null"], format: date-time }
+        version: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 8, maxLength: 1000 }
+    MfaPolicyState:
+      type: object
+      required: [policy, enrolled, verified, enforced, canManage]
+      properties:
+        policy: { $ref: '#/components/schemas/MfaPolicy' }
+        enrolled: { type: boolean }
+        verified: { type: boolean, description: MFA proof no older than 15 minutes. }
+        enforced: { type: boolean }
+        canManage: { type: boolean }
+    ScopedRecord:
+      type: object
+      additionalProperties: true
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+    ScopedRecordPage:
+      type: object
+      required: [rows, total, page, pageSize, sort, direction]
+      properties:
+        rows: { type: array, items: { $ref: '#/components/schemas/ScopedRecord' } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+        sort: { type: string }
+        direction: { type: string, enum: [asc, desc] }
     NotificationPreferences:
       type: object
       required: [version, email_enabled, in_app_enabled, categories]

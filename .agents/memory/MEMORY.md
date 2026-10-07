@@ -12,3 +12,4 @@
 - [Binary upload QA](binary-upload-qa.md) — respond before body capture; a stalled mutation guard is not proof of an application upload failure.
 - [Resident lifecycle policy](resident-lifecycle-policy.md) — lease enforcement activates with recorded periods; common-area maintenance needs system provenance and manager acceptance.
 - [Financial ledger locking](finance-ledger-locking.md) — lock immutable parents before re-reading balances; same-invoice tests can hide credit races.
+- [Rate-limit namespaces](rate-limit-namespaces.md) — independent persistent limiters must not share request budgets.
