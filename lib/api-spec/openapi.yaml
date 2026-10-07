@@ -11,6 +11,49 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /unit-plans/{unitId}:
+    parameters:
+      - {in: path, name: unitId, required: true, schema: {type: string, format: uuid}}
+    get:
+      operationId: getUnitPlan
+      responses:
+        '200':
+          description: Current private plan and defects within handover scope
+          content: {application/json: {schema: {$ref: '#/components/schemas/UnitPlanView'}}}
+    post:
+      operationId: changeUnitPlan
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/UnitPlanChange'}}}
+      responses:
+        '200':
+          description: Updated revision
+          content: {application/json: {schema: {$ref: '#/components/schemas/UnitPlanReceipt'}}}
+  /unit-plans/{unitId}/image:
+    post:
+      operationId: uploadUnitPlan
+      parameters:
+        - {in: path, name: unitId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: key, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: revision, required: true, schema: {type: integer, minimum: 0}}
+        - {in: query, name: planId, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content: {application/octet-stream: {schema: {type: string, format: binary}}}
+      responses:
+        '201':
+          description: Sanitized image saved; previous plan retired, never deleted
+          content: {application/json: {schema: {$ref: '#/components/schemas/UnitPlanReceipt'}}}
+  /unit-plans/{unitId}/{planId}/image:
+    get:
+      operationId: getUnitPlanImage
+      parameters:
+        - {in: path, name: unitId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: planId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Authorized current plan image
+          content: {image/jpeg: {schema: {type: string, format: binary}}}
   /operations/availability/options:
     get:
       operationId: getAvailabilityOptions
@@ -1647,6 +1690,57 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    UnitPlanReceipt:
+      type: object
+      required: [id, revision]
+      properties:
+        id: {type: string}
+        revision: {type: integer}
+    UnitPlanMarker:
+      type: object
+      required: [defectId, x, y]
+      properties:
+        defectId: {type: string}
+        x: {type: number}
+        y: {type: number}
+    UnitPlanDefect:
+      type: object
+      required: [id, subject, location, status]
+      properties:
+        id: {type: string}
+        subject: {type: string}
+        location: {type: string}
+        status: {type: string}
+    UnitPlanCurrent:
+      type: object
+      required: [id, revision, createdAt, markers]
+      properties:
+        id: {type: string}
+        revision: {type: integer}
+        createdAt: {type: string}
+        markers: {type: array, items: {$ref: '#/components/schemas/UnitPlanMarker'}}
+    UnitPlanView:
+      type: object
+      required: [unitId, canManage, plan, defects]
+      properties:
+        unitId: {type: string}
+        canManage: {type: boolean}
+        plan:
+          anyOf:
+            - {$ref: '#/components/schemas/UnitPlanCurrent'}
+            - {type: 'null'}
+        defects: {type: array, items: {$ref: '#/components/schemas/UnitPlanDefect'}}
+    UnitPlanChange:
+      type: object
+      required: [key, planId, revision, action]
+      properties:
+        key: {type: string, format: uuid}
+        planId: {type: string, format: uuid}
+        revision: {type: integer, minimum: 0}
+        action: {type: string, enum: [mark, unmark, remove]}
+        defectId: {type: string, format: uuid}
+        x: {type: number, minimum: 0, maximum: 1}
+        y: {type: number, minimum: 0, maximum: 1}
     IamAccessInput:
       type: object
       additionalProperties: false
