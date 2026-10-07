@@ -5,6 +5,203 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface OperationIdResult {
+  id: string;
+  status?: string;
+}
+
+export type IntegrationCreateInputProvider = typeof IntegrationCreateInputProvider[keyof typeof IntegrationCreateInputProvider];
+
+
+export const IntegrationCreateInputProvider = {
+  smtp: 'smtp',
+} as const;
+
+export type IntegrationCreateInputEnvironment = typeof IntegrationCreateInputEnvironment[keyof typeof IntegrationCreateInputEnvironment];
+
+
+export const IntegrationCreateInputEnvironment = {
+  sandbox: 'sandbox',
+  production: 'production',
+} as const;
+
+export type IntegrationCreateInputConfirmation = typeof IntegrationCreateInputConfirmation[keyof typeof IntegrationCreateInputConfirmation];
+
+
+export const IntegrationCreateInputConfirmation = {
+  INTEGRATION: 'INTEGRATION',
+} as const;
+
+export type SmtpIntegrationConfigPort = typeof SmtpIntegrationConfigPort[keyof typeof SmtpIntegrationConfigPort];
+
+
+export const SmtpIntegrationConfigPort = {
+  NUMBER_465: 465,
+  NUMBER_587: 587,
+} as const;
+
+export interface SmtpIntegrationConfig {
+  host: string;
+  port: SmtpIntegrationConfigPort;
+}
+
+export interface SmtpIntegrationCredentials {
+  username: string;
+  password: string;
+}
+
+export interface IntegrationCreateInput {
+  provider: IntegrationCreateInputProvider;
+  /** @nullable */
+  organizationId: string | null;
+  displayName: string;
+  environment: IntegrationCreateInputEnvironment;
+  config: SmtpIntegrationConfig;
+  credentials: SmtpIntegrationCredentials;
+  confirmation: IntegrationCreateInputConfirmation;
+}
+
+export type IntegrationUpdateInputConfirmation = typeof IntegrationUpdateInputConfirmation[keyof typeof IntegrationUpdateInputConfirmation];
+
+
+export const IntegrationUpdateInputConfirmation = {
+  INTEGRATION: 'INTEGRATION',
+} as const;
+
+export interface IntegrationUpdateInput {
+  displayName: string;
+  config: SmtpIntegrationConfig;
+  credentials?: SmtpIntegrationCredentials;
+  revision: number;
+  confirmation: IntegrationUpdateInputConfirmation;
+}
+
+export type IntegrationCenterProvidersItem = {
+  id: string;
+  name: string;
+  category: string;
+  /** @nullable */
+  version: string | null;
+  adapterInstalled: boolean;
+  capabilities: string[];
+  configurationFields: string[];
+  credentialFields: string[];
+};
+
+export type IntegrationCenterInstancesItem = {
+  id: string;
+  provider: string;
+  /** @nullable */
+  organizationId: string | null;
+  displayName: string;
+  environment: string;
+  config: SmtpIntegrationConfig;
+  enabled: boolean;
+  status: string;
+  revision: number;
+  credentialsConfigured: boolean;
+  /** @nullable */
+  lastCheckAt: string | null;
+  /** @nullable */
+  lastError: string | null;
+  createdAt: string;
+};
+
+export interface IntegrationCenter {
+  page: number;
+  pageSize: number;
+  total: number;
+  providers: IntegrationCenterProvidersItem[];
+  instances: IntegrationCenterInstancesItem[];
+}
+
+export type WebhookCreateInputConfirmation = typeof WebhookCreateInputConfirmation[keyof typeof WebhookCreateInputConfirmation];
+
+
+export const WebhookCreateInputConfirmation = {
+  WEBHOOK: 'WEBHOOK',
+} as const;
+
+export interface WebhookCreateInput {
+  name: string;
+  /** @nullable */
+  organizationId: string | null;
+  endpoint: string;
+  events: string[];
+  confirmation: WebhookCreateInputConfirmation;
+}
+
+export type WebhookCenterWebhooksItem = {
+  id: string;
+  name: string;
+  /** @nullable */
+  organizationId: string | null;
+  endpoint: string;
+  events: string[];
+  enabled: boolean;
+  createdAt: string;
+};
+
+export type WebhookCenterDeliveriesItem = {
+  id: string;
+  webhookId: string;
+  eventId: string;
+  eventName: string;
+  status: string;
+  attempts: number;
+  nextAttemptAt: string;
+  /** @nullable */
+  lastStatus: number | null;
+  /** @nullable */
+  lastError: string | null;
+  createdAt: string;
+};
+
+export interface WebhookCenter {
+  events: string[];
+  page: number;
+  pageSize: number;
+  total: number;
+  webhooks: WebhookCenterWebhooksItem[];
+  deliveries: WebhookCenterDeliveriesItem[];
+}
+
+export interface ManagedApiClient {
+  id: string;
+  name: string;
+  description: string;
+  /** @nullable */
+  organizationId: string | null;
+  clientType: string;
+  status: string;
+  allowedScopes: string[];
+  allowedIps: string[];
+  createdAt: string;
+  /** @nullable */
+  lastUsedAt: string | null;
+}
+
+export interface ManagedApiKey {
+  id: string;
+  clientId: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  expiresAt: string;
+  /** @nullable */
+  revokedAt: string | null;
+  /** @nullable */
+  lastUsedAt: string | null;
+  requestsPerMinute: number;
+  createdAt: string;
+}
+
+export interface ApiKeyActionResult {
+  id: string;
+  secret?: string;
+  revoked?: boolean;
+}
+
 export type SystemMetricStatus = typeof SystemMetricStatus[keyof typeof SystemMetricStatus];
 
 
@@ -2054,6 +2251,167 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetIntegrationCenterParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type ActIntegrationInstanceBodyConfirmation = typeof ActIntegrationInstanceBodyConfirmation[keyof typeof ActIntegrationInstanceBodyConfirmation];
+
+
+export const ActIntegrationInstanceBodyConfirmation = {
+  INTEGRATION: 'INTEGRATION',
+} as const;
+
+export type ActIntegrationInstanceBody = {
+  revision: number;
+  confirmation: ActIntegrationInstanceBodyConfirmation;
+};
+
+export type GetWebhookCenterParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type SetOutgoingWebhookStateBodyConfirmation = typeof SetOutgoingWebhookStateBodyConfirmation[keyof typeof SetOutgoingWebhookStateBodyConfirmation];
+
+
+export const SetOutgoingWebhookStateBodyConfirmation = {
+  WEBHOOK: 'WEBHOOK',
+} as const;
+
+export type SetOutgoingWebhookStateBody = {
+  enabled: boolean;
+  confirmation: SetOutgoingWebhookStateBodyConfirmation;
+};
+
+export type ActWebhookDeliveryBodyConfirmation = typeof ActWebhookDeliveryBodyConfirmation[keyof typeof ActWebhookDeliveryBodyConfirmation];
+
+
+export const ActWebhookDeliveryBodyConfirmation = {
+  WEBHOOK: 'WEBHOOK',
+} as const;
+
+export type ActWebhookDeliveryBody = {
+  confirmation: ActWebhookDeliveryBodyConfirmation;
+};
+
+export type GetSystemApiDocumentation200 = { [key: string]: unknown };
+
+export type GetApiCenterParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type GetApiCenter200 = {
+  scopes: string[];
+  clients: ManagedApiClient[];
+  keys: ManagedApiKey[];
+  page: number;
+  total: number;
+};
+
+export type CreateApiClientBodyClientType = typeof CreateApiClientBodyClientType[keyof typeof CreateApiClientBodyClientType];
+
+
+export const CreateApiClientBodyClientType = {
+  platform: 'platform',
+  organization: 'organization',
+  integration: 'integration',
+  machine_to_machine: 'machine_to_machine',
+} as const;
+
+export type CreateApiClientBodyConfirmation = typeof CreateApiClientBodyConfirmation[keyof typeof CreateApiClientBodyConfirmation];
+
+
+export const CreateApiClientBodyConfirmation = {
+  API_CLIENT: 'API CLIENT',
+} as const;
+
+export type CreateApiClientBody = {
+  name: string;
+  description?: string;
+  /** @nullable */
+  organizationId: string | null;
+  clientType: CreateApiClientBodyClientType;
+  allowedScopes: string[];
+  allowedIps?: string[];
+  confirmation: CreateApiClientBodyConfirmation;
+};
+
+export type SetApiClientStatusBodyStatus = typeof SetApiClientStatusBodyStatus[keyof typeof SetApiClientStatusBodyStatus];
+
+
+export const SetApiClientStatusBodyStatus = {
+  active: 'active',
+  disabled: 'disabled',
+} as const;
+
+export type SetApiClientStatusBodyConfirmation = typeof SetApiClientStatusBodyConfirmation[keyof typeof SetApiClientStatusBodyConfirmation];
+
+
+export const SetApiClientStatusBodyConfirmation = {
+  API_CLIENT: 'API CLIENT',
+} as const;
+
+export type SetApiClientStatusBody = {
+  status: SetApiClientStatusBodyStatus;
+  confirmation: SetApiClientStatusBodyConfirmation;
+};
+
+export type CreateManagedApiKeyBodyConfirmation = typeof CreateManagedApiKeyBodyConfirmation[keyof typeof CreateManagedApiKeyBodyConfirmation];
+
+
+export const CreateManagedApiKeyBodyConfirmation = {
+  API_KEY: 'API KEY',
+} as const;
+
+export type CreateManagedApiKeyBody = {
+  name: string;
+  scopes: string[];
+  expiresAt: string;
+  requestsPerMinute: number;
+  confirmation: CreateManagedApiKeyBodyConfirmation;
+};
+
+export type ActManagedApiKeyBodyConfirmation = typeof ActManagedApiKeyBodyConfirmation[keyof typeof ActManagedApiKeyBodyConfirmation];
+
+
+export const ActManagedApiKeyBodyConfirmation = {
+  API_KEY: 'API KEY',
+} as const;
+
+export type ActManagedApiKeyBody = {
+  confirmation: ActManagedApiKeyBodyConfirmation;
+};
+
+export type GetExternalHealth200 = {
+  status: string;
+  version: string;
+};
+
+export type GetExternalRecordsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type GetExternalRecords200ItemsItem = { [key: string]: unknown };
+
+export type GetExternalRecords200 = {
+  items: GetExternalRecords200ItemsItem[];
+  page: number;
+  pageSize: number;
+  organizationId: string;
+};
 
 export type GetSystemBackupsParams = {
 /**

@@ -55,7 +55,7 @@ export const ENV_LABELS:Record<string,[string,string,string]>={
 };
 const ENV_VALUES:Record<string,[string,string,string]>={configured:['Կարգավորված է','Настроено','Configured'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],unavailable:['Անհասանելի','Нет данных','Unavailable']};
 const t=(k:string,l:Language)=>ADMIN_S[k]?.[L(l)]??k;
-export const canEnterSystem=(p:string[])=>['system.read','cache.read','sessions.read','environment.read','backups.read'].some(x=>p.includes(x));
+export const canEnterSystem=(p:string[])=>['system.read','cache.read','sessions.read','environment.read','backups.read','api.read'].some(x=>p.includes(x));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;

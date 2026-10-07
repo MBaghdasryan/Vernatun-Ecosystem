@@ -11,6 +11,328 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/integrations:
+    get:
+      operationId: getIntegrationCenter
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Provider catalog and safe instance metadata
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IntegrationCenter'}
+    post:
+      operationId: createIntegrationInstance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IntegrationCreateInput'}
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationIdResult'}
+  /system/integrations/{id}:
+    put:
+      operationId: updateIntegrationInstance
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IntegrationUpdateInput'}
+      responses:
+        '200':
+          description: Saved and disabled until tested
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationIdResult'}
+  /system/integrations/{id}/{action}:
+    post:
+      operationId: actIntegrationInstance
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+        - in: path
+          name: action
+          required: true
+          schema: {type: string, enum: [test, activate, deactivate, delete]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [revision, confirmation]
+              properties:
+                revision: {type: integer}
+                confirmation: {type: string, enum: [INTEGRATION]}
+      responses:
+        '200':
+          description: Action result
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationIdResult'}
+  /system/webhooks:
+    get:
+      operationId: getWebhookCenter
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Webhook configuration and paged delivery metadata, never secrets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebhookCenter'}
+    post:
+      operationId: createOutgoingWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebhookCreateInput'}
+      responses:
+        '201':
+          description: Secret once; initially disabled
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiKeyActionResult'}
+  /system/webhooks/{id}/state:
+    post:
+      operationId: setOutgoingWebhookState
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, confirmation]
+              properties:
+                enabled: {type: boolean}
+                confirmation: {type: string, enum: [WEBHOOK]}
+      responses:
+        '200':
+          description: State changed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationIdResult'}
+  /system/webhooks/deliveries/{id}/{action}:
+    post:
+      operationId: actWebhookDelivery
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+        - in: path
+          name: action
+          required: true
+          schema: {type: string, enum: [retry, cancel]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation: {type: string, enum: [WEBHOOK]}
+      responses:
+        '200':
+          description: Queued retry or cancelled queued delivery
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OperationIdResult'}
+  /system/api/docs:
+    get:
+      operationId: getSystemApiDocumentation
+      responses:
+        '200':
+          description: Protected read-only OpenAPI document, no arbitrary try-it-out execution
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/api:
+    get:
+      operationId: getApiCenter
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: API clients and key metadata without hashes or secrets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scopes, clients, keys, page, total]
+                properties:
+                  scopes: {type: array, items: {type: string}}
+                  clients: {type: array, items: {$ref: '#/components/schemas/ManagedApiClient'}}
+                  keys: {type: array, items: {$ref: '#/components/schemas/ManagedApiKey'}}
+                  page: {type: integer}
+                  total: {type: integer}
+  /system/api/clients:
+    post:
+      operationId: createApiClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, organizationId, clientType, allowedScopes, confirmation]
+              properties:
+                name: {type: string}
+                description: {type: string}
+                organizationId: {type: [string, "null"]}
+                clientType: {type: string, enum: [platform, organization, integration, machine_to_machine]}
+                allowedScopes: {type: array, items: {type: string}}
+                allowedIps: {type: array, items: {type: string}}
+                confirmation: {type: string, enum: [API CLIENT]}
+      responses:
+        '201':
+          description: Client
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ManagedApiClient'}
+  /system/api/clients/{id}:
+    patch:
+      operationId: setApiClientStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, confirmation]
+              properties:
+                status: {type: string, enum: [active, disabled]}
+                confirmation: {type: string, enum: [API CLIENT]}
+      responses:
+        '200':
+          description: Client
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ManagedApiClient'}
+  /system/api/clients/{id}/keys:
+    post:
+      operationId: createManagedApiKey
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes, expiresAt, requestsPerMinute, confirmation]
+              properties:
+                name: {type: string}
+                scopes: {type: array, items: {type: string}}
+                expiresAt: {type: string, format: date-time}
+                requestsPerMinute: {type: integer}
+                confirmation: {type: string, enum: [API KEY]}
+      responses:
+        '201':
+          description: Key secret displayed exactly once
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiKeyActionResult'}
+  /system/api/keys/{id}/{action}:
+    post:
+      operationId: actManagedApiKey
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+        - in: path
+          name: action
+          required: true
+          schema: {type: string, enum: [revoke, rotate]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation: {type: string, enum: [API KEY]}
+      responses:
+        '200':
+          description: Revoked or replacement secret (once)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiKeyActionResult'}
+  /v1/health:
+    get:
+      operationId: getExternalHealth
+      security: [{ApiKeyBearer: []}]
+      responses:
+        '200':
+          description: Scoped machine API health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version]
+                properties:
+                  status: {type: string}
+                  version: {type: string}
+  /v1/{resource}:
+    get:
+      operationId: getExternalRecords
+      security: [{ApiKeyBearer: []}]
+      parameters:
+        - in: path
+          name: resource
+          required: true
+          schema: {type: string, enum: [properties, units, requests]}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Read-only records restricted to the client organization and matching read scope
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, pageSize, organizationId]
+                properties:
+                  items: {type: array, items: {type: object, additionalProperties: true}}
+                  page: {type: integer}
+                  pageSize: {type: integer}
+                  organizationId: {type: string}
   /system/backups/{id}/inspect:
     post:
       operationId: inspectSystemBackup
@@ -2042,6 +2364,10 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/PlatformRecordResponse' }
 components:
+  securitySchemes:
+    ApiKeyBearer:
+      type: http
+      scheme: bearer
   parameters:
     PlatformId:
       name: id
@@ -2060,6 +2386,165 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    OperationIdResult:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+        status: {type: string}
+    IntegrationCreateInput:
+      type: object
+      required: [provider, organizationId, displayName, environment, config, credentials, confirmation]
+      properties:
+        provider: {type: string, enum: [smtp]}
+        organizationId: {type: [string, "null"]}
+        displayName: {type: string}
+        environment: {type: string, enum: [sandbox, production]}
+        config: {$ref: '#/components/schemas/SmtpIntegrationConfig'}
+        credentials: {$ref: '#/components/schemas/SmtpIntegrationCredentials'}
+        confirmation: {type: string, enum: [INTEGRATION]}
+    IntegrationUpdateInput:
+      type: object
+      required: [displayName, config, revision, confirmation]
+      properties:
+        displayName: {type: string}
+        config: {$ref: '#/components/schemas/SmtpIntegrationConfig'}
+        credentials: {$ref: '#/components/schemas/SmtpIntegrationCredentials'}
+        revision: {type: integer}
+        confirmation: {type: string, enum: [INTEGRATION]}
+    SmtpIntegrationConfig:
+      type: object
+      required: [host, port]
+      properties:
+        host: {type: string}
+        port: {type: integer, enum: [465, 587]}
+    SmtpIntegrationCredentials:
+      type: object
+      required: [username, password]
+      properties:
+        username: {type: string}
+        password: {type: string}
+    IntegrationCenter:
+      type: object
+      required: [providers, instances, page, pageSize, total]
+      properties:
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
+        providers:
+          type: array
+          items:
+            type: object
+            required: [id, name, category, version, adapterInstalled, capabilities, configurationFields, credentialFields]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              category: {type: string}
+              version: {type: [string, "null"]}
+              adapterInstalled: {type: boolean}
+              capabilities: {type: array, items: {type: string}}
+              configurationFields: {type: array, items: {type: string}}
+              credentialFields: {type: array, items: {type: string}}
+        instances:
+          type: array
+          items:
+            type: object
+            required: [id, provider, organizationId, displayName, environment, config, enabled, status, revision, credentialsConfigured, lastCheckAt, lastError, createdAt]
+            properties:
+              id: {type: string}
+              provider: {type: string}
+              organizationId: {type: [string, "null"]}
+              displayName: {type: string}
+              environment: {type: string}
+              config: {$ref: '#/components/schemas/SmtpIntegrationConfig'}
+              enabled: {type: boolean}
+              status: {type: string}
+              revision: {type: integer}
+              credentialsConfigured: {type: boolean}
+              lastCheckAt: {type: [string, "null"]}
+              lastError: {type: [string, "null"]}
+              createdAt: {type: string}
+    WebhookCreateInput:
+      type: object
+      required: [name, organizationId, endpoint, events, confirmation]
+      properties:
+        name: {type: string}
+        organizationId: {type: [string, "null"]}
+        endpoint: {type: string}
+        events: {type: array, items: {type: string}}
+        confirmation: {type: string, enum: [WEBHOOK]}
+    WebhookCenter:
+      type: object
+      required: [events, webhooks, deliveries, page, pageSize, total]
+      properties:
+        events: {type: array, items: {type: string}}
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
+        webhooks:
+          type: array
+          items:
+            type: object
+            required: [id, name, organizationId, endpoint, events, enabled, createdAt]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              organizationId: {type: [string, "null"]}
+              endpoint: {type: string}
+              events: {type: array, items: {type: string}}
+              enabled: {type: boolean}
+              createdAt: {type: string}
+        deliveries:
+          type: array
+          items:
+            type: object
+            required: [id, webhookId, eventId, eventName, status, attempts, nextAttemptAt, lastStatus, lastError, createdAt]
+            properties:
+              id: {type: string}
+              webhookId: {type: string}
+              eventId: {type: string}
+              eventName: {type: string}
+              status: {type: string}
+              attempts: {type: integer}
+              nextAttemptAt: {type: string}
+              lastStatus: {type: [integer, "null"]}
+              lastError: {type: [string, "null"]}
+              createdAt: {type: string}
+    ManagedApiClient:
+      type: object
+      required: [id, name, description, organizationId, clientType, status, allowedScopes, allowedIps, createdAt, lastUsedAt]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        description: {type: string}
+        organizationId: {type: [string, "null"]}
+        clientType: {type: string}
+        status: {type: string}
+        allowedScopes: {type: array, items: {type: string}}
+        allowedIps: {type: array, items: {type: string}}
+        createdAt: {type: string}
+        lastUsedAt: {type: [string, "null"]}
+    ManagedApiKey:
+      type: object
+      required: [id, clientId, name, prefix, scopes, expiresAt, revokedAt, lastUsedAt, requestsPerMinute, createdAt]
+      properties:
+        id: {type: string}
+        clientId: {type: string}
+        name: {type: string}
+        prefix: {type: string}
+        scopes: {type: array, items: {type: string}}
+        expiresAt: {type: string}
+        revokedAt: {type: [string, "null"]}
+        lastUsedAt: {type: [string, "null"]}
+        requestsPerMinute: {type: integer}
+        createdAt: {type: string}
+    ApiKeyActionResult:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+        secret: {type: string}
+        revoked: {type: boolean}
     SystemMetric:
       type: object
       required: [key, value, status]

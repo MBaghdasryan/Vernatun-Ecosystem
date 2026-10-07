@@ -9,9 +9,10 @@ import {createSystemLogExport} from '@workspace/api-client-react';
 import {getCsrfHeaders} from './client';
 import SystemErrors from './SystemErrors';
 import SystemBackups,{backupsLabel} from './SystemBackups';
+import ApiCenter,{apiLabel} from './ApiCenter';
 import {CachePanel,SessionsPanel,EnvironmentPanel,RetentionPanel,ADMIN_S,ENV_LABELS,canEnterSystem} from './SystemAdmin';
 
-type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups';
+type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups'|'api';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
  read_access_verified:['Հաստատված','Подтверждено','Verified'],probe_failed:['Ստուգումը ձախողվեց','Проверка не удалась','Probe failed'],probe_timeout:['Ժամանակը սպառվեց','Тайм-аут','Timed out'],
@@ -68,8 +69,8 @@ const MAX:Record<string,number>={endpoint:240,errorCode:60,job:60,q:100,requestI
 export const systemLabel=(l:Language)=>S.system[L(l)];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
-type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read';
-const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'}];
+type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read'|'api.read';
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'},{key:'api',perm:'api.read'}];
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
 
 // Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
@@ -168,9 +169,9 @@ function Jobs({ck,l}:{ck:string;l:Language}){
   </section>}</div>;
 }
 
-export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'?s:'overview'}
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'||s==='api'?s:'overview'}
 export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
- const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):(S[k]??ADMIN_S[k])[L(l)];
+ const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):k==='api'?apiLabel(l):(S[k]??ADMIN_S[k])[L(l)];
  const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
  useEffect(()=>{const pop=()=>setTab(systemTab(location.pathname));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop)},[]);
  const visible=TABS.filter(x=>c.permissions.includes(x.perm));
@@ -190,6 +191,7 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
     {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
     {current==='retention'&&<RetentionPanel key={ck+':r'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
     {current==='backups'&&<SystemBackups key={ck+':b'} ck={ck} l={l} perms={{create:c.permissions.includes('backups.create'),download:c.permissions.includes('backups.download'),delete:c.permissions.includes('backups.delete'),policies:c.permissions.includes('backups.policies.manage'),restore:c.permissions.includes('backups.restore')}}/>}
+    {current==='api'&&<ApiCenter key={ck+':a'} ck={ck} l={l} perms={{clients:c.permissions.includes('api.clients.manage'),keys:c.permissions.includes('api.keys.manage')}}/>}
     {current==='cache'&&<CachePanel key={ck+':c'} ck={ck} l={l} canClear={c.permissions.includes('cache.clear')}/>}
     {current==='sessions'&&<SessionsPanel key={ck+':s'} ck={ck} l={l} canRevoke={c.permissions.includes('sessions.revoke')}/>}
     {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}

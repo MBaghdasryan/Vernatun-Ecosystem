@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActIntegrationInstanceBody,
+  ActManagedApiKeyBody,
+  ActWebhookDeliveryBody,
+  ApiKeyActionResult,
   AvailabilityBlock,
   AvailabilityBlockChange,
   AvailabilityBlockInput,
@@ -40,8 +44,10 @@ import type {
   ChangeGovernanceMeeting200,
   ChangeGovernanceMeetingBody,
   ClearSystemCache200,
+  CreateApiClientBody,
   CreateGovernanceMeeting201,
   CreateGovernanceMeetingBody,
+  CreateManagedApiKeyBody,
   CreateOwnership201,
   CreateOwnershipBody,
   CreateSystemBackup202,
@@ -63,13 +69,19 @@ import type {
   EndOwnershipBody,
   ExamineDueNotifications200,
   FinanceRecord,
+  GetApiCenter200,
+  GetApiCenterParams,
   GetContractorScorecard200Item,
   GetContractorScorecardParams,
   GetDefectCollaborationParams,
   GetDispatcherSetupParams,
   GetEmailHealthParams,
+  GetExternalHealth200,
+  GetExternalRecords200,
+  GetExternalRecordsParams,
   GetGovernanceMeeting200,
   GetGovernanceSettings200,
+  GetIntegrationCenterParams,
   GetLandingLeadsParams,
   GetNotificationCatalog200,
   GetPortfolioAnalytics200,
@@ -80,12 +92,14 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  GetSystemApiDocumentation200,
   GetSystemBackupsParams,
   GetSystemErrorsParams,
   GetSystemJobsParams,
   GetSystemLogRetention200,
   GetSystemLogsParams,
   GetSystemSessionsParams,
+  GetWebhookCenterParams,
   HandoverFloorAssignment,
   HandoverFloorInput,
   HandoverFloorReceipt,
@@ -100,6 +114,9 @@ import type {
   IamSessionRevocationInput,
   IncidentInput,
   IncidentTransitionInput,
+  IntegrationCenter,
+  IntegrationCreateInput,
+  IntegrationUpdateInput,
   Invitation,
   InvitationResendInput,
   InvitationSendReceipt,
@@ -125,12 +142,14 @@ import type {
   MaintenanceGenerationInput,
   MaintenancePlanInput,
   MaintenanceRecord,
+  ManagedApiClient,
   MaterialInput,
   MfaPolicy,
   MfaPolicyInput,
   MfaPolicyState,
   NotificationDestination,
   NotificationPreferences,
+  OperationIdResult,
   OperationalRequestInput,
   OperationalRow,
   OrganizationBrandingState,
@@ -158,6 +177,8 @@ import type {
   SaveOperatingBudgetBody,
   SaveSystemLogRetention200,
   ScopedRecordPage,
+  SetApiClientStatusBody,
+  SetOutgoingWebhookStateBody,
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
@@ -191,6 +212,8 @@ import type {
   VerifySystemBackup200,
   VisitProposalInput,
   VisitResponseInput,
+  WebhookCenter,
+  WebhookCreateInput,
   WorkTransitionInput
 } from './api.schemas';
 
@@ -220,6 +243,1298 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetIntegrationCenterUrl = (params?: GetIntegrationCenterParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/integrations?${stringifiedParams}` : `/api/system/integrations`
+}
+
+export const getIntegrationCenter = async (params?: GetIntegrationCenterParams, options?: Parameters<typeof customFetch>[1]): Promise<IntegrationCenter> => {
+
+  return customFetch<IntegrationCenter>(getGetIntegrationCenterUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIntegrationCenterQueryKey = (params?: GetIntegrationCenterParams,) => {
+    return [
+    `/api/system/integrations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetIntegrationCenterQueryOptions = <TData = Awaited<ReturnType<typeof getIntegrationCenter>>, TError = ErrorType<unknown>>(params?: GetIntegrationCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIntegrationCenterQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIntegrationCenter>>> = ({ signal }) => getIntegrationCenter(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIntegrationCenter>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIntegrationCenterQueryResult = NonNullable<Awaited<ReturnType<typeof getIntegrationCenter>>>
+export type GetIntegrationCenterQueryError = ErrorType<unknown>
+
+
+
+export function useGetIntegrationCenter<TData = Awaited<ReturnType<typeof getIntegrationCenter>>, TError = ErrorType<unknown>>(
+ params?: GetIntegrationCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIntegrationCenterQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateIntegrationInstanceUrl = () => {
+
+
+
+
+  return `/api/system/integrations`
+}
+
+export const createIntegrationInstance = async (integrationCreateInput: IntegrationCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OperationIdResult>(getCreateIntegrationInstanceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(integrationCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateIntegrationInstanceMutationKey = () => ['createIntegrationInstance'] as const;
+
+export const getCreateIntegrationInstanceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInstance>>, TError,CreateIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInstance>>, TError,CreateIntegrationInstanceMutationVariables, TContext> => {
+
+const mutationKey = getCreateIntegrationInstanceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIntegrationInstance>>, CreateIntegrationInstanceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createIntegrationInstance(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIntegrationInstanceMutationResult = NonNullable<Awaited<ReturnType<typeof createIntegrationInstance>>>
+    export type CreateIntegrationInstanceMutationBody = BodyType<IntegrationCreateInput>
+    export type CreateIntegrationInstanceMutationError = ErrorType<unknown>
+    export type CreateIntegrationInstanceMutationVariables = {data: BodyType<IntegrationCreateInput>}
+
+    export const useCreateIntegrationInstance = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInstance>>, TError,CreateIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIntegrationInstance>>,
+        TError,
+        CreateIntegrationInstanceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateIntegrationInstanceMutationOptions(options));
+    }
+
+export const getUpdateIntegrationInstanceUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/integrations/${id}`
+}
+
+export const updateIntegrationInstance = async (id: string,
+    integrationUpdateInput: IntegrationUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OperationIdResult>(getUpdateIntegrationInstanceUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(integrationUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateIntegrationInstanceMutationKey = () => ['updateIntegrationInstance'] as const;
+
+export const getUpdateIntegrationInstanceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntegrationInstance>>, TError,UpdateIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIntegrationInstance>>, TError,UpdateIntegrationInstanceMutationVariables, TContext> => {
+
+const mutationKey = getUpdateIntegrationInstanceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIntegrationInstance>>, UpdateIntegrationInstanceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateIntegrationInstance(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIntegrationInstanceMutationResult = NonNullable<Awaited<ReturnType<typeof updateIntegrationInstance>>>
+    export type UpdateIntegrationInstanceMutationBody = BodyType<IntegrationUpdateInput>
+    export type UpdateIntegrationInstanceMutationError = ErrorType<unknown>
+    export type UpdateIntegrationInstanceMutationVariables = {id: string;data: BodyType<IntegrationUpdateInput>}
+
+    export const useUpdateIntegrationInstance = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntegrationInstance>>, TError,UpdateIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIntegrationInstance>>,
+        TError,
+        UpdateIntegrationInstanceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateIntegrationInstanceMutationOptions(options));
+    }
+
+export const getActIntegrationInstanceUrl = (id: string,
+    action: 'test' | 'activate' | 'deactivate' | 'delete',) => {
+
+
+
+
+  return `/api/system/integrations/${id}/${action}`
+}
+
+export const actIntegrationInstance = async (id: string,
+    action: 'test' | 'activate' | 'deactivate' | 'delete',
+    actIntegrationInstanceBody: ActIntegrationInstanceBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OperationIdResult>(getActIntegrationInstanceUrl(id,action),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(actIntegrationInstanceBody)
+  }
+);}
+
+
+
+
+
+export const getActIntegrationInstanceMutationKey = () => ['actIntegrationInstance'] as const;
+
+export const getActIntegrationInstanceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actIntegrationInstance>>, TError,ActIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof actIntegrationInstance>>, TError,ActIntegrationInstanceMutationVariables, TContext> => {
+
+const mutationKey = getActIntegrationInstanceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actIntegrationInstance>>, ActIntegrationInstanceMutationVariables> = (props) => {
+          const {id,action,data} = props ?? {};
+
+          return  actIntegrationInstance(id,action,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActIntegrationInstanceMutationResult = NonNullable<Awaited<ReturnType<typeof actIntegrationInstance>>>
+    export type ActIntegrationInstanceMutationBody = BodyType<ActIntegrationInstanceBody>
+    export type ActIntegrationInstanceMutationError = ErrorType<unknown>
+    export type ActIntegrationInstanceMutationVariables = {id: string;action: 'test' | 'activate' | 'deactivate' | 'delete';data: BodyType<ActIntegrationInstanceBody>}
+
+    export const useActIntegrationInstance = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actIntegrationInstance>>, TError,ActIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof actIntegrationInstance>>,
+        TError,
+        ActIntegrationInstanceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActIntegrationInstanceMutationOptions(options));
+    }
+
+export const getGetWebhookCenterUrl = (params?: GetWebhookCenterParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/webhooks?${stringifiedParams}` : `/api/system/webhooks`
+}
+
+export const getWebhookCenter = async (params?: GetWebhookCenterParams, options?: Parameters<typeof customFetch>[1]): Promise<WebhookCenter> => {
+
+  return customFetch<WebhookCenter>(getGetWebhookCenterUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWebhookCenterQueryKey = (params?: GetWebhookCenterParams,) => {
+    return [
+    `/api/system/webhooks`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWebhookCenterQueryOptions = <TData = Awaited<ReturnType<typeof getWebhookCenter>>, TError = ErrorType<unknown>>(params?: GetWebhookCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWebhookCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWebhookCenterQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWebhookCenter>>> = ({ signal }) => getWebhookCenter(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWebhookCenter>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWebhookCenterQueryResult = NonNullable<Awaited<ReturnType<typeof getWebhookCenter>>>
+export type GetWebhookCenterQueryError = ErrorType<unknown>
+
+
+
+export function useGetWebhookCenter<TData = Awaited<ReturnType<typeof getWebhookCenter>>, TError = ErrorType<unknown>>(
+ params?: GetWebhookCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWebhookCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWebhookCenterQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOutgoingWebhookUrl = () => {
+
+
+
+
+  return `/api/system/webhooks`
+}
+
+export const createOutgoingWebhook = async (webhookCreateInput: WebhookCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<ApiKeyActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ApiKeyActionResult>(getCreateOutgoingWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(webhookCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOutgoingWebhookMutationKey = () => ['createOutgoingWebhook'] as const;
+
+export const getCreateOutgoingWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOutgoingWebhook>>, TError,CreateOutgoingWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOutgoingWebhook>>, TError,CreateOutgoingWebhookMutationVariables, TContext> => {
+
+const mutationKey = getCreateOutgoingWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOutgoingWebhook>>, CreateOutgoingWebhookMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOutgoingWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOutgoingWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof createOutgoingWebhook>>>
+    export type CreateOutgoingWebhookMutationBody = BodyType<WebhookCreateInput>
+    export type CreateOutgoingWebhookMutationError = ErrorType<unknown>
+    export type CreateOutgoingWebhookMutationVariables = {data: BodyType<WebhookCreateInput>}
+
+    export const useCreateOutgoingWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOutgoingWebhook>>, TError,CreateOutgoingWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOutgoingWebhook>>,
+        TError,
+        CreateOutgoingWebhookMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateOutgoingWebhookMutationOptions(options));
+    }
+
+export const getSetOutgoingWebhookStateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/webhooks/${id}/state`
+}
+
+export const setOutgoingWebhookState = async (id: string,
+    setOutgoingWebhookStateBody: SetOutgoingWebhookStateBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OperationIdResult>(getSetOutgoingWebhookStateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setOutgoingWebhookStateBody)
+  }
+);}
+
+
+
+
+
+export const getSetOutgoingWebhookStateMutationKey = () => ['setOutgoingWebhookState'] as const;
+
+export const getSetOutgoingWebhookStateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOutgoingWebhookState>>, TError,SetOutgoingWebhookStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setOutgoingWebhookState>>, TError,SetOutgoingWebhookStateMutationVariables, TContext> => {
+
+const mutationKey = getSetOutgoingWebhookStateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setOutgoingWebhookState>>, SetOutgoingWebhookStateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setOutgoingWebhookState(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetOutgoingWebhookStateMutationResult = NonNullable<Awaited<ReturnType<typeof setOutgoingWebhookState>>>
+    export type SetOutgoingWebhookStateMutationBody = BodyType<SetOutgoingWebhookStateBody>
+    export type SetOutgoingWebhookStateMutationError = ErrorType<unknown>
+    export type SetOutgoingWebhookStateMutationVariables = {id: string;data: BodyType<SetOutgoingWebhookStateBody>}
+
+    export const useSetOutgoingWebhookState = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOutgoingWebhookState>>, TError,SetOutgoingWebhookStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setOutgoingWebhookState>>,
+        TError,
+        SetOutgoingWebhookStateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetOutgoingWebhookStateMutationOptions(options));
+    }
+
+export const getActWebhookDeliveryUrl = (id: string,
+    action: 'retry' | 'cancel',) => {
+
+
+
+
+  return `/api/system/webhooks/deliveries/${id}/${action}`
+}
+
+export const actWebhookDelivery = async (id: string,
+    action: 'retry' | 'cancel',
+    actWebhookDeliveryBody: ActWebhookDeliveryBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OperationIdResult>(getActWebhookDeliveryUrl(id,action),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(actWebhookDeliveryBody)
+  }
+);}
+
+
+
+
+
+export const getActWebhookDeliveryMutationKey = () => ['actWebhookDelivery'] as const;
+
+export const getActWebhookDeliveryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actWebhookDelivery>>, TError,ActWebhookDeliveryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof actWebhookDelivery>>, TError,ActWebhookDeliveryMutationVariables, TContext> => {
+
+const mutationKey = getActWebhookDeliveryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actWebhookDelivery>>, ActWebhookDeliveryMutationVariables> = (props) => {
+          const {id,action,data} = props ?? {};
+
+          return  actWebhookDelivery(id,action,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActWebhookDeliveryMutationResult = NonNullable<Awaited<ReturnType<typeof actWebhookDelivery>>>
+    export type ActWebhookDeliveryMutationBody = BodyType<ActWebhookDeliveryBody>
+    export type ActWebhookDeliveryMutationError = ErrorType<unknown>
+    export type ActWebhookDeliveryMutationVariables = {id: string;action: 'retry' | 'cancel';data: BodyType<ActWebhookDeliveryBody>}
+
+    export const useActWebhookDelivery = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actWebhookDelivery>>, TError,ActWebhookDeliveryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof actWebhookDelivery>>,
+        TError,
+        ActWebhookDeliveryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActWebhookDeliveryMutationOptions(options));
+    }
+
+export const getGetSystemApiDocumentationUrl = () => {
+
+
+
+
+  return `/api/system/api/docs`
+}
+
+export const getSystemApiDocumentation = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetSystemApiDocumentation200> => {
+
+  return customFetch<GetSystemApiDocumentation200>(getGetSystemApiDocumentationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemApiDocumentationQueryKey = () => {
+    return [
+    `/api/system/api/docs`
+    ] as const;
+    }
+
+
+export const getGetSystemApiDocumentationQueryOptions = <TData = Awaited<ReturnType<typeof getSystemApiDocumentation>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemApiDocumentation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemApiDocumentationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemApiDocumentation>>> = ({ signal }) => getSystemApiDocumentation({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemApiDocumentation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemApiDocumentationQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemApiDocumentation>>>
+export type GetSystemApiDocumentationQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemApiDocumentation<TData = Awaited<ReturnType<typeof getSystemApiDocumentation>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemApiDocumentation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemApiDocumentationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetApiCenterUrl = (params?: GetApiCenterParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/api?${stringifiedParams}` : `/api/system/api`
+}
+
+export const getApiCenter = async (params?: GetApiCenterParams, options?: Parameters<typeof customFetch>[1]): Promise<GetApiCenter200> => {
+
+  return customFetch<GetApiCenter200>(getGetApiCenterUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetApiCenterQueryKey = (params?: GetApiCenterParams,) => {
+    return [
+    `/api/system/api`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetApiCenterQueryOptions = <TData = Awaited<ReturnType<typeof getApiCenter>>, TError = ErrorType<unknown>>(params?: GetApiCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApiCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApiCenterQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiCenter>>> = ({ signal }) => getApiCenter(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApiCenter>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetApiCenterQueryResult = NonNullable<Awaited<ReturnType<typeof getApiCenter>>>
+export type GetApiCenterQueryError = ErrorType<unknown>
+
+
+
+export function useGetApiCenter<TData = Awaited<ReturnType<typeof getApiCenter>>, TError = ErrorType<unknown>>(
+ params?: GetApiCenterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApiCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetApiCenterQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateApiClientUrl = () => {
+
+
+
+
+  return `/api/system/api/clients`
+}
+
+export const createApiClient = async (createApiClientBody: CreateApiClientBody, options?: Parameters<typeof customFetch>[1]): Promise<ManagedApiClient> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ManagedApiClient>(getCreateApiClientUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createApiClientBody)
+  }
+);}
+
+
+
+
+
+export const getCreateApiClientMutationKey = () => ['createApiClient'] as const;
+
+export const getCreateApiClientMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiClient>>, TError,CreateApiClientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApiClient>>, TError,CreateApiClientMutationVariables, TContext> => {
+
+const mutationKey = getCreateApiClientMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApiClient>>, CreateApiClientMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createApiClient(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateApiClientMutationResult = NonNullable<Awaited<ReturnType<typeof createApiClient>>>
+    export type CreateApiClientMutationBody = BodyType<CreateApiClientBody>
+    export type CreateApiClientMutationError = ErrorType<unknown>
+    export type CreateApiClientMutationVariables = {data: BodyType<CreateApiClientBody>}
+
+    export const useCreateApiClient = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiClient>>, TError,CreateApiClientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createApiClient>>,
+        TError,
+        CreateApiClientMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateApiClientMutationOptions(options));
+    }
+
+export const getSetApiClientStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/api/clients/${id}`
+}
+
+export const setApiClientStatus = async (id: string,
+    setApiClientStatusBody: SetApiClientStatusBody, options?: Parameters<typeof customFetch>[1]): Promise<ManagedApiClient> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ManagedApiClient>(getSetApiClientStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setApiClientStatusBody)
+  }
+);}
+
+
+
+
+
+export const getSetApiClientStatusMutationKey = () => ['setApiClientStatus'] as const;
+
+export const getSetApiClientStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setApiClientStatus>>, TError,SetApiClientStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setApiClientStatus>>, TError,SetApiClientStatusMutationVariables, TContext> => {
+
+const mutationKey = getSetApiClientStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setApiClientStatus>>, SetApiClientStatusMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setApiClientStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetApiClientStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setApiClientStatus>>>
+    export type SetApiClientStatusMutationBody = BodyType<SetApiClientStatusBody>
+    export type SetApiClientStatusMutationError = ErrorType<unknown>
+    export type SetApiClientStatusMutationVariables = {id: string;data: BodyType<SetApiClientStatusBody>}
+
+    export const useSetApiClientStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setApiClientStatus>>, TError,SetApiClientStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setApiClientStatus>>,
+        TError,
+        SetApiClientStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetApiClientStatusMutationOptions(options));
+    }
+
+export const getCreateManagedApiKeyUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/api/clients/${id}/keys`
+}
+
+export const createManagedApiKey = async (id: string,
+    createManagedApiKeyBody: CreateManagedApiKeyBody, options?: Parameters<typeof customFetch>[1]): Promise<ApiKeyActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ApiKeyActionResult>(getCreateManagedApiKeyUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createManagedApiKeyBody)
+  }
+);}
+
+
+
+
+
+export const getCreateManagedApiKeyMutationKey = () => ['createManagedApiKey'] as const;
+
+export const getCreateManagedApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManagedApiKey>>, TError,CreateManagedApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createManagedApiKey>>, TError,CreateManagedApiKeyMutationVariables, TContext> => {
+
+const mutationKey = getCreateManagedApiKeyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createManagedApiKey>>, CreateManagedApiKeyMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createManagedApiKey(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateManagedApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createManagedApiKey>>>
+    export type CreateManagedApiKeyMutationBody = BodyType<CreateManagedApiKeyBody>
+    export type CreateManagedApiKeyMutationError = ErrorType<unknown>
+    export type CreateManagedApiKeyMutationVariables = {id: string;data: BodyType<CreateManagedApiKeyBody>}
+
+    export const useCreateManagedApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManagedApiKey>>, TError,CreateManagedApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createManagedApiKey>>,
+        TError,
+        CreateManagedApiKeyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateManagedApiKeyMutationOptions(options));
+    }
+
+export const getActManagedApiKeyUrl = (id: string,
+    action: 'revoke' | 'rotate',) => {
+
+
+
+
+  return `/api/system/api/keys/${id}/${action}`
+}
+
+export const actManagedApiKey = async (id: string,
+    action: 'revoke' | 'rotate',
+    actManagedApiKeyBody: ActManagedApiKeyBody, options?: Parameters<typeof customFetch>[1]): Promise<ApiKeyActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ApiKeyActionResult>(getActManagedApiKeyUrl(id,action),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(actManagedApiKeyBody)
+  }
+);}
+
+
+
+
+
+export const getActManagedApiKeyMutationKey = () => ['actManagedApiKey'] as const;
+
+export const getActManagedApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actManagedApiKey>>, TError,ActManagedApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof actManagedApiKey>>, TError,ActManagedApiKeyMutationVariables, TContext> => {
+
+const mutationKey = getActManagedApiKeyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actManagedApiKey>>, ActManagedApiKeyMutationVariables> = (props) => {
+          const {id,action,data} = props ?? {};
+
+          return  actManagedApiKey(id,action,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActManagedApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof actManagedApiKey>>>
+    export type ActManagedApiKeyMutationBody = BodyType<ActManagedApiKeyBody>
+    export type ActManagedApiKeyMutationError = ErrorType<unknown>
+    export type ActManagedApiKeyMutationVariables = {id: string;action: 'revoke' | 'rotate';data: BodyType<ActManagedApiKeyBody>}
+
+    export const useActManagedApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actManagedApiKey>>, TError,ActManagedApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof actManagedApiKey>>,
+        TError,
+        ActManagedApiKeyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActManagedApiKeyMutationOptions(options));
+    }
+
+export const getGetExternalHealthUrl = () => {
+
+
+
+
+  return `/api/v1/health`
+}
+
+export const getExternalHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetExternalHealth200> => {
+
+  return customFetch<GetExternalHealth200>(getGetExternalHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExternalHealthQueryKey = () => {
+    return [
+    `/api/v1/health`
+    ] as const;
+    }
+
+
+export const getGetExternalHealthQueryOptions = <TData = Awaited<ReturnType<typeof getExternalHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExternalHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExternalHealth>>> = ({ signal }) => getExternalHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExternalHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExternalHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getExternalHealth>>>
+export type GetExternalHealthQueryError = ErrorType<unknown>
+
+
+
+export function useGetExternalHealth<TData = Awaited<ReturnType<typeof getExternalHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExternalHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetExternalRecordsUrl = (resource: 'properties' | 'units' | 'requests',
+    params?: GetExternalRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/${resource}?${stringifiedParams}` : `/api/v1/${resource}`
+}
+
+export const getExternalRecords = async (resource: 'properties' | 'units' | 'requests',
+    params?: GetExternalRecordsParams, options?: Parameters<typeof customFetch>[1]): Promise<GetExternalRecords200> => {
+
+  return customFetch<GetExternalRecords200>(getGetExternalRecordsUrl(resource,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExternalRecordsQueryKey = (resource: 'properties' | 'units' | 'requests',
+    params?: GetExternalRecordsParams,) => {
+    return [
+    `/api/v1/${resource}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetExternalRecordsQueryOptions = <TData = Awaited<ReturnType<typeof getExternalRecords>>, TError = ErrorType<unknown>>(resource: 'properties' | 'units' | 'requests',
+    params?: GetExternalRecordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalRecords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExternalRecordsQueryKey(resource,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExternalRecords>>> = ({ signal }) => getExternalRecords(resource,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: resource !== null && resource !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExternalRecords>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExternalRecordsQueryResult = NonNullable<Awaited<ReturnType<typeof getExternalRecords>>>
+export type GetExternalRecordsQueryError = ErrorType<unknown>
+
+
+
+export function useGetExternalRecords<TData = Awaited<ReturnType<typeof getExternalRecords>>, TError = ErrorType<unknown>>(
+ resource: 'properties' | 'units' | 'requests',
+    params?: GetExternalRecordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalRecords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExternalRecordsQueryOptions(resource,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getInspectSystemBackupUrl = (id: string,) => {
 

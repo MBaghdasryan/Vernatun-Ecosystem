@@ -8,6 +8,339 @@
 import * as zod from 'zod';
 
 
+
+
+
+export const GetIntegrationCenterQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetIntegrationCenterResponse = zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "providers": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "version": zod.string().nullable(),
+  "adapterInstalled": zod.boolean(),
+  "capabilities": zod.array(zod.string()),
+  "configurationFields": zod.array(zod.string()),
+  "credentialFields": zod.array(zod.string())
+})),
+  "instances": zod.array(zod.object({
+  "id": zod.string(),
+  "provider": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "displayName": zod.string(),
+  "environment": zod.string(),
+  "config": zod.object({
+  "host": zod.string(),
+  "port": zod.union([zod.literal(465),zod.literal(587)])
+}),
+  "enabled": zod.boolean(),
+  "status": zod.string(),
+  "revision": zod.number().int(),
+  "credentialsConfigured": zod.boolean(),
+  "lastCheckAt": zod.string().nullable(),
+  "lastError": zod.string().nullable(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const CreateIntegrationInstanceBody = zod.object({
+  "provider": zod.enum(['smtp']),
+  "organizationId": zod.string().nullable(),
+  "displayName": zod.string(),
+  "environment": zod.enum(['sandbox', 'production']),
+  "config": zod.object({
+  "host": zod.string(),
+  "port": zod.union([zod.literal(465),zod.literal(587)])
+}),
+  "credentials": zod.object({
+  "username": zod.string(),
+  "password": zod.string()
+}),
+  "confirmation": zod.enum(['INTEGRATION'])
+})
+
+export const CreateIntegrationInstanceResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string().optional()
+})
+
+
+export const UpdateIntegrationInstanceParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateIntegrationInstanceBody = zod.object({
+  "displayName": zod.string(),
+  "config": zod.object({
+  "host": zod.string(),
+  "port": zod.union([zod.literal(465),zod.literal(587)])
+}),
+  "credentials": zod.object({
+  "username": zod.string(),
+  "password": zod.string()
+}).optional(),
+  "revision": zod.number().int(),
+  "confirmation": zod.enum(['INTEGRATION'])
+})
+
+export const UpdateIntegrationInstanceResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string().optional()
+})
+
+
+export const ActIntegrationInstanceParams = zod.object({
+  "id": zod.coerce.string(),
+  "action": zod.enum(['test', 'activate', 'deactivate', 'delete'])
+})
+
+export const ActIntegrationInstanceBody = zod.object({
+  "revision": zod.number().int(),
+  "confirmation": zod.enum(['INTEGRATION'])
+})
+
+export const ActIntegrationInstanceResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string().optional()
+})
+
+
+
+
+
+export const GetWebhookCenterQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetWebhookCenterResponse = zod.object({
+  "events": zod.array(zod.string()),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "webhooks": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "endpoint": zod.string(),
+  "events": zod.array(zod.string()),
+  "enabled": zod.boolean(),
+  "createdAt": zod.string()
+})),
+  "deliveries": zod.array(zod.object({
+  "id": zod.string(),
+  "webhookId": zod.string(),
+  "eventId": zod.string(),
+  "eventName": zod.string(),
+  "status": zod.string(),
+  "attempts": zod.number().int(),
+  "nextAttemptAt": zod.string(),
+  "lastStatus": zod.number().int().nullable(),
+  "lastError": zod.string().nullable(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const CreateOutgoingWebhookBody = zod.object({
+  "name": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "endpoint": zod.string(),
+  "events": zod.array(zod.string()),
+  "confirmation": zod.enum(['WEBHOOK'])
+})
+
+export const CreateOutgoingWebhookResponse = zod.object({
+  "id": zod.string(),
+  "secret": zod.string().optional(),
+  "revoked": zod.boolean().optional()
+})
+
+
+export const SetOutgoingWebhookStateParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SetOutgoingWebhookStateBody = zod.object({
+  "enabled": zod.boolean(),
+  "confirmation": zod.enum(['WEBHOOK'])
+})
+
+export const SetOutgoingWebhookStateResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string().optional()
+})
+
+
+export const ActWebhookDeliveryParams = zod.object({
+  "id": zod.coerce.string(),
+  "action": zod.enum(['retry', 'cancel'])
+})
+
+export const ActWebhookDeliveryBody = zod.object({
+  "confirmation": zod.enum(['WEBHOOK'])
+})
+
+export const ActWebhookDeliveryResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string().optional()
+})
+
+
+export const GetSystemApiDocumentationResponse = zod.record(zod.string(), zod.unknown())
+
+
+
+
+
+export const GetApiCenterQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetApiCenterResponse = zod.object({
+  "scopes": zod.array(zod.string()),
+  "clients": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "clientType": zod.string(),
+  "status": zod.string(),
+  "allowedScopes": zod.array(zod.string()),
+  "allowedIps": zod.array(zod.string()),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullable()
+})),
+  "keys": zod.array(zod.object({
+  "id": zod.string(),
+  "clientId": zod.string(),
+  "name": zod.string(),
+  "prefix": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "expiresAt": zod.string(),
+  "revokedAt": zod.string().nullable(),
+  "lastUsedAt": zod.string().nullable(),
+  "requestsPerMinute": zod.number().int(),
+  "createdAt": zod.string()
+})),
+  "page": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+export const CreateApiClientBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "organizationId": zod.string().nullable(),
+  "clientType": zod.enum(['platform', 'organization', 'integration', 'machine_to_machine']),
+  "allowedScopes": zod.array(zod.string()),
+  "allowedIps": zod.array(zod.string()).optional(),
+  "confirmation": zod.enum(['API CLIENT'])
+})
+
+export const CreateApiClientResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "clientType": zod.string(),
+  "status": zod.string(),
+  "allowedScopes": zod.array(zod.string()),
+  "allowedIps": zod.array(zod.string()),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullable()
+})
+
+
+export const SetApiClientStatusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SetApiClientStatusBody = zod.object({
+  "status": zod.enum(['active', 'disabled']),
+  "confirmation": zod.enum(['API CLIENT'])
+})
+
+export const SetApiClientStatusResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "organizationId": zod.string().nullable(),
+  "clientType": zod.string(),
+  "status": zod.string(),
+  "allowedScopes": zod.array(zod.string()),
+  "allowedIps": zod.array(zod.string()),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullable()
+})
+
+
+export const CreateManagedApiKeyParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CreateManagedApiKeyBody = zod.object({
+  "name": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "expiresAt": zod.coerce.date(),
+  "requestsPerMinute": zod.number().int(),
+  "confirmation": zod.enum(['API KEY'])
+})
+
+export const CreateManagedApiKeyResponse = zod.object({
+  "id": zod.string(),
+  "secret": zod.string().optional(),
+  "revoked": zod.boolean().optional()
+})
+
+
+export const ActManagedApiKeyParams = zod.object({
+  "id": zod.coerce.string(),
+  "action": zod.enum(['revoke', 'rotate'])
+})
+
+export const ActManagedApiKeyBody = zod.object({
+  "confirmation": zod.enum(['API KEY'])
+})
+
+export const ActManagedApiKeyResponse = zod.object({
+  "id": zod.string(),
+  "secret": zod.string().optional(),
+  "revoked": zod.boolean().optional()
+})
+
+
+export const GetExternalHealthResponse = zod.object({
+  "status": zod.string(),
+  "version": zod.string()
+})
+
+
+export const GetExternalRecordsParams = zod.object({
+  "resource": zod.enum(['properties', 'units', 'requests'])
+})
+
+
+
+
+export const GetExternalRecordsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetExternalRecordsResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "organizationId": zod.string()
+})
+
+
 export const InspectSystemBackupParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
