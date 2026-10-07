@@ -5,6 +5,100 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SystemMetricStatus = typeof SystemMetricStatus[keyof typeof SystemMetricStatus];
+
+
+export const SystemMetricStatus = {
+  healthy: 'healthy',
+  degraded: 'degraded',
+  down: 'down',
+  unavailable: 'unavailable',
+  not_configured: 'not_configured',
+} as const;
+
+export interface SystemMetric {
+  key: string;
+  /** @nullable */
+  value: string | null;
+  status: SystemMetricStatus;
+}
+
+export type SystemOverviewStatus = typeof SystemOverviewStatus[keyof typeof SystemOverviewStatus];
+
+
+export const SystemOverviewStatus = {
+  healthy: 'healthy',
+  warning: 'warning',
+  critical: 'critical',
+} as const;
+
+export interface SystemOverview {
+  observedAt: string;
+  status: SystemOverviewStatus;
+  metrics: SystemMetric[];
+}
+
+export interface SystemLog {
+  id: string;
+  createdAt: string;
+  category: string;
+  level: string;
+  service: string;
+  event: string;
+  /** @nullable */
+  requestId: string | null;
+  /** @nullable */
+  actorId: string | null;
+  /** @nullable */
+  organizationId: string | null;
+  /** @nullable */
+  endpoint: string | null;
+  /** @nullable */
+  method: string | null;
+  /** @nullable */
+  status: number | null;
+  /** @nullable */
+  latencyMs: number | null;
+  /** @nullable */
+  errorCode: string | null;
+  /** @nullable */
+  job: string | null;
+}
+
+export interface SystemLogs {
+  page: number;
+  hasMore: boolean;
+  items: SystemLog[];
+}
+
+export type SystemJobStatus = typeof SystemJobStatus[keyof typeof SystemJobStatus];
+
+
+export const SystemJobStatus = {
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  interrupted: 'interrupted',
+} as const;
+
+export interface SystemJob {
+  id: string;
+  job: string;
+  startedAt: string;
+  /** @nullable */
+  finishedAt: string | null;
+  heartbeatAt: string;
+  status: SystemJobStatus;
+  /** @nullable */
+  errorCode: string | null;
+}
+
+export interface SystemJobs {
+  page: number;
+  hasMore: boolean;
+  items: SystemJob[];
+}
+
 export interface HandoverFloorReceipt {
   id: string;
 }
@@ -1619,6 +1713,32 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetSystemLogsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+from?: string;
+to?: string;
+level?: string;
+category?: string;
+user?: string;
+organization?: string;
+requestId?: string;
+status?: number;
+endpoint?: string;
+errorCode?: string;
+job?: string;
+q?: string;
+};
+
+export type GetSystemJobsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
 
 export type UploadUnitPlanParams = {
 key: string;

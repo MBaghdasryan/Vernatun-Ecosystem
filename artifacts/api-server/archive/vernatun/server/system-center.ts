@@ -1,0 +1,85 @@
+import {Router,type Request} from 'express';
+import {z} from 'zod';
+import {pool} from './db.js';
+import {ApiError,requirePermission,requireAuth} from './access.js';
+import {rateLimit} from 'express-rate-limit';
+import {PostgresRateStore} from './rate-limit.js';
+import {config} from './config.js';
+import {logQueue} from './system-observability.js';
+import {systemQuery} from './system-query.js';
+import {emailProviderState} from './email.js';
+import {storageMode} from './storage-providers.js';
+
+export const systemCenter=Router();
+systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
+const startedAt=new Date(Date.now()-process.uptime()*1000).toISOString();
+async function permit(req:Request,p:string){
+ const c=await requirePermission(req,p);
+ if(c.organization_id||c.building_id||c.unit_id||!['platform_admin','support','platform_engineer'].includes(c.role_key))throw new ApiError(403,'platform_scope_required');
+ return c;
+}
+type Metric={key:string;value:string|null;status:'healthy'|'degraded'|'down'|'unavailable'|'not_configured'};
+async function overview(){
+ const metrics:Metric[]=[
+  {key:'environment',value:config.NODE_ENV,status:'healthy'},
+  {key:'node',value:process.version,status:'healthy'},
+  {key:'uptime_seconds',value:String(Math.floor(process.uptime())),status:'healthy'},
+  {key:'started_at',value:startedAt,status:'healthy'},
+  {key:'api',value:'responding',status:'healthy'},
+  ...['application_version','frontend_version','build_version','git_commit','storage','cache','integrations','last_backup','backup_storage'].map(key=>({key,value:null,status:'unavailable' as const})),
+  {key:'pool_total',value:String(pool.totalCount),status:'healthy'},
+  {key:'pool_idle',value:String(pool.idleCount),status:'healthy'},
+  {key:'pool_waiting',value:String(pool.waitingCount),status:pool.waitingCount?'degraded':'healthy'},
+  {key:'log_events_dropped',value:String(logQueue().dropped),status:logQueue().dropped?'degraded':'healthy'},
+ ];
+ try{const email=emailProviderState();metrics.push({key:'email_configuration',value:email,status:email==='not_configured'?'not_configured':'healthy'});
+ metrics.push({key:'email_delivery_probe',value:null,status:'unavailable'})}
+ catch{metrics.push({key:'email_configuration',value:null,status:'unavailable'})}
+ try{metrics.push({key:'storage_provider',value:storageMode(),status:'healthy'})}
+ catch{metrics.push({key:'storage_provider',value:null,status:'unavailable'})}
+ try{
+  const r=await systemQuery({text:`SELECT current_setting('server_version') AS version,pg_database_size(current_database())::text AS bytes,
+  (SELECT max(name) FROM schema_migrations) AS migration`,query_timeout:3000});
+  metrics.push({key:'database',value:r.rows[0].version,status:'healthy'},{key:'database_bytes',value:r.rows[0].bytes,status:'healthy'},
+   {key:'migration',value:r.rows[0].migration,status:'healthy'});
+ }catch{metrics.push({key:'database',value:null,status:'down'})}
+ try{
+  const r=await systemQuery({text:`SELECT count(*) FILTER(WHERE status='running' AND heartbeat_at>now()-interval '2 minutes')::int AS running,
+   count(*) FILTER(WHERE status='failed')::int AS failed,
+   count(*) FILTER(WHERE status='running' AND heartbeat_at<=now()-interval '2 minutes')::int AS interrupted FROM system_job_runs
+   WHERE started_at>now()-interval '24 hours'`,query_timeout:3000});
+  metrics.push(...['running','failed','interrupted'].map(key=>({key:'jobs_'+key,value:String(r.rows[0][key]),status:key!=='running'&&r.rows[0][key]>0?'degraded' as const:'healthy' as const})));
+ }catch{metrics.push({key:'jobs',value:null,status:'unavailable'})}
+ return {observedAt:new Date().toISOString(),status:metrics.some(m=>m.status==='down')?'critical':metrics.some(m=>m.status==='degraded'||m.status==='unavailable')?'warning':'healthy',metrics};
+}
+systemCenter.get('/system/overview',async(req,res)=>{await permit(req,'system.read');res.json(await overview())});
+systemCenter.get('/system/health',async(req,res)=>{await permit(req,'system.health.read');res.json(await overview())});
+const query=z.object({
+ page:z.coerce.number().int().min(1).max(10000).default(1),from:z.string().datetime().optional(),to:z.string().datetime().optional(),
+ level:z.enum(['info','warning','error','fatal']).optional(),
+ category:z.enum(['api','authentication','security','job','system','application','database','email','integration']).optional(),
+ user:z.string().uuid().optional(),organization:z.string().uuid().optional(),requestId:z.string().uuid().optional(),
+ status:z.coerce.number().int().min(100).max(599).optional(),endpoint:z.string().max(240).optional(),
+ errorCode:z.string().max(60).optional(),job:z.string().max(60).optional(),q:z.string().max(100).optional(),
+}).strict();
+systemCenter.get('/system/logs',async(req,res)=>{
+ await permit(req,'logs.read');const f=query.parse(req.query),values:unknown[]=[],where:string[]=[];
+ const add=(column:string,value:unknown,op='=')=>{if(value!==undefined){values.push(value);where.push(`${column} ${op} $${values.length}`)}};
+ add('created_at',f.from,'>=');add('created_at',f.to,'<=');add('level',f.level);add('category',f.category);
+ add('actor_user_id',f.user);add('organization_id',f.organization);add('request_id',f.requestId);add('http_status',f.status);
+ add('endpoint',f.endpoint);add('error_code',f.errorCode);add('job',f.job);
+ if(f.q){values.push('%'+f.q.replace(/[\\%_]/g,'\\$&')+'%');where.push(`concat_ws(' ',event,endpoint,error_code,job,id::text) ILIKE $${values.length}`)}
+ values.push((f.page-1)*50);
+ const r=await pool.query(`SELECT id::text,created_at AS "createdAt",category,level,service,event,request_id AS "requestId",
+ actor_user_id AS "actorId",organization_id AS "organizationId",endpoint,method,http_status AS status,latency_ms AS "latencyMs",
+ error_code AS "errorCode",job FROM system_log_events ${where.length?'WHERE '+where.join(' AND '):''}
+ ORDER BY created_at DESC,id DESC LIMIT 51 OFFSET $${values.length}`,values);
+ res.json({page:f.page,hasMore:r.rows.length>50,items:r.rows.slice(0,50)});
+});
+systemCenter.get('/system/jobs',async(req,res)=>{
+ await permit(req,'jobs.read');const f=z.object({page:z.coerce.number().int().min(1).max(10000).default(1)}).strict().parse(req.query);
+ const r=await pool.query(`SELECT id,job,started_at AS "startedAt",finished_at AS "finishedAt",heartbeat_at AS "heartbeatAt",
+ CASE WHEN status='running' AND heartbeat_at<now()-interval '2 minutes' THEN 'interrupted' ELSE status END AS status,error_code AS "errorCode"
+ FROM system_job_runs ORDER BY started_at DESC,id DESC LIMIT 51 OFFSET $1`,[(f.page-1)*50]);
+ res.json({page:f.page,hasMore:r.rows.length>50,items:r.rows.slice(0,50)});
+});

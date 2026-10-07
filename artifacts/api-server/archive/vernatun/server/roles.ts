@@ -1,5 +1,6 @@
+import {systemPermissions} from './system-permissions.js';
 export const roleCatalog={
- platform_admin:{shell:'platform',permissions:['leads.read','organizations.read','organizations.manage','platform.audit','platform.invite','subscriptions.manage','onboarding.manage','support.assign','support.cases']},
+ platform_admin:{shell:'platform',permissions:[...systemPermissions,'leads.read','organizations.read','organizations.manage','platform.audit','platform.invite','subscriptions.manage','onboarding.manage','support.assign','support.cases']},
  support:{shell:'platform',permissions:['support.queue','support.access.request','support.cases','onboarding.manage']},
  org_admin:{shell:'workspace',permissions:['ownership.read','ownership.manage','properties.read','properties.manage','people.read','people.invite','roles.assign','modules.read','modules.manage','audit.read','support.access.approve','imports.manage','support.cases.create','documents.read','documents.manage','organization.settings','requests.configure','incidents.read','incidents.manage','incidents.create']},
  portfolio_owner:{shell:'workspace',permissions:['ownership.read','properties.read','billing.read','reports.read','expenses.read','expenses.approve','reports.export','leases.read']},

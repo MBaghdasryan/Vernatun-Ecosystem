@@ -17,3 +17,4 @@
 - [Staff availability](staff-availability-policy.md) — scoped shifts and absences cannot prove company-wide free time; missing planning means unknown.
 - [Unit plan versions](unit-plan-policy.md) — replacement images never inherit coordinates automatically; preserve old plans and private-byte references.
 - [Floor readiness](floor-readiness-policy.md) — explicit floor mappings only; readiness requires evidence and never automatically changes handover state.
+- [Accessible table overflow](accessible-table-overflow.md) — hidden labels can escape a scrolling table unless their positioned ancestor is inside its scroll container.

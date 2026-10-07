@@ -1,0 +1,148 @@
+import {useCallback,useEffect,useRef,useState,type FormEvent} from 'react';
+import {getSystemOverview,getSystemHealth,getSystemLogs,getSystemJobs,type SystemOverview,type SystemLogs,type SystemJobs,type GetSystemLogsParams} from '@workspace/api-client-react';
+import {fmtDate,yerevanInstant} from './console-util';
+import type {Language} from './i18n';
+import type {RoleContext} from './types';
+import './console.css';
+import './system-console.css';
+
+type Tab='overview'|'health'|'logs'|'jobs';
+const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
+const S:Record<string,[string,string,string]>={
+ system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],jobs:['Առաջադրանքներ','Задания','Jobs'],
+ healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
+ warning:['Զգուշացում','Предупреждение','Warning'],critical:['Կրիտիկական','Критично','Critical'],
+ running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],interrupted:['Ընդհատված','Прервано','Interrupted'],
+ observedAt:['Դիտարկման պահը','Время наблюдения','Observed at'],aggregate:['Ընդհանուր վիճակ','Сводный статус','Aggregate status'],metric:['Ցուցանիշ','Показатель','Metric'],value:['Արժեք','Значение','Value'],status:['Կարգավիճակ','Статус','Status'],
+ loading:['Բեռնվում է…','Загрузка…','Loading…'],retry:['Կրկնել','Повторить','Retry'],refresh:['Թարմացնել','Обновить','Refresh'],forbidden:['Այս բաժնի համար թույլտվություն չկա։','Нет разрешения на этот раздел.','You do not have permission for this section.'],error:['Չհաջողվեց բեռնել տվյալները։','Не удалось загрузить данные.','Could not load data.'],
+ empty:['Գրառումներ չկան։','Записей нет.','No records.'],noMetrics:['Սերվերը ցուցանիշներ չի վերադարձրել։','Сервер не вернул показателей.','The server returned no metrics.'],
+ from:['Սկսած','С','From'],to:['Մինչև','По','To'],level:['Մակարդակ','Уровень','Level'],category:['Կատեգորիա','Категория','Category'],user:['Օգտատիրոջ UUID','UUID пользователя','User UUID'],organization:['Կազմակերպության UUID','UUID организации','Organization UUID'],requestId:['Հարցման ID','ID запроса','Request ID'],httpStatus:['HTTP կարգավիճակ','HTTP-статус','HTTP status'],endpoint:['Endpoint','Endpoint','Endpoint'],errorCode:['Սխալի կոդ','Код ошибки','Error code'],job:['Առաջադրանք','Задание','Job'],q:['Որոնում','Поиск','Search'],
+ invalidRange:['«Մինչև»-ն պետք է լինի «Սկսած»-ից հետո։','«По» должно быть позже «С».','"To" must be after "From".'],
+ apply:['Կիրառել','Применить','Apply'],reset:['Մաքրել','Сбросить','Reset'],invalidUuid:['Մուտքագրեք ամբողջական UUID։','Введите полный UUID.','Enter a complete UUID.'],invalidStatus:['HTTP կարգավիճակը 100–599 թիվ է։','HTTP-статус — число 100–599.','HTTP status must be a number 100–599.'],
+ time:['Ժամանակ','Время','Time'],event:['Իրադարձություն','Событие','Event'],service:['Ծառայություն','Сервис','Service'],latency:['Տևողություն','Задержка','Latency'],details:['Մանրամասներ','Подробнее','Details'],hide:['Թաքցնել','Скрыть','Hide'],actor:['Գործողի ID','ID исполнителя','Actor ID'],method:['Մեթոդ','Метод','Method'],
+ prev:['Նախորդ','Назад','Previous'],next:['Հաջորդ','Далее','Next'],page:['Էջ','Страница','Page'],
+ started:['Սկիզբ','Начало','Started'],finished:['Ավարտ','Завершение','Finished'],heartbeat:['Վերջին ազդանշան','Последний heartbeat','Last heartbeat'],
+ jobsNote:['Միայն դիտում։ 1-ին փուլում առաջադրանքների կրկնում կամ չեղարկում հասանելի չէ։','Только просмотр. Повтор и отмена заданий в Фазе 1 недоступны.','Read-only. Retrying or cancelling jobs is not available in Phase 1.'],
+ logsNote:['Ցուցադրվում են միայն գործառնական մետատվյալներ․ հարցումների մարմիններ, վերնագրեր և stack trace չեն ցուցադրվում։','Показываются только операционные метаданные; тела запросов, заголовки и стектрейсы не отображаются.','Operational metadata only; request bodies, headers and stack traces are never shown.'],
+ autoRefresh:['Ավտոթարմացում՝ 30 վ','Автообновление: 30 с','Auto-refresh: 30 s'],any:['Բոլորը','Все','Any'],
+};
+const M:Record<string,[string,string,string]>={
+ environment:['Միջավայր','Окружение','Environment'],node:['Node.js տարբերակ','Версия Node.js','Node.js version'],uptime_seconds:['Աշխատանքի ժամանակ (վ)','Время работы (с)','Uptime (seconds)'],started_at:['Գործարկման պահ','Время запуска','Started at'],api:['API','API','API'],
+ application_version:['Հավելվածի տարբերակ','Версия приложения','Application version'],frontend_version:['Frontend տարբերակ','Версия фронтенда','Frontend version'],build_version:['Build տարբերակ','Версия сборки','Build version'],git_commit:['Git commit','Git-коммит','Git commit'],
+ storage:['Պահոց','Хранилище','Storage'],cache:['Քեշ','Кэш','Cache'],integrations:['Ինտեգրումներ','Интеграции','Integrations'],last_backup:['Վերջին պահուստային պատճեն','Последняя резервная копия','Last backup'],backup_storage:['Պահուստային պահոց','Хранилище резервных копий','Backup storage'],
+ pool_total:['DB կապեր՝ ընդհանուր','Соединения БД: всего','DB pool: total'],pool_idle:['DB կապեր՝ ազատ','Соединения БД: свободно','DB pool: idle'],pool_waiting:['DB կապեր՝ սպասող','Соединения БД: ожидают','DB pool: waiting'],log_events_dropped:['Կորցված մատյանային իրադարձություններ','Потерянные события журнала','Dropped log events'],
+ email_configuration:['Էլ. փոստի կարգավորում','Настройка эл. почты','Email configuration'],email_delivery_probe:['Էլ. փոստի առաքման ստուգում','Проверка доставки почты','Email delivery probe'],storage_provider:['Պահոցի մատակարար','Провайдер хранилища','Storage provider'],
+ database:['Տվյալների բազա','База данных','Database'],database_bytes:['Բազայի չափ (բայթ)','Размер БД (байт)','Database size (bytes)'],migration:['Վերջին միգրացիա','Последняя миграция','Latest migration'],
+ jobs_running:['Ընթացիկ առաջադրանքներ (24ժ)','Выполняемые задания (24ч)','Running jobs (24h)'],jobs_failed:['Ձախողված առաջադրանքներ (24ժ)','Неудачные задания (24ч)','Failed jobs (24h)'],jobs_interrupted:['Ընդհատված առաջադրանքներ (24ժ)','Прерванные задания (24ч)','Interrupted jobs (24h)'],jobs:['Առաջադրանքներ','Задания','Jobs'],
+};
+const LEVELS=['info','warning','error','fatal'] as const;
+const CATEGORIES=['api','authentication','security','job','system','application','database','email','integration'] as const;
+const CAT:Record<string,[string,string,string]>={api:['API','API','API'],authentication:['Նույնականացում','Аутентификация','Authentication'],security:['Անվտանգություն','Безопасность','Security'],job:['Առաջադրանք','Задание','Job'],system:['Համակարգ','Система','System'],application:['Հավելված','Приложение','Application'],database:['Տվյալների բազա','База данных','Database'],email:['Էլ. փոստ','Эл. почта','Email'],integration:['Ինտեգրում','Интеграция','Integration']};
+const LEV:Record<string,[string,string,string]>={info:['Տեղեկություն','Инфо','Info'],warning:['Զգուշացում','Предупреждение','Warning'],error:['Սխալ','Ошибка','Error'],fatal:['Ճակատագրական','Фатально','Fatal']};
+const MAX:Record<string,number>={endpoint:240,errorCode:60,job:60,q:100,requestId:36,user:36,organization:36,status:3};
+export const systemLabel=(l:Language)=>S.system[L(l)];
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const POLL=30000;
+type Perm='system.health.read'|'logs.read'|'jobs.read';
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'jobs',perm:'jobs.read'}];
+const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
+
+// Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
+// results from superseded requests so no stale scope is ever shown.
+function usePolled<T>(fetcher:(signal:AbortSignal)=>Promise<T>,key:string){
+ const [data,setData]=useState<T>();const [error,setError]=useState<unknown>();const [loading,setLoading]=useState(true);
+ const ctrl=useRef<AbortController|undefined>(undefined);const fRef=useRef(fetcher);fRef.current=fetcher;
+ const load=useCallback(()=>{ctrl.current?.abort();const c=new AbortController();ctrl.current=c;setLoading(true);
+  fRef.current(c.signal).then(d=>{if(!c.signal.aborted){setData(d);setError(undefined)}}).catch(e=>{if(!c.signal.aborted){setError(e);setData(undefined)}}).finally(()=>{if(!c.signal.aborted)setLoading(false)})},[]);
+ useEffect(()=>{setData(undefined);setError(undefined);load();const id=setInterval(load,POLL);const focus=()=>load();window.addEventListener('focus',focus);
+  return()=>{clearInterval(id);window.removeEventListener('focus',focus);ctrl.current?.abort()}},[key,load]);
+ return {data,error,loading,reload:load};
+}
+
+function Pill({s,l}:{s:string;l:Language}){const cls=['healthy','completed'].includes(s)?'green':['down','critical','failed'].includes(s)?'red':['degraded','warning','interrupted','running'].includes(s)?'amber':'grey';return <span className={'p-badge sc-pill '+cls} data-testid={'status-'+s}>{S[s]?.[L(l)]??s}</span>}
+function Failure({error,l,onRetry}:{error:unknown;l:Language;onRetry:()=>void}){const st=statusOf(error);return <div className="sc-failure" role="alert" data-testid="status-error"><p className="p-error">{st===403?S.forbidden[L(l)]:S.error[L(l)]+(st?' (HTTP '+st+')':'')}</p><button className="p-button" onClick={onRetry} data-testid="button-retry">{S.retry[L(l)]}</button></div>}
+function Skeleton(){return <div className="sc-skeleton" role="status" aria-busy="true" data-testid="status-loading"><span/><span/><span/></div>}
+
+function Metrics({kind,ck,l}:{kind:'overview'|'health';ck:string;l:Language}){
+ const tx=(k:string)=>S[k][L(l)];
+ const q=usePolled<SystemOverview>(signal=>(kind==='overview'?getSystemOverview:getSystemHealth)({signal,credentials:'include'}),ck+':'+kind);
+ if(q.error)return <Failure error={q.error} l={l} onRetry={q.reload}/>;
+ if(!q.data)return <Skeleton/>;
+ const d=q.data;
+ return <section className="p-card sc-card" aria-busy={q.loading}>
+  <div className="sc-head"><div><span className="sc-label">{tx('aggregate')}</span><Pill s={d.status} l={l}/></div><div><span className="sc-label">{tx('observedAt')}</span><strong data-testid="text-observed-at">{fmtDate(d.observedAt,l)}</strong></div><button className="p-button small" onClick={q.reload} disabled={q.loading} data-testid={'button-refresh-'+kind}>{tx('refresh')}</button></div>
+  {d.metrics.length?<ul className="sc-metrics">{d.metrics.map(m=><li key={m.key} data-testid={'row-metric-'+m.key}><span className="sc-mkey">{M[m.key]?.[L(l)]??m.key}</span><strong className={m.value===null?'sc-null':''} data-testid={'text-metric-value-'+m.key}>{m.value??tx('unavailable')}</strong><Pill s={m.status} l={l}/></li>)}</ul>:<p className="sc-empty" data-testid="text-empty">{tx('noMetrics')}</p>}
+  <p className="sc-note">{tx('autoRefresh')}</p>
+ </section>;
+}
+
+const EMPTY={from:'',to:'',level:'',category:'',user:'',organization:'',requestId:'',status:'',endpoint:'',errorCode:'',job:'',q:''};
+type Filters=typeof EMPTY;
+function Logs({ck,l}:{ck:string;l:Language}){
+ const tx=(k:string)=>S[k][L(l)];
+ const initial=():Filters=>{const p=new URLSearchParams(location.search);const u=(p.get('user')??'').trim().slice(0,36);return {...EMPTY,user:u}};
+ const [draft,setDraft]=useState<Filters>(initial);
+ const [applied,setApplied]=useState<Filters>(()=>{const f=initial();return UUID.test(f.user)?f:{...f,user:''}});
+ const [page,setPage]=useState(1);const [invalid,setInvalid]=useState<string[]>([]);const [open,setOpen]=useState<string>();
+ const params=():GetSystemLogsParams=>{const p:GetSystemLogsParams={page};for(const [k,v] of Object.entries(applied)){const t=v.trim();if(!t)continue;if(k==='from'||k==='to')(p as Record<string,unknown>)[k]=yerevanInstant(t);else if(k==='status')p.status=Number(t);else (p as Record<string,unknown>)[k]=t}return p};
+ const key=ck+':logs:'+page+':'+JSON.stringify(applied);
+ const q=usePolled<SystemLogs>(signal=>getSystemLogs(params(),{signal,credentials:'include'}),key);
+ const submit=(e:FormEvent)=>{e.preventDefault();const bad:string[]=[];if(draft.user.trim()&&!UUID.test(draft.user.trim()))bad.push('user');if(draft.organization.trim()&&!UUID.test(draft.organization.trim()))bad.push('organization');if(draft.requestId.trim()&&!UUID.test(draft.requestId.trim()))bad.push('requestId');if(draft.from&&draft.to&&draft.from>draft.to)bad.push('to');if(draft.status.trim()&&!(/^\d{3}$/.test(draft.status.trim())&&+draft.status>=100&&+draft.status<=599))bad.push('status');setInvalid(bad);if(bad.length)return;setPage(1);setApplied(draft)};
+ const inp=(k:keyof Filters,label:string,type='text',extra?:Record<string,string>)=><label>{tx(label)}<input type={type} value={draft[k]} maxLength={MAX[k]??160} aria-invalid={invalid.includes(k)} onChange={e=>setDraft(d=>({...d,[k]:e.target.value}))} data-testid={'input-log-'+k} {...extra}/>{invalid.includes(k)&&<small className="p-field-error">{tx(k==='status'?'invalidStatus':k==='to'?'invalidRange':'invalidUuid')}</small>}</label>;
+ const items=q.data?.items??[];
+ return <div className="sc-stack">
+  <form className="p-card cx-form" role="search" onSubmit={submit} data-testid="form-log-filters"><div className="cx-filters">
+   {inp('from','from','datetime-local')}{inp('to','to','datetime-local')}
+   <label>{tx('level')}<select value={draft.level} onChange={e=>setDraft(d=>({...d,level:e.target.value}))} data-testid="select-log-level"><option value="">{tx('any')}</option>{LEVELS.map(v=><option key={v} value={v}>{LEV[v][L(l)]}</option>)}</select></label>
+   <label>{tx('category')}<select value={draft.category} onChange={e=>setDraft(d=>({...d,category:e.target.value}))} data-testid="select-log-category"><option value="">{tx('any')}</option>{CATEGORIES.map(v=><option key={v} value={v}>{CAT[v][L(l)]}</option>)}</select></label>{inp('user','user','text',{placeholder:'xxxxxxxx-xxxx-…',spellCheck:'false'})}{inp('organization','organization','text',{placeholder:'xxxxxxxx-xxxx-…',spellCheck:'false'})}{inp('requestId','requestId')}{inp('status','httpStatus','text',{inputMode:'numeric'})}{inp('endpoint','endpoint')}{inp('errorCode','errorCode')}{inp('job','job')}{inp('q','q')}
+  </div><div className="cx-row"><button className="p-button orange" data-testid="button-apply-filters">{tx('apply')}</button><button type="button" className="p-button" onClick={()=>{setDraft(EMPTY);setApplied(EMPTY);setInvalid([]);setPage(1)}} data-testid="button-reset-filters">{tx('reset')}</button><button type="button" className="p-button" disabled={q.loading} onClick={q.reload} data-testid="button-refresh-logs">{tx('refresh')}</button></div>
+  <p className="sc-note">{tx('logsNote')}</p></form>
+  {q.error?<Failure error={q.error} l={l} onRetry={q.reload}/>:!q.data?<Skeleton/>:<section className="p-card sc-card" aria-busy={q.loading}>
+   <div className="cx-scroll"><table className="cx-table sc-table"><thead><tr><th>{tx('time')}</th><th>{tx('level')}</th><th>{tx('category')}</th><th>{tx('event')}</th><th>{tx('endpoint')}</th><th>{tx('httpStatus')}</th><th>{tx('errorCode')}</th><th><span className="sr-only">{tx('details')}</span></th></tr></thead><tbody>
+    {items.map(i=>[<tr key={i.id} data-testid={'row-log-'+i.id}><td>{fmtDate(i.createdAt,l)}</td><td><span className={'sc-level sc-level-'+i.level}>{LEV[i.level]?.[L(l)]??i.level}</span></td><td>{CAT[i.category]?.[L(l)]??i.category}</td><td>{i.event}</td><td className="sc-mono">{i.method?i.method+' ':''}{i.endpoint??'—'}</td><td>{i.status??'—'}</td><td className="sc-mono">{i.errorCode??'—'}</td><td><button className="p-button small" aria-expanded={open===i.id} onClick={()=>setOpen(o=>o===i.id?undefined:i.id)} data-testid={'button-log-details-'+i.id}>{open===i.id?tx('hide'):tx('details')}</button></td></tr>,
+     open===i.id&&<tr key={i.id+':d'} className="sc-detail"><td colSpan={8}><dl data-testid={'detail-log-'+i.id}>{([['requestId',i.requestId],['actor',i.actorId],['organization',i.organizationId],['service',i.service],['method',i.method],['latency',i.latencyMs===null?null:i.latencyMs+' ms'],['job',i.job]] as [string,string|null][]).map(([k,v])=><div key={k}><dt>{tx(k)}</dt><dd className="sc-mono">{v??'—'}</dd></div>)}</dl></td></tr>])}
+    {!items.length&&<tr><td colSpan={8} className="sc-empty" data-testid="text-empty">{tx('empty')}</td></tr>}
+   </tbody></table></div>
+   <Pager page={page} hasMore={!!q.data.hasMore} loading={q.loading} setPage={setPage} l={l} id="logs"/>
+  </section>}
+ </div>;
+}
+function Pager({page,hasMore,loading,setPage,l,id}:{page:number;hasMore:boolean;loading:boolean;setPage:(f:(p:number)=>number)=>void;l:Language;id:string}){const tx=(k:string)=>S[k][L(l)];return <div className="cx-row" aria-live="polite"><button className="p-button" disabled={loading||page<=1} onClick={()=>setPage(p=>p-1)} data-testid={'button-prev-'+id}>{tx('prev')}</button><span data-testid={'text-page-'+id}>{tx('page')} {page}</span><button className="p-button" disabled={loading||!hasMore} onClick={()=>setPage(p=>p+1)} data-testid={'button-next-'+id}>{tx('next')}</button></div>}
+
+function Jobs({ck,l}:{ck:string;l:Language}){
+ const tx=(k:string)=>S[k][L(l)];const [page,setPage]=useState(1);
+ const q=usePolled<SystemJobs>(signal=>getSystemJobs({page},{signal,credentials:'include'}),ck+':jobs:'+page);
+ const items=q.data?.items??[];
+ return <div className="sc-stack"><p className="p-info sc-readonly" data-testid="text-jobs-readonly">{tx('jobsNote')}</p>
+  {q.error?<Failure error={q.error} l={l} onRetry={q.reload}/>:!q.data?<Skeleton/>:<section className="p-card sc-card" aria-busy={q.loading}>
+   <div className="cx-row"><button className="p-button small" disabled={q.loading} onClick={q.reload} data-testid="button-refresh-jobs">{tx('refresh')}</button></div>
+   <div className="cx-scroll"><table className="cx-table sc-table"><thead><tr><th>{tx('job')}</th><th>{tx('status')}</th><th>{tx('started')}</th><th>{tx('heartbeat')}</th><th>{tx('finished')}</th><th>{tx('errorCode')}</th></tr></thead><tbody>
+    {items.map(j=><tr key={j.id} data-testid={'row-job-'+j.id}><td className="sc-mono">{j.job}</td><td><Pill s={j.status} l={l}/></td><td>{fmtDate(j.startedAt,l)}</td><td>{fmtDate(j.heartbeatAt,l)}</td><td>{fmtDate(j.finishedAt,l)}</td><td className="sc-mono">{j.errorCode??'—'}</td></tr>)}
+    {!items.length&&<tr><td colSpan={6} className="sc-empty" data-testid="text-empty">{tx('empty')}</td></tr>}
+   </tbody></table></div>
+   <Pager page={page} hasMore={!!q.data.hasMore} loading={q.loading} setPage={setPage} l={l} id="jobs"/>
+  </section>}</div>;
+}
+
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='jobs'?s:'overview'}
+export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
+ const l=language;const tx=(k:string)=>S[k][L(l)];
+ const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
+ useEffect(()=>{const pop=()=>setTab(systemTab(location.pathname));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop)},[]);
+ const visible=TABS.filter(x=>c.permissions.includes(x.perm));
+ const current=visible.some(x=>x.key===tab)?tab:'overview';
+ const denied=current!==tab;
+ useEffect(()=>{if(denied&&location.pathname.startsWith('/console/system/'))history.replaceState(null,'','/console/system/overview')},[denied]);
+ const ck=c.id;
+ if(!c.permissions.includes('system.read'))return <div className="p-card"><p className="p-error" role="alert" data-testid="status-forbidden">{tx('forbidden')}</p></div>;
+ const go=(k:Tab)=>{const u=new URLSearchParams(location.search).get('user');const url='/console/system/'+k+(k==='logs'&&u?'?user='+encodeURIComponent(u):'');if(location.pathname!=='/console/system/'+k)history.pushState(null,'',url);setTab(k)};
+ return <div className="sc-wrap" data-testid="system-console">
+  <nav className="sc-tabs" role="tablist" aria-label={tx('system')}>{visible.map(x=><button key={x.key} role="tab" aria-selected={current===x.key} className={current===x.key?'selected':''} onClick={()=>go(x.key)} data-testid={'tab-system-'+x.key}>{tx(x.key)}</button>)}</nav>
+  <div role="tabpanel">
+   {current==='overview'&&<Metrics key={ck+':o'} kind="overview" ck={ck} l={l}/>}
+   {current==='health'&&<Metrics key={ck+':h'} kind="health" ck={ck} l={l}/>}
+   {current==='logs'&&<Logs key={ck+':l'} ck={ck} l={l}/>}
+   {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
+  </div>
+ </div>;
+}

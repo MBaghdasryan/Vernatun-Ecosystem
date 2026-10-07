@@ -8,6 +8,92 @@
 import * as zod from 'zod';
 
 
+export const GetSystemOverviewResponse = zod.object({
+  "observedAt": zod.string(),
+  "status": zod.enum(['healthy', 'warning', 'critical']),
+  "metrics": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.string().nullable(),
+  "status": zod.enum(['healthy', 'degraded', 'down', 'unavailable', 'not_configured'])
+}))
+})
+
+
+export const GetSystemHealthResponse = zod.object({
+  "observedAt": zod.string(),
+  "status": zod.enum(['healthy', 'warning', 'critical']),
+  "metrics": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.string().nullable(),
+  "status": zod.enum(['healthy', 'degraded', 'down', 'unavailable', 'not_configured'])
+}))
+})
+
+
+
+
+
+export const GetSystemLogsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional(),
+  "level": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "user": zod.coerce.string().optional(),
+  "organization": zod.coerce.string().optional(),
+  "requestId": zod.coerce.string().optional(),
+  "status": zod.coerce.number().int().optional(),
+  "endpoint": zod.coerce.string().optional(),
+  "errorCode": zod.coerce.string().optional(),
+  "job": zod.coerce.string().optional(),
+  "q": zod.coerce.string().optional()
+})
+
+export const GetSystemLogsResponse = zod.object({
+  "page": zod.number().int(),
+  "hasMore": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "category": zod.string(),
+  "level": zod.string(),
+  "service": zod.string(),
+  "event": zod.string(),
+  "requestId": zod.string().nullable(),
+  "actorId": zod.string().nullable(),
+  "organizationId": zod.string().nullable(),
+  "endpoint": zod.string().nullable(),
+  "method": zod.string().nullable(),
+  "status": zod.number().int().nullable(),
+  "latencyMs": zod.number().int().nullable(),
+  "errorCode": zod.string().nullable(),
+  "job": zod.string().nullable()
+}))
+})
+
+
+
+
+
+export const GetSystemJobsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetSystemJobsResponse = zod.object({
+  "page": zod.number().int(),
+  "hasMore": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "job": zod.string(),
+  "startedAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "heartbeatAt": zod.string(),
+  "status": zod.enum(['running', 'completed', 'failed', 'interrupted']),
+  "errorCode": zod.string().nullable()
+}))
+})
+
+
 export const GetHandoverReadinessResponse = zod.object({
   "canManage": zod.boolean(),
   "canCreateFloor": zod.boolean(),

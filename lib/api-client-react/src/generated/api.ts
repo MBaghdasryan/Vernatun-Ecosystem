@@ -75,6 +75,8 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  GetSystemJobsParams,
+  GetSystemLogsParams,
   HandoverFloorAssignment,
   HandoverFloorInput,
   HandoverFloorReceipt,
@@ -147,6 +149,9 @@ import type {
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
+  SystemJobs,
+  SystemLogs,
+  SystemOverview,
   UnitPlanChange,
   UnitPlanReceipt,
   UnitPlanView,
@@ -189,6 +194,304 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSystemOverviewUrl = () => {
+
+
+
+
+  return `/api/system/overview`
+}
+
+export const getSystemOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<SystemOverview> => {
+
+  return customFetch<SystemOverview>(getGetSystemOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemOverviewQueryKey = () => {
+    return [
+    `/api/system/overview`
+    ] as const;
+    }
+
+
+export const getGetSystemOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getSystemOverview>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemOverview>>> = ({ signal }) => getSystemOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemOverview>>>
+export type GetSystemOverviewQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemOverview<TData = Awaited<ReturnType<typeof getSystemOverview>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemHealthUrl = () => {
+
+
+
+
+  return `/api/system/health`
+}
+
+export const getSystemHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<SystemOverview> => {
+
+  return customFetch<SystemOverview>(getGetSystemHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemHealthQueryKey = () => {
+    return [
+    `/api/system/health`
+    ] as const;
+    }
+
+
+export const getGetSystemHealthQueryOptions = <TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemHealth>>> = ({ signal }) => getSystemHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemHealth>>>
+export type GetSystemHealthQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemLogsUrl = (params?: GetSystemLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/logs?${stringifiedParams}` : `/api/system/logs`
+}
+
+export const getSystemLogs = async (params?: GetSystemLogsParams, options?: Parameters<typeof customFetch>[1]): Promise<SystemLogs> => {
+
+  return customFetch<SystemLogs>(getGetSystemLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemLogsQueryKey = (params?: GetSystemLogsParams,) => {
+    return [
+    `/api/system/logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSystemLogsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemLogs>>, TError = ErrorType<unknown>>(params?: GetSystemLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemLogs>>> = ({ signal }) => getSystemLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemLogsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemLogs>>>
+export type GetSystemLogsQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemLogs<TData = Awaited<ReturnType<typeof getSystemLogs>>, TError = ErrorType<unknown>>(
+ params?: GetSystemLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemJobsUrl = (params?: GetSystemJobsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/jobs?${stringifiedParams}` : `/api/system/jobs`
+}
+
+export const getSystemJobs = async (params?: GetSystemJobsParams, options?: Parameters<typeof customFetch>[1]): Promise<SystemJobs> => {
+
+  return customFetch<SystemJobs>(getGetSystemJobsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemJobsQueryKey = (params?: GetSystemJobsParams,) => {
+    return [
+    `/api/system/jobs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSystemJobsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemJobs>>, TError = ErrorType<unknown>>(params?: GetSystemJobsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemJobs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemJobsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemJobs>>> = ({ signal }) => getSystemJobs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemJobs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemJobsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemJobs>>>
+export type GetSystemJobsQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemJobs<TData = Awaited<ReturnType<typeof getSystemJobs>>, TError = ErrorType<unknown>>(
+ params?: GetSystemJobsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemJobs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemJobsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHandoverReadinessUrl = () => {
 

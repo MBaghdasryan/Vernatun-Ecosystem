@@ -11,6 +11,58 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/overview:
+    get:
+      operationId: getSystemOverview
+      responses:
+        "200":
+          description: Safe runtime observations
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemOverview"}
+  /system/health:
+    get:
+      operationId: getSystemHealth
+      responses:
+        "200":
+          description: Safe runtime checks
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemOverview"}
+  /system/logs:
+    get:
+      operationId: getSystemLogs
+      parameters:
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: from, in: query, schema: {type: string}}
+        - {name: to, in: query, schema: {type: string}}
+        - {name: level, in: query, schema: {type: string}}
+        - {name: category, in: query, schema: {type: string}}
+        - {name: user, in: query, schema: {type: string}}
+        - {name: organization, in: query, schema: {type: string}}
+        - {name: requestId, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: integer}}
+        - {name: endpoint, in: query, schema: {type: string}}
+        - {name: errorCode, in: query, schema: {type: string}}
+        - {name: job, in: query, schema: {type: string}}
+        - {name: q, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: Paginated operational metadata, separate from business audit
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemLogs"}
+  /system/jobs:
+    get:
+      operationId: getSystemJobs
+      parameters:
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+      responses:
+        "200":
+          description: Observed scheduled executions
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemJobs"}
   /handover-readiness:
     get:
       operationId: getHandoverReadiness
@@ -1719,6 +1771,64 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    SystemMetric:
+      type: object
+      required: [key, value, status]
+      properties:
+        key: {type: string}
+        value: {type: [string, "null"]}
+        status: {type: string, enum: [healthy, degraded, down, unavailable, not_configured]}
+    SystemOverview:
+      type: object
+      required: [observedAt, status, metrics]
+      properties:
+        observedAt: {type: string}
+        status: {type: string, enum: [healthy, warning, critical]}
+        metrics: {type: array, items: {$ref: "#/components/schemas/SystemMetric"}}
+    SystemLog:
+      type: object
+      required: [id, createdAt, category, level, service, event, requestId, actorId, organizationId, endpoint, method, status, latencyMs, errorCode, job]
+      properties:
+        id: {type: string}
+        createdAt: {type: string}
+        category: {type: string}
+        level: {type: string}
+        service: {type: string}
+        event: {type: string}
+        requestId: {type: [string, "null"]}
+        actorId: {type: [string, "null"]}
+        organizationId: {type: [string, "null"]}
+        endpoint: {type: [string, "null"]}
+        method: {type: [string, "null"]}
+        status: {type: [integer, "null"]}
+        latencyMs: {type: [integer, "null"]}
+        errorCode: {type: [string, "null"]}
+        job: {type: [string, "null"]}
+    SystemLogs:
+      type: object
+      required: [page, hasMore, items]
+      properties:
+        page: {type: integer}
+        hasMore: {type: boolean}
+        items: {type: array, items: {$ref: "#/components/schemas/SystemLog"}}
+    SystemJob:
+      type: object
+      required: [id, job, startedAt, finishedAt, heartbeatAt, status, errorCode]
+      properties:
+        id: {type: string}
+        job: {type: string}
+        startedAt: {type: string}
+        finishedAt: {type: [string, "null"]}
+        heartbeatAt: {type: string}
+        status: {type: string, enum: [running, completed, failed, interrupted]}
+        errorCode: {type: [string, "null"]}
+    SystemJobs:
+      type: object
+      required: [page, hasMore, items]
+      properties:
+        page: {type: integer}
+        hasMore: {type: boolean}
+        items: {type: array, items: {$ref: "#/components/schemas/SystemJob"}}
     HandoverFloorReceipt:
       type: object
       required: [id]
