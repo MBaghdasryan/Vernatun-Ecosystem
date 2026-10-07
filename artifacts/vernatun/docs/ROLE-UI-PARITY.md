@@ -110,5 +110,6 @@ API отказ 403. Production build прошёл. Полная приёмка 1
 `/os/people` получил IAM employee directory и карточки. Реализованы API профилей,
 персональных правил, account/assignment статусов, сессий и аудита.
 Подробная матрица Before/After/API/Browser/Negative находится в
-`IAM-IMPLEMENTATION-PROGRESS.md`. Общий статус IAM — PARTIAL; browser — EXTERNAL BLOCKER.
+`IAM-IMPLEMENTATION-PROGRESS.md`. Общий статус IAM — COMPLETE; целевая изолированная
+браузерная приёмка пройдена. Полная регрессия остальных ролей этим не заявляется.
 Новые панели остальных ролей не начинались.

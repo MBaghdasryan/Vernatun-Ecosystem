@@ -1,6 +1,6 @@
 # Vernatun IAM — архитектура завершения интерфейсов
 
-Дата: 2026-10-07. Статус: **PARTIAL — реализованы основные серверные механизмы и интерфейсы IAM; браузерная приёмка не завершена**.
+Дата: 2026-10-07. Статус: **COMPLETE — IAM реализован и прошёл целевую изолированную API/browser-приёмку**.
 
 Спецификация: `attached_assets/Pasted-Continue-development-of-the-existing-Vernatun-project-T_1791356633425.txt`.
 Разделы исходного проекта ниже сохранены как требования. Фактически выполненный объём и ограничения указаны в разделе 9 и `IAM-IMPLEMENTATION-PROGRESS.md`; наличие реализации не означает браузерную приёмку.
@@ -156,7 +156,7 @@ tenant admin не получает управление сессиями сот�
 
 | Сценарий | Ожидаемый результат | Текущий статус нового IAM |
 |---|---|---|
-| Org admin редактирует platform assignment | Отказ | COMPLETE — server scope guard; browser EXTERNAL BLOCKER |
+| Org admin редактирует platform assignment | Отказ | COMPLETE — server scope guard; UI не раскрывает чужой scope |
 | Org admin присваивает неделегируемое право | Отказ | COMPLETE — API |
 | Профиль другой организации | Отказ | COMPLETE — API |
 | Профиль пытается включить выключенный модуль | Отказ | COMPLETE — API |
@@ -167,7 +167,7 @@ tenant admin не получает управление сессиями сот�
 | Assignment suspended при другом активном назначении | Прекращается только соответствующий доступ | COMPLETE — API |
 | Platform IAM → tenant invoices | Не даёт доступа | COMPLETE — API |
 | Два редактора меняют одну роль | CAS conflict, без потери изменения | COMPLETE — API |
-| Debugger и GET /units/:id | Совпадающий результат для того же объекта | COMPLETE — API; browser EXTERNAL BLOCKER |
+| Debugger и GET /units/:id | Совпадающий результат для того же объекта | COMPLETE — API + browser |
 
 ## 9. Реализованный срез
 

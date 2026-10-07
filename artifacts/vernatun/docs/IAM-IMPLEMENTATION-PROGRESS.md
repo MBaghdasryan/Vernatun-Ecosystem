@@ -1,7 +1,7 @@
 # Vernatun — ход реализации IAM
 
 Дата: 2026-10-07. Реализация IAM завершена в описанных ниже границах.
-Общий статус приёмки milestone: **PARTIAL** — браузерная приёмка **EXTERNAL BLOCKER**.
+Общий статус IAM milestone: **COMPLETE** в описанных границах. Целевая браузерная приёмка пройдена на изолированных данных.
 Исходный аудит принят и не повторялся. Остальные role dashboards не начинались.
 
 ## Изменения кода
@@ -26,27 +26,27 @@
 
 ## Матрица прогресса
 
-COMPLETE в After означает выполненную реализацию функции, а не завершённую браузерную
-приёмку. API/negative отражают серверные проверки; Browser остаётся EXTERNAL BLOCKER.
+COMPLETE в After означает выполненную реализацию функции. Browser отражает целевой
+прогон ниже, а не перебор всех сочетаний разрешений и всех бизнес-процессов платформы.
 
 | Reference function | Before | After | API | Browser | Negative permission |
 |---|---|---|---|---|---|
-| Platform user directory / user card | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Account disable/reactivate | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| MFA state / sessions / force logout | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Organization employee card | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Role / building / unit / dates editor | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Custom role profiles | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Immutable system roles / permission matrix | COMPLETE | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Assignment deny / audited exceptional grants | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Suspend / resume / revoke staff assignment | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Assignment history | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | PARTIAL |
-| Shared permission / module / subscription explanation | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Object-aware effective access debugger — чтение помещения | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Platform staff assignment scope editor | PARTIAL | COMPLETE | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Platform IAM → tenant business data | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Editing system role definitions | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
-| Generic modification of own / protected lifecycle assignments | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | EXTERNAL BLOCKER | COMPLETE |
+| Platform user directory / user card | PARTIAL | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| Account lock/reactivate | PARTIAL | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| MFA state / sessions / force logout | PARTIAL | COMPLETE | COMPLETE | COMPLETE — card + force logout | COMPLETE |
+| Organization employee card | PARTIAL | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| Role / building / unit / dates editor | PARTIAL | COMPLETE | COMPLETE | COMPLETE — scope save/reload | COMPLETE |
+| Custom role profiles | PARTIAL | COMPLETE | COMPLETE | COMPLETE — create/edit/reopen | COMPLETE |
+| Immutable system roles / permission matrix | COMPLETE | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| Assignment deny / audited exceptional grants | PARTIAL | COMPLETE | COMPLETE | COMPLETE — deny save/reopen; grants API-tested | COMPLETE |
+| Suspend / resume / revoke staff assignment | PARTIAL | COMPLETE | COMPLETE | COMPLETE — suspend/resume; revoke API-tested | COMPLETE |
+| Assignment history | PARTIAL | COMPLETE | COMPLETE | Сохранение событий подтверждено API после UI-действий | Серверные scope guards; не отдельный browser case |
+| Shared permission / module / subscription explanation | PARTIAL | COMPLETE | COMPLETE | COMPLETE — displayed permission rows | COMPLETE |
+| Object-aware effective access debugger — чтение помещения | PARTIAL | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| Platform staff assignment scope editor | PARTIAL | COMPLETE | COMPLETE | COMPLETE — scope retained after reload | COMPLETE |
+| Platform IAM → tenant business data | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | Проверено API, не отдельным browser case | COMPLETE |
+| Editing system role definitions | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | COMPLETE — readonly matrix | COMPLETE |
+| Generic modification of own / protected lifecycle assignments | INTENTIONALLY NOT ALLOWED | INTENTIONALLY NOT ALLOWED | COMPLETE | COMPLETE — own dangerous actions hidden | COMPLETE |
 
 ## Проверки
 
@@ -75,21 +75,51 @@ COMPLETE в After означает выполненную реализацию �
   - отзыв конкретной сессии по необратимому административному идентификатору;
   - защиту последнего org admin при приостановке из платформенного интерфейса.
 
-Браузерный прогон подтвердил вход и загрузку обзора, затем выявил неверную маршрутизацию
+Первый браузерный прогон подтвердил вход и загрузку обзора, затем выявил неверную маршрутизацию
 из меню на /console/users (старый Records запрашивал /api/users). Исправлено: внешний
 dispatcher подписан на pushState/replaceState/popstate. Сборка и TypeScript после исправления прошли.
-Продолжение этого же тестового прогона прервано авторизацией платформы из-за лимита кредитов.
-Нет подтверждённой браузерной приёмки исправленного перехода, новых IAM форм или всех ширин.
-Снимок страницы входа, сборка и API tests не подменяют эту проверку.
+Исправленный переход, новые IAM формы и указанные ширины затем проверены финальным
+браузерным прогоном ниже. Снимок страницы входа и API tests не использовались вместо него.
 
-## Что ещё нужно для завершения milestone
+## Финальная браузерная приёмка — COMPLETE
 
-1. Пройти targeted browser acceptance реестра, карточек, сохранения после reload,
-   профилей, deny/grants, статусов и сессий; исправить обнаруженные UI проблемы.
-2. Подтвердить accessibility и ширины 360/390/768/1024/1440 в браузере.
-   У вложенных диалогов теперь уникальные aria-labelledby, собственные опасные действия скрыты.
-3. Полная регрессионная приёмка семи бизнес-сценариев и всех 14 ролей остаётся отдельным
-   общеплатформенным этапом, не выполненным этим целевым IAM-прогоном.
+Предыдущие блокировки выше — история проверки, не текущий статус. Финальный прогон
+прошёл через локальный потоковый proxy к изолированной API-схеме, без перехвата
+запросов браузерным драйвером. Прямой API-вход работал; прежний перехват давал HTTP 400.
+Изменять рабочую авторизацию для обхода этой тестовой ошибки не потребовалось.
+
+- Переход из платформенного меню в /console/users, поиск и карточка сотрудника работают.
+- Scope помещения сохранён, повторное открытие и полная перезагрузка сохранили выбор.
+- Org admin изменил scope здания; создал и отредактировал профиль Manager, изменения сохранились.
+- Персональный deny requests.read сохранился после повторного открытия.
+- Отдельный API-read после browser run подтвердил сохранение причины deny. Пустое поле
+  причины в форме относится к НОВОМУ изменению; прежняя причина не потеряна.
+- Приостановка и возобновление назначения прошли. Конечное состояние — active.
+- Отзыв всех сессий показал пустой список на карточке; отдельный браузер сотрудника
+  после reload показал вход вместо рабочего экрана.
+- Lock/reactivate через UI прошли; итоговый статус тестового аккаунта — active.
+- Собственные опасные действия платформенного администратора скрыты.
+- Чужой пользователь не находится в каталоге org admin.
+- Системная матрица разрешений read-only.
+- Debugger отобразил отказ GET /units/:id для technician и разрешённые рабочие права.
+  Это ожидаемо: у technician нет properties.read/properties.own; scope сам по себе
+  не выдаёт эти разрешения. Положительный manager-case проверен API-тестами.
+- На 360/390/768/1024/1440 px нет горизонтального переполнения документа, модальное
+  окно помещается в экран. На узких экранах таблица прокручивается внутри своего контейнера.
+- Кнопка закрытия модального окна доступна с клавиатуры и имеет доступное имя.
+- Неблокирующее предупреждение React о ключах элементов исправлено; TypeScript прошёл.
+
+При отзыве сессии исходный защищённый URL может оставаться в адресной строке, но вместо
+данных отображается форма входа — это не сохранение доступа.
+
+## Что не заявляется этим закрытием
+
+- Новая реальная отправка приглашений не проверялась и не запускалась. В тесте список
+  приглашений был пуст: существующие ссылки нельзя было проверить; отправка при пустой форме disabled.
+- Отдельные browser cases для выдачи временного grant, terminal revoke и назначения
+  готового профиля не выполнялись; соответствующие серверные операции проверены API.
+- Это целевая IAM-приёмка, не полный аудит WCAG и не общеплатформенная регрессия
+  семи бизнес-сценариев и всех 14 ролей. Эти работы остаются отдельным этапом.
 
 Функциональные доработки platform scope editor и object-aware debugger выполнены, не отложены.
 Debugger показывает общий permission/module/subscription результат и точный IAM-результат

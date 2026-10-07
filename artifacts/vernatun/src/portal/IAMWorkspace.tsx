@@ -33,7 +33,7 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
   if(busy)return;setBusy(true);setError(undefined);
   try{await fn();done();refresh()}catch(e){setError(e)}finally{setBusy(false)}
  }
- const button=(text:string,onClick:()=>void,disabled=false)=><button type="button" className="p-button small" disabled={busy||disabled} onClick={onClick}>{text}</button>;
+ const button=(text:string,onClick:()=>void,disabled=false)=><button key={text} type="button" className="p-button small" disabled={busy||disabled} onClick={onClick}>{text}</button>;
  const save=tr('Պահպանել','Сохранить','Save'),cancel=tr('Չեղարկել','Отмена','Cancel'),reload=tr('Թարմացնել','Обновить','Reload');
  const users=tr('Օգտատերեր','Пользователи','Users'),roles=tr('Դերեր','Роли','Roles'),permissions=tr('Թույլտվություններ','Разрешения','Permissions');
  const statusLabel=(v:string)=>({active:tr('Ակտիվ','Активен','Active'),locked:tr('Արգելափակված','Заблокирован','Locked'),disabled:tr('Անջատված','Отключён','Disabled'),suspended:tr('Կասեցված','Приостановлен','Suspended'),revoked:tr('Հետ կանչված','Отозван','Revoked')}[v]??v);
