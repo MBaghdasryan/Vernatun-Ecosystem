@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canOpenCommunitySection} from './section-access';
+import {canOpenCommunitySection,canOpenCalendar} from './section-access';
 import {routeView,viewInProduct,viewRoute} from '../../shared/products';
 
 test('manager meters is a stable HAYAT deep link',()=>{
@@ -19,4 +19,19 @@ test('meters menu requires manager permission and enabled module',()=>{
 test('legacy contexts without a module list retain navigation compatibility',()=>{
  assert.equal(canOpenCommunitySection('meters',{permissions:['meters.manage']}),true);
  assert.equal(canOpenCommunitySection('missing',{permissions:['meters.manage']}),false);
+});
+test('calendar has a dedicated HAYAT route and scoped navigation',()=>{
+ assert.equal(viewRoute('hayat','calendar','dispatcher'),'/hayat/calendar');
+ assert.equal(routeView('/hayat/calendar','','dispatcher'),'calendar');
+ assert.equal(viewInProduct('hayat','calendar'),true);
+ assert.equal(viewInProduct('console','calendar'),false);
+ for(const role_key of ['manager','dispatcher','technician']){
+  const permission=role_key==='technician'?'workorders.assigned':'requests.read';
+  assert.equal(canOpenCalendar({role_key,permissions:[permission],modules:['requests']}),true);
+  assert.equal(canOpenCalendar({role_key,permissions:[permission],modules:[]}),false);
+  assert.equal(canOpenCalendar({role_key,permissions:[],modules:['requests']}),false);
+ }
+ for(const role_key of ['contractor','security','family','unit_owner']){
+  assert.equal(canOpenCalendar({role_key,permissions:['requests.read'],modules:['requests']}),false);
+ }
 });

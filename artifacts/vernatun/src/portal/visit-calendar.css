@@ -4,3 +4,6 @@
 .vc-filters input,.vc-filters select{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid #ccd7db;border-radius:8px;background:white;color:#183343}
 .vc-note{color:#5b7079;font-size:13px}.vc-visit{display:grid;width:100%;gap:6px;text-align:left;padding:14px;margin:8px 0;background:#f7f9fa;border:1px solid #dce5e8;border-radius:10px;color:#183343;overflow-wrap:anywhere;cursor:pointer}
 .vc-calendar :is(button,input,select):focus-visible{outline:3px solid #ee8128;outline-offset:2px}
+.h-bottom-calendar{overflow-x:auto!important;justify-content:flex-start!important}
+.h-bottom-calendar button{flex:1 0 68px;min-width:0;padding-inline:4px}
+.h-bottom-calendar button span{max-width:100%;overflow-wrap:anywhere}

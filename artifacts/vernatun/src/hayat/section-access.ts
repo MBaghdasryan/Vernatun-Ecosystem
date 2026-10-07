@@ -6,6 +6,11 @@ export const communitySections:Record<string,readonly [string,string]>={
  meters:['meters.manage','meters'],announcements:['announcements.read','community'],
  meetings:['meetings.read','community'],documents:['documents.read','documents'],
 };
+export function canOpenCalendar(c:{role_key:string;permissions:readonly string[];modules?:readonly string[]}){
+ return ['manager','dispatcher','technician'].includes(c.role_key)&&
+  (!c.modules||c.modules.includes('requests'))&&
+  c.permissions.some(p=>p==='requests.read'||p==='workorders.assigned');
+}
 export function canOpenCommunitySection(
  key:string,
  c:{permissions:readonly string[];modules?:readonly string[]},

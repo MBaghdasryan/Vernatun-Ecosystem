@@ -1,5 +1,6 @@
 import type {Language} from '../portal/i18n';
 const copy={
+ calendar:['Календарь','Calendar','Օրացույց'],
   meters:['Счётчики','Meters','Հաշվիչներ'],
  properties:['Здания','Buildings','Շենքեր'],units:['Помещения','Units','Տարածքներ'],people:['Команда','Team','Թիմ'],
  start:['Начать работу','Start work','Սկսել աշխատանքը'],submitReview:['Передать на проверку','Submit for review','Ուղարկել ստուգման'],photos:['Добавить фото результата','Add result photo','Ավելացնել արդյունքի լուսանկարը'],
