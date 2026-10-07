@@ -23,6 +23,161 @@ export interface SystemMetric {
   status: SystemMetricStatus;
 }
 
+export type SystemBackupCreateInputKind = typeof SystemBackupCreateInputKind[keyof typeof SystemBackupCreateInputKind];
+
+
+export const SystemBackupCreateInputKind = {
+  database: 'database',
+  files: 'files',
+  full_data: 'full_data',
+  configuration: 'configuration',
+  platform_snapshot: 'platform_snapshot',
+} as const;
+
+export type SystemBackupCreateInputConfirmation = typeof SystemBackupCreateInputConfirmation[keyof typeof SystemBackupCreateInputConfirmation];
+
+
+export const SystemBackupCreateInputConfirmation = {
+  BACKUP: 'BACKUP',
+} as const;
+
+export interface SystemBackupCreateInput {
+  kind: SystemBackupCreateInputKind;
+  /** @maxLength 300 */
+  notes?: string;
+  confirmation: SystemBackupCreateInputConfirmation;
+}
+
+export type SystemBackupDeleteInputConfirmation = typeof SystemBackupDeleteInputConfirmation[keyof typeof SystemBackupDeleteInputConfirmation];
+
+
+export const SystemBackupDeleteInputConfirmation = {
+  DELETE_BACKUP: 'DELETE BACKUP',
+} as const;
+
+export interface SystemBackupDeleteInput {
+  confirmation: SystemBackupDeleteInputConfirmation;
+}
+
+export type SystemBackupsItemsItem = {
+  id: string;
+  kind: string;
+  status: string;
+  createdAt: string;
+  finishedAt: string | null;
+  provider: string;
+  bytes: string | null;
+  checksum: string | null;
+  applicationVersion: string | null;
+  migrationVersion: string | null;
+  verification: string;
+  verifiedAt: string | null;
+  errorCode: string | null;
+  notes: string;
+  retainUntil: string;
+};
+
+export interface SystemBackups {
+  page: number;
+  hasMore: boolean;
+  provider: string | null;
+  encryption: string;
+  sourceAvailable: boolean;
+  restoreMode: string;
+  limitMiB: number;
+  kinds: string[];
+  items: SystemBackupsItemsItem[];
+}
+
+export type SystemCacheNamespacesItem = {
+  name: string;
+  scope: string;
+  entries: number;
+  ttlSeconds: number;
+};
+
+export interface SystemCache {
+  provider: string;
+  scope: string;
+  redisConfigured: boolean;
+  namespaces: SystemCacheNamespacesItem[];
+}
+
+export type LogRetentionInputConfirmation = typeof LogRetentionInputConfirmation[keyof typeof LogRetentionInputConfirmation];
+
+
+export const LogRetentionInputConfirmation = {
+  RETENTION: 'RETENTION',
+} as const;
+
+export interface LogRetentionInput {
+  enabled: boolean;
+  /**
+     * @minimum 7
+     * @maximum 3650
+     */
+  days: number;
+  revision: number;
+  confirmation: LogRetentionInputConfirmation;
+}
+
+export type SystemCacheClearInputNamespace = typeof SystemCacheClearInputNamespace[keyof typeof SystemCacheClearInputNamespace];
+
+
+export const SystemCacheClearInputNamespace = {
+  'storage-health': 'storage-health',
+  all: 'all',
+} as const;
+
+export type SystemCacheClearInputConfirmation = typeof SystemCacheClearInputConfirmation[keyof typeof SystemCacheClearInputConfirmation];
+
+
+export const SystemCacheClearInputConfirmation = {
+  CLEAR_CACHE: 'CLEAR CACHE',
+} as const;
+
+export interface SystemCacheClearInput {
+  namespace: SystemCacheClearInputNamespace;
+  confirmation: SystemCacheClearInputConfirmation;
+}
+
+export type SystemSessionRevokeInputConfirmation = typeof SystemSessionRevokeInputConfirmation[keyof typeof SystemSessionRevokeInputConfirmation];
+
+
+export const SystemSessionRevokeInputConfirmation = {
+  REVOKE: 'REVOKE',
+} as const;
+
+/**
+ * Exactly one target; recent authentication and confirmation required
+ */
+export interface SystemSessionRevokeInput {
+  sessionRef?: string;
+  userId?: string;
+  confirmation: SystemSessionRevokeInputConfirmation;
+}
+
+export type SystemSessionsItemsItem = {
+  ref: string;
+  userId: string;
+  name: string;
+  /** @nullable */
+  createdAt: string | null;
+  /** @nullable */
+  lastActivityAt: string | null;
+  expiresAt: string;
+  current: boolean;
+  /** @nullable */
+  device: string | null;
+};
+
+export interface SystemSessions {
+  total: number;
+  page: number;
+  hasMore: boolean;
+  items: SystemSessionsItemsItem[];
+}
+
 export type SystemOverviewStatus = typeof SystemOverviewStatus[keyof typeof SystemOverviewStatus];
 
 
@@ -1813,6 +1968,53 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetSystemBackupsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type CreateSystemBackup202 = {
+  id: string;
+  status: string;
+};
+
+export type VerifySystemBackup200 = {
+  verified: boolean;
+};
+
+export type GetSystemLogRetention200 = {
+  enabled: boolean;
+  days: number;
+  revision: number;
+  updatedAt: string;
+  eligible: number;
+};
+
+export type SaveSystemLogRetention200 = {
+  revision: number;
+};
+
+export type ClearSystemCache200 = {
+  count: number;
+  durationMs: number;
+  scope: string;
+};
+
+export type GetSystemSessionsParams = {
+userId?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type RevokeSystemSessions200 = {
+  count: number;
+  currentRevoked: boolean;
+};
 
 export type GetSystemErrorsParams = {
 page?: number;

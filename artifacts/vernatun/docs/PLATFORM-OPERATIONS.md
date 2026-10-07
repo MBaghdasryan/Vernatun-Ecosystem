@@ -112,9 +112,22 @@ crashes and external provider stack collection are outside this capture boundary
 
 ## Backups, restore, cache
 
-Existing developer/test backup utilities are unchanged. No new backup button,
-production restore, scheduled backup, encrypted archive UI or global cache
-clear is claimed. Session administration is Phase 3, not part of this delivery.
+The original paired developer/test CLI remains separate from the new encrypted
+Operations packages. Backup Center now has a durable queue, typed create/delete
+confirmations, component-integrity verification, encrypted downloads and a
+30-day minimum retention. Local is development-only; persistent AppStorage and
+S3 adapters are implemented. AppStorage shares the application's bucket and is
+not independent disaster recovery. Configuration, database, referenced files,
+combined data and source-inclusive snapshot kinds have bounded builders.
+Scheduling/policies and the complete restore workflow are not implemented.
+The new encrypted package format is not automatically accepted by the legacy
+restore CLI. Verification is not a successful restore rehearsal.
+
+Actual process-local storage-health cache management and platform session
+administration are implemented. Clearing cache does not revoke sessions.
+Persistent session revocation markers prevent late-save resurrection.
+Log retention is opt-in and disabled in the working database by default.
+See PLATFORM-OPERATIONS-COMPLETION.md for current per-feature status.
 
 ## Deployment constraints
 

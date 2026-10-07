@@ -8,6 +8,184 @@
 import * as zod from 'zod';
 
 
+
+
+
+export const GetSystemBackupsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetSystemBackupsResponse = zod.object({
+  "page": zod.number().int(),
+  "hasMore": zod.boolean(),
+  "provider": zod.string().nullable(),
+  "encryption": zod.string(),
+  "sourceAvailable": zod.boolean(),
+  "restoreMode": zod.string(),
+  "limitMiB": zod.number().int(),
+  "kinds": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "provider": zod.string(),
+  "bytes": zod.string().nullable(),
+  "checksum": zod.string().nullable(),
+  "applicationVersion": zod.string().nullable(),
+  "migrationVersion": zod.string().nullable(),
+  "verification": zod.string(),
+  "verifiedAt": zod.string().nullable(),
+  "errorCode": zod.string().nullable(),
+  "notes": zod.string(),
+  "retainUntil": zod.string()
+}))
+})
+
+
+export const createSystemBackupBodyNotesMax = 300;
+
+
+
+export const CreateSystemBackupBody = zod.object({
+  "kind": zod.enum(['database', 'files', 'full_data', 'configuration', 'platform_snapshot']),
+  "notes": zod.string().max(createSystemBackupBodyNotesMax).optional(),
+  "confirmation": zod.enum(['BACKUP'])
+})
+
+export const CreateSystemBackupResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.string()
+})
+
+
+export const VerifySystemBackupParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const VerifySystemBackupResponse = zod.object({
+  "verified": zod.boolean()
+})
+
+
+export const DownloadSystemBackupParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DownloadSystemBackupResponse = zod.unknown()
+
+
+export const DeleteSystemBackupParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteSystemBackupBody = zod.object({
+  "confirmation": zod.enum(['DELETE BACKUP'])
+})
+
+export const DeleteSystemBackupResponse = zod.void()
+
+
+export const GetSystemLogRetentionResponse = zod.object({
+  "enabled": zod.boolean(),
+  "days": zod.number().int(),
+  "revision": zod.number().int(),
+  "updatedAt": zod.string(),
+  "eligible": zod.number().int()
+})
+
+
+export const saveSystemLogRetentionBodyDaysMin = 7;
+export const saveSystemLogRetentionBodyDaysMax = 3650;
+
+
+
+export const SaveSystemLogRetentionBody = zod.object({
+  "enabled": zod.boolean(),
+  "days": zod.number().int().min(saveSystemLogRetentionBodyDaysMin).max(saveSystemLogRetentionBodyDaysMax),
+  "revision": zod.number().int(),
+  "confirmation": zod.enum(['RETENTION'])
+})
+
+export const SaveSystemLogRetentionResponse = zod.object({
+  "revision": zod.number().int()
+})
+
+
+export const GetSystemEnvironmentResponse = zod.object({
+  "observedAt": zod.string(),
+  "status": zod.enum(['healthy', 'warning', 'critical']),
+  "metrics": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.string().nullable(),
+  "status": zod.enum(['healthy', 'degraded', 'down', 'unavailable', 'not_configured'])
+}))
+})
+
+
+export const GetSystemCacheResponse = zod.object({
+  "provider": zod.string(),
+  "scope": zod.string(),
+  "redisConfigured": zod.boolean(),
+  "namespaces": zod.array(zod.object({
+  "name": zod.string(),
+  "scope": zod.string(),
+  "entries": zod.number().int(),
+  "ttlSeconds": zod.number().int()
+}))
+})
+
+
+export const ClearSystemCacheBody = zod.object({
+  "namespace": zod.enum(['storage-health', 'all']),
+  "confirmation": zod.enum(['CLEAR CACHE'])
+})
+
+export const ClearSystemCacheResponse = zod.object({
+  "count": zod.number().int(),
+  "durationMs": zod.number().int(),
+  "scope": zod.string()
+})
+
+
+
+
+
+export const GetSystemSessionsQueryParams = zod.object({
+  "userId": zod.coerce.string().uuid().optional(),
+  "page": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetSystemSessionsResponse = zod.object({
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "hasMore": zod.boolean(),
+  "items": zod.array(zod.object({
+  "ref": zod.string(),
+  "userId": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.string().nullable(),
+  "lastActivityAt": zod.string().nullable(),
+  "expiresAt": zod.string(),
+  "current": zod.boolean(),
+  "device": zod.string().nullable()
+}))
+})
+
+
+export const RevokeSystemSessionsBody = zod.object({
+  "sessionRef": zod.string().optional(),
+  "userId": zod.string().uuid().optional(),
+  "confirmation": zod.enum(['REVOKE'])
+}).describe('Exactly one target; recent authentication and confirmation required')
+
+export const RevokeSystemSessionsResponse = zod.object({
+  "count": zod.number().int(),
+  "currentRevoked": zod.boolean()
+})
+
+
 export const GetSystemErrorsQueryParams = zod.object({
   "page": zod.coerce.number().int().optional(),
   "status": zod.enum(['open', 'resolved']).optional()

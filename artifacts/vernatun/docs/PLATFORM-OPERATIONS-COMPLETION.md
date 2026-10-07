@@ -1,44 +1,77 @@
 # Platform Operations completion
 
-Status after the first implementation increment. The eight-phase prompt is
+Current implementation status. The eight-phase prompt is
 **not complete**. Phase 1 has a working foundation, not full log-source coverage.
 
 | Feature | Status | Real/Test/Stub | Notes |
 |---|---|---|---|
 | Permissions | COMPLETE | Real + isolated tests | Granular catalog, platform scope, MFA/effective permissions preserved |
 | System overview | PARTIAL | Real | Actual runtime/database/pool metrics; unavailable values explicit |
-| Health | PARTIAL | Real | API/DB evidence; external provider probes not implemented |
+| Health | PARTIAL | Real | API/DB evidence, bounded cached read-only private-storage probe and email history; no send or integration connectivity tests |
 | Logs | PARTIAL | Real + isolated tests | API/auth/security metadata and jobs; filters/paging; no external log drain |
 | Log exports | PARTIAL | Real + isolated API tests | JSON/CSV download UI; applied filters; mandatory range ≤31 days, ≤5000 rows and ≤5 MiB; audited; large background exports not implemented |
 | Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or raw stacks; trusted basename/line/column extraction only |
-| Error Center | COMPLETE for captured API/job errors | Real + isolated tests | Grouping, counters, details, audited open/resolved lifecycle, event environment, API build ID and reduced safe call locations; not full crash/external-source monitoring |
-| Jobs | PARTIAL | Real + isolated tests | Existing three periodic jobs instrumented; no persistent queue/retry/cancel |
-| Backup | PARTIAL | Existing real CLI | Developer/test paired SQL + files tools, no Operations UI/policies yet |
-| Restore | PARTIAL | Existing isolated tools | No production restore workflow introduced |
-| Cache | NOT IMPLEMENTED | — | No management UI or provider abstraction for clearing |
-| Sessions | NOT IMPLEMENTED | Existing auth unchanged | No new platform session administration |
+| Error Center | COMPLETE | Real + isolated tests | For captured API/job errors: grouping, counters, details, audited lifecycle, event environment, build ID and safe call locations; not full crash/external-source monitoring |
+| Log retention | COMPLETE | Real + isolated tests | Opt-in, disabled by default; typed confirmation, recent authentication, revision check, audited batches of ≤500; preserves recurrence watermarks and business audit |
+| Jobs | PARTIAL | Real + isolated tests | Three original periodic jobs plus opt-in log-retention worker instrumented; no persistent queue/retry/cancel |
+| Backup | PARTIAL | Real + isolated tests | UI, durable queue, encrypted packages, five bounded builders, verification/download/delete, 30-day protection and Local/AppStorage/S3 adapters; schedules/policies unfinished; working key unconfigured |
+| Restore | PARTIAL | Existing isolated tools | New package format has no full restore workflow yet; integrity verification is not a restore rehearsal; no production restore |
+| Cache | COMPLETE | Real + isolated tests | Actual storage-health cache only; process-scoped Memory provider, audited clearing, Redis adapter boundary tested but not connected; no imaginary org/user caches |
+| Sessions | COMPLETE | Real + isolated tests | Platform-only list/count/filter/paging, timestamps, coarse device, single/user revocation with confirmation and recent auth; late-save resurrection prevented |
 | OpenAPI | PARTIAL | Real generated contract | New endpoints included; interactive API Center not built |
 | API Clients | NOT IMPLEMENTED | — | Phase 4 |
 | API Keys | NOT IMPLEMENTED | — | Phase 4 |
 | Webhooks | PARTIAL | Existing Resend real implementation | No generic outbound webhook framework |
 | Integration Registry | NOT IMPLEMENTED | — | Existing provider boundaries preserved |
-| Secret Storage | PARTIAL | Existing runtime secrets | No database-encrypted integration secret vault/UI |
+| Secret Storage | PARTIAL | Runtime secrets + tested cryptographic foundation | AES-256-GCM purpose-bound envelope with independent key; no integration vault CRUD/UI yet; real operations key not configured |
 | Modules | PARTIAL | Existing entitlements | Registry/dependency UI not yet extended |
 | Extensions | NOT IMPLEMENTED | — | No arbitrary plugin execution |
 | Update Upload | NOT IMPLEMENTED | — | Phase 7 |
 | Update Validation | NOT IMPLEMENTED | — | Phase 7 |
 | Update Installation | NOT SUPPORTED BY CURRENT DEPLOYMENT | — | No safe runtime replacement; later staging → manual publish |
 | Rollback | PARTIAL | Existing platform/checkpoint and isolated recovery tools | No new paired application/database rollback workflow |
-| Environment | NOT IMPLEMENTED | — | Only safe environment-kind metric; no secret inspection |
+| Environment | COMPLETE | Real + isolated tests | Fixed allowlist of runtime/provider modes and secret configured/not-configured flags, no arbitrary environment enumeration |
 | Payments integration framework | PARTIAL | Existing business ledger only | General provider-capability framework still to build |
 | Concrete payment provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Bank integration framework | PARTIAL | Existing manual imports only | General provider interface still to build |
 | Concrete bank provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Manual bank statement import | COMPLETE | Existing implementation, unchanged | Not re-tested or modified in this increment |
 
-Next scope in prompt order: finish Phase 1 source coverage/health evidence and
-log retention, then Phase 2 Backup Center using existing paired snapshot tools.
+Next scope: remaining Phase 1 source coverage/health evidence and large exports,
+then Phase 2 Backup Center using the existing paired snapshot tools.
 Do not equate existing CLI support with a completed administrative workflow.
+
+## Storage, cache, sessions, retention and encryption increment
+
+- Storage checks are read-only and prefix-scoped. They do not download private
+  contents, create objects or expose bucket names. Success verifies read access,
+  not write permissions, physical byte counts or recoverability. Responses are
+  bounded by a 3-second observation deadline and cached, including failures, for
+  60 seconds in the current API process. Multi-instance invalidation is not
+  claimed: the UI explicitly identifies process-local scope.
+- Session administration exposes only one-way public references, never the
+  session cookie/token. New sessions record issuance, minute-resolution activity
+  and coarse browser/device classes; historical unknown values remain null.
+  No raw User-Agent or IP is stored by this feature. Revocation and audit commit
+  together; persistent revocation markers prevent in-flight requests from
+  resurrecting a revoked login. Marker cleanup is not implemented.
+- Retention starts disabled with a saved 30-day proposal. Administrators can
+  choose 7–3650 days, must reauthenticate when needed and type RETENTION.
+  This authorizes future irreversible deletion of operational logs only.
+  The app does not silently enable deletion during installation.
+  A bounded worker adjusts error-group acknowledgement counts under locks,
+  preserving open recurrences while pruning; business audit is untouched.
+- The encryption foundation requires VERNATUN_OPERATIONS_ENCRYPTION_KEY,
+  a separate 32-byte random key encoded as 64 hex characters. It never falls
+  back to SESSION_SECRET, stores the key in a database or includes it in an
+  envelope. See OPERATIONS-ENCRYPTION.md. This does not mean Backup Center or the
+  integration vault has been completed.
+- Twelve isolated System test groups and both type checks passed. Tests cover
+  provider-scoped cache deletion, permission denial, current/unmatched session
+  references, late-session resurrection, retention opt-in and bounded batches,
+  recurrence after pruning, ciphertext tampering and purpose isolation.
+  Additive development migrations preserved the 13 legacy-table fingerprints.
+  No production migration, real email or working-data deletion was performed.
 
 ### Email health evidence
 
@@ -135,5 +168,42 @@ Do not equate existing CLI support with a completed administrative workflow.
   and event environment. New per-event expanders were checked in code/types; the
   earlier browser pass covers the unchanged Error Center lifecycle, not a fresh
   browser pass over these expanders.
-- Phase 1 is still incomplete: additional log sources/health probes, retention
+- Phase 1 is still incomplete: additional log sources/health probes
   and large background exports remain. No production deployment or live email.
+
+## Encrypted Backup Center increment
+
+- `/console/system/backups` provides actual registry/readiness, queue creation,
+  verification, encrypted download and retention-protected deletion.
+- Creation requires read/create rights, recent authentication and BACKUP.
+  Deletion requires read/delete rights, recent authentication, DELETE BACKUP and
+  expiration of the minimum 30-day hold. Audit history is retained.
+- A database-backed single pending queue survives a process restart. An
+  interrupted running job becomes failed, never completed. Worker errors are
+  visible in both the backup registry and the job history.
+- Consistent snapshots use short-wait table/advisory locks; a busy database/file
+  aborts the attempt. Private objects missing from the source make the snapshot
+  fail. Reference coverage includes document versions and organization logos.
+- Logical contents are bounded to 64 MiB and 5000 private files. SQL dumping has
+  a 60-second process deadline; file acquisition checks a 120-second cumulative
+  budget and a 5-second per-read deadline. These limits intentionally reject
+  oversized work rather than claiming a scalable archival service.
+- AES-GCM packages authenticate the snapshot identity and per-component
+  checksums; written ciphertext is read back before the registry says completed.
+  Source-inclusive packages exclude environment files, secrets directories,
+  installed dependencies and compiled output. Published runtimes without source
+  cannot create that kind. Manual rebuilding and environment configuration are
+  still needed for recovery.
+- Fourteen isolated API/test groups passed, including real encrypted local
+  round-trip and binary download, protected deletion, corruption detection,
+  custom-format PostgreSQL dump and missing referenced-file failure. Both app
+  type checks passed. Development migration preserved all 13 legacy fingerprints.
+- Browser acceptance passed for cache, sessions, environment and retention at
+  390px and 1280px, including current-session revocation. The new Backup Center
+  browser check also passed at both widths: missing-key warning, disabled
+  creation, no fake success and no unsafe restore action. The successful-create
+  UI journey has not been browser-tested; its backend was tested in isolation.
+  Live backups remain disabled until the independent encryption key is supplied.
+- Still incomplete: schedules/policies, recovery workflow and drill for the new
+  package, integration vault, key rotation, API Center, Modules and Updates.
+  Do not mark the eight-phase prompt complete.

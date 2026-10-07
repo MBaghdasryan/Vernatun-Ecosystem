@@ -76,6 +76,12 @@ export async function deletePrivateFile(kind:FileKind,key:string){
 export async function privateFileExists(kind:FileKind,key:string){
   return provider().exists(kind,key);
 }
+export async function privateStorageHealth(){
+ const selected=provider();
+ if(!selected.health)return {status:'unavailable' as const,value:null};
+ await selected.health();
+ return {status:'healthy' as const,value:'read_access_verified'};
+}
 export async function privateFileMetadata(kind:FileKind,key:string){
   return provider().metadata(kind,key);
 }
@@ -84,6 +90,10 @@ export async function deletePrivateFileVersion(kind:FileKind,key:string,generati
 }
 export class AppStoragePrivateStorage implements PrivateStorageProvider{
  readonly mode='app_storage';
+ async health(){
+  const {bucket,prefix}=privateStorageLocation();
+  await bucket.getFiles({prefix,maxResults:1,autoPaginate:false,maxApiCalls:1});
+ }
  get identity(){return privateStorageLocation().scope}
  save=saveAppStorageFile;
  async read(kind:FileKind,key:string){return (await object(kind,key).download())[0]}

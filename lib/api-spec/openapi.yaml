@@ -11,6 +11,196 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/backups:
+    get:
+      operationId: getSystemBackups
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Encrypted backup registry and actual readiness
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemBackups'}
+    post:
+      operationId: createSystemBackup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SystemBackupCreateInput'}
+      responses:
+        '202':
+          description: Durable queue entry, not a completed backup
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status]
+                properties:
+                  id: {type: string}
+                  status: {type: string}
+  /system/backups/{id}/verify:
+    post:
+      operationId: verifySystemBackup
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Ciphertext, authenticated payload and component checksums verified
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verified]
+                properties:
+                  verified: {type: boolean}
+  /system/backups/{id}/download:
+    get:
+      operationId: downloadSystemBackup
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Encrypted package only
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+  /system/backups/{id}:
+    delete:
+      operationId: deleteSystemBackup
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SystemBackupDeleteInput'}
+      responses:
+        '204': {description: "Backup bytes removed, audit retained"}
+  /system/log-retention:
+    get:
+      operationId: getSystemLogRetention
+      tags: [System]
+      responses:
+        '200':
+          description: Disabled by default; eligible is a preview, not a deleted count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, days, revision, updatedAt, eligible]
+                properties:
+                  enabled: {type: boolean}
+                  days: {type: integer}
+                  revision: {type: integer}
+                  updatedAt: {type: string}
+                  eligible: {type: integer}
+    put:
+      operationId: saveSystemLogRetention
+      tags: [System]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LogRetentionInput'}
+      responses:
+        '200':
+          description: Updated policy revision; future batches delete operational logs only
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revision]
+                properties:
+                  revision: {type: integer}
+  /system/environment:
+    get:
+      operationId: getSystemEnvironment
+      tags: [System]
+      responses:
+        '200':
+          description: Safe allowlisted runtime configuration; no secret values
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemOverview'}
+  /system/cache:
+    get:
+      operationId: getSystemCache
+      tags: [System]
+      responses:
+        '200':
+          description: Only actual cache namespaces in the serving process
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemCache'}
+  /system/cache/clear:
+    post:
+      operationId: clearSystemCache
+      tags: [System]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemCacheClearInput'
+      responses:
+        '200':
+          description: Audited process-local cache invalidation, never sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, durationMs, scope]
+                properties:
+                  count: {type: integer}
+                  durationMs: {type: integer}
+                  scope: {type: string}
+  /system/sessions:
+    get:
+      operationId: getSystemSessions
+      tags: [System]
+      parameters:
+        - {in: query, name: userId, schema: {type: string, format: uuid}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+      responses:
+        '200':
+          description: Active signed-in sessions, without cookies or session tokens
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemSessions'}
+  /system/sessions/revoke:
+    post:
+      operationId: revokeSystemSessions
+      tags: [System]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSessionRevokeInput'
+      responses:
+        '200':
+          description: Revoked sessions and whether this request signed out the current browser
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, currentRevoked]
+                properties:
+                  count: {type: integer}
+                  currentRevoked: {type: boolean}
   /system/errors:
     get:
       operationId: getSystemErrors
@@ -1833,6 +2023,115 @@ components:
         key: {type: string}
         value: {type: [string, "null"]}
         status: {type: string, enum: [healthy, degraded, down, unavailable, not_configured]}
+    SystemBackupCreateInput:
+      type: object
+      required: [kind, confirmation]
+      properties:
+        kind:
+          type: string
+          enum: [database, files, full_data, configuration, platform_snapshot]
+        notes: {type: string, maxLength: 300}
+        confirmation: {type: string, enum: [BACKUP]}
+    SystemBackupDeleteInput:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation: {type: string, enum: [DELETE BACKUP]}
+    SystemBackups:
+      type: object
+      required: [page, hasMore, items, provider, encryption, sourceAvailable, restoreMode, limitMiB, kinds]
+      properties:
+        page: {type: integer}
+        hasMore: {type: boolean}
+        provider: {type: string, nullable: true}
+        encryption: {type: string}
+        sourceAvailable: {type: boolean}
+        restoreMode: {type: string}
+        limitMiB: {type: integer}
+        kinds:
+          type: array
+          items: {type: string}
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, kind, status, createdAt, finishedAt, provider, bytes, checksum, applicationVersion, migrationVersion, verification, verifiedAt, errorCode, notes, retainUntil]
+            properties:
+              id: {type: string}
+              kind: {type: string}
+              status: {type: string}
+              createdAt: {type: string}
+              finishedAt: {type: string, nullable: true}
+              provider: {type: string}
+              bytes: {type: string, nullable: true}
+              checksum: {type: string, nullable: true}
+              applicationVersion: {type: string, nullable: true}
+              migrationVersion: {type: string, nullable: true}
+              verification: {type: string}
+              verifiedAt: {type: string, nullable: true}
+              errorCode: {type: string, nullable: true}
+              notes: {type: string}
+              retainUntil: {type: string}
+    SystemCache:
+      type: object
+      required: [provider, scope, redisConfigured, namespaces]
+      properties:
+        provider: {type: string}
+        scope: {type: string}
+        redisConfigured: {type: boolean}
+        namespaces:
+          type: array
+          items:
+            type: object
+            required: [name, scope, entries, ttlSeconds]
+            properties:
+              name: {type: string}
+              scope: {type: string}
+              entries: {type: integer}
+              ttlSeconds: {type: integer}
+    LogRetentionInput:
+      type: object
+      required: [enabled, days, revision, confirmation]
+      properties:
+        enabled: {type: boolean}
+        days: {type: integer, minimum: 7, maximum: 3650}
+        revision: {type: integer}
+        confirmation: {type: string, enum: [RETENTION]}
+    SystemCacheClearInput:
+      type: object
+      required: [namespace, confirmation]
+      properties:
+        namespace: {type: string, enum: [storage-health, all]}
+        confirmation: {type: string, enum: ['CLEAR CACHE']}
+    SystemSessionRevokeInput:
+      type: object
+      description: Exactly one target; recent authentication and confirmation required
+      required: [confirmation]
+      properties:
+        sessionRef: {type: string}
+        userId: {type: string, format: uuid}
+        confirmation: {type: string, enum: [REVOKE]}
+    SystemSessions:
+      type: object
+      required: [total, page, hasMore, items]
+      properties:
+        total: {type: integer}
+        page: {type: integer}
+        hasMore: {type: boolean}
+        items:
+          type: array
+          items:
+            type: object
+            required: [ref, userId, name, createdAt, lastActivityAt, expiresAt, current, device]
+            properties:
+              ref: {type: string}
+              userId: {type: string}
+              name: {type: string}
+              createdAt: {type: [string, 'null']}
+              lastActivityAt: {type: [string, 'null']}
+              expiresAt: {type: string}
+              current: {type: boolean}
+              device: {type: [string, 'null']}
     SystemOverview:
       type: object
       required: [observedAt, status, metrics]

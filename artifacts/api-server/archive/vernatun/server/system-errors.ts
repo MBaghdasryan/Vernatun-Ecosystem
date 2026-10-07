@@ -6,6 +6,7 @@ import {ApiError} from './access.js';
 // Group only safe, stable metadata. Neither identifiers nor arbitrary messages
 // enter the fingerprint, so repeated instances share a group across users.
 const fingerprint=`md5(jsonb_build_array(category,service,event,method,endpoint,http_status,error_code,job)::text)`;
+export {fingerprint as systemErrorFingerprint};
 const sources=`SELECT *,${fingerprint} AS fingerprint FROM system_log_events WHERE level IN ('error','fatal')`;
 const grouped=`WITH errors AS (${sources}), aggregates AS (
  SELECT fingerprint,min(created_at) AS "firstSeen",max(created_at) AS "lastSeen",
@@ -58,6 +59,7 @@ export function registerSystemErrors(router:Router,permit:(req:Request,permissio
   const client=await pool.connect();
   try{
    await client.query('BEGIN');
+   await client.query('SELECT pg_advisory_xact_lock_shared(73192841)');
    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",['system-error:'+id]);
    const r=await client.query(`SELECT * FROM (${grouped}) groups WHERE fingerprint=$1`,[id]);
    if(!r.rowCount)throw new ApiError(404,'error_group_not_found');

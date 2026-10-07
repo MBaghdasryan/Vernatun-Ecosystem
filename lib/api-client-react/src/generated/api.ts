@@ -36,10 +36,12 @@ import type {
   CategoryUpdateInput,
   ChangeGovernanceMeeting200,
   ChangeGovernanceMeetingBody,
+  ClearSystemCache200,
   CreateGovernanceMeeting201,
   CreateGovernanceMeetingBody,
   CreateOwnership201,
   CreateOwnershipBody,
+  CreateSystemBackup202,
   CreditAllocationInput,
   DefectCollaboration,
   DefectMessage,
@@ -75,9 +77,12 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  GetSystemBackupsParams,
   GetSystemErrorsParams,
   GetSystemJobsParams,
+  GetSystemLogRetention200,
   GetSystemLogsParams,
+  GetSystemSessionsParams,
   HandoverFloorAssignment,
   HandoverFloorInput,
   HandoverFloorReceipt,
@@ -111,6 +116,7 @@ import type {
   ListOwnerships200Item,
   ListOwnershipsParams,
   ListPlatformCasesParams,
+  LogRetentionInput,
   LookupEquipmentParams,
   MaintenanceConfigurationInput,
   MaintenanceGenerationInput,
@@ -144,12 +150,19 @@ import type {
   ResendDeliveryInput,
   ResidentDelegationInput,
   ResolveNotificationDestinationParams,
+  RevokeSystemSessions200,
   SaveOperatingBudget200,
   SaveOperatingBudgetBody,
+  SaveSystemLogRetention200,
   ScopedRecordPage,
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
+  SystemBackupCreateInput,
+  SystemBackupDeleteInput,
+  SystemBackups,
+  SystemCache,
+  SystemCacheClearInput,
   SystemErrorDetail,
   SystemErrorGroup,
   SystemErrorStateInput,
@@ -159,6 +172,8 @@ import type {
   SystemLogExportInput,
   SystemLogs,
   SystemOverview,
+  SystemSessionRevokeInput,
+  SystemSessions,
   UnitPlanChange,
   UnitPlanReceipt,
   UnitPlanView,
@@ -170,6 +185,7 @@ import type {
   UploadOperationalPhotoParams,
   UploadOrganizationLogoParams,
   UploadUnitPlanParams,
+  VerifySystemBackup200,
   VisitProposalInput,
   VisitResponseInput,
   WorkTransitionInput
@@ -201,6 +217,925 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSystemBackupsUrl = (params?: GetSystemBackupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/backups?${stringifiedParams}` : `/api/system/backups`
+}
+
+export const getSystemBackups = async (params?: GetSystemBackupsParams, options?: Parameters<typeof customFetch>[1]): Promise<SystemBackups> => {
+
+  return customFetch<SystemBackups>(getGetSystemBackupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemBackupsQueryKey = (params?: GetSystemBackupsParams,) => {
+    return [
+    `/api/system/backups`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSystemBackupsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemBackups>>, TError = ErrorType<unknown>>(params?: GetSystemBackupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemBackupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemBackups>>> = ({ signal }) => getSystemBackups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemBackups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemBackupsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemBackups>>>
+export type GetSystemBackupsQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemBackups<TData = Awaited<ReturnType<typeof getSystemBackups>>, TError = ErrorType<unknown>>(
+ params?: GetSystemBackupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemBackupsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSystemBackupUrl = () => {
+
+
+
+
+  return `/api/system/backups`
+}
+
+export const createSystemBackup = async (systemBackupCreateInput: SystemBackupCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<CreateSystemBackup202> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreateSystemBackup202>(getCreateSystemBackupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemBackupCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSystemBackupMutationKey = () => ['createSystemBackup'] as const;
+
+export const getCreateSystemBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemBackup>>, TError,CreateSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSystemBackup>>, TError,CreateSystemBackupMutationVariables, TContext> => {
+
+const mutationKey = getCreateSystemBackupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSystemBackup>>, CreateSystemBackupMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSystemBackup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSystemBackupMutationResult = NonNullable<Awaited<ReturnType<typeof createSystemBackup>>>
+    export type CreateSystemBackupMutationBody = BodyType<SystemBackupCreateInput>
+    export type CreateSystemBackupMutationError = ErrorType<unknown>
+    export type CreateSystemBackupMutationVariables = {data: BodyType<SystemBackupCreateInput>}
+
+    export const useCreateSystemBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemBackup>>, TError,CreateSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSystemBackup>>,
+        TError,
+        CreateSystemBackupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSystemBackupMutationOptions(options));
+    }
+
+export const getVerifySystemBackupUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/backups/${id}/verify`
+}
+
+export const verifySystemBackup = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<VerifySystemBackup200> => {
+
+  return customFetch<VerifySystemBackup200>(getVerifySystemBackupUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getVerifySystemBackupMutationKey = () => ['verifySystemBackup'] as const;
+
+export const getVerifySystemBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySystemBackup>>, TError,VerifySystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifySystemBackup>>, TError,VerifySystemBackupMutationVariables, TContext> => {
+
+const mutationKey = getVerifySystemBackupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifySystemBackup>>, VerifySystemBackupMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  verifySystemBackup(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifySystemBackupMutationResult = NonNullable<Awaited<ReturnType<typeof verifySystemBackup>>>
+
+    export type VerifySystemBackupMutationError = ErrorType<unknown>
+    export type VerifySystemBackupMutationVariables = {id: string}
+
+    export const useVerifySystemBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySystemBackup>>, TError,VerifySystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifySystemBackup>>,
+        TError,
+        VerifySystemBackupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifySystemBackupMutationOptions(options));
+    }
+
+export const getDownloadSystemBackupUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/backups/${id}/download`
+}
+
+export const downloadSystemBackup = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadSystemBackupUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadSystemBackupQueryKey = (id: string,) => {
+    return [
+    `/api/system/backups/${id}/download`
+    ] as const;
+    }
+
+
+export const getDownloadSystemBackupQueryOptions = <TData = Awaited<ReturnType<typeof downloadSystemBackup>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadSystemBackup>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadSystemBackupQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadSystemBackup>>> = ({ signal }) => downloadSystemBackup(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadSystemBackup>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadSystemBackupQueryResult = NonNullable<Awaited<ReturnType<typeof downloadSystemBackup>>>
+export type DownloadSystemBackupQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadSystemBackup<TData = Awaited<ReturnType<typeof downloadSystemBackup>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadSystemBackup>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadSystemBackupQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteSystemBackupUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/backups/${id}`
+}
+
+export const deleteSystemBackup = async (id: string,
+    systemBackupDeleteInput: SystemBackupDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDeleteSystemBackupUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemBackupDeleteInput)
+  }
+);}
+
+
+
+
+
+export const getDeleteSystemBackupMutationKey = () => ['deleteSystemBackup'] as const;
+
+export const getDeleteSystemBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSystemBackup>>, TError,DeleteSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSystemBackup>>, TError,DeleteSystemBackupMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSystemBackupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSystemBackup>>, DeleteSystemBackupMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deleteSystemBackup(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSystemBackupMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSystemBackup>>>
+    export type DeleteSystemBackupMutationBody = BodyType<SystemBackupDeleteInput>
+    export type DeleteSystemBackupMutationError = ErrorType<unknown>
+    export type DeleteSystemBackupMutationVariables = {id: string;data: BodyType<SystemBackupDeleteInput>}
+
+    export const useDeleteSystemBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSystemBackup>>, TError,DeleteSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSystemBackup>>,
+        TError,
+        DeleteSystemBackupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSystemBackupMutationOptions(options));
+    }
+
+export const getGetSystemLogRetentionUrl = () => {
+
+
+
+
+  return `/api/system/log-retention`
+}
+
+export const getSystemLogRetention = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetSystemLogRetention200> => {
+
+  return customFetch<GetSystemLogRetention200>(getGetSystemLogRetentionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemLogRetentionQueryKey = () => {
+    return [
+    `/api/system/log-retention`
+    ] as const;
+    }
+
+
+export const getGetSystemLogRetentionQueryOptions = <TData = Awaited<ReturnType<typeof getSystemLogRetention>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemLogRetention>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemLogRetentionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemLogRetention>>> = ({ signal }) => getSystemLogRetention({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemLogRetention>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemLogRetentionQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemLogRetention>>>
+export type GetSystemLogRetentionQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemLogRetention<TData = Awaited<ReturnType<typeof getSystemLogRetention>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemLogRetention>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemLogRetentionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveSystemLogRetentionUrl = () => {
+
+
+
+
+  return `/api/system/log-retention`
+}
+
+export const saveSystemLogRetention = async (logRetentionInput: LogRetentionInput, options?: Parameters<typeof customFetch>[1]): Promise<SaveSystemLogRetention200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SaveSystemLogRetention200>(getSaveSystemLogRetentionUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(logRetentionInput)
+  }
+);}
+
+
+
+
+
+export const getSaveSystemLogRetentionMutationKey = () => ['saveSystemLogRetention'] as const;
+
+export const getSaveSystemLogRetentionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSystemLogRetention>>, TError,SaveSystemLogRetentionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveSystemLogRetention>>, TError,SaveSystemLogRetentionMutationVariables, TContext> => {
+
+const mutationKey = getSaveSystemLogRetentionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveSystemLogRetention>>, SaveSystemLogRetentionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveSystemLogRetention(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveSystemLogRetentionMutationResult = NonNullable<Awaited<ReturnType<typeof saveSystemLogRetention>>>
+    export type SaveSystemLogRetentionMutationBody = BodyType<LogRetentionInput>
+    export type SaveSystemLogRetentionMutationError = ErrorType<unknown>
+    export type SaveSystemLogRetentionMutationVariables = {data: BodyType<LogRetentionInput>}
+
+    export const useSaveSystemLogRetention = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSystemLogRetention>>, TError,SaveSystemLogRetentionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveSystemLogRetention>>,
+        TError,
+        SaveSystemLogRetentionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveSystemLogRetentionMutationOptions(options));
+    }
+
+export const getGetSystemEnvironmentUrl = () => {
+
+
+
+
+  return `/api/system/environment`
+}
+
+export const getSystemEnvironment = async ( options?: Parameters<typeof customFetch>[1]): Promise<SystemOverview> => {
+
+  return customFetch<SystemOverview>(getGetSystemEnvironmentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemEnvironmentQueryKey = () => {
+    return [
+    `/api/system/environment`
+    ] as const;
+    }
+
+
+export const getGetSystemEnvironmentQueryOptions = <TData = Awaited<ReturnType<typeof getSystemEnvironment>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemEnvironment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemEnvironmentQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemEnvironment>>> = ({ signal }) => getSystemEnvironment({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemEnvironment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemEnvironmentQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemEnvironment>>>
+export type GetSystemEnvironmentQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemEnvironment<TData = Awaited<ReturnType<typeof getSystemEnvironment>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemEnvironment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemEnvironmentQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemCacheUrl = () => {
+
+
+
+
+  return `/api/system/cache`
+}
+
+export const getSystemCache = async ( options?: Parameters<typeof customFetch>[1]): Promise<SystemCache> => {
+
+  return customFetch<SystemCache>(getGetSystemCacheUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemCacheQueryKey = () => {
+    return [
+    `/api/system/cache`
+    ] as const;
+    }
+
+
+export const getGetSystemCacheQueryOptions = <TData = Awaited<ReturnType<typeof getSystemCache>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemCache>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemCacheQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemCache>>> = ({ signal }) => getSystemCache({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemCache>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemCacheQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemCache>>>
+export type GetSystemCacheQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemCache<TData = Awaited<ReturnType<typeof getSystemCache>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemCache>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemCacheQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getClearSystemCacheUrl = () => {
+
+
+
+
+  return `/api/system/cache/clear`
+}
+
+export const clearSystemCache = async (systemCacheClearInput: SystemCacheClearInput, options?: Parameters<typeof customFetch>[1]): Promise<ClearSystemCache200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClearSystemCache200>(getClearSystemCacheUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemCacheClearInput)
+  }
+);}
+
+
+
+
+
+export const getClearSystemCacheMutationKey = () => ['clearSystemCache'] as const;
+
+export const getClearSystemCacheMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearSystemCache>>, TError,ClearSystemCacheMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof clearSystemCache>>, TError,ClearSystemCacheMutationVariables, TContext> => {
+
+const mutationKey = getClearSystemCacheMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearSystemCache>>, ClearSystemCacheMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  clearSystemCache(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClearSystemCacheMutationResult = NonNullable<Awaited<ReturnType<typeof clearSystemCache>>>
+    export type ClearSystemCacheMutationBody = BodyType<SystemCacheClearInput>
+    export type ClearSystemCacheMutationError = ErrorType<unknown>
+    export type ClearSystemCacheMutationVariables = {data: BodyType<SystemCacheClearInput>}
+
+    export const useClearSystemCache = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearSystemCache>>, TError,ClearSystemCacheMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof clearSystemCache>>,
+        TError,
+        ClearSystemCacheMutationVariables,
+        TContext
+      > => {
+      return useMutation(getClearSystemCacheMutationOptions(options));
+    }
+
+export const getGetSystemSessionsUrl = (params?: GetSystemSessionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/system/sessions?${stringifiedParams}` : `/api/system/sessions`
+}
+
+export const getSystemSessions = async (params?: GetSystemSessionsParams, options?: Parameters<typeof customFetch>[1]): Promise<SystemSessions> => {
+
+  return customFetch<SystemSessions>(getGetSystemSessionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemSessionsQueryKey = (params?: GetSystemSessionsParams,) => {
+    return [
+    `/api/system/sessions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSystemSessionsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemSessions>>, TError = ErrorType<unknown>>(params?: GetSystemSessionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemSessionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemSessions>>> = ({ signal }) => getSystemSessions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemSessions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemSessions>>>
+export type GetSystemSessionsQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemSessions<TData = Awaited<ReturnType<typeof getSystemSessions>>, TError = ErrorType<unknown>>(
+ params?: GetSystemSessionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemSessionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRevokeSystemSessionsUrl = () => {
+
+
+
+
+  return `/api/system/sessions/revoke`
+}
+
+export const revokeSystemSessions = async (systemSessionRevokeInput: SystemSessionRevokeInput, options?: Parameters<typeof customFetch>[1]): Promise<RevokeSystemSessions200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RevokeSystemSessions200>(getRevokeSystemSessionsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemSessionRevokeInput)
+  }
+);}
+
+
+
+
+
+export const getRevokeSystemSessionsMutationKey = () => ['revokeSystemSessions'] as const;
+
+export const getRevokeSystemSessionsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSystemSessions>>, TError,RevokeSystemSessionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeSystemSessions>>, TError,RevokeSystemSessionsMutationVariables, TContext> => {
+
+const mutationKey = getRevokeSystemSessionsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeSystemSessions>>, RevokeSystemSessionsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  revokeSystemSessions(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeSystemSessionsMutationResult = NonNullable<Awaited<ReturnType<typeof revokeSystemSessions>>>
+    export type RevokeSystemSessionsMutationBody = BodyType<SystemSessionRevokeInput>
+    export type RevokeSystemSessionsMutationError = ErrorType<unknown>
+    export type RevokeSystemSessionsMutationVariables = {data: BodyType<SystemSessionRevokeInput>}
+
+    export const useRevokeSystemSessions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSystemSessions>>, TError,RevokeSystemSessionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeSystemSessions>>,
+        TError,
+        RevokeSystemSessionsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeSystemSessionsMutationOptions(options));
+    }
 
 export const getGetSystemErrorsUrl = (params?: GetSystemErrorsParams,) => {
   const normalizedParams = new URLSearchParams();

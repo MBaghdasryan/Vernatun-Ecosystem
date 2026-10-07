@@ -14,6 +14,10 @@ const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin
 await testAdmin.query(`CREATE SCHEMA "${schema}"`);
 url.searchParams.set('options',`-c search_path=${schema},public`);
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
+// Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
+if(process.argv.includes('--system-only'))Object.assign(env,{
+ VERNATUN_OPERATIONS_ENCRYPTION_KEY:randomBytes(32).toString('hex'),BACKUP_STORAGE_MODE:'local',
+});
 let status=0;
 const checks=process.argv.includes('--browser-only')
  ? [['server/tests/browser-sandbox.ts']]

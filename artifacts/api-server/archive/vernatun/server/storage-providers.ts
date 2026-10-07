@@ -1,10 +1,11 @@
-import {mkdir,open,readFile,stat,unlink} from 'node:fs/promises';
+import {mkdir,open,readFile,stat,unlink,access,constants} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
+import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand,DeleteObjectCommand,ListObjectsV2Command} from '@aws-sdk/client-s3';
 export type StorageKind='photos'|'documents';
 export interface PrivateStorageProvider{
  readonly mode:string;readonly identity:string;
+ health?():Promise<void>;
  save(kind:StorageKind,key:string,bytes:Buffer,type:string):Promise<void>;
  read(kind:StorageKind,key:string):Promise<Buffer>;
  exists(kind:StorageKind,key:string):Promise<boolean>;
@@ -18,6 +19,7 @@ export class LocalPrivateStorage implements PrivateStorageProvider{
  readonly mode='local';readonly identity:string;
  constructor(private root:string){this.root=resolve(root);this.identity='local:'+this.root}
  private path(k:StorageKind,id:string){return resolve(this.root,keyFor(k,id))}
+ async health(){await access(this.root,constants.R_OK);if(!(await stat(this.root)).isDirectory())throw new Error('Not a directory')}
  async save(k:StorageKind,id:string,bytes:Buffer,_type:string){await mkdir(resolve(this.root,k),{recursive:true,mode:0o700});const f=await open(this.path(k,id),'wx',0o600);try{await f.writeFile(bytes);await f.sync()}finally{await f.close()}}
  async read(k:StorageKind,id:string){return readFile(this.path(k,id))}
  async exists(k:StorageKind,id:string){try{await stat(this.path(k,id));return true}catch(e:any){if(e.code==='ENOENT')return false;throw e}}
@@ -33,6 +35,7 @@ export class S3CompatibleStorage implements PrivateStorageProvider{
   this.client=new S3Client({endpoint:settings.endpoint,region:settings.region,forcePathStyle:true,credentials:{accessKeyId:settings.accessKey,secretAccessKey:settings.secretKey}});
  }
  private args(k:StorageKind,id:string){return {Bucket:this.settings.bucket,Key:this.settings.prefix+'/'+keyFor(k,id)}}
+ async health(){await this.client.send(new ListObjectsV2Command({Bucket:this.settings.bucket,Prefix:this.settings.prefix+'/',MaxKeys:1}),{abortSignal:AbortSignal.timeout(2500)})}
  async save(k:StorageKind,id:string,bytes:Buffer,type:string){await this.client.send(new PutObjectCommand({...this.args(k,id),Body:bytes,ContentType:type,CacheControl:'private, no-store',IfNoneMatch:'*'}))}
  async read(k:StorageKind,id:string){const r=await this.client.send(new GetObjectCommand(this.args(k,id)));if(!r.Body)throw new Error('Missing object body');return Buffer.from(await r.Body.transformToByteArray())}
  async exists(k:StorageKind,id:string){try{await this.client.send(new HeadObjectCommand(this.args(k,id)));return true}catch(e:any){if(e.$metadata?.httpStatusCode===404)return false;throw e}}

@@ -1,6 +1,6 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,rm} from 'node:fs/promises';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
@@ -8,6 +8,13 @@ import {observedJob,recordSystemEvent,safeCode} from '../system-observability.js
 import {logCsvCell} from '../system-center.js';
 import {safeErrorStack,apiBuildId} from '../system-diagnostics.js';
 import {emailHealthMetrics} from '../system-email-health.js';
+import {MemoryCacheProvider,RedisCacheProvider,cachedStorageHealth,clearHealthCache} from '../operations-cache.js';
+import {pruneSystemLogs} from '../system-retention.js';
+import {OperationsCipher} from '../operations-encryption.js';
+import {randomBytes} from 'node:crypto';
+import {sessionDevice} from '../system-sessions.js';
+import {runPendingBackup,buildSnapshot,unpackSnapshot,verifyStoredBackup} from '../operations-backups.js';
+import {backupStorage} from '../operations-backup-storage.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
@@ -31,9 +38,11 @@ before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));base='http://127.0.0.1:'+(server.address() as any).port;
  admin=await new Client().login('platform_admin');support=await new Client().login('support');org=await new Client().login('org_admin');
 });
-after(async()=>{server.close();server.closeAllConnections();await new Promise(r=>setTimeout(r,100));await pool.end()});
+after(async()=>{server.close();server.closeAllConnections();await new Promise(r=>setTimeout(r,100));await pool.end();
+ const scope=process.env.PRIVATE_FILES_TEST_RUN;if(scope&&/^qa_[a-f0-9]{20}$/.test(scope))await rm('.local/operations-backups/'+scope,{recursive:true,force:true});
+});
 test('platform-only granular rights; tenants, support and anonymous denied',async()=>{
- for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs','/system/errors']){
+  for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs','/system/errors','/system/cache','/system/environment','/system/sessions','/system/backups']){
   assert.equal((await new Client().call(route)).status,401);
   assert.equal((await support.call(route)).status,403);
   assert.equal((await org.call(route)).status,403);
@@ -43,6 +52,114 @@ test('platform-only granular rights; tenants, support and anonymous denied',asyn
  assert.equal((await admin.call('/system/logs')).status,403);
  assert.equal((await admin.call('/system/overview')).status,200);
  await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key='logs.read'",[admin.assignment]);
+});
+test('actual cache administration never revokes sessions and environment is allowlisted',async()=>{
+ const env=await admin.call('/system/environment');assert.equal(env.status,200);
+ const keys=env.data.metrics.map((x:any)=>x.key);
+ assert.deepEqual(keys,['environment','node','database_engine','storage_provider','email_configuration','cache_provider','redis_configuration','session_secret','email_webhook_secret','operations_encryption']);
+ assert.ok(!JSON.stringify(env.data).includes(config.SESSION_SECRET));
+ const m=new MemoryCacheProvider();
+ await m.set('a','key',{x:1},60);await m.set('b','key',{x:2},60);
+ assert.deepEqual(await m.get('a','key'),{x:1});assert.equal(await m.clear('a'),1);
+ assert.equal(await m.get('a','key'),undefined);assert.deepEqual(await m.get('b','key'),{x:2});
+ await m.set('a','expired',1,-1);assert.equal(m.count('a'),0);
+ const raw=new Map<string,string>();
+ const redis=new RedisCacheProvider({get:async k=>raw.get(k)??null,set:async(k,v)=>raw.set(k,v),
+  deletePrefix:async prefix=>{let n=0;for(const k of raw.keys())if(k.startsWith(prefix)){raw.delete(k);n++}return n}});
+ await redis.set('health','a',1,60);await redis.set('other','a',2,60);
+ assert.equal(await redis.clear('health'),1);assert.equal(await redis.get('other','a'),2);
+ await clearHealthCache();let probes=0;
+ const load=async()=>{probes++;return {status:'down' as const,value:'probe_failed'}};
+ await Promise.all([cachedStorageHealth(load),cachedStorageHealth(load)]);
+ assert.equal(probes,1);await cachedStorageHealth(load);assert.equal(probes,1);
+ const before=await pool.query('SELECT count(*)::int AS n FROM session');
+ assert.equal((await admin.call('/system/cache/clear','POST',{namespace:'all',confirmation:'wrong'})).status,400);
+ const clear=await admin.call('/system/cache/clear','POST',{namespace:'all',confirmation:'CLEAR CACHE'});
+ assert.equal(clear.status,200);assert.equal(clear.data.scope,'process');
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM session')).rows[0].n,before.rows[0].n);
+ assert.equal((await support.call('/system/cache/clear','POST',{namespace:'all',confirmation:'CLEAR CACHE'})).status,403);
+ const audit=await pool.query("SELECT 1 FROM audit_events WHERE action='system.cache.clear.completed'");
+ assert.ok(audit.rowCount);
+});
+test('session administration uses irreversible public references and resists late session resurrection',async()=>{
+ const before=(await admin.call('/system/sessions?userId='+support.user)).data.items.map((s:any)=>s.ref);
+ const victim=await new Client().login('support');
+ const sessions=await admin.call('/system/sessions?userId='+victim.user);
+ assert.equal(sessions.status,200);
+ const target=sessions.data.items.find((s:any)=>!before.includes(s.ref));assert.ok(target);
+ assert.match(target.ref,/^[a-f0-9]{64}$/);assert.ok(target.createdAt);assert.ok(target.lastActivityAt);
+ assert.equal(target.device,'Unknown browser / Unknown device');assert.equal(target.current,false);
+ assert.equal(sessionDevice('PRIVATE_TOKEN Mozilla Windows Chrome/1.2'), 'Chrome / Windows');
+ const original=(await pool.query("SELECT * FROM session WHERE encode(sha256(convert_to(sid,'UTF8')),'hex')=$1",[target.ref])).rows[0];
+ assert.ok(!JSON.stringify(sessions.data).includes(original.sid));
+ assert.equal((await support.call('/system/sessions/revoke','POST',{sessionRef:target.ref,confirmation:'REVOKE'})).status,403);
+ assert.equal((await admin.call('/system/sessions/revoke','POST',{sessionRef:target.ref,userId:victim.user,confirmation:'REVOKE'})).status,400);
+ const result=await admin.call('/system/sessions/revoke','POST',{sessionRef:target.ref,confirmation:'REVOKE'});
+ assert.equal(result.status,200);assert.equal(result.data.count,1);assert.equal(result.data.currentRevoked,false);
+ // Simulate a request that loaded the session before revoke and saves afterward.
+ await pool.query('INSERT INTO session(sid,sess,expire) VALUES($1,$2,$3)',[original.sid,original.sess,original.expire]);
+ assert.equal((await victim.call('/system/overview')).status,401);
+ assert.ok(!(await admin.call('/system/sessions?userId='+victim.user)).data.items.some((s:any)=>s.ref===target.ref));
+ const fresh=await new Client().login('support');
+ const all=await admin.call('/system/sessions/revoke','POST',{userId:fresh.user,confirmation:'REVOKE'});
+ assert.equal(all.status,200);assert.ok(all.data.count>=1);
+ assert.equal((await fresh.call('/system/overview')).status,401);
+ // Restore the shared denial-test client with a fresh authenticated session.
+ support=await new Client().login('support');
+});
+test('operations encryption authenticates ciphertext and binds it to a purpose and record',()=>{
+ const cipher=new OperationsCipher(randomBytes(32));
+ const bytes=Buffer.from('TEST_ONLY_SECRET');
+ const a=cipher.seal(bytes,'backup:123'),b=cipher.seal(bytes,'backup:123');
+ assert.notEqual(a.nonce,b.nonce);assert.notEqual(a.ciphertext,b.ciphertext);
+ assert.ok(!JSON.stringify(a).includes('TEST_ONLY_SECRET'));
+ assert.deepEqual(cipher.open(a,'backup:123'),bytes);
+ assert.throws(()=>cipher.open(a,'backup:124'));
+ assert.throws(()=>cipher.open(a,'integration:123'));
+ assert.throws(()=>new OperationsCipher(randomBytes(32)).open(a,'backup:123'));
+ assert.throws(()=>cipher.open({...a,tag:'0'.repeat(32)},'backup:123'));
+ assert.throws(()=>cipher.open({...a,ciphertext:'not-base64'},'backup:123'));
+ assert.throws(()=>cipher.open({...a,extra:'secret'},'backup:123'));
+});
+test('encrypted backup queue creates and verifies a real snapshot, protects retention and rejects corruption',async()=>{
+ const overview=await admin.call('/system/backups');
+ assert.equal(overview.data.provider,'local');assert.equal(overview.data.encryption,'configured');
+ assert.equal((await support.call('/system/backups','POST',{kind:'configuration',confirmation:'BACKUP'})).status,403);
+ assert.equal((await admin.call('/system/backups','POST',{kind:'configuration',confirmation:'wrong'})).status,400);
+ const created=await admin.call('/system/backups','POST',{kind:'configuration',confirmation:'BACKUP',notes:'QA configuration'});
+ assert.equal(created.status,202);const id=created.data.id;
+ assert.equal((await admin.call('/system/backups','POST',{kind:'configuration',confirmation:'BACKUP'})).status,409);
+ assert.equal(await runPendingBackup(),1);
+ const row=(await pool.query('SELECT * FROM operations_backups WHERE id=$1',[id])).rows[0];
+ assert.equal(row.status,'completed');assert.equal(row.verification,'verified');
+ const manifest=await verifyStoredBackup(id,row.checksum,row.provider);
+ assert.equal(manifest.kind,'configuration');assert.ok(manifest.components.find(c=>c.name==='configuration.json'));
+ const raw=await backupStorage().read(id);
+ assert.ok(!raw.toString().includes('QA configuration'));assert.ok(!raw.toString().includes('subscription_plans'));
+ const downloaded=await fetch(base+'/api/system/backups/'+id+'/download',{headers:{Cookie:admin.cookie}});
+ assert.equal(downloaded.status,200);assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),raw);
+ assert.equal((await admin.call('/system/backups/'+id,'DELETE',{confirmation:'DELETE BACKUP'})).status,409);
+ assert.equal((await admin.call('/system/backups/'+id+'/verify','POST',{})).status,200);
+ await backupStorage().remove(id);await backupStorage().write(id,Buffer.from('damaged QA package'));
+ assert.equal((await admin.call('/system/backups/'+id+'/verify','POST',{})).status,409);
+ assert.equal((await pool.query('SELECT verification FROM operations_backups WHERE id=$1',[id])).rows[0].verification,'verification_failed');
+ assert.ok((await pool.query("SELECT 1 FROM audit_events WHERE action='system.backup.completed' AND entity_id=$1",[id])).rowCount);
+});
+test('database snapshot contains a custom-format dump and missing files never produce a completed backup',async()=>{
+ const id='00000000-0000-4000-8000-000000000701';
+ const built=await buildSnapshot(id,'database');
+ const manifest=unpackSnapshot(built.bytes,id),dump=manifest.components.find(c=>c.name==='database.dump');
+ assert.ok(dump);assert.equal(Buffer.from(dump.content,'base64').subarray(0,5).toString(),'PGDMP');
+ assert.throws(()=>unpackSnapshot(built.bytes,'00000000-0000-4000-8000-000000000702'));
+ const queued=await admin.call('/system/backups','POST',{kind:'files',confirmation:'BACKUP'});
+ assert.equal(queued.status,202);
+ // A referenced historical logo with missing bytes must fail, never get silently omitted.
+ const orgId=(await pool.query('SELECT id FROM organizations LIMIT 1')).rows[0].id;
+ const old=(await pool.query('SELECT web_branding FROM organizations WHERE id=$1',[orgId])).rows[0].web_branding;
+ await pool.query("UPDATE organizations SET web_branding=web_branding||jsonb_build_object('logo_key','00000000-0000-4000-8000-000000000703.jpg') WHERE id=$1",[orgId]);
+ await assert.rejects(()=>runPendingBackup(),/Backup job failed/);
+ assert.equal((await pool.query('SELECT status FROM operations_backups WHERE id=$1',[queued.data.id])).rows[0].status,'failed');
+ await pool.query('UPDATE organizations SET web_branding=$2 WHERE id=$1',[orgId,old]);
 });
 test('email health distinguishes retained acceptance, delivery and unknown outcomes without sending',async()=>{
  const empty=await emailHealthMetrics();
@@ -84,6 +201,31 @@ test('email health distinguishes retained acceptance, delivery and unknown outco
   pool.query=(()=>{throw Error('PRIVATE_DATABASE_ERROR')}) as typeof pool.query;
   assert.ok((await emailHealthMetrics()).every(m=>m.value===null&&m.status==='unavailable'));
  }finally{pool.query=original}
+});
+test('retention is opt-in, audited, bounded and preserves recurrence after pruning',async()=>{
+ const p=await admin.call('/system/log-retention');assert.equal(p.data.enabled,false);
+ await pool.query(`INSERT INTO system_log_events(category,level,event,created_at)
+  VALUES('system','error','retention_fixture',now()-interval '60 days'),
+   ('system','error','retention_fixture',now())`);
+ const group=(await admin.call('/system/errors')).data.items.find((g:any)=>g.message==='retention_fixture');
+ assert.ok(group);
+ const body={status:'resolved',lastEventId:group.lastEventId,occurrences:group.occurrences,revision:group.revision};
+ assert.equal((await admin.call('/system/errors/'+group.fingerprint,'PATCH',body)).status,200);
+ assert.equal(await pruneSystemLogs(),0);
+ assert.equal((await support.call('/system/log-retention','PUT',{enabled:true,days:30,revision:p.data.revision,confirmation:'RETENTION'})).status,403);
+ const enabled=await admin.call('/system/log-retention','PUT',{enabled:true,days:30,revision:p.data.revision,confirmation:'RETENTION'});
+ assert.equal(enabled.status,200);
+ assert.equal((await admin.call('/system/log-retention','PUT',{enabled:false,days:30,revision:p.data.revision,confirmation:'RETENTION'})).status,409);
+ assert.equal(await pruneSystemLogs(),1);
+ const retained=(await admin.call('/system/errors/'+group.fingerprint)).data.group;
+ assert.equal(retained.occurrences,1);assert.equal(retained.status,'resolved');
+ await recordSystemEvent({category:'system',level:'error',event:'retention_fixture'});
+ assert.equal((await admin.call('/system/errors/'+group.fingerprint)).data.group.status,'open');
+ await pool.query(`INSERT INTO system_log_events(category,level,event,created_at)
+  SELECT 'system','info','old',now()-interval '60 days' FROM generate_series(1,502)`);
+ assert.equal(await pruneSystemLogs(),500);assert.equal(await pruneSystemLogs(),2);
+ assert.ok((await pool.query("SELECT 1 FROM audit_events WHERE action='system.logs.retention'")).rowCount);
+ assert.equal((await admin.call('/system/log-retention','PUT',{enabled:false,days:30,revision:enabled.data.revision,confirmation:'RETENTION'})).status,200);
 });
 test('error groups retain safe evidence, resolve with concurrency guards and reopen on recurrence',async()=>{
  const event={category:'system',event:'qa_error_group',level:'error',error:'QA_FAILURE',endpoint:'/qa/:id',method:'GET',status:500};

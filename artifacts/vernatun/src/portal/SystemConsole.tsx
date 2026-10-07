@@ -8,10 +8,13 @@ import './system-console.css';
 import {createSystemLogExport} from '@workspace/api-client-react';
 import {getCsrfHeaders} from './client';
 import SystemErrors from './SystemErrors';
+import SystemBackups,{backupsLabel} from './SystemBackups';
+import {CachePanel,SessionsPanel,EnvironmentPanel,RetentionPanel,ADMIN_S,ENV_LABELS,canEnterSystem} from './SystemAdmin';
 
-type Tab='overview'|'health'|'logs'|'errors'|'jobs';
+type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
+ read_access_verified:['Հաստատված','Подтверждено','Verified'],probe_failed:['Ստուգումը ձախողվեց','Проверка не удалась','Probe failed'],probe_timeout:['Ժամանակը սպառվեց','Тайм-аут','Timed out'],
  emailEvidence:['Էլփոստի ցուցանիշները բոլոր մատակարարների պահպանված տվյալներն են, ոչ կենդանի ստուգում։ Ընդունումը առաքում չէ։ 24 ժամվա հաշվիչները հաշվում են եզակի նամակները՝ ըստ իրադարձության տեսակի․ մեկ նամակը կարող է լինել մի քանի հաշվիչում։ Անհայտ արդյունքը հաստատված ձախողում չէ։','Почтовые показатели — сохранённые данные всех провайдеров, не проверка соединения. Принятие не означает доставку. За 24 часа считаются уникальные письма по каждому типу события; одно письмо может попасть в несколько счётчиков. Неизвестный результат — не подтверждённый сбой.','Email metrics use retained evidence across all providers, not a live probe. Acceptance is not delivery. Each 24-hour event counter counts distinct messages; one message may appear in multiple counters. An unknown result is not a confirmed failure.'],
  system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
  healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
@@ -49,8 +52,10 @@ const M:Record<string,[string,string,string]>={
  pool_total:['DB կապեր՝ ընդհանուր','Соединения БД: всего','DB pool: total'],pool_idle:['DB կապեր՝ ազատ','Соединения БД: свободно','DB pool: idle'],pool_waiting:['DB կապեր՝ սպասող','Соединения БД: ожидают','DB pool: waiting'],log_events_dropped:['Կորցված մատյանային իրադարձություններ','Потерянные события журнала','Dropped log events'],
  email_configuration:['Էլ. փոստի կարգավորում','Настройка эл. почты','Email configuration'],email_delivery_probe:['Էլ. փոստի առաքման ստուգում','Проверка доставки почты','Email delivery probe'],storage_provider:['Պահոցի մատակարար','Провайдер хранилища','Storage provider'],
  database:['Տվյալների բազա','База данных','Database'],database_bytes:['Բազայի չափ (բայթ)','Размер БД (байт)','Database size (bytes)'],migration:['Վերջին միգրացիա','Последняя миграция','Latest migration'],
+ read_access_verified:['Կարդալու հասանելիությունը հաստատված է','Доступ на чтение подтверждён','Read access verified'],probe_failed:['Ստուգումը ձախողվեց','Проверка не удалась','Probe failed'],probe_timeout:['Ստուգման ժամանակը սպառվեց','Тайм-аут проверки','Probe timed out'],storage_read_access:['Պահոցի կարդալու ստուգում','Проверка чтения хранилища','Storage read check'],
  jobs_running:['Ընթացիկ առաջադրանքներ (24ժ)','Выполняемые задания (24ч)','Running jobs (24h)'],jobs_failed:['Ձախողված առաջադրանքներ (24ժ)','Неудачные задания (24ч)','Failed jobs (24h)'],jobs_interrupted:['Ընդհատված առաջադրանքներ (24ժ)','Прерванные задания (24ч)','Interrupted jobs (24h)'],jobs:['Առաջադրանքներ','Задания','Jobs'],
 };
+for(const [k,v] of Object.entries(ENV_LABELS))M[k]??=v;
 const LEVELS=['info','warning','error','fatal'] as const;
 const CATEGORIES=['api','authentication','security','job','system','application','database','email','integration'] as const;
 const CAT:Record<string,[string,string,string]>={api:['API','API','API'],authentication:['Նույնականացում','Аутентификация','Authentication'],security:['Անվտանգություն','Безопасность','Security'],job:['Առաջադրանք','Задание','Job'],system:['Համակարգ','Система','System'],application:['Հավելված','Приложение','Application'],database:['Տվյալների բազա','База данных','Database'],email:['Էլ. փոստ','Эл. почта','Email'],integration:['Ինտեգրում','Интеграция','Integration']};
@@ -59,8 +64,8 @@ const MAX:Record<string,number>={endpoint:240,errorCode:60,job:60,q:100,requestI
 export const systemLabel=(l:Language)=>S.system[L(l)];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
-type Perm='system.health.read'|'logs.read'|'jobs.read';
-const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'}];
+type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read';
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'}];
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
 
 // Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
@@ -87,7 +92,7 @@ function Metrics({kind,ck,l}:{kind:'overview'|'health';ck:string;l:Language}){
  const d=q.data;
  return <section className="p-card sc-card" aria-busy={q.loading}>
   <div className="sc-head"><div><span className="sc-label">{tx('aggregate')}</span><Pill s={d.status} l={l}/></div><div><span className="sc-label">{tx('observedAt')}</span><strong data-testid="text-observed-at">{fmtDate(d.observedAt,l)}</strong></div><button className="p-button small" onClick={q.reload} disabled={q.loading} data-testid={'button-refresh-'+kind}>{tx('refresh')}</button></div>
-  {d.metrics.length?<ul className="sc-metrics">{d.metrics.map(m=><li key={m.key} data-testid={'row-metric-'+m.key}><span className="sc-mkey">{M[m.key]?.[L(l)]??m.key}</span><strong className={m.value===null?'sc-null':''} data-testid={'text-metric-value-'+m.key}>{m.value??tx('unavailable')}</strong><Pill s={m.status} l={l}/></li>)}</ul>:<p className="sc-empty" data-testid="text-empty">{tx('noMetrics')}</p>}
+  {d.metrics.length?<ul className="sc-metrics">{d.metrics.map(m=><li key={m.key} data-testid={'row-metric-'+m.key}><span className="sc-mkey">{M[m.key]?.[L(l)]??m.key}</span><strong className={m.value===null?'sc-null':''} data-testid={'text-metric-value-'+m.key}>{m.value===null?tx('unavailable'):(S[String(m.value)]?.[L(l)]??m.value)}</strong><Pill s={m.status} l={l}/></li>)}</ul>:<p className="sc-empty" data-testid="text-empty">{tx('noMetrics')}</p>}
   <p className="sc-note">{tx('emailEvidence')}</p>
   <p className="sc-note">{tx('autoRefresh')}</p>
  </section>;
@@ -159,17 +164,17 @@ function Jobs({ck,l}:{ck:string;l:Language}){
   </section>}</div>;
 }
 
-export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'?s:'overview'}
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'?s:'overview'}
 export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
- const l=language;const tx=(k:string)=>S[k][L(l)];
+ const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):(S[k]??ADMIN_S[k])[L(l)];
  const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
  useEffect(()=>{const pop=()=>setTab(systemTab(location.pathname));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop)},[]);
  const visible=TABS.filter(x=>c.permissions.includes(x.perm));
- const current=visible.some(x=>x.key===tab)?tab:'overview';
+ const current=visible.some(x=>x.key===tab)?tab:(visible[0]?.key??'overview');
  const denied=current!==tab;
- useEffect(()=>{if(denied&&location.pathname.startsWith('/console/system/'))history.replaceState(null,'','/console/system/overview')},[denied]);
+ useEffect(()=>{if(denied&&location.pathname.startsWith('/console/system/'))history.replaceState(null,'','/console/system/'+current)},[denied,current]);
  const ck=c.id;
- if(!c.permissions.includes('system.read'))return <div className="p-card"><p className="p-error" role="alert" data-testid="status-forbidden">{tx('forbidden')}</p></div>;
+ if(!canEnterSystem(c.permissions))return <div className="p-card"><p className="p-error" role="alert" data-testid="status-forbidden">{tx('forbidden')}</p></div>;
  const go=(k:Tab)=>{const u=new URLSearchParams(location.search).get('user');const url='/console/system/'+k+(k==='logs'&&u?'?user='+encodeURIComponent(u):'');if(location.pathname!=='/console/system/'+k)history.pushState(null,'',url);setTab(k)};
  return <div className="sc-wrap" data-testid="system-console">
   <nav className="sc-tabs" role="tablist" aria-label={tx('system')}>{visible.map(x=><button key={x.key} role="tab" aria-selected={current===x.key} className={current===x.key?'selected':''} onClick={()=>go(x.key)} data-testid={'tab-system-'+x.key}>{tx(x.key)}</button>)}</nav>
@@ -179,6 +184,11 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
    {current==='logs'&&<Logs key={ck+':l'} ck={ck} l={l} canExport={c.permissions.includes('logs.export')}/>}
    {current==='errors'&&<SystemErrors key={ck+':e'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
     {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
+    {current==='retention'&&<RetentionPanel key={ck+':r'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
+    {current==='backups'&&<SystemBackups key={ck+':b'} ck={ck} l={l} perms={{create:c.permissions.includes('backups.create'),download:c.permissions.includes('backups.download'),delete:c.permissions.includes('backups.delete')}}/>}
+    {current==='cache'&&<CachePanel key={ck+':c'} ck={ck} l={l} canClear={c.permissions.includes('cache.clear')}/>}
+    {current==='sessions'&&<SessionsPanel key={ck+':s'} ck={ck} l={l} canRevoke={c.permissions.includes('sessions.revoke')}/>}
+    {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}
   </div>
  </div>;
 }

@@ -10,7 +10,7 @@ import {scopedUnitRow,unitReadDecision} from './iam-resource.js';
 export class ApiError extends Error{constructor(public status:number,public code:string){super(code)}}
 export type Context={id:string;role_key:string;shell:string;organization_id:string|null;organization_name:string|null;brand_color?:string;building_id:string|null;building_name?:string|null;unit_id:string|null;unit_number?:string|null;expires_at:string|null;permissions:string[];product?:string;products?:string[];startRoute?:string;modules?:string[]};
 declare global{namespace Express{interface User{id:string;email:string;name:string;locale:'hy'|'ru'|'en';currency:'AMD'|'RUB'|'USD'}}}
-declare module 'express-session'{interface SessionData{csrf:string;contextId?:string;createdAt?:string;lastSeenAt?:string}}
+declare module 'express-session'{interface SessionData{csrf:string;contextId?:string;createdAt?:string;issuedAt?:string;lastSeenAt?:string;device?:string;passport?:{user:string}}}
 export async function contexts(userId:string):Promise<Context[]>{if(!(await pool.query('SELECT id FROM users WHERE id=$1 AND NOT blocked',[userId])).rowCount)return [];await pool.query('SELECT expire_support_grants($1)',[userId]);const r=await pool.query(`SELECT a.id,a.role_key,a.profile_id,r.shell,a.organization_id,o.name AS organization_name,o.brand_color,o.web_branding AS branding,a.building_id,a.unit_id,a.expires_at,b.name AS building_name,u.number AS unit_number,
  COALESCE((SELECT to_json(d.permission_keys) FROM resident_delegations d WHERE d.assignment_id=a.id),(SELECT json_agg(permission_key ORDER BY permission_key) FROM role_permissions WHERE role_key=a.role_key),'[]') AS permissions
  FROM role_assignments a JOIN roles r ON r.key=a.role_key LEFT JOIN organizations o ON o.id=a.organization_id

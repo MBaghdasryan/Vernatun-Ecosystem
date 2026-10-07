@@ -19,3 +19,4 @@
 - [Floor readiness](floor-readiness-policy.md) — explicit floor mappings only; readiness requires evidence and never automatically changes handover state.
 - [Accessible table overflow](accessible-table-overflow.md) — hidden labels can escape a scrolling table unless their positioned ancestor is inside its scroll container.
 - [Operations error lifecycle](operations-error-lifecycle.md) — resolved acknowledges observed events; recurrence and future retention must respect concurrent-event watermarks.
+- [Operations safety](operations-safety.md) — revocation must survive late session saves; encryption keys need an independent recovery lifecycle.

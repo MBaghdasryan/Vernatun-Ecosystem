@@ -7,7 +7,7 @@ export function identifier(name:string){
   return `"${name}"`;
 }
 // Credentials are child environment only, never process arguments or diagnostics.
-export async function postgresTool(tool:'pg_dump'|'pg_restore',connectionString:string,args:string[]){
+export async function postgresTool(tool:'pg_dump'|'pg_restore',connectionString:string,args:string[],timeoutMs=0){
   const url=new URL(connectionString);
   const env={...process.env,PGHOST:url.hostname,PGPORT:url.port||'5432',
     PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),
@@ -15,6 +15,10 @@ export async function postgresTool(tool:'pg_dump'|'pg_restore',connectionString:
     PGSSLMODE:url.searchParams.get('sslmode')||'prefer',PGOPTIONS:url.searchParams.get('options')||''};
   await new Promise<void>((resolve,reject)=>{
     const child=spawn(tool,args,{env,stdio:['ignore','ignore','pipe']});
+    const deadline=timeoutMs?setTimeout(()=>child.kill('SIGKILL'),timeoutMs):undefined;
+    deadline?.unref();
+    child.once('close',()=>{if(deadline)clearTimeout(deadline)});
+    child.once('error',()=>{if(deadline)clearTimeout(deadline)});
     // Diagnostics may contain private values. Report only a fixed classification.
     let publicSchemaExists=false;
     child.stderr.on('data',chunk=>{
