@@ -280,3 +280,17 @@ mtime_ms = 1791357248275
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/c7d811a9-8c8c-49ea-bf9c-85733763b0fd/f53f750c-ba9b-413c-a0f6-1986a8b541b0"
 storage_version_token = "1791357913497892"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "cKmW3uqgBosEyHrp82XKR"
+uri = "file://artifacts/vernatun/docs/IAM-IMPLEMENTATION-PROGRESS.md"
+type = "text"
+title = "Vernatun — реализация IAM и оставшиеся работы"
+description = "Изменения кода, матрица Before/After/API/Browser/Negative permission, результаты проверок и незавершённые пункты."
+logical_id = "592c2380-af6e-4343-8ff6-90f2e4500eb8"
+content_hash = "sha256:8751942245b56d9adf2a7d37c8432e64caff2c203b51d3e3c32d3cb32782d49b"
+size = 8044
+mtime_ms = 1791360714273
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/592c2380-af6e-4343-8ff6-90f2e4500eb8/3672dbf2-96a3-45a3-951d-f9e724ad85e8"
+storage_version_token = "1791360898592133"
+content_type = "text/markdown"

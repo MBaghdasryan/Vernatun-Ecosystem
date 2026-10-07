@@ -5,6 +5,156 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type IamAccessInputMethod = typeof IamAccessInputMethod[keyof typeof IamAccessInputMethod];
+
+
+export const IamAccessInputMethod = {
+  GET: 'GET',
+  POST: 'POST',
+  PATCH: 'PATCH',
+  DELETE: 'DELETE',
+} as const;
+
+export interface IamAccessInput {
+  method: IamAccessInputMethod;
+}
+
+export interface IamRecord { [key: string]: unknown }
+
+export type IamAccountStatusInputStatus = typeof IamAccountStatusInputStatus[keyof typeof IamAccountStatusInputStatus];
+
+
+export const IamAccountStatusInputStatus = {
+  active: 'active',
+  locked: 'locked',
+  disabled: 'disabled',
+} as const;
+
+export interface IamAccountStatusInput {
+  status: IamAccountStatusInputStatus;
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export interface IamSessionRevocationInput {
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  reason: string;
+  /** @pattern ^[a-f0-9]{32}$ */
+  sessionId?: string;
+}
+
+export type IamAssignmentStatusInputStatus = typeof IamAssignmentStatusInputStatus[keyof typeof IamAssignmentStatusInputStatus];
+
+
+export const IamAssignmentStatusInputStatus = {
+  active: 'active',
+  suspended: 'suspended',
+  revoked: 'revoked',
+} as const;
+
+export interface IamAssignmentStatusInput {
+  version: string;
+  status: IamAssignmentStatusInputStatus;
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export interface IamProfileInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 1000 */
+  description?: string;
+  baseRole: string;
+  /** @maxItems 100 */
+  permissions: string[];
+  tenantAllowed?: boolean;
+  active?: boolean;
+  version?: string;
+}
+
+export interface IamAssignmentPolicyInput {
+  version: string;
+  /** @nullable */
+  profileId: string | null;
+  /** @maxItems 100 */
+  denies: string[];
+  /** @maxItems 10 */
+  grants: string[];
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  reason: string;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export interface EmployeeAssignment {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  role_key: string;
+  /** @nullable */
+  building_id: string | null;
+  /** @nullable */
+  unit_id: string | null;
+  starts_at: string;
+  /** @nullable */
+  expires_at: string | null;
+  active: boolean;
+  /** @pattern ^\d+$ */
+  version: string;
+  name?: string;
+  email?: string;
+}
+
+export interface EmployeeAssignmentDetail {
+  assignment: EmployeeAssignment;
+  editable: boolean;
+  editableRoles: string[];
+  permissions: string[];
+}
+
+export type EmployeeAssignmentUpdateRoleKey = typeof EmployeeAssignmentUpdateRoleKey[keyof typeof EmployeeAssignmentUpdateRoleKey];
+
+
+export const EmployeeAssignmentUpdateRoleKey = {
+  org_admin: 'org_admin',
+  portfolio_owner: 'portfolio_owner',
+  developer: 'developer',
+  manager: 'manager',
+  accountant: 'accountant',
+  dispatcher: 'dispatcher',
+  technician: 'technician',
+  contractor: 'contractor',
+  security: 'security',
+} as const;
+
+export interface EmployeeAssignmentUpdate {
+  /** @pattern ^\d+$ */
+  version: string;
+  roleKey: EmployeeAssignmentUpdateRoleKey;
+  /** @nullable */
+  buildingId: string | null;
+  /** @nullable */
+  unitId: string | null;
+  startsAt: string;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
 export type LandingLeadInputLanguage = typeof LandingLeadInputLanguage[keyof typeof LandingLeadInputLanguage];
 
 
@@ -1167,6 +1317,22 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type ListIamUsersParams = {
+/**
+ * @maxLength 100
+ */
+q?: string;
+/**
+ * @minimum 0
+ * @maximum 100000
+ */
+offset?: number;
+};
+
+export type UpdateEmployeeAssignment200 = {
+  assignment: EmployeeAssignment;
+};
 
 export type GetLandingLeadsParams = {
 /**

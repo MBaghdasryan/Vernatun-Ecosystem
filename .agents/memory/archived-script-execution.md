@@ -14,3 +14,9 @@ Run full remote-storage/backup QA as a background process and wait for its compl
 **Why:** App Storage restore/deletion checks can exceed that total limit even when completed test cases pass. Forced termination can prevent the runner's finally cleanup from running.
 
 **How to apply:** Distinguish an interrupted suite from a failing assertion. After interruption, prove the exact runner-owned test schema/files before cleanup; never drop arbitrary test schemas or touch application data.
+
+Serialize isolated API and browser harness runs until their fixture-output files are also run-scoped.
+
+**Why:** Separate database schemas do not isolate a shared generated credential file. Seeding a second harness can replace credentials while the first browser still needs them.
+
+**How to apply:** Finish and gracefully clean up the browser sandbox before starting another seeded suite; database isolation alone is not sufficient.

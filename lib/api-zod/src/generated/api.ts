@@ -8,6 +8,270 @@
 import * as zod from 'zod';
 
 
+export const GetIamCatalogResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const listIamUsersQueryQMax = 100;
+
+export const listIamUsersQueryOffsetMin = 0;
+export const listIamUsersQueryOffsetMax = 100000;
+
+
+
+export const ListIamUsersQueryParams = zod.object({
+  "q": zod.coerce.string().max(listIamUsersQueryQMax).optional(),
+  "offset": zod.coerce.number().int().min(listIamUsersQueryOffsetMin).max(listIamUsersQueryOffsetMax).optional()
+})
+
+export const ListIamUsersResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetIamUserParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetIamUserResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangeIamAccountStatusParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const changeIamAccountStatusBodyReasonMin = 5;
+export const changeIamAccountStatusBodyReasonMax = 1000;
+
+
+
+export const ChangeIamAccountStatusBody = zod.object({
+  "status": zod.enum(['active', 'locked', 'disabled']),
+  "reason": zod.string().min(changeIamAccountStatusBodyReasonMin).max(changeIamAccountStatusBodyReasonMax)
+})
+
+export const ChangeIamAccountStatusResponse = zod.void()
+
+
+export const RevokeIamSessionsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const revokeIamSessionsBodyReasonMin = 5;
+export const revokeIamSessionsBodyReasonMax = 1000;
+
+export const revokeIamSessionsBodySessionIdRegExp = new RegExp('^[a-f0-9]{32}$');
+
+
+export const RevokeIamSessionsBody = zod.object({
+  "reason": zod.string().min(revokeIamSessionsBodyReasonMin).max(revokeIamSessionsBodyReasonMax),
+  "sessionId": zod.string().regex(revokeIamSessionsBodySessionIdRegExp).optional()
+})
+
+export const RevokeIamSessionsResponse = zod.void()
+
+
+export const ListIamProfilesResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListIamProfilesResponse = zod.array(ListIamProfilesResponseItem)
+
+
+export const createIamProfileBodyNameMin = 2;
+export const createIamProfileBodyNameMax = 100;
+
+export const createIamProfileBodyDescriptionDefault = ``;
+export const createIamProfileBodyDescriptionMax = 1000;
+
+export const createIamProfileBodyPermissionsMax = 100;
+
+export const createIamProfileBodyTenantAllowedDefault = false;
+export const createIamProfileBodyActiveDefault = true;
+
+export const CreateIamProfileBody = zod.object({
+  "name": zod.string().min(createIamProfileBodyNameMin).max(createIamProfileBodyNameMax),
+  "description": zod.string().max(createIamProfileBodyDescriptionMax).default(createIamProfileBodyDescriptionDefault),
+  "baseRole": zod.string(),
+  "permissions": zod.array(zod.string()).max(createIamProfileBodyPermissionsMax),
+  "tenantAllowed": zod.boolean().default(createIamProfileBodyTenantAllowedDefault),
+  "active": zod.boolean().default(createIamProfileBodyActiveDefault),
+  "version": zod.string().optional()
+})
+
+export const CreateIamProfileResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UpdateIamProfileParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateIamProfileBodyNameMin = 2;
+export const updateIamProfileBodyNameMax = 100;
+
+export const updateIamProfileBodyDescriptionDefault = ``;
+export const updateIamProfileBodyDescriptionMax = 1000;
+
+export const updateIamProfileBodyPermissionsMax = 100;
+
+export const updateIamProfileBodyTenantAllowedDefault = false;
+export const updateIamProfileBodyActiveDefault = true;
+
+export const UpdateIamProfileBody = zod.object({
+  "name": zod.string().min(updateIamProfileBodyNameMin).max(updateIamProfileBodyNameMax),
+  "description": zod.string().max(updateIamProfileBodyDescriptionMax).default(updateIamProfileBodyDescriptionDefault),
+  "baseRole": zod.string(),
+  "permissions": zod.array(zod.string()).max(updateIamProfileBodyPermissionsMax),
+  "tenantAllowed": zod.boolean().default(updateIamProfileBodyTenantAllowedDefault),
+  "active": zod.boolean().default(updateIamProfileBodyActiveDefault),
+  "version": zod.string().optional()
+})
+
+export const UpdateIamProfileResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * Shared permission/module/subscription evaluator. Not an unconditional resource authorization; workflow, ownership and session MFA still apply.
+ */
+export const ExplainIamAccessParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ExplainIamAccessResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * Read-only permission explanation for a requested HTTP method; does not perform the operation.
+ */
+export const SimulateIamAccessParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SimulateIamAccessBody = zod.object({
+  "method": zod.enum(['GET', 'POST', 'PATCH', 'DELETE'])
+})
+
+export const SimulateIamAccessResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UpdateIamAssignmentPolicyParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateIamAssignmentPolicyBodyDeniesMax = 100;
+
+export const updateIamAssignmentPolicyBodyGrantsMax = 10;
+
+export const updateIamAssignmentPolicyBodyReasonMin = 5;
+export const updateIamAssignmentPolicyBodyReasonMax = 1000;
+
+
+
+export const UpdateIamAssignmentPolicyBody = zod.object({
+  "version": zod.string(),
+  "profileId": zod.string().uuid().nullable(),
+  "denies": zod.array(zod.string()).max(updateIamAssignmentPolicyBodyDeniesMax),
+  "grants": zod.array(zod.string()).max(updateIamAssignmentPolicyBodyGrantsMax),
+  "reason": zod.string().min(updateIamAssignmentPolicyBodyReasonMin).max(updateIamAssignmentPolicyBodyReasonMax),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+export const UpdateIamAssignmentPolicyResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ChangeIamAssignmentStatusParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const changeIamAssignmentStatusBodyReasonMin = 5;
+export const changeIamAssignmentStatusBodyReasonMax = 1000;
+
+
+
+export const ChangeIamAssignmentStatusBody = zod.object({
+  "version": zod.string(),
+  "status": zod.enum(['active', 'suspended', 'revoked']),
+  "reason": zod.string().min(changeIamAssignmentStatusBodyReasonMin).max(changeIamAssignmentStatusBodyReasonMax)
+})
+
+export const ChangeIamAssignmentStatusResponse = zod.void()
+
+
+/**
+ * Requires roles.assign in the active organization context. Base permissions are not effective-access decisions.
+ */
+export const GetEmployeeAssignmentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const getEmployeeAssignmentResponseAssignmentVersionRegExp = new RegExp('^\\d+$');
+
+
+export const GetEmployeeAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "user_id": zod.string().uuid(),
+  "organization_id": zod.string().uuid(),
+  "role_key": zod.string(),
+  "building_id": zod.string().uuid().nullable(),
+  "unit_id": zod.string().uuid().nullable(),
+  "starts_at": zod.coerce.date(),
+  "expires_at": zod.coerce.date().nullable(),
+  "active": zod.boolean(),
+  "version": zod.string().regex(getEmployeeAssignmentResponseAssignmentVersionRegExp),
+  "name": zod.string().optional(),
+  "email": zod.string().optional()
+}),
+  "editable": zod.boolean(),
+  "editableRoles": zod.array(zod.string()),
+  "permissions": zod.array(zod.string())
+})
+
+
+/**
+ * Changes an active staff assignment, never self or residential lifecycle assignments. Optimistic concurrency token is mandatory.
+ */
+export const UpdateEmployeeAssignmentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateEmployeeAssignmentBodyVersionRegExp = new RegExp('^\\d+$');
+
+
+export const UpdateEmployeeAssignmentBody = zod.object({
+  "version": zod.string().regex(updateEmployeeAssignmentBodyVersionRegExp),
+  "roleKey": zod.enum(['org_admin', 'portfolio_owner', 'developer', 'manager', 'accountant', 'dispatcher', 'technician', 'contractor', 'security']),
+  "buildingId": zod.string().uuid().nullable(),
+  "unitId": zod.string().uuid().nullable(),
+  "startsAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+export const updateEmployeeAssignmentResponseAssignmentVersionRegExp = new RegExp('^\\d+$');
+
+
+export const UpdateEmployeeAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "user_id": zod.string().uuid(),
+  "organization_id": zod.string().uuid(),
+  "role_key": zod.string(),
+  "building_id": zod.string().uuid().nullable(),
+  "unit_id": zod.string().uuid().nullable(),
+  "starts_at": zod.coerce.date(),
+  "expires_at": zod.coerce.date().nullable(),
+  "active": zod.boolean(),
+  "version": zod.string().regex(updateEmployeeAssignmentResponseAssignmentVersionRegExp),
+  "name": zod.string().optional(),
+  "email": zod.string().optional()
+})
+})
+
+
+/**
+ * Revokes a non-self assignment with scope and last-administrator protection; never deletes the user.
+ */
+export const RevokeEmployeeAssignmentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RevokeEmployeeAssignmentResponse = zod.void()
+
+
 export const submitLandingLeadBodyNameMin = 2;
 export const submitLandingLeadBodyNameMax = 120;
 

@@ -26,3 +26,9 @@ description: Active completion requirements and how role-specific reference scre
 **Why:** Новый пользовательский continuation prompt явно приоритизирует скрытые за API функции, управление пользователями, custom roles и effective access перед следующими интеграционными этапами.
 
 **How to apply:** Сохранить 14 неизменяемых системных шаблонов; custom profiles и overrides не обходят tenant/module/subscription/ownership. До приёмки этого этапа не начинать Payments, Utility Billing, Boon, новую Platform Operations или native apps. Разделять source evidence, API tests и browser acceptance; промежуточный аудит не является DONE. Актуальные матрицы и проект IAM — ROLE-UI-PARITY.md, REFERENCE-SCREEN-GAP-REPORT.md, IAM-ARCHITECTURE.md в документации Vernatun.
+
+Исходный аудит принят пользователем. Не повторять его без нового конфликта и не заменять реализацию очередной документацией. Следующий обязательный milestone — IAM вместе с платформенным управлением пользователями и организационным управлением сотрудниками/ролями; остальные dashboard продолжать только после него.
+
+**Why:** Пользователь повторно уточнил «Do not postpone IAM again» и потребовал реальные изменения кода в каждой итерации.
+
+**How to apply:** Сначала IAM foundation → Platform Admin UI → Organization Admin UI. Затем shared shell и ролевые панели в заданном промптом порядке. Для прогресса использовать COMPLETE / PARTIAL / EXTERNAL BLOCKER / INTENTIONALLY NOT ALLOWED с отдельными API, browser и negative-permission доказательствами.

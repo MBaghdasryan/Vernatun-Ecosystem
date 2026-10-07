@@ -103,3 +103,12 @@ Cross-role journeys берутся из раздела 44 нового пром�
 Целевая browser acceptance счётчиков прошла на изолированной БД: создание, подача 12.345,
 сохранение истории после reload, desktop и 390px, отсутствие пункта/формы у dispatcher,
 API отказ 403. Production build прошёл. Полная приёмка 14 ролей по-прежнему не выполнена.
+
+## 7. IAM implementation
+
+Добавлены `/console/users`, `/console/roles`, `/console/permissions`, `/os/roles`;
+`/os/people` получил IAM employee directory и карточки. Реализованы API профилей,
+персональных правил, account/assignment статусов, сессий и аудита.
+Подробная матрица Before/After/API/Browser/Negative находится в
+`IAM-IMPLEMENTATION-PROGRESS.md`. Общий статус IAM — PARTIAL; browser — EXTERNAL BLOCKER.
+Новые панели остальных ролей не начинались.

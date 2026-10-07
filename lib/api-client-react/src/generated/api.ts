@@ -45,6 +45,8 @@ import type {
   EmailHealth,
   EmailMessageDetail,
   EmailMessagePage,
+  EmployeeAssignmentDetail,
+  EmployeeAssignmentUpdate,
   EndOwnership200,
   EndOwnershipBody,
   ExamineDueNotifications200,
@@ -63,6 +65,13 @@ import type {
   GetPrivateStorageStatus200,
   GetScopedRecordPageParams,
   HealthStatus,
+  IamAccessInput,
+  IamAccountStatusInput,
+  IamAssignmentPolicyInput,
+  IamAssignmentStatusInput,
+  IamProfileInput,
+  IamRecord,
+  IamSessionRevocationInput,
   IncidentInput,
   IncidentTransitionInput,
   Invitation,
@@ -77,6 +86,7 @@ import type {
   ListEmailMessagesParams,
   ListFinanceAccountsParams,
   ListGovernanceMeetings200Item,
+  ListIamUsersParams,
   ListOperatingBudgets200Item,
   ListOperationalVisitsParams,
   ListOwnershipCandidates200Item,
@@ -121,6 +131,7 @@ import type {
   ScopedRecordPage,
   SlaPolicyInput,
   SuggestBankMatchesParams,
+  UpdateEmployeeAssignment200,
   UpdateOrganizationBrandingBody,
   UpdatePortfolioObjectBody,
   UploadDocumentVersion201,
@@ -158,6 +169,1185 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetIamCatalogUrl = () => {
+
+
+
+
+  return `/api/iam/catalog`
+}
+
+export const getIamCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+  return customFetch<IamRecord>(getGetIamCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIamCatalogQueryKey = () => {
+    return [
+    `/api/iam/catalog`
+    ] as const;
+    }
+
+
+export const getGetIamCatalogQueryOptions = <TData = Awaited<ReturnType<typeof getIamCatalog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIamCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIamCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIamCatalog>>> = ({ signal }) => getIamCatalog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIamCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIamCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof getIamCatalog>>>
+export type GetIamCatalogQueryError = ErrorType<unknown>
+
+
+
+export function useGetIamCatalog<TData = Awaited<ReturnType<typeof getIamCatalog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIamCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIamCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListIamUsersUrl = (params?: ListIamUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/iam/users?${stringifiedParams}` : `/api/iam/users`
+}
+
+export const listIamUsers = async (params?: ListIamUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+  return customFetch<IamRecord>(getListIamUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIamUsersQueryKey = (params?: ListIamUsersParams,) => {
+    return [
+    `/api/iam/users`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListIamUsersQueryOptions = <TData = Awaited<ReturnType<typeof listIamUsers>>, TError = ErrorType<unknown>>(params?: ListIamUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIamUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIamUsersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIamUsers>>> = ({ signal }) => listIamUsers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIamUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIamUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listIamUsers>>>
+export type ListIamUsersQueryError = ErrorType<unknown>
+
+
+
+export function useListIamUsers<TData = Awaited<ReturnType<typeof listIamUsers>>, TError = ErrorType<unknown>>(
+ params?: ListIamUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIamUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIamUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetIamUserUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/users/${id}`
+}
+
+export const getIamUser = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+  return customFetch<IamRecord>(getGetIamUserUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIamUserQueryKey = (id: string,) => {
+    return [
+    `/api/iam/users/${id}`
+    ] as const;
+    }
+
+
+export const getGetIamUserQueryOptions = <TData = Awaited<ReturnType<typeof getIamUser>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIamUser>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIamUserQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIamUser>>> = ({ signal }) => getIamUser(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIamUser>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIamUserQueryResult = NonNullable<Awaited<ReturnType<typeof getIamUser>>>
+export type GetIamUserQueryError = ErrorType<void>
+
+
+
+export function useGetIamUser<TData = Awaited<ReturnType<typeof getIamUser>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIamUser>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIamUserQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeIamAccountStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/users/${id}/status`
+}
+
+export const changeIamAccountStatus = async (id: string,
+    iamAccountStatusInput: IamAccountStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getChangeIamAccountStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamAccountStatusInput)
+  }
+);}
+
+
+
+
+
+export const getChangeIamAccountStatusMutationKey = () => ['changeIamAccountStatus'] as const;
+
+export const getChangeIamAccountStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeIamAccountStatus>>, TError,ChangeIamAccountStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeIamAccountStatus>>, TError,ChangeIamAccountStatusMutationVariables, TContext> => {
+
+const mutationKey = getChangeIamAccountStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeIamAccountStatus>>, ChangeIamAccountStatusMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeIamAccountStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeIamAccountStatusMutationResult = NonNullable<Awaited<ReturnType<typeof changeIamAccountStatus>>>
+    export type ChangeIamAccountStatusMutationBody = BodyType<IamAccountStatusInput>
+    export type ChangeIamAccountStatusMutationError = ErrorType<void>
+    export type ChangeIamAccountStatusMutationVariables = {id: string;data: BodyType<IamAccountStatusInput>}
+
+    export const useChangeIamAccountStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeIamAccountStatus>>, TError,ChangeIamAccountStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeIamAccountStatus>>,
+        TError,
+        ChangeIamAccountStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeIamAccountStatusMutationOptions(options));
+    }
+
+export const getRevokeIamSessionsUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/users/${id}/logout`
+}
+
+export const revokeIamSessions = async (id: string,
+    iamSessionRevocationInput: IamSessionRevocationInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getRevokeIamSessionsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamSessionRevocationInput)
+  }
+);}
+
+
+
+
+
+export const getRevokeIamSessionsMutationKey = () => ['revokeIamSessions'] as const;
+
+export const getRevokeIamSessionsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeIamSessions>>, TError,RevokeIamSessionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeIamSessions>>, TError,RevokeIamSessionsMutationVariables, TContext> => {
+
+const mutationKey = getRevokeIamSessionsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeIamSessions>>, RevokeIamSessionsMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  revokeIamSessions(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeIamSessionsMutationResult = NonNullable<Awaited<ReturnType<typeof revokeIamSessions>>>
+    export type RevokeIamSessionsMutationBody = BodyType<IamSessionRevocationInput>
+    export type RevokeIamSessionsMutationError = ErrorType<void>
+    export type RevokeIamSessionsMutationVariables = {id: string;data: BodyType<IamSessionRevocationInput>}
+
+    export const useRevokeIamSessions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeIamSessions>>, TError,RevokeIamSessionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeIamSessions>>,
+        TError,
+        RevokeIamSessionsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeIamSessionsMutationOptions(options));
+    }
+
+export const getListIamProfilesUrl = () => {
+
+
+
+
+  return `/api/iam/profiles`
+}
+
+export const listIamProfiles = async ( options?: Parameters<typeof customFetch>[1]): Promise<IamRecord[]> => {
+
+  return customFetch<IamRecord[]>(getListIamProfilesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIamProfilesQueryKey = () => {
+    return [
+    `/api/iam/profiles`
+    ] as const;
+    }
+
+
+export const getListIamProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listIamProfiles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIamProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIamProfilesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIamProfiles>>> = ({ signal }) => listIamProfiles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIamProfiles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIamProfilesQueryResult = NonNullable<Awaited<ReturnType<typeof listIamProfiles>>>
+export type ListIamProfilesQueryError = ErrorType<unknown>
+
+
+
+export function useListIamProfiles<TData = Awaited<ReturnType<typeof listIamProfiles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIamProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIamProfilesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateIamProfileUrl = () => {
+
+
+
+
+  return `/api/iam/profiles`
+}
+
+export const createIamProfile = async (iamProfileInput: IamProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<IamRecord>(getCreateIamProfileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamProfileInput)
+  }
+);}
+
+
+
+
+
+export const getCreateIamProfileMutationKey = () => ['createIamProfile'] as const;
+
+export const getCreateIamProfileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIamProfile>>, TError,CreateIamProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIamProfile>>, TError,CreateIamProfileMutationVariables, TContext> => {
+
+const mutationKey = getCreateIamProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIamProfile>>, CreateIamProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createIamProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIamProfileMutationResult = NonNullable<Awaited<ReturnType<typeof createIamProfile>>>
+    export type CreateIamProfileMutationBody = BodyType<IamProfileInput>
+    export type CreateIamProfileMutationError = ErrorType<void>
+    export type CreateIamProfileMutationVariables = {data: BodyType<IamProfileInput>}
+
+    export const useCreateIamProfile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIamProfile>>, TError,CreateIamProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIamProfile>>,
+        TError,
+        CreateIamProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateIamProfileMutationOptions(options));
+    }
+
+export const getUpdateIamProfileUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/profiles/${id}`
+}
+
+export const updateIamProfile = async (id: string,
+    iamProfileInput: IamProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<IamRecord>(getUpdateIamProfileUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateIamProfileMutationKey = () => ['updateIamProfile'] as const;
+
+export const getUpdateIamProfileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIamProfile>>, TError,UpdateIamProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIamProfile>>, TError,UpdateIamProfileMutationVariables, TContext> => {
+
+const mutationKey = getUpdateIamProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIamProfile>>, UpdateIamProfileMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateIamProfile(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIamProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateIamProfile>>>
+    export type UpdateIamProfileMutationBody = BodyType<IamProfileInput>
+    export type UpdateIamProfileMutationError = ErrorType<void>
+    export type UpdateIamProfileMutationVariables = {id: string;data: BodyType<IamProfileInput>}
+
+    export const useUpdateIamProfile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIamProfile>>, TError,UpdateIamProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIamProfile>>,
+        TError,
+        UpdateIamProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateIamProfileMutationOptions(options));
+    }
+
+export const getExplainIamAccessUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/assignments/${id}/access`
+}
+
+/**
+ * Shared permission/module/subscription evaluator. Not an unconditional resource authorization; workflow, ownership and session MFA still apply.
+ */
+export const explainIamAccess = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+  return customFetch<IamRecord>(getExplainIamAccessUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExplainIamAccessQueryKey = (id: string,) => {
+    return [
+    `/api/iam/assignments/${id}/access`
+    ] as const;
+    }
+
+
+export const getExplainIamAccessQueryOptions = <TData = Awaited<ReturnType<typeof explainIamAccess>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof explainIamAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExplainIamAccessQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof explainIamAccess>>> = ({ signal }) => explainIamAccess(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof explainIamAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExplainIamAccessQueryResult = NonNullable<Awaited<ReturnType<typeof explainIamAccess>>>
+export type ExplainIamAccessQueryError = ErrorType<void>
+
+
+
+export function useExplainIamAccess<TData = Awaited<ReturnType<typeof explainIamAccess>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof explainIamAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExplainIamAccessQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSimulateIamAccessUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/assignments/${id}/access`
+}
+
+/**
+ * Read-only permission explanation for a requested HTTP method; does not perform the operation.
+ */
+export const simulateIamAccess = async (id: string,
+    iamAccessInput: IamAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<IamRecord>(getSimulateIamAccessUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamAccessInput)
+  }
+);}
+
+
+
+
+
+export const getSimulateIamAccessMutationKey = () => ['simulateIamAccess'] as const;
+
+export const getSimulateIamAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof simulateIamAccess>>, TError,SimulateIamAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof simulateIamAccess>>, TError,SimulateIamAccessMutationVariables, TContext> => {
+
+const mutationKey = getSimulateIamAccessMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof simulateIamAccess>>, SimulateIamAccessMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  simulateIamAccess(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SimulateIamAccessMutationResult = NonNullable<Awaited<ReturnType<typeof simulateIamAccess>>>
+    export type SimulateIamAccessMutationBody = BodyType<IamAccessInput>
+    export type SimulateIamAccessMutationError = ErrorType<void>
+    export type SimulateIamAccessMutationVariables = {id: string;data: BodyType<IamAccessInput>}
+
+    export const useSimulateIamAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof simulateIamAccess>>, TError,SimulateIamAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof simulateIamAccess>>,
+        TError,
+        SimulateIamAccessMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSimulateIamAccessMutationOptions(options));
+    }
+
+export const getUpdateIamAssignmentPolicyUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/assignments/${id}/policy`
+}
+
+export const updateIamAssignmentPolicy = async (id: string,
+    iamAssignmentPolicyInput: IamAssignmentPolicyInput, options?: Parameters<typeof customFetch>[1]): Promise<IamRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<IamRecord>(getUpdateIamAssignmentPolicyUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamAssignmentPolicyInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateIamAssignmentPolicyMutationKey = () => ['updateIamAssignmentPolicy'] as const;
+
+export const getUpdateIamAssignmentPolicyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIamAssignmentPolicy>>, TError,UpdateIamAssignmentPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIamAssignmentPolicy>>, TError,UpdateIamAssignmentPolicyMutationVariables, TContext> => {
+
+const mutationKey = getUpdateIamAssignmentPolicyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIamAssignmentPolicy>>, UpdateIamAssignmentPolicyMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateIamAssignmentPolicy(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIamAssignmentPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updateIamAssignmentPolicy>>>
+    export type UpdateIamAssignmentPolicyMutationBody = BodyType<IamAssignmentPolicyInput>
+    export type UpdateIamAssignmentPolicyMutationError = ErrorType<void>
+    export type UpdateIamAssignmentPolicyMutationVariables = {id: string;data: BodyType<IamAssignmentPolicyInput>}
+
+    export const useUpdateIamAssignmentPolicy = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIamAssignmentPolicy>>, TError,UpdateIamAssignmentPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIamAssignmentPolicy>>,
+        TError,
+        UpdateIamAssignmentPolicyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateIamAssignmentPolicyMutationOptions(options));
+    }
+
+export const getChangeIamAssignmentStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/iam/assignments/${id}/status`
+}
+
+export const changeIamAssignmentStatus = async (id: string,
+    iamAssignmentStatusInput: IamAssignmentStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getChangeIamAssignmentStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(iamAssignmentStatusInput)
+  }
+);}
+
+
+
+
+
+export const getChangeIamAssignmentStatusMutationKey = () => ['changeIamAssignmentStatus'] as const;
+
+export const getChangeIamAssignmentStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeIamAssignmentStatus>>, TError,ChangeIamAssignmentStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeIamAssignmentStatus>>, TError,ChangeIamAssignmentStatusMutationVariables, TContext> => {
+
+const mutationKey = getChangeIamAssignmentStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeIamAssignmentStatus>>, ChangeIamAssignmentStatusMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeIamAssignmentStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeIamAssignmentStatusMutationResult = NonNullable<Awaited<ReturnType<typeof changeIamAssignmentStatus>>>
+    export type ChangeIamAssignmentStatusMutationBody = BodyType<IamAssignmentStatusInput>
+    export type ChangeIamAssignmentStatusMutationError = ErrorType<void>
+    export type ChangeIamAssignmentStatusMutationVariables = {id: string;data: BodyType<IamAssignmentStatusInput>}
+
+    export const useChangeIamAssignmentStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeIamAssignmentStatus>>, TError,ChangeIamAssignmentStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeIamAssignmentStatus>>,
+        TError,
+        ChangeIamAssignmentStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeIamAssignmentStatusMutationOptions(options));
+    }
+
+export const getGetEmployeeAssignmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/roles/${id}`
+}
+
+/**
+ * Requires roles.assign in the active organization context. Base permissions are not effective-access decisions.
+ */
+export const getEmployeeAssignment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeAssignmentDetail> => {
+
+  return customFetch<EmployeeAssignmentDetail>(getGetEmployeeAssignmentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeAssignmentQueryKey = (id: string,) => {
+    return [
+    `/api/roles/${id}`
+    ] as const;
+    }
+
+
+export const getGetEmployeeAssignmentQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeAssignment>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAssignment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeAssignmentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeAssignment>>> = ({ signal }) => getEmployeeAssignment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAssignment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmployeeAssignmentQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeAssignment>>>
+export type GetEmployeeAssignmentQueryError = ErrorType<void>
+
+
+
+export function useGetEmployeeAssignment<TData = Awaited<ReturnType<typeof getEmployeeAssignment>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAssignment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmployeeAssignmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEmployeeAssignmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/roles/${id}`
+}
+
+/**
+ * Changes an active staff assignment, never self or residential lifecycle assignments. Optimistic concurrency token is mandatory.
+ */
+export const updateEmployeeAssignment = async (id: string,
+    employeeAssignmentUpdate: EmployeeAssignmentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<UpdateEmployeeAssignment200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UpdateEmployeeAssignment200>(getUpdateEmployeeAssignmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(employeeAssignmentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEmployeeAssignmentMutationKey = () => ['updateEmployeeAssignment'] as const;
+
+export const getUpdateEmployeeAssignmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAssignment>>, TError,UpdateEmployeeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAssignment>>, TError,UpdateEmployeeAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEmployeeAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployeeAssignment>>, UpdateEmployeeAssignmentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEmployeeAssignment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEmployeeAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployeeAssignment>>>
+    export type UpdateEmployeeAssignmentMutationBody = BodyType<EmployeeAssignmentUpdate>
+    export type UpdateEmployeeAssignmentMutationError = ErrorType<void>
+    export type UpdateEmployeeAssignmentMutationVariables = {id: string;data: BodyType<EmployeeAssignmentUpdate>}
+
+    export const useUpdateEmployeeAssignment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAssignment>>, TError,UpdateEmployeeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEmployeeAssignment>>,
+        TError,
+        UpdateEmployeeAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEmployeeAssignmentMutationOptions(options));
+    }
+
+export const getRevokeEmployeeAssignmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/roles/${id}`
+}
+
+/**
+ * Revokes a non-self assignment with scope and last-administrator protection; never deletes the user.
+ */
+export const revokeEmployeeAssignment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeEmployeeAssignmentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeEmployeeAssignmentMutationKey = () => ['revokeEmployeeAssignment'] as const;
+
+export const getRevokeEmployeeAssignmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEmployeeAssignment>>, TError,RevokeEmployeeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeEmployeeAssignment>>, TError,RevokeEmployeeAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getRevokeEmployeeAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeEmployeeAssignment>>, RevokeEmployeeAssignmentMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeEmployeeAssignment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeEmployeeAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof revokeEmployeeAssignment>>>
+
+    export type RevokeEmployeeAssignmentMutationError = ErrorType<void>
+    export type RevokeEmployeeAssignmentMutationVariables = {id: string}
+
+    export const useRevokeEmployeeAssignment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEmployeeAssignment>>, TError,RevokeEmployeeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeEmployeeAssignment>>,
+        TError,
+        RevokeEmployeeAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeEmployeeAssignmentMutationOptions(options));
+    }
 
 export const getSubmitLandingLeadUrl = () => {
 

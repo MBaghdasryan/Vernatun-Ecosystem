@@ -5,6 +5,13 @@ export type Language='hy'|'ru'|'en';
 export type Currency='AMD'|'RUB'|'USD';
 const strings={...businessStrings,...communityStrings,...lifecycleStrings,error_mfa_required:['Մուտքագրեք TOTP կամ վերականգնման կոդը։','Введите TOTP или резервный код.','Enter a TOTP or recovery code.'],error_invalid_mfa:['Կոդը սխալ է կամ արդեն օգտագործված։','Код неверен или уже использован.','Code is invalid or already used.'],
  brandSubtitle:['Գույքի կառավարման հարթակ','Платформа управления недвижимостью','Property management platform'],
+ error_last_administrator:['Պետք է մնա ակտիվ, անժամկետ ադմինիստրատոր՝ ամբողջ կազմակերպության հասանելիությամբ։','Должен остаться действующий бессрочный администратор с доступом ко всей организации.','An active, non-expiring organization-wide administrator must remain.'],
+ error_invalid_scope:['Ստուգեք դերի, շենքի և տարածքի սահմանները։','Проверьте границы роли, здания и помещения.','Check the role, building and unit scope.'],
+ users:['Օգտատերեր','Пользователи','Users'],
+ permissions:['Թույլտվություններ','Разрешения','Permissions'],
+ error_detach_policy_first:['Նախ հեռացրեք նշանակման պրոֆիլն ու սահմանափակումները։','Сначала снимите профиль и ограничения назначения, затем измените базовую роль.','Remove the assignment profile and restrictions before changing its base role.'],
+ error_concurrent_change:['Տվյալները փոխվել են։ Բացեք քարտը նորից։','Данные изменились. Откройте карточку заново.','Data changed. Reopen the card.'],
+ error_revoked_assignment:['Հետ կանչված նշանակումը հնարավոր չէ վերականգնել այստեղ։','Отозванное назначение нельзя восстановить здесь.','A revoked assignment cannot be restored here.'],
  error_connection:['Սերվերի հետ կապ չկա։ Ստուգեք կապը և կրկին փորձեք։','Нет соединения с сервером. Проверьте подключение и повторите попытку.','Cannot connect to the server. Check your connection and try again.'],
  error_service_unavailable:['Ծառայությունը ժամանակավորապես անհասանելի է։ Կրկին փորձեք ավելի ուշ։','Сервис временно недоступен. Повторите попытку позже.','The service is temporarily unavailable. Please try again later.'],
  error_server_error:['Սերվերի սխալ։ Կրկին փորձեք ավելի ուշ։','Ошибка сервера. Повторите попытку позже.','Server error. Please try again later.'],

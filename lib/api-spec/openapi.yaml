@@ -11,6 +11,163 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /iam/catalog:
+    get:
+      operationId: getIamCatalog
+      responses:
+        '200': { description: "Immutable role catalog, existing permissions, exceptional grant allowlist", content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+  /iam/users:
+    get:
+      operationId: listIamUsers
+      parameters:
+        - { in: query, name: q, schema: { type: string, maxLength: 100 } }
+        - { in: query, name: offset, schema: { type: integer, minimum: 0, maximum: 100000 } }
+      responses:
+        '200': { description: "Scoped rows, total, offset and limit; no credentials", content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+  /iam/users/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getIamUser
+      responses:
+        '200': { description: "Scoped user, assignments and history; hashed session handles for platform admins only", content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '404': { description: Not found or outside scope }
+  /iam/users/{id}/status:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: changeIamAccountStatus
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamAccountStatusInput' } } }
+      responses:
+        '204': { description: Account status changed; disable/lock also revoke sessions }
+        '403': { description: Platform administrator required; self changes forbidden }
+        '409': { description: Last administrator would be lost }
+  /iam/users/{id}/logout:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: revokeIamSessions
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamSessionRevocationInput' } } }
+      responses:
+        '204': { description: Sessions revoked }
+        '403': { description: Platform administrator required; self changes forbidden }
+  /iam/profiles:
+    get:
+      operationId: listIamProfiles
+      responses:
+        '200': { description: Organization profiles and tenant-allowed global templates, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/IamRecord' } } } } }
+    post:
+      operationId: createIamProfile
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamProfileInput' } } }
+      responses:
+        '201': { description: Created profile with concurrency token, content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '403': { description: Undelegable permission or unauthorized scope }
+  /iam/profiles/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateIamProfile
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamProfileInput' } } }
+      responses:
+        '200': { description: Updated profile; base role immutable, content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '409': { description: Concurrent change or administrator protection }
+  /iam/assignments/{id}/access:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: explainIamAccess
+      description: Shared permission/module/subscription evaluator. Not an unconditional resource authorization; workflow, ownership and session MFA still apply.
+      responses:
+        '200': { description: "Effective permission decisions, reasons, scope, profile and rules", content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '404': { description: Assignment outside authorized scope }
+    post:
+      operationId: simulateIamAccess
+      description: Read-only permission explanation for a requested HTTP method; does not perform the operation.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamAccessInput' } } }
+      responses:
+        '200': { description: Permission explanation, content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '404': { description: Assignment outside authorized scope }
+  /iam/assignments/{id}/policy:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: updateIamAssignmentPolicy
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamAssignmentPolicyInput' } } }
+      responses:
+        '200': { description: Policy saved and audited, content: { application/json: { schema: { $ref: '#/components/schemas/IamRecord' } } } }
+        '403': { description: "Self, protected role, cross-scope or unsupported grant" }
+        '409': { description: Concurrent change or inactive assignment }
+  /iam/assignments/{id}/status:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: changeIamAssignmentStatus
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IamAssignmentStatusInput' } } }
+      responses:
+        '204': { description: Assignment status changed }
+        '403': { description: Protected or self assignment }
+        '409': { description: Revoked assignment or concurrent change }
+  /roles/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getEmployeeAssignment
+      description: Requires roles.assign in the active organization context. Base permissions are not effective-access decisions.
+      responses:
+        '200':
+          description: Assignment card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeAssignmentDetail' }
+        '403': { description: Permission denied }
+        '404': { description: Assignment outside active scope or not found }
+    patch:
+      operationId: updateEmployeeAssignment
+      description: Changes an active staff assignment, never self or residential lifecycle assignments. Optimistic concurrency token is mandatory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeAssignmentUpdate' }
+      responses:
+        '200':
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assignment]
+                properties:
+                  assignment: { $ref: '#/components/schemas/EmployeeAssignment' }
+        '400': { description: Invalid dates or scope }
+        '403': { description: Permission denied or immutable assignment }
+        '404': { description: Assignment or property outside active scope }
+        '409': { description: concurrent_change or last_administrator }
+    delete:
+      operationId: revokeEmployeeAssignment
+      description: Revokes a non-self assignment with scope and last-administrator protection; never deletes the user.
+      responses:
+        '204': { description: Revoked or already inactive }
+        '403': { description: Permission denied }
+        '404': { description: Assignment outside active scope }
+        '409': { description: last_administrator }
   /leads:
     post:
       operationId: submitLandingLead
@@ -1387,6 +1544,97 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    IamAccessInput:
+      type: object
+      additionalProperties: false
+      required: [method]
+      properties:
+        method: { type: string, enum: [GET, POST, PATCH, DELETE] }
+    IamRecord:
+      type: object
+      additionalProperties: true
+    IamAccountStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [active, locked, disabled] }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+    IamSessionRevocationInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+        sessionId: { type: string, pattern: '^[a-f0-9]{32}$' }
+    IamAssignmentStatusInput:
+      type: object
+      additionalProperties: false
+      required: [version, status, reason]
+      properties:
+        version: { type: string }
+        status: { type: string, enum: [active, suspended, revoked] }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+    IamProfileInput:
+      type: object
+      additionalProperties: false
+      required: [name, baseRole, permissions]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        description: { type: string, maxLength: 1000, default: '' }
+        baseRole: { type: string }
+        permissions: { type: array, maxItems: 100, items: { type: string } }
+        tenantAllowed: { type: boolean, default: false }
+        active: { type: boolean, default: true }
+        version: { type: string }
+    IamAssignmentPolicyInput:
+      type: object
+      additionalProperties: false
+      required: [version, profileId, denies, grants, reason, expiresAt]
+      properties:
+        version: { type: string }
+        profileId: { type: [string, 'null'], format: uuid }
+        denies: { type: array, maxItems: 100, items: { type: string } }
+        grants: { type: array, maxItems: 10, items: { type: string } }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+        expiresAt: { type: [string, 'null'], format: date-time }
+    EmployeeAssignment:
+      type: object
+      required: [id, user_id, organization_id, role_key, building_id, unit_id, starts_at, expires_at, active, version]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        organization_id: { type: string, format: uuid }
+        role_key: { type: string }
+        building_id: { type: [string, 'null'], format: uuid }
+        unit_id: { type: [string, 'null'], format: uuid }
+        starts_at: { type: string, format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+        active: { type: boolean }
+        version: { type: string, pattern: '^\d+$' }
+        name: { type: string }
+        email: { type: string }
+    EmployeeAssignmentDetail:
+      type: object
+      required: [assignment, editable, editableRoles, permissions]
+      properties:
+        assignment: { $ref: '#/components/schemas/EmployeeAssignment' }
+        editable: { type: boolean }
+        editableRoles: { type: array, items: { type: string } }
+        permissions: { type: array, items: { type: string } }
+    EmployeeAssignmentUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, roleKey, buildingId, unitId, startsAt, expiresAt]
+      properties:
+        version: { type: string, pattern: '^\d+$' }
+        roleKey:
+          type: string
+          enum: [org_admin, portfolio_owner, developer, manager, accountant, dispatcher, technician, contractor, security]
+        buildingId: { type: [string, 'null'], format: uuid }
+        unitId: { type: [string, 'null'], format: uuid }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: [string, 'null'], format: date-time }
     LandingLeadInput:
       type: object
       additionalProperties: false
