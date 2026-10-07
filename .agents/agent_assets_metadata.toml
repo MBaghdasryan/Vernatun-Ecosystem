@@ -210,3 +210,17 @@ mtime_ms = 1791354978708
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/b176438f-caa1-49c9-868c-c2d4247d941e/c3481c29-74bd-47ac-9d54-e38fa043e495"
 storage_version_token = "1791355019394248"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "UPJXChR04tmAHAsltwvOV"
+uri = "file://artifacts/vernatun/docs/VERNATUN-INTERFACES-AND-ROLES-GUIDE.md"
+type = "text"
+title = "Vernatun — интерфейсы и права всех пользователей"
+description = "Подробный справочник четырёх порталов и 14 ролей: разделы, действия, ограничения, делегирование, модули и незавершённые функции."
+logical_id = "a8bc0da2-5d45-4343-92ea-4ab953313e98"
+content_hash = "sha256:372a6a0094ed0d9cef9aef20d2e7791556d298be75f9da4b4dae1c9e8a0f2b72"
+size = 67958
+mtime_ms = 1791355761948
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/a8bc0da2-5d45-4343-92ea-4ab953313e98/a1bb183a-aa5f-45ca-9fa8-36e87e2f2ed0"
+storage_version_token = "1791355773150349"
+content_type = "text/markdown"
