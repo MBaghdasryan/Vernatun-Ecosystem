@@ -43,13 +43,22 @@ export function registerSystemBackups(router:Router,permit:(req:Request,p:string
   await permit(req,'backups.read');await permit(req,'backups.create');requireRecentAuthentication(req);
   const id=z.string().uuid().parse(req.params.id);
   if(operationsEncryptionState()!=='configured')throw new ApiError(503,'operations_encryption_not_configured');
-  const row=(await pool.query("SELECT checksum,provider FROM operations_backups WHERE id=$1 AND status='completed'",[id])).rows[0];
-  if(!row)throw new ApiError(404,'backup_not_found');
-  try{await verifyStoredBackup(id,row.checksum,row.provider)}
-  catch{await pool.query("UPDATE operations_backups SET verification='verification_failed',verified_at=now() WHERE id=$1",[id]);await recordAudit(req,'system.backup.verification_failed',id);throw new ApiError(409,'backup_verification_failed')}
-  await pool.query("UPDATE operations_backups SET verification='verified',verified_at=now() WHERE id=$1",[id]);
-  await recordAudit(req,'system.backup.verified',id);
-  res.json({verified:true});
+  const db=await pool.connect();let locked=false;
+  try{
+   locked=!!(await db.query('SELECT pg_try_advisory_lock(73192843) AS ok')).rows[0].ok;
+   if(!locked)throw new ApiError(409,'backup_busy');
+   const row=(await db.query("SELECT checksum,provider FROM operations_backups WHERE id=$1 AND status='completed'",[id])).rows[0];
+   if(!row)throw new ApiError(404,'backup_not_found');
+   let verified=true;try{await verifyStoredBackup(id,row.checksum,row.provider)}catch{verified=false}
+   await db.query('BEGIN');
+   await db.query('UPDATE operations_backups SET verification=$2,verified_at=now() WHERE id=$1',[id,verified?'verified':'verification_failed']);
+   await db.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id) VALUES($1,$2,'backup',$3)",
+    [req.user!.id,verified?'system.backup.verified':'system.backup.verification_failed',id]);
+   await db.query('COMMIT');
+   if(!verified)throw new ApiError(409,'backup_verification_failed');
+   res.json({verified:true});
+  }catch(e){await db.query('ROLLBACK');throw e}
+  finally{if(locked)await db.query('SELECT pg_advisory_unlock(73192843)');db.release()}
  });
  router.get('/system/backups/:id/download',async(req,res)=>{
   await permit(req,'backups.read');await permit(req,'backups.download');requireRecentAuthentication(req);
@@ -68,6 +77,7 @@ export function registerSystemBackups(router:Router,permit:(req:Request,p:string
   const db=await pool.connect();
   try{
    await db.query('BEGIN');
+   await db.query('SELECT pg_advisory_xact_lock(73192843)');
    const row=(await db.query('SELECT status,provider,retain_until>now() AS protected FROM operations_backups WHERE id=$1 FOR UPDATE',[id])).rows[0];
    if(!row)throw new ApiError(404,'backup_not_found');
    if(row.protected)throw new ApiError(409,'backup_minimum_retention');

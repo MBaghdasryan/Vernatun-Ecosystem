@@ -8,6 +8,58 @@
 import * as zod from 'zod';
 
 
+export const GetSystemBackupPoliciesResponseItem = zod.object({
+  "kind": zod.string(),
+  "enabled": zod.boolean(),
+  "frequency": zod.string(),
+  "provider": zod.string(),
+  "retentionDays": zod.number().int(),
+  "keepLast": zod.number().int(),
+  "autoDelete": zod.boolean(),
+  "revision": zod.number().int(),
+  "nextRunAt": zod.string().nullable(),
+  "lastQueuedAt": zod.string().nullable()
+})
+export const GetSystemBackupPoliciesResponse = zod.array(GetSystemBackupPoliciesResponseItem)
+
+
+export const UpdateSystemBackupPolicyParams = zod.object({
+  "kind": zod.coerce.string()
+})
+
+export const updateSystemBackupPolicyBodyRetentionDaysMin = 30;
+export const updateSystemBackupPolicyBodyRetentionDaysMax = 3650;
+
+export const updateSystemBackupPolicyBodyKeepLastMax = 100;
+
+
+
+
+export const UpdateSystemBackupPolicyBody = zod.object({
+  "enabled": zod.boolean(),
+  "frequency": zod.enum(['daily', 'weekly', 'monthly']),
+  "provider": zod.enum(['app_storage', 'local', 's3']),
+  "retentionDays": zod.number().int().min(updateSystemBackupPolicyBodyRetentionDaysMin).max(updateSystemBackupPolicyBodyRetentionDaysMax),
+  "keepLast": zod.number().int().min(1).max(updateSystemBackupPolicyBodyKeepLastMax),
+  "autoDelete": zod.boolean(),
+  "revision": zod.number().int().min(1),
+  "confirmation": zod.enum(['BACKUP POLICY'])
+})
+
+export const UpdateSystemBackupPolicyResponse = zod.object({
+  "kind": zod.string(),
+  "enabled": zod.boolean(),
+  "frequency": zod.string(),
+  "provider": zod.string(),
+  "retentionDays": zod.number().int(),
+  "keepLast": zod.number().int(),
+  "autoDelete": zod.boolean(),
+  "revision": zod.number().int(),
+  "nextRunAt": zod.string().nullable(),
+  "lastQueuedAt": zod.string().nullable()
+})
+
+
 
 
 

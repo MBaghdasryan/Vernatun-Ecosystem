@@ -119,9 +119,37 @@ confirmations, component-integrity verification, encrypted downloads and a
 S3 adapters are implemented. AppStorage shares the application's bucket and is
 not independent disaster recovery. Configuration, database, referenced files,
 combined data and source-inclusive snapshot kinds have bounded builders.
-Scheduling/policies and the complete restore workflow are not implemented.
+Periodic scheduling and opt-in policy retention are implemented. The complete
+restore workflow remains incomplete.
 The new encrypted package format is not automatically accepted by the legacy
 restore CLI. Verification is not a successful restore rehearsal.
+
+### Scheduled backup policies
+
+Backup Center exposes five fixed policies, all initially disabled. Editing needs
+`backups.read`, `backups.policies.manage`, recent authentication and the typed
+phrase `BACKUP POLICY`. This permission includes configuring automatic retention
+deletion; only delegate it to trusted platform operators.
+
+Daily/weekly/monthly intervals run in UTC. Enabling or changing frequency sets
+the first due time one interval ahead. The minute worker queues at most one
+copy and skips while another is pending/running. Missed intervals coalesce;
+there is no catch-up flood. Disabling does not cancel already queued work.
+Configuration backups include the non-secret policy definitions.
+
+Retention is opt-in and runs only while the policy is enabled. Each pass removes
+at most one verified, completed copy created by that policy, outside both its
+original hold and the current retention period (minimum 30 days), excluding the
+newest `keepLast` verified copies. Manual copies and failed verification evidence
+are never automatically removed. The audit intent precedes byte deletion;
+after success the registry becomes `expired` and audit history remains.
+Copies from a different/unconfigured provider are not deleted.
+
+Verification and policy changes serialize with retention decisions. Revision
+checks reject stale edits; polling does not overwrite unsaved UI drafts.
+Changing runtime credentials is still a separate secure-environment action.
+Pre-update configuration backups await Update Center; these are periodic policies,
+not a completed update or recovery workflow.
 
 Actual process-local storage-health cache management and platform session
 administration are implemented. Clearing cache does not revoke sessions.

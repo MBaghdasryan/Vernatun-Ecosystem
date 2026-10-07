@@ -38,6 +38,6 @@ than falling back to plaintext. Isolated tests use
 an ephemeral test key and a separate local storage directory, never the working
 key or production data.
 
-Backup policies, the full restore flow, integration secret-vault CRUD and key-ring
+The full restore flow, integration secret-vault CRUD and key-ring
 rotation remain incomplete. No successful recovery rehearsal of the new
 encrypted package format is claimed.

@@ -24,6 +24,8 @@ import type {
   AvailabilityBlockChange,
   AvailabilityBlockInput,
   AvailabilityUnit,
+  BackupPolicy,
+  BackupPolicyInput,
   BankConfirmationInput,
   BankIgnoreInput,
   BankImportInput,
@@ -217,6 +219,160 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSystemBackupPoliciesUrl = () => {
+
+
+
+
+  return `/api/system/backup-policies`
+}
+
+export const getSystemBackupPolicies = async ( options?: Parameters<typeof customFetch>[1]): Promise<BackupPolicy[]> => {
+
+  return customFetch<BackupPolicy[]>(getGetSystemBackupPoliciesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemBackupPoliciesQueryKey = () => {
+    return [
+    `/api/system/backup-policies`
+    ] as const;
+    }
+
+
+export const getGetSystemBackupPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof getSystemBackupPolicies>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemBackupPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemBackupPoliciesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemBackupPolicies>>> = ({ signal }) => getSystemBackupPolicies({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemBackupPolicies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemBackupPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemBackupPolicies>>>
+export type GetSystemBackupPoliciesQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemBackupPolicies<TData = Awaited<ReturnType<typeof getSystemBackupPolicies>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemBackupPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemBackupPoliciesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSystemBackupPolicyUrl = (kind: string,) => {
+
+
+
+
+  return `/api/system/backup-policies/${kind}`
+}
+
+export const updateSystemBackupPolicy = async (kind: string,
+    backupPolicyInput: BackupPolicyInput, options?: Parameters<typeof customFetch>[1]): Promise<BackupPolicy> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<BackupPolicy>(getUpdateSystemBackupPolicyUrl(kind),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(backupPolicyInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSystemBackupPolicyMutationKey = () => ['updateSystemBackupPolicy'] as const;
+
+export const getUpdateSystemBackupPolicyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemBackupPolicy>>, TError,UpdateSystemBackupPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSystemBackupPolicy>>, TError,UpdateSystemBackupPolicyMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSystemBackupPolicyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystemBackupPolicy>>, UpdateSystemBackupPolicyMutationVariables> = (props) => {
+          const {kind,data} = props ?? {};
+
+          return  updateSystemBackupPolicy(kind,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSystemBackupPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updateSystemBackupPolicy>>>
+    export type UpdateSystemBackupPolicyMutationBody = BodyType<BackupPolicyInput>
+    export type UpdateSystemBackupPolicyMutationError = ErrorType<unknown>
+    export type UpdateSystemBackupPolicyMutationVariables = {kind: string;data: BodyType<BackupPolicyInput>}
+
+    export const useUpdateSystemBackupPolicy = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemBackupPolicy>>, TError,UpdateSystemBackupPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSystemBackupPolicy>>,
+        TError,
+        UpdateSystemBackupPolicyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSystemBackupPolicyMutationOptions(options));
+    }
 
 export const getGetSystemBackupsUrl = (params?: GetSystemBackupsParams,) => {
   const normalizedParams = new URLSearchParams();

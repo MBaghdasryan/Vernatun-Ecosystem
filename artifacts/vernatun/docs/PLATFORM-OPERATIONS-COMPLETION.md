@@ -13,8 +13,8 @@ Current implementation status. The eight-phase prompt is
 | Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or raw stacks; trusted basename/line/column extraction only |
 | Error Center | COMPLETE | Real + isolated tests | For captured API/job errors: grouping, counters, details, audited lifecycle, event environment, build ID and safe call locations; not full crash/external-source monitoring |
 | Log retention | COMPLETE | Real + isolated tests | Opt-in, disabled by default; typed confirmation, recent authentication, revision check, audited batches of ≤500; preserves recurrence watermarks and business audit |
-| Jobs | PARTIAL | Real + isolated tests | Three original periodic jobs plus opt-in log-retention worker instrumented; no persistent queue/retry/cancel |
-| Backup | PARTIAL | Real + isolated tests + development App Storage verification | UI, durable queue, encrypted packages, five bounded builders, verification/download/delete, 30-day protection and Local/AppStorage/S3 adapters; configuration copy created and read-back verified with configured development key; schedules/policies unfinished |
+| Jobs | PARTIAL | Real + isolated tests | Original jobs, log retention, backup worker, scheduler and backup retention observed; backup queue persists; generic retry/cancel remains incomplete |
+| Backup | PARTIAL | Real + isolated tests + development App Storage verification | UI, encrypted bounded builders, queue, verification/download/delete, Local/AppStorage/S3 adapters and periodic policies with opt-in retention; recovery drill and update-triggered backup remain unfinished |
 | Restore | PARTIAL | Existing isolated tools | New package format has no full restore workflow yet; integrity verification is not a restore rehearsal; no production restore |
 | Cache | COMPLETE | Real + isolated tests | Actual storage-health cache only; process-scoped Memory provider, audited clearing, Redis adapter boundary tested but not connected; no imaginary org/user caches |
 | Sessions | COMPLETE | Real + isolated tests | Platform-only list/count/filter/paging, timestamps, coarse device, single/user revocation with confirmation and recent auth; late-save resurrection prevented |
@@ -37,8 +37,8 @@ Current implementation status. The eight-phase prompt is
 | Concrete bank provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Manual bank statement import | COMPLETE | Existing implementation, unchanged | Not re-tested or modified in this increment |
 
-Next scope: remaining Phase 1 source coverage/health evidence and large exports,
-then Phase 2 Backup Center using the existing paired snapshot tools.
+Next scope: safe recovery/drill for encrypted packages, remaining Phase 1 source
+coverage/health evidence and large exports, then outstanding API/integration/update work.
 Do not equate existing CLI support with a completed administrative workflow.
 
 ## Storage, cache, sessions, retention and encryption increment
@@ -209,7 +209,7 @@ Do not equate existing CLI support with a completed administrative workflow.
   private App Storage and read-back verified. Its queued/completed audit records
   identify the operator readiness check; no user identity was impersonated.
   This was not a browser create-flow test or a production/recovery test.
-- Still incomplete: schedules/policies, recovery workflow and drill for the new
+- Still incomplete after that increment: schedules/policies, recovery workflow and drill for the new
   package, integration vault, key rotation, API Center, Modules and Updates.
   Do not mark the eight-phase prompt complete.
 
@@ -230,3 +230,33 @@ Do not equate existing CLI support with a completed administrative workflow.
   including genuine PostgreSQL archive decoding, malformed archive rejection,
   latest-backup metrics and exclusion of failed verification.
 - No restore, production deployment, email send or retention deletion occurred.
+
+## Periodic backup policies
+
+- Additive migration checked in isolation and applied to development; all 13
+  legacy-table fingerprints preserved. All five live policies remain disabled.
+- Daily/weekly/monthly UTC scheduling, one global pending/running queue,
+  coalesced missed intervals, chosen configured provider, revision-guarded edits.
+- Opt-in retention: minimum 30 days and original hold both enforced; newest
+  keep-last verified copies retained; manual copies and failed evidence excluded.
+  At most one expiry per pass, durable audit intent and final event, bytes removed
+  only for the selected scheduled copy. Policy and verification changes serialize
+  with the expiry decision.
+- Backup Center has HY/RU/EN policy controls, recent-authentication flow, typed
+  confirmation and additional irreversible-deletion acknowledgement. Disabling
+  remains possible when encryption/storage configuration becomes unavailable.
+- All 15 isolated system test groups and both application type checks passed.
+  Tests cover disabled defaults, denied access, invalid retention, stale revision,
+  concurrent scheduler calls, queue bounds, original hold, keep-last preservation,
+  expiry audit, and retention excluding manual copies. Destructive checks used
+  disposable test storage only.
+- Browser acceptance on an isolated schema confirmed invalid-day/phrase rejection,
+  draft preservation across polling, save/reload persistence, enabling a daily
+  schedule, irreversible-deletion acknowledgement and final disabled settings.
+  No overflow at 390/768/1024/1440px. No copies were created/deleted by browser QA.
+  The discovered Yerevan-time-plus-UTC-label mismatch was corrected with explicit
+  UTC formatting and checked separately; no second full browser pass was run.
+  Logout could not be confirmed because the workspace restarted at that step;
+  the isolated schema was subsequently removed, not any working account.
+- Remaining: recovery workflow/drill, pre-update trigger, API Center, integration
+  vault, Modules/Extensions, Update Center, and remaining overall QA coverage.

@@ -4,6 +4,7 @@ import {fmtDate} from './console-util';
 import {getCsrfHeaders} from './client';
 import {ReauthPrompt,needsReauth,reauthDone} from './Reauth';
 import type {Language} from './i18n';
+import BackupPolicies from './BackupPolicies';
 
 type T3=[string,string,string];
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
@@ -19,7 +20,7 @@ const S:Record<string,T3>={
  encMissing:['Գործառնությունների գաղտնագրման բանալին կարգավորված չէ։ Պատճեններ ստեղծել հնարավոր չէ, քանի դեռ ադմինիստրատորը այն չի ավելացրել Secrets-ում։ Այստեղ բանալի մուտքագրել կամ ցուցադրել հնարավոր չէ։','Ключ шифрования операций не настроен. Создавать копии нельзя, пока администратор не добавит его в Secrets. Ввести или показать ключ здесь невозможно.','The operations encryption key is not configured. Backups cannot be created until an administrator adds it in Secrets. The key cannot be entered or revealed here.'],
  providerMissing:['Պահուստային պահոցը կարգավորված չէ։ Ստեղծումն անջատված է։','Хранилище резервных копий не настроено. Создание отключено.','Backup storage is not configured. Creation is disabled.'],
  scopeNote:['AppStorage-ն օգտագործում է հավելվածի նույն bucket-ը․ սա անկախ աղետից վերականգնում չէ։ Միայն Local մատակարարն է սահմանափակված մշակմամբ։ S3-ը կարգավորելի է, բայց ինքնաբերաբար ակտիվ չէ։','AppStorage использует тот же bucket, что и приложение: это не независимое аварийное восстановление. Только Local ограничен средой разработки. S3 настраивается отдельно и не считается активным по умолчанию.','AppStorage uses the application’s bucket: this is not independent disaster recovery. Only Local is restricted to development. S3 is configured separately and is not assumed live.'],
- restoreNote:['Վերականգնումը կատարվում է միայն ձեռքով, մեկուսացված միջավայրում։ Այս վահանակից վերականգնում չկա։ Ժամանակացույցեր դեռ իրականացված չեն։','Восстановление выполняется только вручную в изолированной среде. Из этой консоли восстановить нельзя. Расписания пока не реализованы.','Restore is performed only manually in an isolated environment. There is no restore from this console. Schedules are not implemented yet.'],
+ restoreNote:['Վերականգնումը կատարվում է միայն ձեռքով, մեկուսացված միջավայրում։ Այս վահանակից վերականգնում չկա։','Восстановление выполняется только вручную в изолированной среде. Из этой консоли восстановить нельзя.','Restore is performed only manually in an isolated environment. There is no restore from this console.'],
  verifyNote:['Ստուգումը հաստատում է գաղտնագրված փաթեթի ամբողջականությունը և բաղադրիչների checksum-ները, ոչ թե վերականգնման հաջող փորձ։','Проверка подтверждает целостность зашифрованного пакета и контрольные суммы компонентов, а не успешную репетицию восстановления.','Verification confirms the authenticated encrypted payload and component checksums, not a successful restore rehearsal.'],
  createTitle:['Ստեղծել պատճեն','Создать копию','Create backup'],kind:['Տեսակ','Тип','Kind'],notes:['Նշում (մինչև 300 նիշ)','Заметка (до 300 символов)','Note (up to 300 characters)'],
  createWarn:['Պատճենը հերթագրվում է և կատարվում աշխատողի կողմից։ Կատարման ընթացքում գրառումները կարող են կարճ արգելափակվել․ զբաղված բազայի դեպքում պատճենը ձախողվում է՝ չսպասելով։ Նվազագույն պահպանում՝ 30 օր։','Копия ставится в очередь и выполняется воркером. Во время выполнения запись может ненадолго блокироваться; при занятой БД копия завершается ошибкой, а не ждёт. Минимальное хранение — 30 дней.','The backup is queued and run by a worker. Writes may be briefly blocked while it runs; if the database is busy the backup fails rather than waiting. Minimum retention is 30 days.'],
@@ -30,6 +31,7 @@ const S:Record<string,T3>={
  created:['Ստեղծված','Создано','Created'],finished:['Ավարտ','Завершено','Finished'],size:['Չափ','Размер','Size'],build:['Build','Сборка','Build'],schema:['Սխեմա','Схема','Schema'],checksum:['Checksum (SHA-256)','Контрольная сумма (SHA-256)','Checksum (SHA-256)'],verification:['Ստուգում','Проверка','Verification'],retainUntil:['Պահպանվում է մինչև','Хранится до','Retained until'],errorCode:['Սխալի կոդ','Код ошибки','Error code'],unknown:['Անհայտ','Неизвестно','Unknown'],details:['Մանրամասներ','Подробнее','Details'],hide:['Թաքցնել','Скрыть','Hide'],
  pending:['Սպասում է','В очереди','Pending'],running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],deleted:['Ջնջված','Удалено','Deleted'],
  verified:['Ստուգված','Проверено','Verified'],verification_failed:['Ստուգումը ձախողվեց','Проверка не пройдена','Verification failed'],not_verified:['Չստուգված','Не проверено','Not verified'],
+ expired:['Պահպանման ժամկետն ավարտվել է','Удалено по сроку хранения','Expired by retention'],
  verify:['Ստուգել','Проверить','Verify'],download:['Ներբեռնել .vbackup','Скачать .vbackup','Download .vbackup'],delete:['Ջնջել','Удалить','Delete'],
  downloadNote:['Ներբեռնվում է միայն գաղտնագրված .vbackup փաթեթը․ ապագաղտնագրված բովանդակություն չի տրամադրվում։','Скачивается только зашифрованный пакет .vbackup; расшифрованное содержимое не выдаётся.','Only the encrypted .vbackup package is downloaded; decrypted contents are never provided.'],
  protectedUntil:['Պաշտպանված է մինչև {d}','Защищено до {d}','Protected until {d}'],
@@ -49,6 +51,7 @@ const ERR:Record<string,T3>={
  backup_checksum_mismatch:['Checksum-ը չի համընկնում․ ներբեռնումը մերժված է։','Контрольная сумма не совпадает; скачивание отклонено.','Checksum mismatch; download refused.'],
  backup_minimum_retention:['Նվազագույն պահպանման ժամկետը դեռ չի անցել։','Минимальный срок хранения ещё не истёк.','The minimum retention period has not passed.'],
  backup_not_deletable:['Միայն ավարտված կամ ձախողված պատճենը կարելի է ջնջել։','Удалить можно только завершённую или неудачную копию.','Only completed or failed backups can be deleted.'],
+ backup_busy:['Պահուստային պատճենը այս պահին զբաղված է այլ գործողությամբ (օր.՝ պահպանման մաքրում)։ Փորձեք մի փոքր ուշ։','Копия сейчас занята другой операцией (например, очисткой по сроку хранения). Повторите чуть позже.','The backup is busy with another operation (such as retention cleanup). Try again shortly.'],
  failed:['Գործողությունը չհաջողվեց։','Действие не выполнено.','The action failed.'],
 };
 const POLL=30000;
@@ -67,7 +70,7 @@ function usePolled<D>(fetcher:(signal:AbortSignal)=>Promise<D>,key:string){
  return {data,error,loading,reload:load};
 }
 
-type Perms={create:boolean;download:boolean;delete:boolean};
+type Perms={create:boolean;download:boolean;delete:boolean;policies:boolean};
 export default function SystemBackups({ck,l,perms}:{ck:string;l:Language;perms:Perms}){
  const t=(k:string)=>S[k]?.[L(l)]??k;
  const errText=(e:unknown)=>{const c=codeOf(e),st=statusOf(e);return st===403&&!ERR[c]?t('forbidden'):(ERR[c]??ERR.failed)[L(l)]+(c&&!ERR[c]?' ('+c+')':'')};
@@ -104,6 +107,7 @@ export default function SystemBackups({ck,l,perms}:{ck:string;l:Language;perms:P
    {msg&&<p className={msg.bad?'p-error':'p-info'} role="status" data-testid="status-backup-action">{msg.t}</p>}
    {perms.create&&<CreateForm key={ck} d={d} t={t} l={l} disabled={!canCreate||active} busy={busy==='create'} onSubmit={(kind,notes)=>run('create',async s=>{await createSystemBackup({kind,notes,confirmation:'BACKUP'},opts(s));return t('queued')})}/>}
    {del&&perms.delete&&<DeleteForm key={del.id} b={del} t={t} l={l} busy={busy==='delete'} onCancel={()=>setDel(undefined)} onSubmit={async()=>{const id=del.id;if(await run('delete',async s=>{await deleteSystemBackup(id,{confirmation:'DELETE BACKUP'},opts(s));return t('deletedOk')}))setDel(undefined)}}/>}
+   <BackupPolicies ck={ck} l={l} canManage={perms.policies} provider={d.provider} encryption={d.encryption} kindLabel={k=>KIND[k]?.[L(l)]??k}/>
    <section className="p-card sc-card" aria-busy={q.loading}>
     <h3 className="sb-h">{t('queue')}</h3>
     <div className="cx-scroll"><table className="cx-table sc-table"><thead><tr><th>{t('created')}</th><th>{t('kind')}</th><th>{t('completed')}</th><th>{t('size')}</th><th>{t('verification')}</th><th>{t('retainUntil')}</th><th><span className="sr-only">{t('details')}</span></th></tr></thead><tbody>

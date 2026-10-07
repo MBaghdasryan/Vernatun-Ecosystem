@@ -59,6 +59,66 @@ export interface SystemBackupDeleteInput {
   confirmation: SystemBackupDeleteInputConfirmation;
 }
 
+export type BackupPolicyInputFrequency = typeof BackupPolicyInputFrequency[keyof typeof BackupPolicyInputFrequency];
+
+
+export const BackupPolicyInputFrequency = {
+  daily: 'daily',
+  weekly: 'weekly',
+  monthly: 'monthly',
+} as const;
+
+export type BackupPolicyInputProvider = typeof BackupPolicyInputProvider[keyof typeof BackupPolicyInputProvider];
+
+
+export const BackupPolicyInputProvider = {
+  app_storage: 'app_storage',
+  local: 'local',
+  s3: 's3',
+} as const;
+
+export type BackupPolicyInputConfirmation = typeof BackupPolicyInputConfirmation[keyof typeof BackupPolicyInputConfirmation];
+
+
+export const BackupPolicyInputConfirmation = {
+  BACKUP_POLICY: 'BACKUP POLICY',
+} as const;
+
+export interface BackupPolicyInput {
+  enabled: boolean;
+  frequency: BackupPolicyInputFrequency;
+  provider: BackupPolicyInputProvider;
+  /**
+     * @minimum 30
+     * @maximum 3650
+     */
+  retentionDays: number;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  keepLast: number;
+  autoDelete: boolean;
+  /** @minimum 1 */
+  revision: number;
+  confirmation: BackupPolicyInputConfirmation;
+}
+
+export interface BackupPolicy {
+  kind: string;
+  enabled: boolean;
+  frequency: string;
+  provider: string;
+  retentionDays: number;
+  keepLast: number;
+  autoDelete: boolean;
+  revision: number;
+  /** @nullable */
+  nextRunAt: string | null;
+  /** @nullable */
+  lastQueuedAt: string | null;
+}
+
 export type SystemBackupsItemsItem = {
   id: string;
   kind: string;

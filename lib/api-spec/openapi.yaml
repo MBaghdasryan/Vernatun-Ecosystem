@@ -11,6 +11,36 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/backup-policies:
+    get:
+      operationId: getSystemBackupPolicies
+      responses:
+        '200':
+          description: UTC backup schedules, initially disabled
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/BackupPolicy'}
+  /system/backup-policies/{kind}:
+    put:
+      operationId: updateSystemBackupPolicy
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BackupPolicyInput'}
+      responses:
+        '200':
+          description: Saved policy
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BackupPolicy'}
   /system/backups:
     get:
       operationId: getSystemBackups
@@ -2037,6 +2067,32 @@ components:
       required: [confirmation]
       properties:
         confirmation: {type: string, enum: [DELETE BACKUP]}
+    BackupPolicyInput:
+      type: object
+      required: [enabled, frequency, provider, retentionDays, keepLast, autoDelete, revision, confirmation]
+      properties:
+        enabled: {type: boolean}
+        frequency: {type: string, enum: [daily, weekly, monthly]}
+        provider: {type: string, enum: [app_storage, local, s3]}
+        retentionDays: {type: integer, minimum: 30, maximum: 3650}
+        keepLast: {type: integer, minimum: 1, maximum: 100}
+        autoDelete: {type: boolean}
+        revision: {type: integer, minimum: 1}
+        confirmation: {type: string, enum: [BACKUP POLICY]}
+    BackupPolicy:
+      type: object
+      required: [kind, enabled, frequency, provider, retentionDays, keepLast, autoDelete, revision, nextRunAt, lastQueuedAt]
+      properties:
+        kind: {type: string}
+        enabled: {type: boolean}
+        frequency: {type: string}
+        provider: {type: string}
+        retentionDays: {type: integer}
+        keepLast: {type: integer}
+        autoDelete: {type: boolean}
+        revision: {type: integer}
+        nextRunAt: {type: [string, "null"]}
+        lastQueuedAt: {type: [string, "null"]}
     SystemBackups:
       type: object
       required: [page, hasMore, items, provider, encryption, sourceAvailable, restoreMode, limitMiB, kinds]

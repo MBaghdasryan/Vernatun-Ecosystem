@@ -93,7 +93,8 @@ export async function buildSnapshot(id:string,kind:Snapshot['kind']){
    const plans=(await db.query('SELECT id,name,amount_minor,currency,building_limit,allowed_modules,grace_days FROM subscription_plans ORDER BY id')).rows;
    const modules=(await db.query('SELECT organization_id,module,enabled,override_state FROM module_entitlements ORDER BY organization_id,module')).rows;
    const permissions=(await db.query('SELECT * FROM role_permissions ORDER BY role_key,permission_key')).rows;
-   add('configuration.json',Buffer.from(JSON.stringify({plans,modules,permissions})));
+   const backupPolicies=(await db.query('SELECT kind,enabled,frequency,provider,retention_days,keep_last,auto_delete FROM operations_backup_policies ORDER BY kind')).rows;
+   add('configuration.json',Buffer.from(JSON.stringify({plans,modules,permissions,backupPolicies})));
   }
   if(['database','full_data','platform_snapshot'].includes(kind)){
    const snapshotId=String((await db.query('SELECT pg_export_snapshot() AS id')).rows[0].id);

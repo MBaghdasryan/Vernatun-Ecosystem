@@ -19,6 +19,7 @@ import {registerSystemSessions} from './system-sessions.js';
 import {registerSystemRetention} from './system-retention.js';
 import {registerSystemBackups} from './system-backups.js';
 import {backupHealthMetrics} from './system-backup-health.js';
+import {registerBackupPolicies} from './system-backup-policies.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -74,6 +75,7 @@ registerSystemTools(systemCenter,permit);
 registerSystemSessions(systemCenter,permit);
 registerSystemRetention(systemCenter,permit);
 registerSystemBackups(systemCenter,permit);
+registerBackupPolicies(systemCenter,permit);
 const query=z.object({
  page:z.coerce.number().int().min(1).max(10000).default(1),from:z.string().datetime().optional(),to:z.string().datetime().optional(),
  level:z.enum(['info','warning','error','fatal']).optional(),
