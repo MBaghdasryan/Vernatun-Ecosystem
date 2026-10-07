@@ -1,4 +1,4 @@
-import {mkdtemp,readFile,rm,stat,readdir,access} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,rm,stat,readdir,access} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {gzipSync,gunzipSync} from 'node:zlib';
@@ -123,13 +123,27 @@ export async function buildSnapshot(id:string,kind:Snapshot['kind']){
   await db.query('COMMIT');return {bytes,build:apiBuildId,migration};
  }catch(e){await db.query('ROLLBACK');throw e}finally{db.release();await rm(temp,{recursive:true,force:true})}
 }
+export async function verifyDatabaseComponent(value:Snapshot){
+ const dump=value.components.find(c=>c.name==='database.dump');
+ if(!dump)return;
+ const temp=await mkdtemp(join(tmpdir(),'vernatun-verify-'));
+ try{
+  const path=join(temp,'database.dump');
+  await writeFile(path,Buffer.from(dump.content,'base64'),{mode:0o600,flag:'wx'});
+  // Decode the whole archive to a discarded SQL stream. Never connect to a
+  // restore target or execute SQL. This is readability, NOT a recovery drill.
+  await postgresTool('pg_restore',config.DATABASE_URL,['--no-owner','--no-acl','--file=/dev/null',path],60000);
+ }finally{await rm(temp,{recursive:true,force:true})}
+}
 export async function verifyStoredBackup(id:string,checksum:string,provider:string){
  const store=backupStorage();
  if(store.name!==provider)throw new Error('Backup storage provider changed');
  const bytes=await store.read(id);
  if(bytes.length>backupByteLimit||digest(bytes)!==checksum)throw new Error('Backup object checksum mismatch');
  const plain=operationsCipher().open(JSON.parse(bytes.toString('utf8')),'backup:'+id);
- return unpackSnapshot(plain,id);
+ const value=unpackSnapshot(plain,id);
+ await verifyDatabaseComponent(value);
+ return value;
 }
 export async function runPendingBackup(){
  const lock=await pool.connect();let acquired=false;

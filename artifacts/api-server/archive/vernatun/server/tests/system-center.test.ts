@@ -13,7 +13,8 @@ import {pruneSystemLogs} from '../system-retention.js';
 import {OperationsCipher} from '../operations-encryption.js';
 import {randomBytes} from 'node:crypto';
 import {sessionDevice} from '../system-sessions.js';
-import {runPendingBackup,buildSnapshot,unpackSnapshot,verifyStoredBackup} from '../operations-backups.js';
+import {runPendingBackup,buildSnapshot,unpackSnapshot,verifyStoredBackup,verifyDatabaseComponent} from '../operations-backups.js';
+import {backupHealthMetrics} from '../system-backup-health.js';
 import {backupStorage} from '../operations-backup-storage.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
@@ -132,6 +133,11 @@ test('encrypted backup queue creates and verifies a real snapshot, protects rete
  assert.equal(await runPendingBackup(),1);
  const row=(await pool.query('SELECT * FROM operations_backups WHERE id=$1',[id])).rows[0];
  assert.equal(row.status,'completed');assert.equal(row.verification,'verified');
+  const health=await backupHealthMetrics();
+  assert.equal(health.find(m=>m.key==='last_backup')?.value,new Date(row.finished_at).toISOString());
+  assert.equal(health.find(m=>m.key==='backup_type')?.value,'configuration');
+  assert.equal(health.find(m=>m.key==='backup_bytes')?.value,String(row.bytes));
+  assert.equal(health.find(m=>m.key==='backup_storage')?.status,'unavailable','configuration alone is not a storage probe');
  const manifest=await verifyStoredBackup(id,row.checksum,row.provider);
  assert.equal(manifest.kind,'configuration');assert.ok(manifest.components.find(c=>c.name==='configuration.json'));
  const raw=await backupStorage().read(id);
@@ -143,6 +149,7 @@ test('encrypted backup queue creates and verifies a real snapshot, protects rete
  await backupStorage().remove(id);await backupStorage().write(id,Buffer.from('damaged QA package'));
  assert.equal((await admin.call('/system/backups/'+id+'/verify','POST',{})).status,409);
  assert.equal((await pool.query('SELECT verification FROM operations_backups WHERE id=$1',[id])).rows[0].verification,'verification_failed');
+  assert.equal((await backupHealthMetrics()).find(m=>m.key==='last_backup')?.value,null);
  assert.ok((await pool.query("SELECT 1 FROM audit_events WHERE action='system.backup.completed' AND entity_id=$1",[id])).rowCount);
 });
 test('database snapshot contains a custom-format dump and missing files never produce a completed backup',async()=>{
@@ -150,6 +157,8 @@ test('database snapshot contains a custom-format dump and missing files never pr
  const built=await buildSnapshot(id,'database');
  const manifest=unpackSnapshot(built.bytes,id),dump=manifest.components.find(c=>c.name==='database.dump');
  assert.ok(dump);assert.equal(Buffer.from(dump.content,'base64').subarray(0,5).toString(),'PGDMP');
+  await verifyDatabaseComponent(manifest);
+  await assert.rejects(()=>verifyDatabaseComponent({...manifest,components:[{...dump,content:Buffer.from('PGDMP not an actual archive').toString('base64')}]}));
  assert.throws(()=>unpackSnapshot(built.bytes,'00000000-0000-4000-8000-000000000702'));
  const queued=await admin.call('/system/backups','POST',{kind:'files',confirmation:'BACKUP'});
  assert.equal(queued.status,202);

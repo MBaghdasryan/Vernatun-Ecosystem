@@ -18,6 +18,7 @@ import {registerSystemTools} from './system-tools.js';
 import {registerSystemSessions} from './system-sessions.js';
 import {registerSystemRetention} from './system-retention.js';
 import {registerSystemBackups} from './system-backups.js';
+import {backupHealthMetrics} from './system-backup-health.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -36,7 +37,7 @@ async function overview(){
   {key:'started_at',value:startedAt,status:'healthy'},
   {key:'api',value:'responding',status:'healthy'},
   {key:'build_version',value:apiBuildId,status:apiBuildId?'healthy':'unavailable'},
-  ...['application_version','frontend_version','git_commit','integrations','last_backup','backup_storage'].map(key=>({key,value:null,status:'unavailable' as const})),
+  ...['application_version','frontend_version','git_commit','integrations'].map(key=>({key,value:null,status:'unavailable' as const})),
   {key:'cache',value:'memory · storage-health',status:'healthy'},
   {key:'pool_total',value:String(pool.totalCount),status:'healthy'},
   {key:'pool_idle',value:String(pool.idleCount),status:'healthy'},
@@ -62,6 +63,7 @@ async function overview(){
   metrics.push(...['running','failed','interrupted'].map(key=>({key:'jobs_'+key,value:String(r.rows[0][key]),status:key!=='running'&&r.rows[0][key]>0?'degraded' as const:'healthy' as const})));
  }catch{metrics.push({key:'jobs',value:null,status:'unavailable'})}
  metrics.push(...await emailHealthMetrics());
+ metrics.push(...await backupHealthMetrics());
  metrics.push({key:'storage',...await cachedStorageHealth(privateStorageHealth)});
  return {observedAt:new Date().toISOString(),status:metrics.some(m=>m.status==='down')?'critical':metrics.some(m=>m.status==='degraded'||m.status==='unavailable'||m.status==='not_configured')?'warning':'healthy',metrics};
 }

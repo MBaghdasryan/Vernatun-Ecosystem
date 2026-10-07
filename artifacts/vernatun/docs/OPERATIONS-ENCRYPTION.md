@@ -1,7 +1,9 @@
 # Operations encryption readiness
 
-The cryptographic foundation is implemented and tested, but no key has been
-configured and no live encrypted backup or integration vault is claimed.
+The cryptographic foundation is implemented and tested. On 2026-10-07 the
+development key passed application validation and an authenticated roundtrip.
+A configuration backup was written to private App Storage and verified after
+read-back. This does not demonstrate full-data recovery or an integration vault.
 
 ## Configuration
 
@@ -30,8 +32,9 @@ key-ring/rotation workflow is not implemented yet.
 ## Still to complete
 
 Backup storage adapters and queued snapshot creation/verification now consume
-this foundation. The development environment still has no configured key:
-creation is disabled rather than falling back to plaintext. Isolated tests use
+this foundation. Development configuration is verified; other environments must
+be checked separately. With a missing/invalid key creation is disabled rather
+than falling back to plaintext. Isolated tests use
 an ephemeral test key and a separate local storage directory, never the working
 key or production data.
 

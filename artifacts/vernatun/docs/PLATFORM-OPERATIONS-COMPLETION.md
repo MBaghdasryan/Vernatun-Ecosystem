@@ -14,7 +14,7 @@ Current implementation status. The eight-phase prompt is
 | Error Center | COMPLETE | Real + isolated tests | For captured API/job errors: grouping, counters, details, audited lifecycle, event environment, build ID and safe call locations; not full crash/external-source monitoring |
 | Log retention | COMPLETE | Real + isolated tests | Opt-in, disabled by default; typed confirmation, recent authentication, revision check, audited batches of ≤500; preserves recurrence watermarks and business audit |
 | Jobs | PARTIAL | Real + isolated tests | Three original periodic jobs plus opt-in log-retention worker instrumented; no persistent queue/retry/cancel |
-| Backup | PARTIAL | Real + isolated tests | UI, durable queue, encrypted packages, five bounded builders, verification/download/delete, 30-day protection and Local/AppStorage/S3 adapters; schedules/policies unfinished; working key unconfigured |
+| Backup | PARTIAL | Real + isolated tests + development App Storage verification | UI, durable queue, encrypted packages, five bounded builders, verification/download/delete, 30-day protection and Local/AppStorage/S3 adapters; configuration copy created and read-back verified with configured development key; schedules/policies unfinished |
 | Restore | PARTIAL | Existing isolated tools | New package format has no full restore workflow yet; integrity verification is not a restore rehearsal; no production restore |
 | Cache | COMPLETE | Real + isolated tests | Actual storage-health cache only; process-scoped Memory provider, audited clearing, Redis adapter boundary tested but not connected; no imaginary org/user caches |
 | Sessions | COMPLETE | Real + isolated tests | Platform-only list/count/filter/paging, timestamps, coarse device, single/user revocation with confirmation and recent auth; late-save resurrection prevented |
@@ -23,7 +23,7 @@ Current implementation status. The eight-phase prompt is
 | API Keys | NOT IMPLEMENTED | — | Phase 4 |
 | Webhooks | PARTIAL | Existing Resend real implementation | No generic outbound webhook framework |
 | Integration Registry | NOT IMPLEMENTED | — | Existing provider boundaries preserved |
-| Secret Storage | PARTIAL | Runtime secrets + tested cryptographic foundation | AES-256-GCM purpose-bound envelope with independent key; no integration vault CRUD/UI yet; real operations key not configured |
+| Secret Storage | PARTIAL | Runtime secrets + tested cryptographic foundation | AES-256-GCM purpose-bound envelope with independent key; development encryption validated; no integration vault CRUD/UI or managed rotation yet |
 | Modules | PARTIAL | Existing entitlements | Registry/dependency UI not yet extended |
 | Extensions | NOT IMPLEMENTED | — | No arbitrary plugin execution |
 | Update Upload | NOT IMPLEMENTED | — | Phase 7 |
@@ -203,7 +203,30 @@ Do not equate existing CLI support with a completed administrative workflow.
   browser check also passed at both widths: missing-key warning, disabled
   creation, no fake success and no unsafe restore action. The successful-create
   UI journey has not been browser-tested; its backend was tested in isolation.
-  Live backups remain disabled until the independent encryption key is supplied.
+  The missing-key browser result above predates key configuration. On 2026-10-07
+  the supplied development key passed validation and an authenticated roundtrip.
+  A real configuration package was created via the application worker, written to
+  private App Storage and read-back verified. Its queued/completed audit records
+  identify the operator readiness check; no user identity was impersonated.
+  This was not a browser create-flow test or a production/recovery test.
 - Still incomplete: schedules/policies, recovery workflow and drill for the new
   package, integration vault, key rotation, API Center, Modules and Updates.
   Do not mark the eight-phase prompt complete.
+
+## Backup verification and overview follow-through
+
+- PostgreSQL components now undergo bounded `pg_restore --file=/dev/null`
+  decoding before a stored package is considered verified. This executes no SQL
+  and does not connect to a restore target. It is stronger than checksum/header
+  validation, but is explicitly not a recovery rehearsal.
+- Overview and Health now show the most recent completed, verified backup:
+  timestamp, kind, byte size and age. A copy whose verification subsequently
+  fails is excluded. Configuration-only copies are labelled by kind and do not
+  imply that business records or uploaded files are protected.
+- Encryption readiness is reported separately. Backup storage provider mode is
+  visible, but its health remains unavailable without an actual dedicated probe;
+  successful configuration is not reported as live storage health.
+- Both application type checks and all 14 isolated system test groups passed,
+  including genuine PostgreSQL archive decoding, malformed archive rejection,
+  latest-backup metrics and exclusion of failed verification.
+- No restore, production deployment, email send or retention deletion occurred.
