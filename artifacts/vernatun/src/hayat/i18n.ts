@@ -1,5 +1,6 @@
 import type {Language} from '../portal/i18n';
 const copy={
+  meters:['Счётчики','Meters','Հաշվիչներ'],
  properties:['Здания','Buildings','Շենքեր'],units:['Помещения','Units','Տարածքներ'],people:['Команда','Team','Թիմ'],
  start:['Начать работу','Start work','Սկսել աշխատանքը'],submitReview:['Передать на проверку','Submit for review','Ուղարկել ստուգման'],photos:['Добавить фото результата','Add result photo','Ավելացնել արդյունքի լուսանկարը'],
  overview:['Обзор','Overview','Ակնարկ'], today:['Сегодня','Today','Այսօր'], works:['Работы','Work orders','Աշխատանքներ'], requests:['Заявки','Requests','Հայտեր'], defects:['Дефекты','Defects','Թերություններ'], passes:['Пропуска','Passes','Անցագրեր'], events:['События','Events','Իրադարձություններ'], incidents:['Инциденты','Incidents','Միջադեպեր'], assets:['Оборудование','Equipment','Սարքավորումներ'], announcements:['Объявления','Announcements','Հայտարարություններ'], meetings:['Собрания','Meetings','Ժողովներ'], documents:['Документы','Documents','Փաստաթղթեր'], settings:['Профиль','Profile','Պրոֆիլ'], notifications:['Уведомления','Notifications','Ծանուցումներ'],

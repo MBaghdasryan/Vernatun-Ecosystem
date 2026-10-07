@@ -348,7 +348,7 @@ Occupancy без исторических фактов не объявляетс
 10. Создать weighted meeting, повестку/кворум/период, опубликовать snapshot, завершить итог и протокол.
 11. Управлять долями собственности и историей в scope.
 12. Загружать документы/версии и управлять доступной видимостью.
-13. Работать с показаниями/приборами через разрешённый meters API. В текущих основных меню HAYAT/OS отдельный manager meters screen не выведен; это серверная capability, не полностью подключённая навигационная функция.
+13. Открыть «Счётчики» в HAYAT (`/hayat/meters`), просмотреть приборы и историю, создать прибор и передать показание через существующий meters API. Пункт доступен при `meters.manage` и включённом модуле meters; сервер проверяет область и допустимость изменения.
 14. Создавать/изменять предусмотренные расходы и плановые бюджеты.
 15. Продлевать/отменять договор аренды с причиной/version; читать финансовую аналитику и отчёты.
 
@@ -642,7 +642,7 @@ Contractor defects и technician WorkOrders — разные источники 
 | Handover/warranty | Передача/осмотры/гарантии | Developer; не общий resident-admin доступ |
 | Visitor passes | Visitor/vehicle/period/revoke/state | Owner/renter/explicit delegate create; security validate/events |
 | Access events | Entry/exit/history | Security scope; не общая история жителей |
-| Meter readings | Прибор/serial/значения | Manager manage API, отдельный пункт меню не выведен; owner/renter own submissions в ImTun |
+| Meter readings | Прибор/serial/значения | Manager — раздел «Счётчики» HAYAT; owner/renter — собственные показания в ImTun |
 | Announcements | Записанные новости | Manager manage; owner/renter/family permitted read |
 | Ownership | Доли/периоды/основание/history | Org admin/manager manage; permitted owner/portfolio read |
 | Meetings | Agenda/quorum/snapshot/vote/protocol | Manager manage; eligible owner vote; renter/family без default vote |

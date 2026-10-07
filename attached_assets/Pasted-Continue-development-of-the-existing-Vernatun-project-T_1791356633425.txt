@@ -1,0 +1,1528 @@
+Continue development of the existing Vernatun project.
+
+THIS IS NOT A NEW PRODUCT AND NOT A REDESIGN FROM SCRATCH.
+
+The backend/business implementation has advanced significantly through Master Prompt Phases 0–8, but the product is still incomplete from the actual user-interface and role-administration perspective.
+
+The attached/reference screens are now part of the required product specification.
+
+Your task is to perform a complete:
+
+REFERENCE UI → FUNCTION → ROUTE → API → PERMISSION → DATA → TEST
+
+gap analysis and then implement every missing functional element shown in those screens.
+
+The goal of this phase is:
+
+VERNATUN PRODUCT & INTERFACE COMPLETION
+
+The project must stop being a collection of backend capabilities that are only partially exposed through generic screens.
+
+Every standard user role must have a complete, coherent working workspace corresponding to the approved reference screens.
+
+==================================================
+0. MAIN RULE
+==================================================
+
+DO NOT replace the existing backend.
+
+DO NOT create duplicate business engines.
+
+DO NOT replace the existing:
+- React/Vite frontend
+- Express backend
+- PostgreSQL
+- Passport/session authentication
+- current RBAC
+- Workflow
+- financial engine
+- HAYAT
+- ImTun
+- Console
+- Vernatun OS
+
+Reuse all existing business logic.
+
+The priority is now:
+
+1. expose existing capabilities correctly in UI;
+2. implement genuinely missing capabilities;
+3. complete RBAC/user administration;
+4. bring dashboards to functional parity with the approved reference screens;
+5. close navigation/action gaps;
+6. run full role-based acceptance.
+
+==================================================
+1. FIRST STEP: SCREEN-BY-SCREEN GAP AUDIT
+==================================================
+
+Before changing code, inspect:
+
+- all current routes;
+- all 14 standard roles;
+- permissions;
+- dashboard components;
+- role navigation;
+- shared components;
+- APIs;
+- database schema;
+- reference screenshots.
+
+Build an internal matrix:
+
+| Reference screen | Role | Visible block/action | Exists UI | Exists API | Exists permission | Missing | Action |
+
+Do this for EVERY visible functional block.
+
+Do not treat decorative/static text as a feature.
+
+Do treat the following as features:
+
+- buttons;
+- tabs;
+- filters;
+- charts;
+- cards;
+- counters;
+- tables;
+- menus;
+- context selectors;
+- status chips;
+- actions;
+- quick actions;
+- search;
+- notifications;
+- drill-downs;
+- assignments;
+- approvals;
+- edit/create flows.
+
+==================================================
+2. REFERENCE SCREENS ARE NOW PRODUCT REQUIREMENTS
+==================================================
+
+The approved role/product screens include:
+
+1. Platform Administrator / SaaS Admin
+2. Organization Administrator
+3. Support / Implementation
+4. Portfolio Owner
+5. Developer / Handover Manager
+6. Manager
+7. Dispatcher
+8. Accountant
+9. Technician
+10. Contractor
+11. Security
+12. Unit Owner
+13. Renter
+14. Family Member
+
+The interface does not have to reproduce fake numbers from screenshots.
+
+ALL DATA MUST COME FROM REAL ALLOWED API DATA.
+
+If there is no data:
+show empty state.
+
+Never invent KPIs just to make UI look like the reference.
+
+==================================================
+3. CRITICAL NEW AREA — IDENTITY & ACCESS MANAGEMENT
+==================================================
+
+The current user/role administration is not sufficient.
+
+Create a proper:
+
+Vernatun IAM
+Identity & Access Management
+
+This is a mandatory part of this phase.
+
+==================================================
+4. SYSTEM ROLES VS CUSTOM ROLES
+==================================================
+
+Preserve the existing 14 standard roles as immutable system templates.
+
+Examples:
+
+- platform_admin
+- support
+- org_admin
+- portfolio_owner
+- developer
+- manager
+- accountant
+- dispatcher
+- technician
+- contractor
+- security
+- unit_owner
+- renter
+- family
+
+DO NOT let organization administrators rewrite the meaning of these system roles.
+
+Add a separate concept:
+
+CUSTOM ROLE / ROLE PROFILE
+
+A custom role is created from allowed permissions and scopes.
+
+Examples:
+
+- Senior Dispatcher
+- Chief Engineer
+- Finance Viewer
+- Building Manager
+- Front Desk Operator
+- Warranty Supervisor
+
+System roles remain stable.
+
+Custom roles may reuse allowed permission bundles.
+
+==================================================
+5. PLATFORM ADMIN — USER MANAGEMENT
+==================================================
+
+Add:
+
+Console
+→ Users & Access
+
+Suggested routes:
+
+/console/users
+/console/roles
+/console/permissions
+
+Platform administrator must be able to:
+
+- view platform users;
+- search/filter users;
+- create a platform-level account when permitted;
+- invite a user;
+- deactivate account;
+- reactivate account;
+- lock/unlock account where applicable;
+- force logout all sessions;
+- require password reset;
+- view MFA state without viewing MFA secret;
+- revoke sessions;
+- view assignments;
+- add/remove platform assignment;
+- view organization assignments;
+- inspect effective permissions;
+- inspect effective modules;
+- inspect access scopes;
+- view access history/audit.
+
+Do not give platform_admin hidden unlimited access to tenant business records.
+
+IAM administration and business-data access are different things.
+
+==================================================
+6. ORGANIZATION ADMIN — EMPLOYEES & ROLES
+==================================================
+
+Create the full UI shown conceptually by:
+
+"Сотрудники и роли"
+
+Route:
+
+/os/people
+/os/roles
+
+Organization Admin must be able to:
+
+- see all users assigned to the organization;
+- invite employee;
+- view pending invitations;
+- resend/revoke invitation;
+- open employee card;
+- assign role;
+- change role;
+- assign buildings;
+- assign units if role permits;
+- define employment/access dates;
+- suspend assignment;
+- revoke assignment;
+- see assignment history;
+- see effective permissions;
+- see effective modules.
+
+Do NOT delete historical user activity when access is revoked.
+
+==================================================
+7. CUSTOM ROLE BUILDER
+==================================================
+
+Add safe Role Builder.
+
+Role fields:
+
+- name
+- description
+- organization
+- base role/template optional
+- status
+- permissions
+- allowed scopes
+- allowed modules
+- created_by
+- created_at
+- version
+
+Permissions grouped by domain:
+
+Organization
+Properties
+People
+Requests
+Maintenance
+Finance
+Documents
+Community
+Access
+Meters
+Handover
+Support
+Reporting
+Settings
+
+Examples:
+
+requests.read
+requests.create
+requests.assign
+requests.verify
+requests.configure
+
+finance.read
+billing.calculate
+billing.publish
+payments.reconcile
+
+documents.read
+documents.manage
+
+access.read
+access.create
+access.manage
+
+etc.
+
+Reuse existing permission catalog.
+
+Do not invent permissions that have no server meaning without implementing server enforcement.
+
+==================================================
+8. USER-SPECIFIC FEATURE ACCESS
+==================================================
+
+Need per-user effective access management.
+
+But do NOT implement dangerous arbitrary "checkbox gives any permission".
+
+Use layered policy:
+
+SYSTEM ROLE
+        ↓
+CUSTOM ROLE / ASSIGNMENT
+        ↓
+ORGANIZATION MODULES
+        ↓
+BUILDING / UNIT SCOPE
+        ↓
+OPTIONAL USER OVERRIDE
+        ↓
+EFFECTIVE PERMISSIONS
+
+A user override may further RESTRICT access.
+
+Granting additional rights should require an explicitly authorized admin and may never bypass:
+
+- disabled module;
+- organization scope;
+- subscription policy;
+- ownership scope;
+- safety restrictions.
+
+UI must display:
+
+Inherited
+Allowed
+Denied
+Unavailable because module disabled
+Unavailable because subscription
+Unavailable because scope
+
+==================================================
+9. PERMISSION MATRIX UI
+==================================================
+
+Create visual permission matrix.
+
+Rows:
+features/actions.
+
+Columns:
+roles/custom roles.
+
+Example:
+
+                    Manager Dispatcher Technician Accountant
+Requests read          ✓        ✓          Own        -
+Create request         ✓        ✓          -          -
+Assign technician      ✓        ✓          -          -
+Accept work            ✓        -          -          -
+Finance read           ✓*       -          -          ✓
+Publish billing        -        -          -          ✓
+
+* according to module/context.
+
+Allow filtering by domain.
+
+Effective permission explanation must be available:
+
+"Why does this user have access?"
+
+Example:
+
+Allowed because:
+Role = Manager
+Permission = requests.assign
+Module = requests enabled
+Building scope = Building A
+Subscription = active
+
+==================================================
+10. ORGANIZATION DASHBOARD — MATCH REFERENCE FUNCTIONALLY
+==================================================
+
+Complete the Organization Administrator dashboard.
+
+Required blocks:
+
+- houses/objects count;
+- employees count;
+- active modules;
+- pending invitations;
+
+Employee table:
+
+- user;
+- role;
+- assigned properties;
+- status;
+- date added;
+- actions.
+
+Available modules:
+
+- module name;
+- state;
+- dependencies;
+- entitlement;
+- enable/disable where allowed.
+
+Integrations summary:
+
+- banking;
+- SMS;
+- email;
+- telephony;
+- future providers.
+
+Until integrations exist, show:
+Not configured
+
+NOT fake "Connected".
+
+Branding panel:
+
+- logo;
+- primary color;
+- accent;
+- organization name;
+- support details.
+
+Recent rights changes:
+
+- actor;
+- action;
+- user;
+- date.
+
+==================================================
+11. PLATFORM ADMIN / SAAS DASHBOARD
+==================================================
+
+Complete the SaaS/platform overview screens from the references.
+
+Required real-data blocks:
+
+- organizations;
+- buildings;
+- active/pilot organizations;
+- active subscriptions;
+- support cases;
+- onboarding implementations;
+
+SaaS revenue:
+
+Use actual Platform Billing data only.
+
+Until Platform Billing exists:
+show:
+"Not available / billing integration not configured"
+
+Do NOT show fake revenue.
+
+Required areas:
+
+- organization list;
+- subscription status;
+- implementation state;
+- support alerts;
+- integration failures;
+- recent platform activity;
+- modules;
+- system status links.
+
+The two provided platform-admin visual concepts may be consolidated into one coherent Console experience.
+
+Do not create a second superadmin role merely because two visual references exist.
+
+==================================================
+12. SUPPORT / IMPLEMENTATION DASHBOARD
+==================================================
+
+Complete:
+
+/console/onboarding
+
+Reference capabilities:
+
+- client selector;
+- implementation stages;
+- progress;
+- responsible person;
+- deadline;
+- status;
+- imports;
+- validation problems;
+- support queue;
+- system diagnostics;
+- upcoming meetings/tasks.
+
+Buttons visible in UI must work.
+
+Example:
+
+"Проверить импорт"
+must open actual import job/error preview.
+
+"Запустить проверку"
+must execute a real allowed diagnostic or show unavailable if infrastructure support is absent.
+
+==================================================
+13. ACCOUNTANT DASHBOARD
+==================================================
+
+Bring accounting UI to reference parity.
+
+Required navigation:
+
+- Overview
+- Accounts
+- Tariffs
+- Accruals
+- Payments
+- Reconciliation
+- Debt
+- Budget
+- Expenses
+- Periods
+- Reports
+
+Dashboard:
+
+- accrued;
+- paid;
+- outstanding;
+- unmatched transactions;
+- collection rate;
+- billing period.
+
+Resident/account table.
+
+Unmatched bank transactions.
+
+Billing preview.
+
+Actions:
+
+- calculate draft;
+- open batch;
+- import statement;
+- reconcile;
+- ignore valid bank row;
+- allocate;
+- publish;
+- adjustments;
+- export.
+
+Use existing Phase 4 logic.
+
+No fake bank settlement.
+
+==================================================
+14. MANAGER DASHBOARD
+==================================================
+
+Complete full residential operations dashboard.
+
+Navigation:
+
+- Overview
+- Buildings/Properties
+- Residents
+- Finance read view where permitted
+- Requests
+- Equipment
+- Meters
+- Announcements
+- Meetings
+- Documents
+- Reports
+
+Important:
+Current documentation admits manager meter capability exists server-side but separate screen is not exposed.
+
+CREATE THE ACTUAL METERS SCREEN.
+
+Dashboard:
+
+- buildings;
+- open requests;
+- overdue;
+- planned maintenance;
+- operational queue;
+- finance summary if permitted;
+- latest requests;
+- maintenance calendar;
+- announcements;
+- upcoming meeting.
+
+Every quick action must lead to the actual working section.
+
+==================================================
+15. DISPATCHER DASHBOARD
+==================================================
+
+Complete reference control-center behavior.
+
+Navigation:
+
+- Requests & Queue
+- Incidents
+- Calendar
+- Executors
+- Communications
+- Reports
+
+Dashboard:
+
+- emergency banner;
+- new requests;
+- unassigned;
+- overdue;
+- in progress;
+- kanban columns;
+- details panel;
+- technician availability;
+- daily schedule.
+
+Buttons:
+
+- register request;
+- assign technician;
+- schedule visit;
+- send resident reply;
+- internal note.
+
+Use existing Phase 2 APIs.
+
+==================================================
+16. TECHNICIAN DASHBOARD
+==================================================
+
+Complete mobile-first technician experience.
+
+Required:
+
+- Today
+- Works
+- Equipment
+- Profile
+
+Dashboard:
+
+- current date;
+- task count;
+- urgent count;
+- QR scanner;
+- urgent task;
+- active work;
+- checklist progress;
+- add photo;
+- materials;
+- upcoming tasks;
+- offline draft/sync status.
+
+Actions must map to existing:
+
+- accept;
+- start;
+- pause;
+- resume;
+- cannot perform;
+- checklist;
+- materials;
+- photos;
+- report;
+- submit for review.
+
+==================================================
+17. CONTRACTOR DASHBOARD
+==================================================
+
+Complete reference screen.
+
+Required:
+
+- assigned defects;
+- in progress;
+- awaiting verification;
+- deadlines;
+- documents count where allowed;
+- defect photo;
+- status;
+- action required;
+
+Actions:
+
+- accept/start assignment;
+- add result photo;
+- upload permitted evidence;
+- submit for verification;
+- respond after return.
+
+Do not merge contractor defects with technician WorkOrders.
+
+==================================================
+18. SECURITY DASHBOARD
+==================================================
+
+Complete mobile guard interface.
+
+Navigation:
+
+- Passes
+- Events
+- Incidents
+- Profile
+
+Required:
+
+- controller/integration status;
+- scan pass;
+- manual pass/vehicle search;
+- Expected;
+- On territory;
+- History;
+- valid/expired/revoked;
+- mark entry;
+- mark exit;
+- recent events;
+- incident button.
+
+Do not fake physical controller connectivity.
+
+If no provider:
+"Controller not configured".
+
+Future Boon integration must plug into this interface.
+
+==================================================
+19. DEVELOPER / HANDOVER
+==================================================
+
+Complete reference dashboard.
+
+Navigation:
+
+- Projects
+- Units
+- Handover & Warranty
+- Inspections
+- Defects
+- Contractors
+- Warranty
+- Documents
+- Reports
+
+Required:
+
+- readiness matrix by floor/unit;
+- unit status;
+- unit plan;
+- defect markers;
+- defects list;
+- contractor work;
+- inspections calendar;
+- warranty expiration.
+
+If floorplan image/coordinates are unavailable:
+show real empty state / upload/configure workflow.
+
+Do not invent plans.
+
+Implement floorplan metadata/marker UI where necessary.
+
+==================================================
+20. PORTFOLIO OWNER
+==================================================
+
+Complete portfolio dashboard.
+
+Navigation:
+
+- Overview
+- Properties
+- Lease
+- Budget
+- Expenses
+- Service
+- Reports
+- Documents
+
+Dashboard:
+
+- objects count;
+- occupancy;
+- income;
+- expenses;
+- cashflow;
+- objects table;
+- expenses requiring approval;
+- contractor scorecard;
+- expiring leases.
+
+Current backend already has much of this aggregation.
+
+Expose it consistently.
+
+==================================================
+21. ImTun OWNER
+==================================================
+
+Bring owner home screen to approved reference.
+
+Required:
+
+- greeting;
+- current unit/context;
+- billing amount;
+- pay CTA;
+- charges link;
+- meters;
+- request;
+- guest pass;
+- documents;
+- meetings;
+- family;
+- recent work/request;
+- announcements.
+
+"Pay" must not pretend payment gateway exists.
+
+Until provider integration:
+open invoice/payment-information flow and show payment method state honestly.
+
+==================================================
+22. ImTun RENTER
+==================================================
+
+Required:
+
+- lease expiry/access date;
+- assigned charges;
+- payment CTA;
+- meters;
+- request;
+- guests;
+- documents;
+- own requests;
+- visit approval;
+- announcements;
+- lease card.
+
+Respect payer assignment.
+
+Do not show ownership/voting/family administration.
+
+==================================================
+23. ImTun FAMILY
+==================================================
+
+Required:
+
+- greeting;
+- selected unit;
+- create request if delegated;
+- announcements;
+- management contacts;
+- home documents only when allowed;
+- own/delegated requests;
+- delegated access credential;
+- emergency management contact.
+
+Do not expose finance or ownership.
+
+"My key / Open door" must NOT operate physical hardware until an actual AccessControlProvider is connected.
+
+If access integration absent:
+show credential/status only or
+"Physical access provider not configured".
+
+==================================================
+24. GLOBAL NAVIGATION COMPLETENESS
+==================================================
+
+Perform a full navigation audit.
+
+Every capability that is supposed to be a normal end-user function needs a discoverable route.
+
+Example of current gap:
+meters API exists for manager, but the menu does not expose a complete manager meters workflow.
+
+Search for similar cases.
+
+Create UI routes for legitimate missing user-facing functions.
+
+Do NOT expose internal/admin-only endpoints merely because API exists.
+
+==================================================
+25. SEARCH
+==================================================
+
+The reference screens show global search.
+
+Implement role-aware search.
+
+Search only permitted entities.
+
+Possible categories:
+
+- organizations;
+- buildings;
+- units;
+- people;
+- requests;
+- work orders;
+- defects;
+- invoices;
+- documents;
+- support cases.
+
+Do not build one giant unrestricted SQL search.
+
+Return grouped authorized results.
+
+==================================================
+26. NOTIFICATIONS HEADER
+==================================================
+
+Every applicable shell should have:
+
+- unread count;
+- notification dropdown;
+- mark read;
+- open target;
+- safe context switch.
+
+Use current notification infrastructure.
+
+==================================================
+27. CONTEXT SELECTORS
+==================================================
+
+Reference dashboards frequently display:
+
+organization
+property
+building
+unit
+month/period.
+
+Add appropriate selectors.
+
+Changing context must:
+
+- clear old data;
+- abort/ignore late requests;
+- reauthorize;
+- reload metrics.
+
+Never merge data across unauthorized scopes.
+
+==================================================
+28. TABLE ACTION MENUS
+==================================================
+
+Where references show "..." action menus, implement real allowed actions.
+
+Example employee:
+
+- Open
+- Edit assignment
+- Change scope
+- Suspend assignment
+- Revoke assignment
+- View audit
+
+Do not render disabled fake options without explanation.
+
+==================================================
+29. DASHBOARD KPIs
+==================================================
+
+Create a centralized role-dashboard metric contract.
+
+Each metric must have:
+
+- backend query;
+- permission;
+- module requirement;
+- definition;
+- empty state.
+
+No screenshot placeholder values.
+
+==================================================
+30. CHARTS
+==================================================
+
+Only render charts with sufficient historical data.
+
+If history absent:
+
+"Недостаточно данных для графика."
+
+Do not extrapolate fake series.
+
+==================================================
+31. USER STATUS MODEL
+==================================================
+
+Add clear account/assignment distinction.
+
+Account status:
+
+- active
+- locked
+- disabled
+
+Assignment status:
+
+- invited
+- active
+- suspended
+- expired
+- revoked
+
+Do not conflate account disabled with one organization assignment revoked.
+
+==================================================
+32. CREATE USER VS INVITE USER
+==================================================
+
+Support both concepts safely.
+
+Preferred standard flow:
+
+Invite User
+→ user activates account.
+
+Platform admin may create a platform-managed account only when business policy permits.
+
+Organization admin normally invites, rather than sets another user's password.
+
+Never display generated plaintext password after creation.
+
+==================================================
+33. USER CARD
+==================================================
+
+Create comprehensive user/employee card.
+
+Tabs:
+
+- Overview
+- Assignments
+- Roles
+- Permissions
+- Buildings/Units
+- Sessions
+- MFA/Security
+- Activity/Audit
+
+Do not expose password hashes, MFA secrets or session tokens.
+
+==================================================
+34. EFFECTIVE ACCESS DEBUGGER
+==================================================
+
+For authorized admins provide:
+
+"Check access"
+
+Input:
+
+user
+organization
+context
+action
+
+Result:
+
+ALLOWED / DENIED
+
+Explanation:
+
+role
+permission
+module
+scope
+subscription
+assignment state
+MFA/fresh-auth if relevant.
+
+This will dramatically improve supportability.
+
+==================================================
+35. FEATURE ACTIVATION PER USER
+==================================================
+
+Implement safe feature controls.
+
+Do not duplicate module system.
+
+Separate:
+
+MODULE
+organization-wide product entitlement
+
+PERMISSION
+what action a role may do
+
+SCOPE
+where action may be performed
+
+USER OVERRIDE
+optional narrower per-user restriction or specifically audited exceptional grant
+
+Any exceptional grant must include:
+
+- reason;
+- granted_by;
+- expires_at optional;
+- audit;
+- permission allowlist.
+
+It must NEVER override a disabled module or tenant boundary.
+
+==================================================
+36. ROLE TEMPLATES
+==================================================
+
+Platform admin may manage a global catalog of custom-role templates.
+
+Examples:
+
+- Senior Dispatcher
+- Finance Viewer
+- Facility Supervisor
+- Warranty Manager
+
+Organization Admin can instantiate only templates allowed for tenant use.
+
+System roles remain immutable.
+
+==================================================
+37. MODULE ACTIVATION UX
+==================================================
+
+Organization dashboard must show:
+
+- Included in plan
+- Enabled
+- Disabled
+- Requires dependency
+- Not included
+- Read-only due subscription
+- Override
+
+Clicking module should explain why its state exists.
+
+==================================================
+38. INTEGRATIONS CARDS
+==================================================
+
+References show integration cards.
+
+Create provider-neutral Integration Summary now.
+
+Categories:
+
+- payments;
+- bank;
+- email;
+- SMS;
+- telephony;
+- access control;
+- cameras;
+- intercom;
+- AI;
+- chatbots.
+
+Current real statuses only.
+
+Examples:
+
+Resend:
+Configured / pending domain / error.
+
+Boon:
+Not configured.
+
+Ameriabank:
+Not configured.
+
+Do not implement those providers in this phase unless already existing.
+
+This is only the UI foundation that future integration prompts will plug into.
+
+==================================================
+39. ALL REFERENCE BUTTONS MUST BE CLASSIFIED
+==================================================
+
+For every button visible in every supplied reference screenshot, classify it as:
+
+A. WORKING
+B. IMPLEMENT NOW
+C. EXTERNAL PROVIDER REQUIRED
+D. INTENTIONALLY NOT ALLOWED FOR ROLE
+
+There must be no unexplained dead buttons.
+
+==================================================
+40. VISUAL PARITY
+==================================================
+
+After functional parity, align UI with references:
+
+- dark navy sidebar desktop;
+- white content;
+- orange primary CTA;
+- card spacing;
+- KPI cards;
+- status chips;
+- table density;
+- kanban;
+- mobile bottom navigation;
+- responsive cards;
+- typography hierarchy;
+- context/user header.
+
+Preserve product branding:
+Vernatun Console
+Vernatun OS
+HAYAT
+ImTun.
+
+Do not replace HAYAT/ImTun branding with generic Vernatun when product identity exists.
+
+==================================================
+41. RESPONSIVE
+==================================================
+
+Validate each standard workspace at:
+
+360
+390
+768
+1024
+1440
+
+Mobile-first roles:
+
+technician
+contractor
+security
+owner
+renter
+family
+
+must be particularly strong at 390px.
+
+Desktop-first:
+
+platform admin
+org admin
+accountant
+portfolio
+developer
+manager
+dispatcher
+support.
+
+==================================================
+42. ACCESSIBILITY
+==================================================
+
+Test:
+
+- keyboard;
+- focus;
+- modal focus trap;
+- aria;
+- labels;
+- status meaning not color-only;
+- minimum touch size;
+- responsive zoom.
+
+==================================================
+43. FULL ROLE ACCEPTANCE
+==================================================
+
+Create real browser acceptance for all 14 roles.
+
+For each role:
+
+LOGIN
+→ DASHBOARD
+→ EACH NAV ITEM
+→ KEY ACTIONS
+→ PERMISSION DENIALS
+→ LOGOUT
+
+Use isolated safe test data.
+
+Do not mutate production/main user data for QA.
+
+==================================================
+44. CROSS-ROLE JOURNEYS
+==================================================
+
+Finally run:
+
+Journey 1:
+Org Admin
+→ create/invite employee
+→ assign Dispatcher role
+→ assign Building A
+→ user accepts
+→ dispatcher sees only Building A.
+
+Journey 2:
+Org Admin
+→ custom role
+→ limited permissions
+→ assign user
+→ effective access debugger confirms grants/denials.
+
+Journey 3:
+Resident
+→ request
+→ dispatcher
+→ technician
+→ manager
+→ resident confirmation.
+
+Journey 4:
+Accountant
+→ mass billing
+→ reconciliation
+→ resident sees result.
+
+Journey 5:
+Developer
+→ defect
+→ contractor
+→ return/accept.
+
+Journey 6:
+Owner
+→ guest pass
+→ security entry/exit.
+
+Journey 7:
+Manager
+→ meeting
+→ owner vote
+→ protocol.
+
+==================================================
+45. DO NOT START NEW EXTERNAL INTEGRATIONS YET
+==================================================
+
+In this phase DO NOT implement:
+
+- Ameriabank production provider;
+- Idram production provider;
+- utilities;
+- Boon;
+- SMS;
+- cameras;
+- AI;
+- native apps.
+
+Only create the UI/integration slots if needed.
+
+Those are the NEXT architecture phases.
+
+==================================================
+46. DATABASE
+==================================================
+
+If IAM/custom-role changes require schema:
+
+use additive migrations only.
+
+Possible concepts after audit:
+
+custom_roles
+custom_role_permissions
+role_templates
+user_permission_overrides
+assignment_scopes
+
+But DO NOT create them if equivalent tables already exist.
+
+==================================================
+47. SECURITY
+==================================================
+
+New IAM APIs need strong server checks.
+
+Test:
+
+- org admin cannot modify platform admin;
+- org admin cannot assign permission they are not allowed to delegate;
+- no cross-organization assignments;
+- no privilege escalation via custom role;
+- custom role cannot bypass modules;
+- custom role cannot bypass subscription;
+- user override cannot escape building/unit scope;
+- revoked assignment stops access immediately;
+- disabled account stops all sessions/actions;
+- platform admin IAM does not imply tenant financial read access.
+
+==================================================
+48. AUDIT
+==================================================
+
+Audit every IAM mutation:
+
+- account created
+- account disabled
+- invitation
+- assignment
+- role changed
+- custom role created
+- permission changed
+- scope changed
+- user override added
+- user override removed
+- session revoked
+- MFA policy change
+
+Store previous/new structured values.
+
+==================================================
+49. DOCUMENTATION
+==================================================
+
+Create:
+
+docs/ROLE-UI-PARITY.md
+
+For every role:
+
+- reference screenshot;
+- routes;
+- navigation;
+- cards;
+- actions;
+- backend;
+- status.
+
+Create:
+
+docs/IAM-ARCHITECTURE.md
+
+Create:
+
+docs/PERMISSION-CATALOG.md
+
+Create:
+
+docs/REFERENCE-SCREEN-GAP-REPORT.md
+
+==================================================
+50. FINAL GAP REPORT
+==================================================
+
+At the end generate:
+
+| Role | Reference blocks | Implemented | Missing | External blocked | Browser accepted |
+
+Do NOT use arbitrary completion percentage.
+
+Also provide:
+
+| Screenshot | Visible functions | Working | Newly implemented | Remaining |
+
+==================================================
+51. DEFINITION OF DONE
+==================================================
+
+This phase is DONE only when:
+
+1. every supplied role screenshot has been audited;
+2. every visible business function has a real destination;
+3. every allowed button works;
+4. every non-working provider-backed button clearly states why;
+5. platform/admin user management is complete;
+6. organization employee/role management is complete;
+7. custom roles and permission profiles work safely;
+8. per-user effective access is inspectable;
+9. all 14 roles have coherent dashboards;
+10. major backend capabilities are no longer hidden behind generic screens;
+11. role-based browser acceptance is executed;
+12. no fake KPI or fake integration states are used.
+
+Only after this phase should we move to:
+
+Payments
+→ Utility Billing
+→ Boon
+→ Platform Operations
+→ Native applications.

@@ -224,3 +224,59 @@ mtime_ms = 1791355761948
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/a8bc0da2-5d45-4343-92ea-4ab953313e98/a1bb183a-aa5f-45ca-9fa8-36e87e2f2ed0"
 storage_version_token = "1791355773150349"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "SBZHEzIOatFYSM4nPM4SC"
+uri = "file://artifacts/vernatun/docs/REFERENCE-SCREEN-GAP-REPORT.md"
+type = "text"
+title = "Vernatun — аудит референсов и оставшихся функций"
+description = "Матрица по 15 экранам и 14 ролям, классификация функций, разрывы и результаты проверки счётчиков управляющего."
+logical_id = "4472b6a7-66c9-450a-a539-7adb467b1b7a"
+content_hash = "sha256:17548065381b1271177ed370b33dbe4e350518c39dd7b23a8aa9083a69b85dcd"
+size = 42343
+mtime_ms = 1791357894813
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/4472b6a7-66c9-450a-a539-7adb467b1b7a/4c54064c-67f3-4e0f-a38b-1e097dd3541b"
+storage_version_token = "1791357909273273"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "vG4Wfs629LoEYt4Idkh4M"
+uri = "file://artifacts/vernatun/docs/ROLE-UI-PARITY.md"
+type = "text"
+title = "Vernatun — соответствие интерфейсов ролям"
+description = "Точки входа, навигация, frontend/backend и ограничения каждой роли."
+logical_id = "cf99223a-5b68-4118-ad71-f316816ba360"
+content_hash = "sha256:aee089aed8184b5296810f703a8e95acb92b2935a86d977bcc01b320e0cea086"
+size = 12826
+mtime_ms = 1791357896335
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/cf99223a-5b68-4118-ad71-f316816ba360/43394715-d37b-4ba7-aebd-a03aeecf3504"
+storage_version_token = "1791357910565649"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "xG8-6-9tBUEKhhSaN0kQg"
+uri = "file://artifacts/vernatun/docs/IAM-ARCHITECTURE.md"
+type = "text"
+title = "Vernatun — проект архитектуры IAM"
+description = "Проект безопасного управления аккаунтами, назначениями, пользовательскими ролями и эффективными правами; реализация ещё предстоит."
+logical_id = "c084cadd-7992-47da-ae29-c62bb55a611f"
+content_hash = "sha256:8a4f0618c53054c01da1528f6f274a7b2449023ac9aeb36e0fe6c1bc81fabdf3"
+size = 16097
+mtime_ms = 1791357026016
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/c084cadd-7992-47da-ae29-c62bb55a611f/78e6c466-a155-4825-94e6-b8c991548ad8"
+storage_version_token = "1791357911856326"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "1qYoTp-5WpQjC3XrureiP"
+uri = "file://artifacts/vernatun/docs/PERMISSION-CATALOG.md"
+type = "text"
+title = "Vernatun — каталог 73 разрешений"
+description = "Действующие системные роли, разрешения, модули и ссылки на серверные проверки."
+logical_id = "c7d811a9-8c8c-49ea-bf9c-85733763b0fd"
+content_hash = "sha256:f1a89b36e665f0a449e3bf1043f2a2704a753da3a8b2d3ee9d0ae1f3ad3b8fab"
+size = 15751
+mtime_ms = 1791357248275
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/c7d811a9-8c8c-49ea-bf9c-85733763b0fd/f53f750c-ba9b-413c-a0f6-1986a8b541b0"
+storage_version_token = "1791357913497892"
+content_type = "text/markdown"

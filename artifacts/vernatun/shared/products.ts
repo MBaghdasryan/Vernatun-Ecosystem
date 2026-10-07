@@ -20,7 +20,7 @@ export function startRoute(role:string,c?:RouteContext){
 }
 export function allowedProducts(c:{role_key:string;permissions:readonly string[];modules?:readonly string[]}):Product[]{const result=[primaryProduct(c.role_key)];if(c.role_key==='manager'&&c.permissions.some(p=>['billing.read','expenses.read','reports.export'].includes(p))&&(!c.modules||c.modules.includes('finance')))result.push('os');return result}
 const osViews=['ownership','analytics','scorecard','meetings','finance','budgets','expenses','leases','handovers','defects','subscriptions','properties','units','people','invitations','modules','audit','imports','documents','invoices','support','support-cases','incidents'];
-const hayatViews=['ownership','analytics','scorecard','budgets','support-cases','requests','properties','units','people','assets','announcements','meetings','passes','defects','documents','audit','incidents'];
+const hayatViews=['ownership','analytics','scorecard','budgets','support-cases','requests','properties','units','people','assets','meters','announcements','meetings','passes','defects','documents','audit','incidents'];
 const imtunViews=['ownership','support-cases','finance','invoices','requests','meters','announcements','documents','passes','delegations','meetings','leases','properties'];
 const consoleViews=['organizations','invitations','subscriptions','onboarding','support-cases','support','audit','properties','units','requests','imports','email'];
 export function viewInProduct(product:Product,view:string){return ['overview','settings','notifications'].includes(view)||(product==='os'?osViews:product==='hayat'?hayatViews:product==='imtun'?imtunViews:consoleViews).includes(view)}
