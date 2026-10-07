@@ -5,16 +5,16 @@ import {requireAuth,requirePermission,context,ApiError} from './access.js';
 import {transaction,record,idempotent} from './operations.js';
 import {uuid,day,currency} from './finance-shared.js';
 export const portfolioAnalytics=Router();portfolioAnalytics.use(requireAuth);
-const filters=z.object({from:day,to:day,currency:currency.default('AMD'),buildingId:uuid.optional(),propertyId:uuid.optional()});
+const filters=z.object({from:day,to:day,currency:currency.default('AMD'),buildingId:uuid.optional(),propertyId:uuid.optional(),portfolioObjectId:uuid.optional()});
 async function scope(req:any,score=false){
  const c=await context(req),p=score&&c.permissions.includes('workorders.accept')?'workorders.accept':c.permissions.includes('reports.read')?'reports.read':'expenses.read';
  await requirePermission(req,p);if(!c.organization_id||c.unit_id)throw new ApiError(403,'forbidden');
  if(!c.modules?.includes(score?'handover':'finance'))throw new ApiError(403,'module_disabled');
  const f=filters.parse(req.query);if(f.to<f.from||Date.parse(f.to)-Date.parse(f.from)>3660*86400000)throw new ApiError(400,'invalid_dates');
- // In the restored schema a portfolio property is a building. Do not invent
- // an unpersisted complex hierarchy or claim an unsupported group dimension.
+ // Preserve legacy propertyId=building compatibility; new group dimension is explicit.
  if(f.buildingId&&f.propertyId&&f.buildingId!==f.propertyId)throw new ApiError(400,'invalid_filters');
- const buildings=(await pool.query('SELECT id,name FROM buildings WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2) AND ($3::uuid IS NULL OR id=$3) ORDER BY name',[c.organization_id,c.building_id,f.buildingId??f.propertyId??null])).rows;
+ if(f.portfolioObjectId&&!(await pool.query('SELECT 1 FROM portfolio_objects WHERE id=$1 AND organization_id=$2',[f.portfolioObjectId,c.organization_id])).rowCount)throw new ApiError(404,'not_found');
+ const buildings=(await pool.query('SELECT id,name,portfolio_object_id FROM buildings WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2) AND ($3::uuid IS NULL OR id=$3) AND ($4::uuid IS NULL OR portfolio_object_id=$4) ORDER BY name',[c.organization_id,c.building_id,f.buildingId??f.propertyId??null,f.portfolioObjectId??null])).rows;
  const timezone=(await pool.query('SELECT timezone FROM organizations WHERE id=$1',[c.organization_id])).rows[0].timezone;
  return {c,f,buildings,timezone};
 }

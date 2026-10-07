@@ -1,5 +1,15 @@
 # Vernatun Completion Report — фактическое состояние проекта
 
+## Актуальное дополнение: Phase 7
+
+Основная реализация уведомлений/preferences, scoped branding, provider abstraction и ограниченного PWA выполнена. Реальные объекты портфеля с CRUD, CAS, привязкой/отвязкой зданий и независимым фильтром реализованы; прежнее ограничение Phase 6 о grouping снято. См. [подробный отчёт](PHASE7-COMPLETION-REPORT.md).
+
+Phase 7 9/9, Core 106/106 до Phase 6, исправленный отдельный Phase 6 8/8, backup/storage/inventory 9/9; TypeScript и Web build пройдены. Development migration сохранила прежние данные 23 таблиц. Полный Core сначала выявил ошибочный legacy-only fixture для module override, а не основание ослаблять policy; это отражено в отчёте.
+
+EXTERNAL/PARTIAL: domain/email live delivery, live S3/production storage selection, production reminder scheduler и реальная mobile/PWA приёмка. Production и письма не затрагивались. Phase 8 ещё не выполнена.
+
+Read-only browser pass: OS/HAYAT/ImTun settings и 402px layout без pageerror/overlap, manifest/icons 200, private/API cache отсутствует. Browser PARTIAL для edit/assignment при пустом main portfolio и technician local-draft/offline flow; API проверки не подменяют этот статус.
+
 ## Последнее дополнение: Phase 5, 7 октября 2026
 
 COMPLETE implementation: организация/card/profile/status lifecycle, append-only support conversation и очередь, onboarding dependencies/order/reopen и typed units/owners/residents/meters/opening balances. 106 isolated core checks прошли; workspace TypeScript, generated OpenAPI contracts и Vite build успешны. Migration 020 проверена изолированно и применена только development с совпадением прежних данных 17 business tables. Целевая browser acceptance COMPLETE: org guards/routing, staff/customer conversation и ограничения, resident mapping, finance-only imports, явный identical retry после 503 без autoretry, onboarding prerequisites/cascade/history и выбранные mobile screens. Stale action alert после successful retry исправлен с frontend TypeScript/build verification. Полный отчёт — [PHASE5-COMPLETION.md](PHASE5-COMPLETION.md), доказательства и ограничения — [PHASE5-BROWSER-ACCEPTANCE.md](PHASE5-BROWSER-ACCEPTANCE.md).

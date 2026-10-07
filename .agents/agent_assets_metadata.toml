@@ -168,3 +168,17 @@ mtime_ms = 1791335437645
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/44fcb8c1-547f-4656-ba1a-3d530f7e8c49/174fee43-ce22-42c9-b01a-59811c9d9da5"
 storage_version_token = "1791335479679226"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "jeLE7GaSEAYFwz0DhoZrj"
+uri = "file://artifacts/vernatun/docs/PHASE7-COMPLETION-REPORT.md"
+type = "text"
+title = "Phase 7 — итоговый отчёт"
+description = "Реализация, группирование портфеля, результаты проверок и оставшиеся ограничения."
+logical_id = "c2323a22-5c49-4e36-ae3d-2bf0a91244ea"
+content_hash = "sha256:c4e6c3759c81046e429581395586065a3bb90b163fa093c55e310c2d070e396e"
+size = 11702
+mtime_ms = 1791339645674
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/c2323a22-5c49-4e36-ae3d-2bf0a91244ea/61f08562-40ea-4d13-8b45-7fef7b46ca75"
+storage_version_token = "1791339679170604"
+content_type = "text/markdown"

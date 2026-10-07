@@ -2,20 +2,23 @@ import {useState,type FormEvent} from 'react';
 import type {Currency,Language} from './i18n';
 import type {RoleContext} from './types';
 import {Fail,Frozen,useFrozen,useMounted,useLoad,LoadFail,Empty,p6,bp,minorText,minorFromMajor,dayText,ISO_DAY,type Row} from './phase6-ui';
+import PortfolioObjects from './PortfolioObjects';
 
-type Flt={from:string;to:string;currency:string;buildingId:string;propertyId:string};
+type Flt={from:string;to:string;currency:string;buildingId:string;propertyId:string;portfolioObjectId?:string};
 function Filters({c,l,currency,withCurrency,onApply}:{c:RoleContext;l:Language;currency:Currency;withCurrency:boolean;onApply:(f:Flt)=>void}){
  const blds=useLoad<Row[]>('/community/buildings',[c.id]);
+ const objects=useLoad<Row[]>('/portfolio/objects',[c.id]);
  const [f,setF]=useState<Flt>({from:'',to:'',currency,buildingId:'',propertyId:''}),[bad,setBad]=useState(false);
  const ok=ISO_DAY.test(f.from)&&ISO_DAY.test(f.to)&&f.from<=f.to&&(!f.buildingId||!f.propertyId||f.buildingId===f.propertyId);
- return <form className="p5-filters" onSubmit={(e:FormEvent)=>{e.preventDefault();if(!ok){setBad(true);return}setBad(false);onApply(f)}}>
+ return <><form className="p5-filters" onSubmit={(e:FormEvent)=>{e.preventDefault();if(!ok){setBad(true);return}setBad(false);onApply(f)}}>
   <label>{p6(l,'from')}<input type="date" value={f.from} onChange={e=>setF({...f,from:e.target.value})}/></label><label>{p6(l,'to')}<input type="date" value={f.to} min={f.from||undefined} onChange={e=>setF({...f,to:e.target.value})}/></label>
   {withCurrency&&<label>{p6(l,'currency')}<select value={f.currency} onChange={e=>setF({...f,currency:e.target.value})}>{['AMD','RUB','USD'].map(x=><option key={x}>{x}</option>)}</select></label>}
   <label>{p6(l,'building')}<select value={f.buildingId} onChange={e=>setF({...f,buildingId:e.target.value})}><option value="">{p6(l,'all')}</option>{blds.data?.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
-  <label>{p6(l,'property')}<select value={f.propertyId} onChange={e=>setF({...f,propertyId:e.target.value})}><option value="">{p6(l,'all')}</option>{blds.data?.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label><small className="p5-muted">{p6(l,'propNote')}</small>
-  <button className="p-button orange">{p6(l,'apply')}</button>{bad&&<span className="p-error" role="alert">{p6(l,'invalid')}</span>}</form>}
+  <label>{p6(l,'property')}<select value={f.portfolioObjectId??''} onChange={e=>setF({...f,portfolioObjectId:e.target.value,buildingId:''})}><option value="">{p6(l,'all')}</option>{objects.data?.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+  {!!objects.error&&<LoadFail l={l} error={objects.error} onRetry={objects.reload}/>}
+  <button className="p-button orange">{p6(l,'apply')}</button>{bad&&<span className="p-error" role="alert">{p6(l,'invalid')}</span>}</form><PortfolioObjects c={c} language={l}/></>}
 const occ=(r:Row|undefined,l:Language)=>r?.occupancyBasisPoints===null||r?.occupancyBasisPoints===undefined?p6(l,'occIncomplete'):bp(r.occupancyBasisPoints)+' ('+(r.occupiedUnits??'—')+'/'+(r.unitCount??'—')+')';
-const qs=(f:Flt|undefined,cur:boolean)=>{const q=new URLSearchParams();if(f){if(f.from)q.set('from',f.from);if(f.to)q.set('to',f.to);if(cur&&f.currency)q.set('currency',f.currency);if(f.buildingId)q.set('buildingId',f.buildingId);if(f.propertyId)q.set('propertyId',f.propertyId)}return q.toString()};
+const qs=(f:Flt|undefined,cur:boolean)=>{const q=new URLSearchParams();if(f){if(f.from)q.set('from',f.from);if(f.to)q.set('to',f.to);if(cur&&f.currency)q.set('currency',f.currency);if(f.buildingId)q.set('buildingId',f.buildingId);if(f.propertyId)q.set('propertyId',f.propertyId);if(f.portfolioObjectId)q.set('portfolioObjectId',f.portfolioObjectId)}return q.toString()};
 
 export function Analytics({c,language:l,currency}:{c:RoleContext;language:Language;currency:Currency}){
  const [f,setF]=useState<Flt>();const cur=f?.currency||currency;

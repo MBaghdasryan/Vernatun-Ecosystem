@@ -11,4 +11,8 @@ from: Date;
 to: Date;
 buildingId?: string;
 propertyId?: string;
+/**
+ * Real organization-scoped portfolio group.
+ */
+portfolioObjectId?: string;
 };

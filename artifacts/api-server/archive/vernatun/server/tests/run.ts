@@ -17,6 +17,10 @@ const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_
 let status=0;
 const checks=process.argv.includes('--offline-only')
  ? [['--test','server/tests/offline.test.ts']]
+ : process.argv.includes('--phase7-only')
+ ? [['--test','server/tests/phase7.test.ts']]
+ : process.argv.includes('--inventory-only')
+ ? [['--test','server/tests/storage-inventory.test.ts']]
  : process.argv.includes('--delivery-only')
  ? [['--test','server/tests/email-providers.test.ts'],['--test','server/tests/email-delivery.test.ts'],['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--phase1-only')

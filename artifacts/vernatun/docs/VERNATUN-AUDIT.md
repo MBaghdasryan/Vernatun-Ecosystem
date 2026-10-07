@@ -1,5 +1,13 @@
 # Vernatun — сверка с активной спецификацией
 
+## Актуальное дополнение: Phase 7 и grouping портфеля
+
+Каталог 21 событий + explicit account-security policy; in-app preference delivery flags; blocked email intentions; fresh-context notification links; CAS preferences; organization branding с raster sanitization/private logo; App Storage/Local/S3 provider boundary; static-only PWA manifest/icons/fallback. Объекты портфеля — самостоятельная scoped dimension с CRUD, atomic building assignments, empty-only delete и новым `portfolioObjectId`; legacy alias сохранён.
+
+Изолированно: Phase 7 9/9, отдельный Phase 6 8/8, backup/storage/inventory 9/9; Core до Phase 6 106/106. Generated contracts/TypeScript/build успешны, 23 таблицы сохранили original-column hashes/counts после development migration. Подробности и external blockers: [Phase 7 report](PHASE7-COMPLETION-REPORT.md). Исторические оценки ниже не означают, что ранее отмеченное grouping всё ещё отсутствует.
+
+Browser read-only: settings/forms/filter hierarchy, ImTun 402px, manifest/icons и отсутствие private/API cache подтверждены. Edit/assignment в браузере и technician offline/local drafts остаются PARTIAL, без создания main business data.
+
 ## Актуальное дополнение: Phase 5
 
 COMPLETE implementation и isolated regressions: organization profile/card/status lifecycle, append-only support conversation + private internal notes + scoped queue, guarded onboarding dependencies/order/reopen и пять typed import strategies. 106 isolated core checks прошли; TypeScript, OpenAPI generation и production Web build успешны. Migration 020 применена development после isolated tests, прежние поля 17 business tables сохранены по counts/digests. Целевая browser acceptance COMPLETE: organization guards/routing, support privacy/sharing, resident mapping, finance-only imports и exact-intent 503 retry, onboarding dependencies/cascade и выбранные 390px screens. После successful retry очищается stale action error; frontend TypeScript/build прошли. Точные границы — [PHASE5-BROWSER-ACCEPTANCE.md](PHASE5-BROWSER-ACCEPTANCE.md), полный объём — [PHASE5-COMPLETION.md](PHASE5-COMPLETION.md). Phases 6–8 и production/email/private-byte acceptance не выполнены. Следующий абзац и baseline ниже являются историческими, не текущим статусом Phase 5.

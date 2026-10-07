@@ -11,6 +11,234 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /notifications/catalog:
+    get:
+      operationId: getNotificationCatalog
+      responses:
+        "200":
+          description: Event catalog, categories, channel readiness and explicit critical policy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events, categories, channels]
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, category, critical]
+                      properties:
+                        code: {type: string}
+                        category: {type: string}
+                        critical: {type: boolean}
+                  categories: {type: array, items: {type: string}}
+                  channels:
+                    type: object
+                    properties:
+                      in_app: {type: string, enum: [active]}
+                      email: {type: string, enum: [pending_domain]}
+                      sms: {type: string, enum: [future]}
+                      push: {type: string, enum: [future]}
+  /notifications/preferences:
+    get:
+      operationId: getNotificationPreferences
+      responses:
+        "200":
+          description: Global user preferences; a missing row has version zero.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NotificationPreferences"}
+    put:
+      operationId: updateNotificationPreferences
+      description: Future notifications only. CAS conflict returns 409; only catalog-critical account security overrides opt-out.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/NotificationPreferences"}
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NotificationPreferences"}
+  /notifications/due:
+    post:
+      operationId: examineDueNotifications
+      description: Organization-settings permission, idempotent due reminder generation, no email sends.
+      responses:
+        "200":
+          description: Examination summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  examinedDueRecords: {type: integer}
+                  email: {type: string, enum: [pending_domain]}
+  /organization/branding:
+    get:
+      operationId: getOrganizationBranding
+      responses:
+        "200":
+          description: Current context organization branding
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OrganizationBrandingState"}
+    put:
+      operationId: updateOrganizationBranding
+      description: Organization settings permission, CAS version, strict hex colors and HTTPS URLs; no HTML or logo URLs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, branding]
+              properties:
+                version: {type: integer, minimum: 0}
+                branding: {$ref: "#/components/schemas/OrganizationBrandingMetadata"}
+      responses:
+        "200":
+          description: Saved branding
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OrganizationBrandingState"}
+  /organization/branding/logo:
+    parameters:
+      - name: version
+        in: query
+        required: true
+        schema: {type: integer, minimum: 0}
+    post:
+      operationId: uploadOrganizationLogo
+      description: 2 MB PNG/JPEG/WebP only, sanitized private JPEG; SVG/HTML rejected, stale version returns 409.
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        "200":
+          description: Saved logo reference
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OrganizationBrandingState"}
+    delete:
+      operationId: removeOrganizationLogo
+      description: Clear reference only; never deletes private bytes.
+      responses:
+        "200":
+          description: Updated branding
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OrganizationBrandingState"}
+  /portfolio/objects:
+    get:
+      operationId: listPortfolioObjects
+      description: Current organization and building scope; properties.read, no finance module required.
+      responses:
+        "200":
+          description: Real portfolio groups and assigned buildings
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/PortfolioObject"}}
+    post:
+      operationId: createPortfolioObject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PortfolioObjectInput"}
+      responses:
+        "201":
+          description: Created empty object
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PortfolioObject"}
+  /portfolio/objects/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    patch:
+      operationId: updatePortfolioObject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: "#/components/schemas/PortfolioObjectInput"}
+                - type: object
+                  required: [version]
+                  properties:
+                    version: {type: integer, minimum: 1}
+      responses:
+        "200":
+          description: Updated object
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PortfolioObject"}
+    delete:
+      operationId: deleteEmptyPortfolioObject
+      description: Explicit CAS deletion of an empty group only. Buildings, units and history are never deleted.
+      parameters:
+        - name: version
+          in: query
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        "200":
+          description: Empty object deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+  /portfolio/objects/{id}/buildings:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    put:
+      operationId: replacePortfolioBuildings
+      description: Atomic organization-scoped CAS; cross-org IDs denied; unassign first before moving from another object.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, buildingIds]
+              properties:
+                version: {type: integer, minimum: 1}
+                buildingIds: {type: array, maxItems: 500, uniqueItems: true, items: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Saved assignments
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PortfolioObject"}
+  /storage/status:
+    get:
+      operationId: getPrivateStorageStatus
+      responses:
+        "200":
+          description: Safe provider readiness; never returns paths, buckets or credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mode, explicit, productionReady]
+                properties:
+                  mode: {type: string, enum: [app_storage, local, s3]}
+                  explicit: {type: boolean}
+                  productionReady: {type: boolean}
   /governance/settings:
     get:
       operationId: getGovernanceSettings
@@ -189,6 +417,7 @@ paths:
         - { in: query, name: currency, schema: { type: string, enum: [AMD, RUB, USD] } }
         - { in: query, name: buildingId, schema: { type: string, format: uuid } }
         - { in: query, name: propertyId, schema: { type: string, format: uuid } }
+        - { in: query, name: portfolioObjectId, schema: { type: string, format: uuid }, description: "Real organization-scoped portfolio group, independent of buildingId." }
       responses:
         "200": { description: "Exact minor-unit aggregates, definitions, buildings and real monthly series", content: { application/json: { schema: { type: object, additionalProperties: true } } } }
   /contractors/scorecard:
@@ -199,6 +428,7 @@ paths:
         - { in: query, name: to, required: true, schema: { type: string, format: date } }
         - { in: query, name: buildingId, schema: { type: string, format: uuid } }
         - { in: query, name: propertyId, schema: { type: string, format: uuid } }
+        - { in: query, name: portfolioObjectId, schema: { type: string, format: uuid }, description: Real organization-scoped portfolio group. }
       responses:
         "200": { description: Real scoped work/defect metrics with explicit historical limitations, content: { application/json: { schema: { type: array, items: { type: object, additionalProperties: true } } } } }
   /portfolio/budgets:
@@ -1067,6 +1297,67 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    NotificationPreferences:
+      type: object
+      required: [version, email_enabled, in_app_enabled, categories]
+      properties:
+        version: {type: integer, minimum: 0}
+        email_enabled: {type: boolean}
+        in_app_enabled: {type: boolean}
+        categories:
+          type: object
+          description: Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.
+          additionalProperties:
+            type: object
+            properties:
+              email: {type: boolean}
+              in_app: {type: boolean}
+    OrganizationBrandingMetadata:
+      type: object
+      properties:
+        brand_name: {type: string, nullable: true}
+        primary_color: {type: string, nullable: true}
+        accent_color: {type: string, nullable: true}
+        support_email: {type: string, nullable: true}
+        support_phone: {type: string, nullable: true}
+        website_url: {type: string, nullable: true}
+        privacy_url: {type: string, nullable: true}
+        terms_url: {type: string, nullable: true}
+    OrganizationBrandingState:
+      type: object
+      required: [version, branding, canManage]
+      properties:
+        version: {type: integer, minimum: 0}
+        canManage: {type: boolean}
+        branding:
+          allOf:
+            - {$ref: "#/components/schemas/OrganizationBrandingMetadata"}
+            - type: object
+              properties:
+                logo_key: {type: string, nullable: true, readOnly: true}
+    PortfolioObjectInput:
+      type: object
+      required: [name, kind]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        kind: {type: string, enum: [residential, commercial, mixed, other]}
+        address: {type: string, maxLength: 300}
+    PortfolioObject:
+      allOf:
+        - {$ref: "#/components/schemas/PortfolioObjectInput"}
+        - type: object
+          required: [id, version]
+          properties:
+            id: {type: string, format: uuid}
+            version: {type: integer, minimum: 1}
+            buildings:
+              type: array
+              items:
+                type: object
+                required: [id, name]
+                properties:
+                  id: {type: string, format: uuid}
+                  name: {type: string}
     PlatformRecord:
       type: object
       additionalProperties: true

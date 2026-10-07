@@ -3,6 +3,18 @@ name: Private file policy
 description: Why persistent storage must preserve the original Vernatun authorization and upload contract.
 ---
 
+Changing a storage provider is not permission to migrate or delete existing bytes.
+Retain restored App Storage until an explicit switch is requested; do not run an
+App Storage-specific cleanup or recovery tool against Local/S3 configuration.
+
+**Why:** SQL references and object-store versions form a paired recovery contract.
+Provider-specific conditional deletion guarantees are not interchangeable, and
+silently switching after an error could hide or lose the user's existing files.
+
+**How to apply:** Require explicit provider selection and separate transfer approval.
+Refuse unsupported reviewed deletion instead of falling back to an unconditional
+delete. Verify matched SQL/bytes and the owning namespace before maintenance.
+
 Keep private file upload and download operations behind Vernatun's existing
 server authorization; moving bytes to App Storage is not an authentication
 migration or permission redesign.

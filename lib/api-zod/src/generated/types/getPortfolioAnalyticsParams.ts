@@ -13,4 +13,8 @@ to: Date;
 currency?: GetPortfolioAnalyticsCurrency;
 buildingId?: string;
 propertyId?: string;
+/**
+ * Real organization-scoped portfolio group, independent of buildingId.
+ */
+portfolioObjectId?: string;
 };

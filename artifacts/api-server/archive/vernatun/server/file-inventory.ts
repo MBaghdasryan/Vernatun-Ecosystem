@@ -22,13 +22,15 @@ const referenceQuery=`SELECT storage_key FROM request_photos
   UNION SELECT storage_key FROM file_attachments
   UNION SELECT storage_key FROM incident_attachments
   UNION SELECT storage_key FROM documents
-  UNION SELECT storage_key FROM document_versions`;
+  UNION SELECT storage_key FROM document_versions
+  UNION SELECT web_branding->>'logo_key' FROM organizations WHERE web_branding->>'logo_key' IS NOT NULL`;
 const referencedQuery=`SELECT EXISTS(
   SELECT 1 FROM request_photos WHERE storage_key=$1
   UNION ALL SELECT 1 FROM file_attachments WHERE storage_key=$1
   UNION ALL SELECT 1 FROM incident_attachments WHERE storage_key=$1
   UNION ALL SELECT 1 FROM documents WHERE storage_key=$1
   UNION ALL SELECT 1 FROM document_versions WHERE storage_key=$1
+  UNION ALL SELECT 1 FROM organizations WHERE web_branding->>'logo_key'=$1
 ) AS referenced`;
 function oldEnough(entry:Entry,now:number,graceHours:number){
   const cutoff=now-graceHours*3600000;
@@ -80,7 +82,7 @@ export async function cleanPrivateFiles(input:unknown,now=Date.now()){
       if(!lock.rows[0].locked){result.busy++;continue}
       // Protect against new references from other writers/restores as well.
       // NOWAIT skips activity rather than blocking the application.
-      await db.query('LOCK TABLE request_photos, file_attachments, incident_attachments, documents, document_versions IN SHARE MODE NOWAIT');
+      await db.query('LOCK TABLE request_photos, file_attachments, incident_attachments, documents, document_versions, organizations IN SHARE MODE NOWAIT');
       if((await db.query(referencedQuery,[entry.key])).rows[0].referenced){result.referenced++;continue}
       const parsed=snapshot(entry.kind,entry.key,await privateFileMetadata(entry.kind,entry.key));
       if(!parsed.success){result.changed++;continue}

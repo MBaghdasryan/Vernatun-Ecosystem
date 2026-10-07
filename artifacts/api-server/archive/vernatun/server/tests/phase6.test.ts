@@ -149,8 +149,14 @@ test('portfolio exact arithmetic, recorded budget CAS, real series and contracto
  const score=await clients.manager.call('/contractors/scorecard?'+filters+'&buildingId='+building);assert.equal(score.status,200,JSON.stringify(score.data));
  const s=score.data.find((x:any)=>x.id===users.contractor);assert.equal(s.jobsAssigned,1);assert.equal(s.completed,1);assert.equal(s.accepted,1);assert.equal(s.defectsReopened,1);assert.ok(s.avgCompletionHours>0);
  const pc=await new Client().login(account('portfolio_owner'));
- await pool.query("UPDATE module_entitlements SET enabled=false WHERE organization_id=$1 AND module='finance'",[org]);
- assert.equal((await pc.call('/portfolio/analytics?'+filters)).status,403,'Report permission cannot bypass disabled finance');
- await pool.query("UPDATE module_entitlements SET enabled=false WHERE organization_id=$1 AND module='handover'",[org]);
- assert.equal((await pc.call('/contractors/scorecard?'+filters)).status,403,'Scorecard respects the disabled source module');
+ const previous=(await pool.query("SELECT module,enabled,override_state FROM module_entitlements WHERE organization_id=$1 AND module IN('finance','handover')",[org])).rows;
+ try{
+  // Earlier full-suite checks may leave explicit enabled overrides. Disable the
+  // effective policy rather than only its legacy boolean.
+  await pool.query("UPDATE module_entitlements SET override_state='enabled' WHERE organization_id=$1 AND module IN('finance','handover')",[org]);
+  await pool.query("UPDATE module_entitlements SET enabled=false,override_state='disabled' WHERE organization_id=$1 AND module='finance'",[org]);
+  assert.equal((await pc.call('/portfolio/analytics?'+filters)).status,403,'Report permission cannot bypass disabled finance');
+  await pool.query("UPDATE module_entitlements SET enabled=false,override_state='disabled' WHERE organization_id=$1 AND module='handover'",[org]);
+  assert.equal((await pc.call('/contractors/scorecard?'+filters)).status,403,'Scorecard respects the disabled source module');
+ }finally{for(const row of previous)await pool.query('UPDATE module_entitlements SET enabled=$3,override_state=$4 WHERE organization_id=$1 AND module=$2',[org,row.module,row.enabled,row.override_state])}
 });

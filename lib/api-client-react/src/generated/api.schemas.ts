@@ -5,6 +5,78 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.
+ */
+export type NotificationPreferencesCategories = {[key: string]: {
+  email?: boolean;
+  in_app?: boolean;
+}};
+
+export interface NotificationPreferences {
+  /** @minimum 0 */
+  version: number;
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  /** Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system. */
+  categories: NotificationPreferencesCategories;
+}
+
+export interface OrganizationBrandingMetadata {
+  brand_name?: string | null;
+  primary_color?: string | null;
+  accent_color?: string | null;
+  support_email?: string | null;
+  support_phone?: string | null;
+  website_url?: string | null;
+  privacy_url?: string | null;
+  terms_url?: string | null;
+}
+
+export type OrganizationBrandingStateBranding = OrganizationBrandingMetadata & ({
+  readonly logo_key?: string | null;
+});
+
+export interface OrganizationBrandingState {
+  /** @minimum 0 */
+  version: number;
+  canManage: boolean;
+  branding: OrganizationBrandingStateBranding;
+}
+
+export type PortfolioObjectInputKind = typeof PortfolioObjectInputKind[keyof typeof PortfolioObjectInputKind];
+
+
+export const PortfolioObjectInputKind = {
+  residential: 'residential',
+  commercial: 'commercial',
+  mixed: 'mixed',
+  other: 'other',
+} as const;
+
+export interface PortfolioObjectInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  kind: PortfolioObjectInputKind;
+  /** @maxLength 300 */
+  address?: string;
+}
+
+export type PortfolioObjectBuildingsItem = {
+  id: string;
+  name: string;
+};
+
+export type PortfolioObject = PortfolioObjectInput & {
+  id: string;
+  /** @minimum 1 */
+  version: number;
+  buildings?: PortfolioObjectBuildingsItem[];
+};
+
 export interface PlatformRecord { [key: string]: unknown }
 
 export interface PlatformVersionIntent {
@@ -969,6 +1041,123 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
 
+export type GetNotificationCatalog200EventsItem = {
+  code: string;
+  category: string;
+  critical: boolean;
+};
+
+export type GetNotificationCatalog200ChannelsInApp = typeof GetNotificationCatalog200ChannelsInApp[keyof typeof GetNotificationCatalog200ChannelsInApp];
+
+
+export const GetNotificationCatalog200ChannelsInApp = {
+  active: 'active',
+} as const;
+
+export type GetNotificationCatalog200ChannelsEmail = typeof GetNotificationCatalog200ChannelsEmail[keyof typeof GetNotificationCatalog200ChannelsEmail];
+
+
+export const GetNotificationCatalog200ChannelsEmail = {
+  pending_domain: 'pending_domain',
+} as const;
+
+export type GetNotificationCatalog200ChannelsSms = typeof GetNotificationCatalog200ChannelsSms[keyof typeof GetNotificationCatalog200ChannelsSms];
+
+
+export const GetNotificationCatalog200ChannelsSms = {
+  future: 'future',
+} as const;
+
+export type GetNotificationCatalog200ChannelsPush = typeof GetNotificationCatalog200ChannelsPush[keyof typeof GetNotificationCatalog200ChannelsPush];
+
+
+export const GetNotificationCatalog200ChannelsPush = {
+  future: 'future',
+} as const;
+
+export type GetNotificationCatalog200Channels = {
+  in_app?: GetNotificationCatalog200ChannelsInApp;
+  email?: GetNotificationCatalog200ChannelsEmail;
+  sms?: GetNotificationCatalog200ChannelsSms;
+  push?: GetNotificationCatalog200ChannelsPush;
+};
+
+export type GetNotificationCatalog200 = {
+  events: GetNotificationCatalog200EventsItem[];
+  categories: string[];
+  channels: GetNotificationCatalog200Channels;
+};
+
+export type ExamineDueNotifications200Email = typeof ExamineDueNotifications200Email[keyof typeof ExamineDueNotifications200Email];
+
+
+export const ExamineDueNotifications200Email = {
+  pending_domain: 'pending_domain',
+} as const;
+
+export type ExamineDueNotifications200 = {
+  examinedDueRecords?: number;
+  email?: ExamineDueNotifications200Email;
+};
+
+export type UpdateOrganizationBrandingBody = {
+  /** @minimum 0 */
+  version: number;
+  branding: OrganizationBrandingMetadata;
+};
+
+export type UploadOrganizationLogoParams = {
+/**
+ * @minimum 0
+ */
+version: number;
+};
+
+export type RemoveOrganizationLogoParams = {
+/**
+ * @minimum 0
+ */
+version: number;
+};
+
+export type UpdatePortfolioObjectBody = PortfolioObjectInput & {
+  /** @minimum 1 */
+  version: number;
+};
+
+export type DeleteEmptyPortfolioObjectParams = {
+/**
+ * @minimum 1
+ */
+version: number;
+};
+
+export type DeleteEmptyPortfolioObject200 = {
+  ok?: boolean;
+};
+
+export type ReplacePortfolioBuildingsBody = {
+  /** @minimum 1 */
+  version: number;
+  /** @maxItems 500 */
+  buildingIds: string[];
+};
+
+export type GetPrivateStorageStatus200Mode = typeof GetPrivateStorageStatus200Mode[keyof typeof GetPrivateStorageStatus200Mode];
+
+
+export const GetPrivateStorageStatus200Mode = {
+  app_storage: 'app_storage',
+  local: 'local',
+  s3: 's3',
+} as const;
+
+export type GetPrivateStorageStatus200 = {
+  mode: GetPrivateStorageStatus200Mode;
+  explicit: boolean;
+  productionReady: boolean;
+};
+
 export type GetGovernanceSettings200 = {
   timezone: string;
 };
@@ -1160,6 +1349,10 @@ to: string;
 currency?: GetPortfolioAnalyticsCurrency;
 buildingId?: string;
 propertyId?: string;
+/**
+ * Real organization-scoped portfolio group, independent of buildingId.
+ */
+portfolioObjectId?: string;
 };
 
 export type GetPortfolioAnalyticsCurrency = typeof GetPortfolioAnalyticsCurrency[keyof typeof GetPortfolioAnalyticsCurrency];
@@ -1178,6 +1371,10 @@ from: string;
 to: string;
 buildingId?: string;
 propertyId?: string;
+/**
+ * Real organization-scoped portfolio group.
+ */
+portfolioObjectId?: string;
 };
 
 export type GetContractorScorecard200Item = { [key: string]: unknown };

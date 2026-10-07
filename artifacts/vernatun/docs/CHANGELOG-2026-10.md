@@ -1,3 +1,11 @@
+# Phase 7 — 7 октября 2026
+
+Notification catalog/preferences/fresh-context destinations, explicitly held email intents, localized event labels и manual due reminders. Tenant branding/editor/private sanitized logo и reference-aware backup/inventory. Explicit PrivateStorageProvider adapters с сохранением App Storage. Static-only PWA manifest/icons/offline fallback без private/API cache и автоматической синхронизации черновиков.
+
+Реализованы самостоятельные portfolio objects, org-scoped CRUD/CAS, building assignment/unassignment, empty-only deletion и отдельный `portfolioObjectId` filter. Нет auto-grouping или изменения прежней истории.
+
+Изолированная migration и original-data comparison 23 таблиц; Phase 7 9/9, Phase 6 8/8, backup/storage/inventory 9/9, Core 106/106 до Phase 6, generated contracts/TypeScript/Web build. Исправлен legacy-only entitlement test fixture при explicit override; бизнес-policy не ослаблена. Production/email/live S3/native builds не выполнялись. См. PHASE7-COMPLETION-REPORT.md.
+
 # Phase 6 — 7 октября 2026
 
 Доли/периоды/основания и immutable history; weighted meetings с eligibility snapshot, quorum, защищёнными голосами и приватным Unicode protocol; version-aware документы и pinned support consent; exact-money portfolio analytics/planning budgets; contractor defect-history scorecard и независимый reopen.

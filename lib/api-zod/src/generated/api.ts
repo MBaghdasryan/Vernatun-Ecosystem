@@ -8,6 +8,371 @@
 import * as zod from 'zod';
 
 
+export const GetNotificationCatalogResponse = zod.object({
+  "events": zod.array(zod.object({
+  "code": zod.string(),
+  "category": zod.string(),
+  "critical": zod.boolean()
+})),
+  "categories": zod.array(zod.string()),
+  "channels": zod.object({
+  "in_app": zod.enum(['active']).optional(),
+  "email": zod.enum(['pending_domain']).optional(),
+  "sms": zod.enum(['future']).optional(),
+  "push": zod.enum(['future']).optional()
+})
+})
+
+
+export const getNotificationPreferencesResponseVersionMin = 0;
+
+
+
+export const GetNotificationPreferencesResponse = zod.object({
+  "version": zod.number().int().min(getNotificationPreferencesResponseVersionMin),
+  "email_enabled": zod.boolean(),
+  "in_app_enabled": zod.boolean(),
+  "categories": zod.record(zod.string(), zod.object({
+  "email": zod.boolean().optional(),
+  "in_app": zod.boolean().optional()
+})).describe('Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.')
+})
+
+
+/**
+ * Future notifications only. CAS conflict returns 409; only catalog-critical account security overrides opt-out.
+ */
+export const updateNotificationPreferencesBodyVersionMin = 0;
+
+
+
+export const UpdateNotificationPreferencesBody = zod.object({
+  "version": zod.number().int().min(updateNotificationPreferencesBodyVersionMin),
+  "email_enabled": zod.boolean(),
+  "in_app_enabled": zod.boolean(),
+  "categories": zod.record(zod.string(), zod.object({
+  "email": zod.boolean().optional(),
+  "in_app": zod.boolean().optional()
+})).describe('Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.')
+})
+
+export const updateNotificationPreferencesResponseVersionMin = 0;
+
+
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  "version": zod.number().int().min(updateNotificationPreferencesResponseVersionMin),
+  "email_enabled": zod.boolean(),
+  "in_app_enabled": zod.boolean(),
+  "categories": zod.record(zod.string(), zod.object({
+  "email": zod.boolean().optional(),
+  "in_app": zod.boolean().optional()
+})).describe('Closed server-validated category set requests, finance, community, access, leases, support, onboarding, system.')
+})
+
+
+/**
+ * Organization-settings permission, idempotent due reminder generation, no email sends.
+ */
+export const ExamineDueNotificationsResponse = zod.object({
+  "examinedDueRecords": zod.number().int().optional(),
+  "email": zod.enum(['pending_domain']).optional()
+})
+
+
+export const getOrganizationBrandingResponseVersionMin = 0;
+
+
+
+export const GetOrganizationBrandingResponse = zod.object({
+  "version": zod.number().int().min(getOrganizationBrandingResponseVersionMin),
+  "canManage": zod.boolean(),
+  "branding": zod.object({
+  "brand_name": zod.string().nullish(),
+  "primary_color": zod.string().nullish(),
+  "accent_color": zod.string().nullish(),
+  "support_email": zod.string().nullish(),
+  "support_phone": zod.string().nullish(),
+  "website_url": zod.string().nullish(),
+  "privacy_url": zod.string().nullish(),
+  "terms_url": zod.string().nullish()
+}).and(zod.object({
+  "logo_key": zod.string().nullish()
+}))
+})
+
+
+/**
+ * Organization settings permission, CAS version, strict hex colors and HTTPS URLs; no HTML or logo URLs.
+ */
+export const updateOrganizationBrandingBodyVersionMin = 0;
+
+
+
+export const UpdateOrganizationBrandingBody = zod.object({
+  "version": zod.number().int().min(updateOrganizationBrandingBodyVersionMin),
+  "branding": zod.object({
+  "brand_name": zod.string().nullish(),
+  "primary_color": zod.string().nullish(),
+  "accent_color": zod.string().nullish(),
+  "support_email": zod.string().nullish(),
+  "support_phone": zod.string().nullish(),
+  "website_url": zod.string().nullish(),
+  "privacy_url": zod.string().nullish(),
+  "terms_url": zod.string().nullish()
+})
+})
+
+export const updateOrganizationBrandingResponseVersionMin = 0;
+
+
+
+export const UpdateOrganizationBrandingResponse = zod.object({
+  "version": zod.number().int().min(updateOrganizationBrandingResponseVersionMin),
+  "canManage": zod.boolean(),
+  "branding": zod.object({
+  "brand_name": zod.string().nullish(),
+  "primary_color": zod.string().nullish(),
+  "accent_color": zod.string().nullish(),
+  "support_email": zod.string().nullish(),
+  "support_phone": zod.string().nullish(),
+  "website_url": zod.string().nullish(),
+  "privacy_url": zod.string().nullish(),
+  "terms_url": zod.string().nullish()
+}).and(zod.object({
+  "logo_key": zod.string().nullish()
+}))
+})
+
+
+/**
+ * 2 MB PNG/JPEG/WebP only, sanitized private JPEG; SVG/HTML rejected, stale version returns 409.
+ */
+export const uploadOrganizationLogoQueryVersionMin = 0;
+
+
+
+export const UploadOrganizationLogoQueryParams = zod.object({
+  "version": zod.coerce.number().int().min(uploadOrganizationLogoQueryVersionMin)
+})
+
+export const uploadOrganizationLogoResponseVersionMin = 0;
+
+
+
+export const UploadOrganizationLogoResponse = zod.object({
+  "version": zod.number().int().min(uploadOrganizationLogoResponseVersionMin),
+  "canManage": zod.boolean(),
+  "branding": zod.object({
+  "brand_name": zod.string().nullish(),
+  "primary_color": zod.string().nullish(),
+  "accent_color": zod.string().nullish(),
+  "support_email": zod.string().nullish(),
+  "support_phone": zod.string().nullish(),
+  "website_url": zod.string().nullish(),
+  "privacy_url": zod.string().nullish(),
+  "terms_url": zod.string().nullish()
+}).and(zod.object({
+  "logo_key": zod.string().nullish()
+}))
+})
+
+
+/**
+ * Clear reference only; never deletes private bytes.
+ */
+export const removeOrganizationLogoQueryVersionMin = 0;
+
+
+
+export const RemoveOrganizationLogoQueryParams = zod.object({
+  "version": zod.coerce.number().int().min(removeOrganizationLogoQueryVersionMin)
+})
+
+export const removeOrganizationLogoResponseVersionMin = 0;
+
+
+
+export const RemoveOrganizationLogoResponse = zod.object({
+  "version": zod.number().int().min(removeOrganizationLogoResponseVersionMin),
+  "canManage": zod.boolean(),
+  "branding": zod.object({
+  "brand_name": zod.string().nullish(),
+  "primary_color": zod.string().nullish(),
+  "accent_color": zod.string().nullish(),
+  "support_email": zod.string().nullish(),
+  "support_phone": zod.string().nullish(),
+  "website_url": zod.string().nullish(),
+  "privacy_url": zod.string().nullish(),
+  "terms_url": zod.string().nullish()
+}).and(zod.object({
+  "logo_key": zod.string().nullish()
+}))
+})
+
+
+/**
+ * Current organization and building scope; properties.read, no finance module required.
+ */
+export const listPortfolioObjectsResponseOneNameMax = 120;
+
+export const listPortfolioObjectsResponseOneAddressMax = 300;
+
+
+
+
+export const ListPortfolioObjectsResponseItem = zod.object({
+  "name": zod.string().min(1).max(listPortfolioObjectsResponseOneNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(listPortfolioObjectsResponseOneAddressMax).optional()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})).optional()
+}))
+export const ListPortfolioObjectsResponse = zod.array(ListPortfolioObjectsResponseItem)
+
+
+export const createPortfolioObjectBodyNameMax = 120;
+
+export const createPortfolioObjectBodyAddressMax = 300;
+
+
+
+export const CreatePortfolioObjectBody = zod.object({
+  "name": zod.string().min(1).max(createPortfolioObjectBodyNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(createPortfolioObjectBodyAddressMax).optional()
+})
+
+export const createPortfolioObjectResponseOneNameMax = 120;
+
+export const createPortfolioObjectResponseOneAddressMax = 300;
+
+
+
+
+export const CreatePortfolioObjectResponse = zod.object({
+  "name": zod.string().min(1).max(createPortfolioObjectResponseOneNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(createPortfolioObjectResponseOneAddressMax).optional()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})).optional()
+}))
+
+
+export const UpdatePortfolioObjectParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updatePortfolioObjectBodyOneNameMax = 120;
+
+export const updatePortfolioObjectBodyOneAddressMax = 300;
+
+
+
+
+export const UpdatePortfolioObjectBody = zod.object({
+  "name": zod.string().min(1).max(updatePortfolioObjectBodyOneNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(updatePortfolioObjectBodyOneAddressMax).optional()
+}).and(zod.object({
+  "version": zod.number().int().min(1)
+}))
+
+export const updatePortfolioObjectResponseOneNameMax = 120;
+
+export const updatePortfolioObjectResponseOneAddressMax = 300;
+
+
+
+
+export const UpdatePortfolioObjectResponse = zod.object({
+  "name": zod.string().min(1).max(updatePortfolioObjectResponseOneNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(updatePortfolioObjectResponseOneAddressMax).optional()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})).optional()
+}))
+
+
+/**
+ * Explicit CAS deletion of an empty group only. Buildings, units and history are never deleted.
+ */
+export const DeleteEmptyPortfolioObjectParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const DeleteEmptyPortfolioObjectQueryParams = zod.object({
+  "version": zod.coerce.number().int().min(1)
+})
+
+export const DeleteEmptyPortfolioObjectResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
+ * Atomic organization-scoped CAS; cross-org IDs denied; unassign first before moving from another object.
+ */
+export const ReplacePortfolioBuildingsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const replacePortfolioBuildingsBodyBuildingIdsMax = 500;
+
+
+
+export const ReplacePortfolioBuildingsBody = zod.object({
+  "version": zod.number().int().min(1),
+  "buildingIds": zod.array(zod.string().uuid()).max(replacePortfolioBuildingsBodyBuildingIdsMax)
+})
+
+export const replacePortfolioBuildingsResponseOneNameMax = 120;
+
+export const replacePortfolioBuildingsResponseOneAddressMax = 300;
+
+
+
+
+export const ReplacePortfolioBuildingsResponse = zod.object({
+  "name": zod.string().min(1).max(replacePortfolioBuildingsResponseOneNameMax),
+  "kind": zod.enum(['residential', 'commercial', 'mixed', 'other']),
+  "address": zod.string().max(replacePortfolioBuildingsResponseOneAddressMax).optional()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})).optional()
+}))
+
+
+export const GetPrivateStorageStatusResponse = zod.object({
+  "mode": zod.enum(['app_storage', 'local', 's3']),
+  "explicit": zod.boolean(),
+  "productionReady": zod.boolean()
+})
+
+
 export const GetGovernanceSettingsResponse = zod.object({
   "timezone": zod.string()
 })
@@ -204,7 +569,8 @@ export const GetPortfolioAnalyticsQueryParams = zod.object({
   "to": zod.date(),
   "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
   "buildingId": zod.coerce.string().uuid().optional(),
-  "propertyId": zod.coerce.string().uuid().optional()
+  "propertyId": zod.coerce.string().uuid().optional(),
+  "portfolioObjectId": zod.coerce.string().uuid().optional().describe('Real organization-scoped portfolio group, independent of buildingId.')
 })
 
 export const GetPortfolioAnalyticsResponse = zod.record(zod.string(), zod.unknown())
@@ -214,7 +580,8 @@ export const GetContractorScorecardQueryParams = zod.object({
   "from": zod.date(),
   "to": zod.date(),
   "buildingId": zod.coerce.string().uuid().optional(),
-  "propertyId": zod.coerce.string().uuid().optional()
+  "propertyId": zod.coerce.string().uuid().optional(),
+  "portfolioObjectId": zod.coerce.string().uuid().optional().describe('Real organization-scoped portfolio group.')
 })
 
 export const GetContractorScorecardResponseItem = zod.record(zod.string(), zod.unknown())

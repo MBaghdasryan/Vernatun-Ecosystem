@@ -107,4 +107,5 @@ export async function uploadPhoto(id:string,file:File,kind:'requests'|'defects'=
 export async function uploadImport(query:URLSearchParams,file:File){return fetchApi<any>("/imports/preview?"+query,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}
 
 export async function uploadDocumentVersion(id:string,query:URLSearchParams,file:File){return fetchApi<any>("/documents/"+encodeURIComponent(id)+"/versions?"+query,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}
+export async function uploadBrandingLogo(version:number,file:File){return fetchApi<any>("/organization/branding/logo?version="+version,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}
 export async function uploadDocument(query:URLSearchParams,file:File){return fetchApi<any>("/documents?"+query,{method:"POST",headers:{"Content-Type":"application/octet-stream","X-CSRF-Token":csrf},body:file});}

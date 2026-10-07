@@ -15,3 +15,7 @@ export type { EndOwnershipBody } from "./generated/types/endOwnershipBody";
 export type { SaveOperatingBudgetBody } from "./generated/types/saveOperatingBudgetBody";
 export type { UploadDocumentVersionParams } from "./generated/types/uploadDocumentVersionParams";
 export type { DownloadPlatformCaseAttachmentParams } from "./generated/types/downloadPlatformCaseAttachmentParams";
+export type { DeleteEmptyPortfolioObjectParams } from "./generated/types/deleteEmptyPortfolioObjectParams";
+export type { ReplacePortfolioBuildingsBody } from "./generated/types/replacePortfolioBuildingsBody";
+export type { UpdateOrganizationBrandingBody } from "./generated/types/updateOrganizationBrandingBody";
+export type { UpdatePortfolioObjectBody } from "./generated/types/updatePortfolioObjectBody";
