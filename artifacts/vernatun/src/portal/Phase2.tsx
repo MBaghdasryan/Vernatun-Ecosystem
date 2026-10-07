@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react';
+import VisitCalendar from './VisitCalendar';
 import {request,uploadPhoto,uploadIncidentAttachment,ApiClientError} from './client';
 import type {RoleContext} from './types';
 import type {Language} from './i18n';
@@ -131,9 +132,7 @@ export function parseIdentifier(raw:string){let v=raw.trim();try{const u=new URL
  // eslint-disable-next-line no-control-regex
  if(!v||v.length>160||/[\u0000-\u001f\u007f]/.test(v))return '';return v}
 export function VisitSchedule({c,language:l,onOpen}:{c:RoleContext;language:Language;onOpen:(requestId:string)=>void}){
- const [rows,setRows]=useState<Row[]>();const [err,setErr]=useState(false);
- usePolling(()=>{const from=new Date(Date.now()-864e5),to=new Date(Date.now()+14*864e5);request<Row[]>('/operations/visits?'+new URLSearchParams({from:from.toISOString(),to:to.toISOString()})).then(r=>{setRows(r);setErr(false)}).catch(()=>setErr(true))},[c.id]);
- return <section className="p-card"><header><h3>{p2(l,'schedule')}</h3></header>{err&&<div className="p-error" role="alert">{p2(l,'error')}</div>}{!rows?<p role="status">{p2(l,'loading')}</p>:!rows.length?<p>{p2(l,'noVisits')}</p>:rows.map(v=><button type="button" key={v.id} className="p-request-row" onClick={()=>onOpen(v.request_id)}><span className="p-badge">{v.status}</span><strong>{v.subject}</strong><small>{fmt(l,v.starts_at)} – {fmt(l,v.ends_at)}</small><small>{v.building_name} · {v.number}</small></button>)}</section>}
+ return <VisitCalendar key={c.id} c={c} language={l} onOpen={onOpen}/>}
 export function EquipmentPanel({c,language:l,onCreated}:{c:RoleContext;language:Language;onCreated?:()=>void}){
  const op=useOp(l,undefined,c.id);const [cats,catErr,reloadCats]=useCategories(l);const [ident,setIdent]=useState(''),[res,setRes]=useState<Row>(),[miss,setMiss]=useState(false);
  const [f,setF]=useState<Record<string,string>>({priority:'normal'}),[techs,setTechs]=useState<Row[]>([]);

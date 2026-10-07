@@ -1246,7 +1246,7 @@ paths:
         - {name: to, in: query, required: true, schema: {type: string, format: date-time}}
       responses:
         "200":
-          description: Active visits in a bounded date range and the current request scope
+          description: Active visits in a bounded date range and the current request scope. Each row includes building_id, technician_id and technician_name (nullable). More than 1000 matches returns visit_window_too_large rather than a partial calendar.
           content:
             application/json:
               schema: {type: array, items: {$ref: "#/components/schemas/OperationalRow"}}

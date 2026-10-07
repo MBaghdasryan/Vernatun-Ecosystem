@@ -115,12 +115,15 @@ coreOperations.get('/assets/lookup',async(req,res)=>{
 coreOperations.get('/operations/visits',async(req,res)=>{
  const c=await readScope(req),from=time.parse(req.query.from),to=time.parse(req.query.to);
  if(Date.parse(to)<=Date.parse(from)||Date.parse(to)-Date.parse(from)>62*86400000)throw new ApiError(400,'invalid_visit_window');
- res.json((await pool.query(`SELECT v.*,r.version AS request_version,r.subject,u.number,b.name AS building_name FROM request_visits v
+ const rows=(await pool.query(`SELECT v.*,r.version AS request_version,r.subject,u.number,b.name AS building_name,b.id AS building_id,w.technician_id,tech.name AS technician_name FROM request_visits v
  JOIN resident_requests r ON r.id=v.request_id LEFT JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=COALESCE(r.building_id,u.building_id) LEFT JOIN work_orders w ON w.request_id=r.id
+ LEFT JOIN users tech ON tech.id=w.technician_id
  WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR COALESCE(r.building_id,u.building_id)=$2) AND ($3::uuid IS NULL OR u.id=$3)
  AND v.status IN('proposed','confirmed') AND r.status<>'closed' AND v.starts_at<$5 AND v.ends_at>$4
  AND ($6::boolean OR ($7::boolean AND (r.author_user_id=$8 OR r.reported_for_user_id=$8 OR r.reported_for_user_id IS NULL AND r.source IN('dispatcher_phone','manager','system') AND u.id=$3)) OR ($9::boolean AND w.technician_id=$8))
- ORDER BY v.starts_at LIMIT 1000`,[c.organization_id,c.building_id,c.unit_id,from,to,c.permissions.includes('requests.read'),c.permissions.includes('requests.own'),req.user!.id,c.permissions.includes('workorders.assigned')])).rows);
+ ORDER BY v.starts_at LIMIT 1001`,[c.organization_id,c.building_id,c.unit_id,from,to,c.permissions.includes('requests.read'),c.permissions.includes('requests.own'),req.user!.id,c.permissions.includes('workorders.assigned')])).rows;
+ if(rows.length>1000)throw new ApiError(400,'visit_window_too_large');
+ res.json(rows);
 });
 coreOperations.get('/assets/:id/qr',async(req,res)=>{
  const c=await requirePermission(req,'assets.read'),id=uuid.parse(req.params.id);

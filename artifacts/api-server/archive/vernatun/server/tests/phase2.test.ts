@@ -101,6 +101,13 @@ test('Visits require independent confirmations, rescheduling resets them and his
  const start=new Date(Date.now()+86400000).toISOString(),end=new Date(Date.now()+90000000).toISOString();
  const b={key:randomUUID(),version:r.version,startsAt:start,endsAt:end},url='/requests/'+r.id+'/visits';
  const v=await desk.call(url,'POST',b);assert.equal(v.status,200);assert.equal((await desk.call(url,'POST',b)).data.id,v.data.id);
+ const schedule=await desk.call('/operations/visits?'+new URLSearchParams({from:start,to:end}));
+ assert.equal(schedule.status,200);
+ const scheduled=schedule.data.find((x:any)=>x.id===v.data.id);
+ assert.equal(scheduled.technician_id,seeded.accounts.technician.id);
+ assert.ok(scheduled.technician_name);assert.ok(scheduled.building_id);
+ const isolated=await other.call('/operations/visits?'+new URLSearchParams({from:start,to:end}));
+ assert.ok(isolated.status===403||isolated.status===200&&!isolated.data.some((x:any)=>x.id===v.data.id));
  const confirm=async(actor:Client)=>{const d=await actor.detail(r.id),visit=d.visits.find((x:any)=>x.id===v.data.id);return actor.call(url+'/'+visit.id,'POST',{key:randomUUID(),version:d.version,visitVersion:visit.version,action:'confirm'})};
  assert.equal((await confirm(desk)).status,403);assert.equal((await confirm(owner)).data.status,'proposed');assert.equal((await confirm(tech)).data.status,'confirmed');
  const d=await desk.detail(r.id),next=await desk.call(url,'POST',{...b,key:randomUUID(),version:d.version});assert.equal(next.status,200);
