@@ -13,3 +13,4 @@
 - [Resident lifecycle policy](resident-lifecycle-policy.md) — lease enforcement activates with recorded periods; common-area maintenance needs system provenance and manager acceptance.
 - [Financial ledger locking](finance-ledger-locking.md) — lock immutable parents before re-reading balances; same-invoice tests can hide credit races.
 - [Rate-limit namespaces](rate-limit-namespaces.md) — independent persistent limiters must not share request budgets.
+- [Transaction connection budget](transaction-connection-budget.md) — authorization must not wait for a second pooled connection while all slots are held by transactions.

@@ -1311,6 +1311,57 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface DefectMessageInput {
+  key: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  body: string;
+}
+
+export interface DefectMessage {
+  id: string;
+  actor_id: string;
+  actor: string;
+  body: string;
+  created_at: string;
+}
+
+export interface DefectEvidencePhoto {
+  id: string;
+  created_at: string;
+}
+
+export type DefectEvidenceReportAction = typeof DefectEvidenceReportAction[keyof typeof DefectEvidenceReportAction];
+
+
+export const DefectEvidenceReportAction = {
+  report: 'report',
+  return: 'return',
+  accept: 'accept',
+  reopen: 'reopen',
+} as const;
+
+export interface DefectEvidenceReport {
+  id: string;
+  actor: string;
+  action: DefectEvidenceReportAction;
+  note: string;
+  created_at: string;
+}
+
+export interface DefectCollaboration {
+  defectId: string;
+  messages: DefectMessage[];
+  total: number;
+  /** @nullable */
+  nextCursor: string | null;
+  canWrite: boolean;
+  photos: DefectEvidencePhoto[];
+  reports: DefectEvidenceReport[];
+}
+
 export type RoleInsightCardCurrency = typeof RoleInsightCardCurrency[keyof typeof RoleInsightCardCurrency];
 
 
@@ -1335,6 +1386,10 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetDefectCollaborationParams = {
+before?: string;
+};
 
 export type GetRoleInsightsParams = {
 currency?: GetRoleInsightsCurrency;

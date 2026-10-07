@@ -56,7 +56,6 @@ const U:Record<string,L3[]>={
  accountant:[['Բանկային ինտեգրացիա չկա. քաղվածքները ներմուծվում են ձեռքով','Банковская интеграция не подключена — выписки импортируются вручную','No bank integration — statements are imported manually']],
  developer:[['Հարկի հատակագծեր և թերությունների նշիչներ դեռ հասանելի չեն','Планы этажей и маркеры дефектов пока недоступны','Floor plans and defect markers are not available yet']],
  dispatcher:[['Քարտեզը հասանելի չէ. աշխատանքների գեոտվյալներ չկան','Карта недоступна — нет геоданных работ','Map is unavailable — no work geodata']],
- contractor:[['Պարզաբանման նամակագրություն հասանելի չէ','Отдельная переписка-уточнение недоступна','Clarification messaging is not available']],
  portfolio_owner:[['Սպասարկման և ընդհանուր փաստաթղթերի մուտքը այս դերում տրված չէ','Общее обслуживание и документы этой роли не выданы','General service and documents are not granted to this role']],
  unit_owner:[['Առցանց վճարման դարպաս միացված չէ','Онлайн-оплата не подключена','Online payment gateway is not connected']],
  renter:[['Առցանց վճարման դարպաս միացված չէ','Онлайн-оплата не подключена','Online payment gateway is not connected']],

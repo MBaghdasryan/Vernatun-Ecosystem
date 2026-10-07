@@ -37,6 +37,9 @@ import type {
   CreateOwnership201,
   CreateOwnershipBody,
   CreditAllocationInput,
+  DefectCollaboration,
+  DefectMessage,
+  DefectMessageInput,
   DelegationExpirationInput,
   DelegationResendInput,
   DeleteEmptyPortfolioObject200,
@@ -53,6 +56,7 @@ import type {
   FinanceRecord,
   GetContractorScorecard200Item,
   GetContractorScorecardParams,
+  GetDefectCollaborationParams,
   GetDispatcherSetupParams,
   GetEmailHealthParams,
   GetGovernanceMeeting200,
@@ -171,6 +175,178 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetDefectCollaborationUrl = (id: string,
+    params?: GetDefectCollaborationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/defects/${id}/collaboration?${stringifiedParams}` : `/api/defects/${id}/collaboration`
+}
+
+/**
+ * Assigned-contractor or scoped defect-reader access only. Evidence is not access to the general document catalog.
+ */
+export const getDefectCollaboration = async (id: string,
+    params?: GetDefectCollaborationParams, options?: Parameters<typeof customFetch>[1]): Promise<DefectCollaboration> => {
+
+  return customFetch<DefectCollaboration>(getGetDefectCollaborationUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDefectCollaborationQueryKey = (id: string,
+    params?: GetDefectCollaborationParams,) => {
+    return [
+    `/api/defects/${id}/collaboration`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDefectCollaborationQueryOptions = <TData = Awaited<ReturnType<typeof getDefectCollaboration>>, TError = ErrorType<void>>(id: string,
+    params?: GetDefectCollaborationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDefectCollaboration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDefectCollaborationQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDefectCollaboration>>> = ({ signal }) => getDefectCollaboration(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDefectCollaboration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDefectCollaborationQueryResult = NonNullable<Awaited<ReturnType<typeof getDefectCollaboration>>>
+export type GetDefectCollaborationQueryError = ErrorType<void>
+
+
+
+export function useGetDefectCollaboration<TData = Awaited<ReturnType<typeof getDefectCollaboration>>, TError = ErrorType<void>>(
+ id: string,
+    params?: GetDefectCollaborationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDefectCollaboration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDefectCollaborationQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostDefectMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/defects/${id}/messages`
+}
+
+/**
+ * Append a clarification without transitioning the defect. Requires CSRF and defects.execute (assigned contractor) or defects.manage; read-only subscriptions cannot write.
+ */
+export const postDefectMessage = async (id: string,
+    defectMessageInput: DefectMessageInput, options?: Parameters<typeof customFetch>[1]): Promise<DefectMessage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DefectMessage>(getPostDefectMessageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(defectMessageInput)
+  }
+);}
+
+
+
+
+
+export const getPostDefectMessageMutationKey = () => ['postDefectMessage'] as const;
+
+export const getPostDefectMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDefectMessage>>, TError,PostDefectMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postDefectMessage>>, TError,PostDefectMessageMutationVariables, TContext> => {
+
+const mutationKey = getPostDefectMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDefectMessage>>, PostDefectMessageMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postDefectMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostDefectMessageMutationResult = NonNullable<Awaited<ReturnType<typeof postDefectMessage>>>
+    export type PostDefectMessageMutationBody = BodyType<DefectMessageInput>
+    export type PostDefectMessageMutationError = ErrorType<void>
+    export type PostDefectMessageMutationVariables = {id: string;data: BodyType<DefectMessageInput>}
+
+    export const usePostDefectMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDefectMessage>>, TError,PostDefectMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postDefectMessage>>,
+        TError,
+        PostDefectMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostDefectMessageMutationOptions(options));
+    }
 
 export const getGetRoleInsightsUrl = (params?: GetRoleInsightsParams,) => {
   const normalizedParams = new URLSearchParams();

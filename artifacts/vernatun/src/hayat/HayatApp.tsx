@@ -11,6 +11,7 @@ import {VisitSchedule,p2,PhoneRequestForm,OperationsSettings,EquipmentPanel,Requ
 import {prepareOfflineShell} from './offline-shell';
 import Community from '../portal/Community';
 import Lifecycle from '../portal/Lifecycle';
+import DefectCollaboration from '../portal/DefectCollaboration';
 import {allowedProducts,startRoute,type Product} from '../../shared/products';
 import {ht} from './i18n';
 import './hayat.css';
@@ -60,4 +61,35 @@ export default function HayatApp({session,c,language,currency,setLanguage,onSwit
  {modal&&<Dialog title={t(modal==='validate'?'validate':'incident')} close={()=>setModal(null)}><form onSubmit={async e=>{e.preventDefault();const fields=new FormData(e.currentTarget);if(modal==='validate')setValidation(undefined);const result=await act(modal==='validate'?'/passes/validate':'/incidents',modal==='validate'?{token:fields.get('token')}:{buildingId:fields.get('buildingId')??c.building_id,description:fields.get('description')});if(result){if(modal==='validate')setValidation(result);else setModal(null)}}}>{modal==='validate'?<><p>{t('noHardware')}</p><label>{t('token')}<input name="token" required pattern="[a-f0-9]{64}" minLength={64} maxLength={64}/></label></>:<>{!c.building_id&&<label>{t('location')}<select name="buildingId" required><option value="">—</option>{data?.buildings.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}<label>{t('description')}<textarea name="description" required minLength={5} maxLength={4000}/></label></>}{error&&<p className="h-error" role="alert">{error}</p>}<button className="h-primary" disabled={busy||!online}>{t(modal==='validate'?'validate':'send')}</button>{validation&&<div className="h-validation" role="status"><h3>{t(validation.valid?'valid':'invalid')}</h3><p>{validation.subject??(validation as any).visitor}</p><p>{t('controllerHint')}</p></div>}</form></Dialog>}
  </div>;
 }
-function DefectDetail({id,language,close,changed}:{id:string;language:Language;close:()=>void;changed:()=>void}){const t=(key:string)=>ht(language,key);const [data,setData]=useState<Row>(),[error,setError]=useState(''),[busy,setBusy]=useState(false);const load=()=>request<Row>('/defects/'+id).then(setData).catch(()=>setError(t('error')));useEffect(()=>{void load()},[id]);async function act(fn:()=>Promise<unknown>){if(busy)return;setBusy(true);setError('');try{await fn();await load();changed()}catch{setError(t('error'))}finally{setBusy(false)}}return <section className="h-defect-detail"><button className="h-back" onClick={close}><ChevronLeft size={18}/>{t('back')}</button>{error&&<p className="h-error" role="alert">{error}</p>}{!data?<p>{t('loading')}</p>:<article className="h-work-card"><div className="h-card-top"><span className={'h-badge h-status-'+data.status}>{t(data.status)}</span><small>#{id.slice(0,8)}</small></div><h2>{data.subject}</h2><p>{data.building_name} · {data.number} · {data.location}</p><p className="h-description">{data.description}</p><blockquote>{data.report}</blockquote><div className="h-photo-grid">{data.photos?.map(p=><a key={p.id} href={'/api/photos/'+p.id} target="_blank" rel="noreferrer"><img src={'/api/photos/'+p.id} alt={data.subject}/></a>)}</div>{['assigned','in_progress'].includes(data.status)&&<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act(()=>request('/defects/'+id+'/transition','POST',{action:data.status==='assigned'?'start':'report',version:data.version,note:f.get('note')??''}))}}>{data.status==='in_progress'&&<><label>{t('description')}<textarea name="note" minLength={5} maxLength={4000} required/></label><label>{t('photos')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void act(()=>uploadPhoto(id,file,'defects'));e.target.value=''}}/></label></>}<button className="h-primary" disabled={busy}>{t(data.status==='assigned'?'start':'submitReview')}<ArrowRight size={18}/></button></form>}</article>}</section>}
+function DefectDetail({id,language,close,changed}:{id:string;language:Language;close:()=>void;changed:()=>void}){
+ const t=(key:string)=>ht(language,key);
+ const [data,setData]=useState<Row>(),[error,setError]=useState(''),[busy,setBusy]=useState(false),[evidenceRevision,setEvidenceRevision]=useState(0);
+ const load=()=>request<Row>('/defects/'+id).then(setData).catch(()=>setError(t('error')));
+ useEffect(()=>{setData(undefined);setError('');void load()},[id]);
+ async function act(fn:()=>Promise<unknown>){
+  if(busy)return;setBusy(true);setError('');
+  try{await fn();await load();setEvidenceRevision(n=>n+1);changed()}catch{setError(t('error'))}finally{setBusy(false)}
+ }
+ return <section className="h-defect-detail">
+  <button className="h-back" onClick={close}><ChevronLeft size={18}/>{t('back')}</button>
+  {error&&<p className="h-error" role="alert">{error}</p>}
+  {!data||data.id!==id?<p>{t('loading')}</p>:<>
+   <article className="h-work-card">
+    <div className="h-card-top"><span className={'h-badge h-status-'+data.status}>{t(data.status)}</span><small>#{id.slice(0,8)}</small></div>
+    <h2>{data.subject}</h2><p>{data.building_name} · {data.number} · {data.location}</p><p className="h-description">{data.description}</p><blockquote>{data.report}</blockquote>
+    <div className="h-photo-grid">{data.photos?.map(p=><a key={p.id} href={import.meta.env.BASE_URL+'api/defect-photos/'+p.id} target="_blank" rel="noreferrer"><img src={import.meta.env.BASE_URL+'api/defect-photos/'+p.id} alt={data.subject}/></a>)}</div>
+    {['assigned','in_progress'].includes(data.status)&&<form onSubmit={e=>{
+     e.preventDefault();const f=new FormData(e.currentTarget);
+     void act(()=>request('/defects/'+id+'/transition','POST',{action:data.status==='assigned'?'start':'report',version:data.version,note:f.get('note')??''}));
+    }}>
+     {data.status==='in_progress'&&<>
+      <label>{t('description')}<textarea name="note" minLength={5} maxLength={4000} required/></label>
+      <label>{t('photos')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void act(()=>uploadPhoto(id,file,'defects'));e.target.value=''}}/></label>
+     </>}
+     <button className="h-primary" disabled={busy}>{t(data.status==='assigned'?'start':'submitReview')}<ArrowRight size={18}/></button>
+    </form>}
+   </article>
+   <DefectCollaboration key={id} id={id} language={language} revision={evidenceRevision}/>
+  </>}
+ </section>;
+}

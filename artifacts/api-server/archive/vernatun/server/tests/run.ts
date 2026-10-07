@@ -17,6 +17,8 @@ const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_
 let status=0;
 const checks=process.argv.includes('--browser-only')
  ? [['server/tests/browser-sandbox.ts']]
+ : process.argv.includes('--defect-collaboration-only')
+ ? [['--test','server/tests/defect-collaboration.test.ts']]
  : process.argv.includes('--role-dashboards-only')
  ? [['--test','server/tests/role-dashboards.test.ts']]
  : process.argv.includes('--iam-only')
@@ -60,6 +62,7 @@ if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
 }
 if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
  checks.push(['--test','server/tests/assignment-management.test.ts']);
+ checks.push(['--test','server/tests/defect-collaboration.test.ts']);
  checks.push(['--test','server/tests/maintenance-calendar.test.ts'],['--test','server/tests/phase3.test.ts']);
  checks.push(['--test','server/tests/phase4.test.ts']);
  checks.push(['--test','server/tests/phase5.test.ts']);

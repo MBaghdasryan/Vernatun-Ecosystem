@@ -6,6 +6,7 @@ import {get,identity,sameScope,update,workKey,type Draft,type LocalWork,type Pen
 import {offlineText} from './offline-i18n';
 import {prepareOfflineShell} from './offline-shell';
 import {ht} from './i18n';
+import DefectCollaboration from '../portal/DefectCollaboration';
 
 export default function OfflineWork({id,c,userId,language,kind='requests',changed=()=>{}}:{
  id:string;c:RoleContext;userId:string;language:Language;kind?:'requests'|'defects';changed?:()=>void;
@@ -156,7 +157,7 @@ export default function OfflineWork({id,c,userId,language,kind='requests',change
  }
  async function discard(){
   if(!local||!window.confirm(t('confirmDiscard')))return;
-  await persist(v=>({...v,draft:emptyDraft(v.snapshot),photos:[],pending:undefined,pendingFailure:undefined})).catch(()=>{});
+  await persist(v=>({...v,draft:emptyDraft(v.snapshot),photos:[],pending:undefined,pendingFailure:undefined})).then(()=>setError('')).catch(()=>{});
  }
  const d=local?.snapshot;
  const disabled=busy||!!local?.pending||blocked||!permission;
@@ -215,6 +216,7 @@ export default function OfflineWork({id,c,userId,language,kind='requests',change
    <h3>{t('history')}</h3>{(d.history??[]).map((h:Work)=><div className="p-history" key={h.id}>
     <strong>{t(h.action)} · {h.actor}</strong><small>{new Date(h.created_at).toLocaleString(language,{timeZone:'Asia/Yerevan'})} · {t(h.to_status??'')}</small><p>{h.note}</p>
    </div>)}
+   {kind==='defects'&&<DefectCollaboration key={key} id={id} language={language} revision={live?.version}/>}
   </>}
  </section>;
 }

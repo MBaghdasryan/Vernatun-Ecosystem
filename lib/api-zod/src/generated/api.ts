@@ -9,6 +9,68 @@ import * as zod from 'zod';
 
 
 /**
+ * Assigned-contractor or scoped defect-reader access only. Evidence is not access to the general document catalog.
+ */
+export const GetDefectCollaborationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetDefectCollaborationQueryParams = zod.object({
+  "before": zod.coerce.string().uuid().optional()
+})
+
+export const GetDefectCollaborationResponse = zod.object({
+  "defectId": zod.string().uuid(),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "actor_id": zod.string().uuid(),
+  "actor": zod.string(),
+  "body": zod.string(),
+  "created_at": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "nextCursor": zod.string().uuid().nullable(),
+  "canWrite": zod.boolean(),
+  "photos": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "created_at": zod.coerce.date()
+})),
+  "reports": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "actor": zod.string(),
+  "action": zod.enum(['report', 'return', 'accept', 'reopen']),
+  "note": zod.string(),
+  "created_at": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Append a clarification without transitioning the defect. Requires CSRF and defects.execute (assigned contractor) or defects.manage; read-only subscriptions cannot write.
+ */
+export const PostDefectMessageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const postDefectMessageBodyBodyMax = 4000;
+
+
+
+export const PostDefectMessageBody = zod.object({
+  "key": zod.string().uuid(),
+  "body": zod.string().min(1).max(postDefectMessageBodyBodyMax)
+})
+
+export const PostDefectMessageResponse = zod.object({
+  "id": zod.string().uuid(),
+  "actor_id": zod.string().uuid(),
+  "actor": zod.string(),
+  "body": zod.string(),
+  "created_at": zod.coerce.date()
+})
+
+
+/**
  * Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
  */
 export const getRoleInsightsQueryPeriodRegExp = new RegExp('^\\d{4}-(0[1-9]|1[0-2])$');

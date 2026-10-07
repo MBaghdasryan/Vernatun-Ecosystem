@@ -11,6 +11,36 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /defects/{id}/collaboration:
+    get:
+      operationId: getDefectCollaboration
+      description: Assigned-contractor or scoped defect-reader access only. Evidence is not access to the general document catalog.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: before, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Append-only conversation and existing defect evidence
+          content: { application/json: { schema: { $ref: '#/components/schemas/DefectCollaboration' } } }
+        '403': { description: Missing permission or module }
+        '404': { description: Defect or cursor outside scope }
+  /defects/{id}/messages:
+    post:
+      operationId: postDefectMessage
+      description: Append a clarification without transitioning the defect. Requires CSRF and defects.execute (assigned contractor) or defects.manage; read-only subscriptions cannot write.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DefectMessageInput' } } }
+      responses:
+        '201':
+          description: Persisted message, or the same receipt on idempotent retry
+          content: { application/json: { schema: { $ref: '#/components/schemas/DefectMessage' } } }
+        '400': { description: Invalid text or operation key }
+        '403': { description: Write access denied }
+        '404': { description: Defect outside scope }
+        '409': { description: Operation key reused with different content }
   /role-insights:
     get:
       operationId: getRoleInsights
@@ -2346,6 +2376,54 @@ components:
           type: string
       required:
         - status
+    DefectMessageInput:
+      type: object
+      additionalProperties: false
+      required: [key, body]
+      properties:
+        key: { type: string, format: uuid }
+        body: { type: string, minLength: 1, maxLength: 4000 }
+    DefectMessage:
+      type: object
+      required: [id, actor_id, actor, body, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        actor_id: { type: string, format: uuid }
+        actor: { type: string }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+    DefectEvidencePhoto:
+      type: object
+      required: [id, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+    DefectEvidenceReport:
+      type: object
+      required: [id, actor, action, note, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        actor: { type: string }
+        action: { type: string, enum: [report, return, accept, reopen] }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
+    DefectCollaboration:
+      type: object
+      required: [defectId, messages, total, nextCursor, canWrite, photos, reports]
+      properties:
+        defectId: { type: string, format: uuid }
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/DefectMessage' }
+        total: { type: integer }
+        nextCursor: { type: [string, 'null'], format: uuid }
+        canWrite: { type: boolean }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/DefectEvidencePhoto' }
+        reports:
+          type: array
+          items: { $ref: '#/components/schemas/DefectEvidenceReport' }
     RoleInsightCard:
       type: object
       required: [key, value]
