@@ -1,0 +1,2651 @@
+Продолжи разработку существующего проекта **Vernatun** после завершения предыдущих этапов.
+
+Это отдельная фаза:
+
+# VERNATUN PAYMENTS & UTILITY BILLING ARCHITECTURE
+
+Цель — создать production-oriented финансовый integration layer, который поддерживает:
+
+1. оплату SaaS-подписки Vernatun управляющими организациями;
+2. оплату жителями начислений конкретной управляющей организации;
+3. оплату коммунальных услуг:
+   - электроэнергия;
+   - газ;
+   - вода;
+   - в дальнейшем другие utility providers;
+4. несколько payment providers;
+5. отдельные merchant credentials для каждой организации;
+6. reconciliation;
+7. refunds;
+8. partial payments;
+9. account credit;
+10. utility subscriber/debt lookup;
+11. API/webhook confirmation;
+12. безопасное добавление новых банков и платёжных систем без переписывания финансового ядра.
+
+---
+
+# 0. КРИТИЧЕСКОЕ АРХИТЕКТУРНОЕ ПРАВИЛО
+
+В системе должны существовать ТРИ НЕЗАВИСИМЫХ финансовых потока.
+
+## FLOW A — VERNATUN SaaS
+
+Плательщик:
+
+`Management Company / Developer / HOA`
+
+Получатель:
+
+`Vernatun`
+
+Пример:
+
+Management Company
+→ payment provider
+→ банковский/merchant account Vernatun.
+
+---
+
+## FLOW B — PROPERTY / ЖКХ PAYMENTS
+
+Плательщик:
+
+`Resident / Owner / Renter`
+
+Получатель:
+
+`конкретная Management Company / HOA`
+
+Пример:
+
+Resident
+→ Ameriabank / Idram / другой provider
+→ merchant account организации A.
+
+Vernatun НЕ является получателем средств.
+
+---
+
+## FLOW C — UTILITIES
+
+Плательщик:
+
+`Resident`
+
+Получатель:
+
+- Electric utility;
+- Gas utility;
+- Water utility;
+- другой service provider.
+
+Пример:
+
+Resident
+→ utility payment rail
+→ Electric Networks / Gas provider / Water provider.
+
+Vernatun НЕ является получателем этих средств.
+
+---
+
+# 1. НИКОГДА НЕ СМЕШИВАТЬ ТРИ КОНТУРА
+
+В коде и БД разделить:
+
+### Platform Billing
+
+SaaS Vernatun.
+
+### Property Billing
+
+ЖКХ/управление домом.
+
+### Utility Billing
+
+Газ/вода/электроэнергия и т.д.
+
+Нельзя использовать один `payments` flow без явного типа назначения.
+
+Каждая денежная операция должна иметь:
+
+`payment_domain`
+
+enum:
+
+- `platform`
+- `property`
+- `utility`
+
+---
+
+# 2. VERNATUN НЕ ДОЛЖЕН СТАНОВИТЬСЯ КОШЕЛЬКОМ
+
+Для property и utility payments:
+
+Vernatun:
+
+- рассчитывает;
+- показывает;
+- инициирует;
+- маршрутизирует;
+- получает callback/webhook;
+- сверяет;
+- хранит accounting state.
+
+Но деньги должны идти напрямую конечному получателю.
+
+Нельзя строить:
+
+Resident
+→ Vernatun bank account
+→ Management Company.
+
+Правильно:
+
+Resident
+→ Payment Provider
+→ Management Company merchant/account.
+
+Utility:
+
+Resident
+→ Payment Provider / Utility Gateway
+→ Utility Provider.
+
+---
+
+# 3. НЕ ХРАНИТЬ ДАННЫЕ БАНКОВСКОЙ КАРТЫ
+
+Vernatun никогда не должен хранить:
+
+- PAN;
+- CVV/CVC;
+- PIN;
+- track data.
+
+Использовать hosted payment pages / tokenized provider flows.
+
+Если provider поддерживает saved card/binding:
+
+хранить только provider token/binding identifier.
+
+---
+
+# 4. СНАЧАЛА AUDIT
+
+Перед изменениями проанализируй существующие:
+
+- finance tables;
+- invoices;
+- charges;
+- payments;
+- payment confirmations;
+- adjustments;
+- reconciliation;
+- subscriptions;
+- integrations;
+- provider registry;
+- encrypted secrets;
+- webhooks;
+- API;
+- audit events;
+- ImTun payment screens;
+- accountant screens;
+- Vernatun Console;
+- organization settings.
+
+Не создавать дубликаты существующих сущностей.
+
+---
+
+# 5. PAYMENT DOMAIN MODEL
+
+Построить/нормализовать модель:
+
+## billing_accounts
+
+ЖКХ-лицевые счета.
+
+Поля минимум:
+
+- id
+- organization_id
+- building_id
+- unit_id
+- account_number
+- currency
+- status
+- payer_user_id nullable
+- created_at
+
+---
+
+## invoices
+
+- id
+- billing_account_id
+- period
+- issued_at
+- due_at
+- currency
+- subtotal
+- adjustments_total
+- total
+- paid_amount
+- status
+
+Statuses:
+
+- draft
+- validated
+- published
+- partially_paid
+- paid
+- overdue
+- cancelled
+
+---
+
+## invoice_items
+
+- id
+- invoice_id
+- service_code
+- description
+- quantity
+- unit_price
+- amount
+- metadata
+
+---
+
+# 6. PAYMENT INTENT
+
+Создать provider-independent сущность:
+
+`payment_intents`
+
+Минимум:
+
+- id
+- public_reference
+- payment_domain
+- organization_id nullable
+- billing_account_id nullable
+- platform_invoice_id nullable
+- utility_account_id nullable
+- payer_user_id
+- provider_instance_id
+- amount
+- currency
+- description
+- status
+- provider_payment_id nullable
+- provider_order_id nullable
+- return_url
+- expires_at
+- created_at
+- updated_at
+
+Statuses:
+
+- created
+- pending
+- requires_action
+- processing
+- succeeded
+- failed
+- cancelled
+- expired
+
+---
+
+# 7. PAYMENT TRANSACTION
+
+Не считать PaymentIntent фактическим платежом.
+
+Создать:
+
+`payment_transactions`
+
+- id
+- payment_intent_id
+- provider_instance_id
+- external_transaction_id
+- amount
+- currency
+- transaction_type
+- status
+- provider_status
+- provider_response_safe_json
+- initiated_at
+- confirmed_at
+
+Types:
+
+- payment
+- refund
+- reversal
+- correction
+
+---
+
+# 8. PAYMENT ALLOCATIONS
+
+Создать:
+
+`payment_allocations`
+
+Это критически важно.
+
+Один платеж может покрывать несколько invoices.
+
+Поля:
+
+- id
+- payment_transaction_id
+- invoice_id
+- amount
+- created_at
+
+Constraint:
+
+SUM allocations <= successful payment amount.
+
+---
+
+# 9. ACCOUNT CREDIT
+
+Создать возможность переплаты.
+
+Если:
+
+invoice = 26,000 AMD
+
+payment = 30,000 AMD
+
+результат:
+
+26,000 → invoice allocation
+
+4,000 → account credit.
+
+Создать ledger/credit model.
+
+Не создавать фиктивный отрицательный invoice.
+
+---
+
+# 10. LEDGER
+
+Добавить финансовый ledger.
+
+Минимум:
+
+`ledger_entries`
+
+- billing_account_id
+- entry_type
+- source_type
+- source_id
+- debit
+- credit
+- currency
+- effective_at
+- created_at
+
+Types:
+
+- invoice
+- payment
+- adjustment
+- credit
+- credit_application
+- refund
+- writeoff
+
+Ledger entries immutable.
+
+Correction выполняется новой записью.
+
+---
+
+# 11. PAYMENT ALLOCATION POLICY
+
+Организация может выбирать policy:
+
+### oldest_first
+
+Старейший долг первым.
+
+### selected_invoices
+
+Только выбранные invoices.
+
+### current_period_first
+
+Опционально.
+
+Default:
+
+`oldest_first`.
+
+Policy должна быть backend-controlled.
+
+---
+
+# 12. PAYMENT PROVIDER ARCHITECTURE
+
+Создать общий interface:
+
+`PaymentProvider`
+
+Conceptually:
+
+- `initializePayment()`
+- `getPaymentStatus()`
+- `verifyCallback()`
+- `confirmPayment()` optional
+- `refundPayment()` optional
+- `cancelPayment()` optional
+- `getCapabilities()`
+- `healthCheck()`
+
+Каждый provider adapter должен реализовывать единый internal contract.
+
+---
+
+# 13. PROVIDER CAPABILITIES
+
+Capabilities:
+
+- hosted_payment
+- redirect_payment
+- status_query
+- callback
+- webhook
+- refund
+- reversal
+- card_binding
+- recurring
+- partial_refund
+- utility_payment
+
+UI не должен предлагать функцию, которую конкретный provider не поддерживает.
+
+---
+
+# 14. PAYMENT PROVIDER INSTANCE
+
+Не существует одного глобального Ameriabank account.
+
+Создать:
+
+`payment_provider_instances`
+
+Поля:
+
+- id
+- provider_code
+- scope_type
+- organization_id nullable
+- display_name
+- environment
+- enabled
+- configuration_json
+- encrypted_credentials
+- status
+- last_health_check
+- last_error
+- created_at
+- updated_at
+
+`scope_type`:
+
+- platform
+- organization
+
+---
+
+# 15. PLATFORM MERCHANT
+
+Создать отдельный provider instance:
+
+scope:
+
+`platform`
+
+Используется ТОЛЬКО для:
+
+Vernatun SaaS subscription payments.
+
+Его нельзя использовать для resident ЖКХ payments.
+
+---
+
+# 16. ORGANIZATION MERCHANT
+
+Каждая управляющая организация имеет свои provider instances.
+
+Пример:
+
+Organization A:
+- Ameriabank Merchant A
+- Idram Merchant A
+
+Organization B:
+- Ameriabank Merchant B
+
+Organization C:
+- Idram Merchant C
+
+Деньги идут на merchant/account соответствующей организации.
+
+---
+
+# 17. PROVIDER ROUTING
+
+Создать service:
+
+`PaymentRouter`
+
+Он получает:
+
+- payment domain
+- organization
+- amount
+- currency
+- payment method
+
+и выбирает подходящий provider instance.
+
+Пример:
+
+property payment
+organization = ORG-A
+method = ameria
+
+→ Ameria instance ORG-A.
+
+platform payment
+→ Vernatun platform merchant.
+
+---
+
+# 18. AMERIABANK VPOS ADAPTER
+
+Создать настоящий adapter:
+
+`AmeriabankPaymentProvider`
+
+Не смешивать provider-specific поля с core financial entities.
+
+Поддержать конфигурацию минимум:
+
+- base URL
+- ClientID
+- Username
+- Password
+- BackURL
+- environment
+
+Credentials encrypted.
+
+---
+
+# 19. AMERIABANK OPERATIONS
+
+Реализовать adapter operations вокруг актуального VPOS contract.
+
+Поддержать минимум:
+
+### InitPayment
+
+Создание платежа.
+
+Передавать provider-specific:
+
+- ClientID
+- Amount
+- OrderID
+- BackURL
+- Username
+- Password
+- Description
+- Currency
+
+Дополнительные поддерживаемые provider поля использовать только при необходимости.
+
+---
+
+# 20. AMERIA ORDER ID
+
+Ameriabank требует подходящий order identifier.
+
+Не использовать raw database UUID, если provider требует integer.
+
+Создать безопасный internal→provider order mapping.
+
+Provider OrderID должен быть уникальным в merchant context.
+
+Хранить соответствие:
+
+Vernatun PaymentIntent
+↔ Ameria OrderID
+↔ Ameria PaymentID.
+
+---
+
+# 21. AMERIA PAYMENT ID
+
+После successful initialization сохранить:
+
+- PaymentID
+- ResponseCode
+- safe ResponseMessage.
+
+Не хранить credentials в provider response JSON.
+
+---
+
+# 22. AMERIA STATUS CHECK
+
+Использовать provider status operation для server-to-server проверки.
+
+Не доверять только browser redirect.
+
+Payment status считается succeeded только после подтверждённого server-side provider result.
+
+---
+
+# 23. AMERIA CALLBACK / RETURN
+
+Разделять:
+
+### Browser return
+
+Пользователь вернулся после payment page.
+
+Это НЕ доказательство оплаты.
+
+### Server verification
+
+Backend запрашивает/проверяет фактический статус.
+
+Только после этого:
+
+`PaymentTransaction.status = succeeded`.
+
+---
+
+# 24. AMERIA CONFIRM
+
+Если merchant configuration использует двухэтапную схему authorization/capture:
+
+поддержать provider capability:
+
+`requires_confirmation`.
+
+Не выполнять ConfirmPayment автоматически без понимания merchant configuration.
+
+---
+
+# 25. AMERIA REFUND
+
+Реализовать adapter method для refund, если разрешено merchant configuration.
+
+Refund:
+
+- отдельная transaction;
+- original transaction reference;
+- amount;
+- reason;
+- actor;
+- audit.
+
+Никогда не удалять original payment.
+
+---
+
+# 26. AMERIA CANCEL / REVERSAL
+
+Поддержать provider reversal/cancel как отдельное действие при допустимом статусе.
+
+---
+
+# 27. AMERIA SANDBOX / PRODUCTION
+
+Обязательно разделить:
+
+- test endpoint;
+- production endpoint.
+
+Нельзя определять environment по frontend.
+
+Хранить environment в provider instance.
+
+Production credentials никогда не использовать в test instance.
+
+---
+
+# 28. IDRAM ADAPTER
+
+Создать:
+
+`IdramPaymentProvider`
+
+Но не изобретать undocumented production contract.
+
+Каркас adapter реализовать полностью.
+
+Конфигурация должна предусматривать минимум:
+
+- Merchant/Receiver account
+- Secret key
+- Result callback URL
+- Success URL
+- Fail URL
+- environment/provider base URL if required
+
+---
+
+# 29. IDRAM MERCHANT FIELDS
+
+Adapter должен быть способен работать с merchant protocol, содержащим provider-specific merchant/bill/payment data.
+
+Поддержать mapping concepts:
+
+- receiver account
+- merchant bill number
+- amount
+- description
+- payer/provider transaction reference
+- result callback
+- success redirect
+- fail redirect
+
+Но точный checksum/signature algorithm и production endpoint должны быть реализованы ТОЛЬКО по официальной merchant documentation, предоставленной Idram.
+
+---
+
+# 30. IDRAM SAFETY FLAG
+
+До подтверждения официального technical merchant contract:
+
+Idram adapter должен иметь:
+
+`productionReady = false`
+
+или аналогичный internal capability/status.
+
+UI:
+
+`Provider adapter implemented — production protocol verification required.`
+
+Нельзя включить production через случайный toggle.
+
+---
+
+# 31. IDRAM PRECHECK / RESULT FLOW
+
+Архитектура должна позволять:
+
+Merchant payment request
+→ Idram
+→ merchant precheck if protocol requires
+→ user payment
+→ result callback
+→ signature validation
+→ bill validation
+→ amount validation
+→ idempotent completion.
+
+Не считать success redirect подтверждением оплаты.
+
+---
+
+# 32. CHECKSUM / SIGNATURE
+
+Любой Idram result callback:
+
+- проверить signature/checksum;
+- receiver;
+- bill number;
+- amount;
+- duplicate transaction.
+
+Invalid callback:
+
+- HTTP safe error;
+- security log;
+- payment state не менять.
+
+---
+
+# 33. ADDITIONAL ARMENIAN PAYMENT PROVIDERS
+
+Архитектура должна позволять позже добавить adapters для:
+
+- других банковских VPOS;
+- ArCa-based acquiring;
+- Telcell;
+- EasyPay;
+- другие локальные payment providers.
+
+НЕ hardcode бизнес-логику под Ameria/Idram.
+
+---
+
+# 34. UI — PAYMENT PROVIDERS
+
+В:
+
+`Vernatun Console → Integrations → Payments`
+
+Platform admin видит provider types.
+
+Для platform scope можно настроить merchant Vernatun.
+
+В:
+
+`Vernatun OS → Organization → Integrations → Payments`
+
+org admin с permission может настроить merchant своей организации.
+
+---
+
+# 35. PROVIDER SETUP WIZARD
+
+Для каждого provider:
+
+Step 1:
+Choose provider.
+
+Step 2:
+Environment.
+
+Step 3:
+Merchant credentials.
+
+Step 4:
+Callback URLs.
+
+Step 5:
+Test connection.
+
+Step 6:
+Test transaction configuration.
+
+Step 7:
+Activate.
+
+Не показывать сохранённый secret.
+
+После сохранения:
+
+`••••••••`
+
+Actions:
+
+- Replace credentials
+- Disable
+- Test
+
+---
+
+# 36. SaaS BILLING — VERNATUN
+
+Теперь реализовать отдельный:
+
+`PlatformBillingService`
+
+Он обслуживает только подписки Vernatun.
+
+---
+
+# 37. PLATFORM INVOICE
+
+Создать/нормализовать:
+
+`platform_invoices`
+
+Поля:
+
+- organization_id
+- subscription_id
+- billing_period
+- amount
+- currency
+- issued_at
+- due_at
+- status
+
+Statuses:
+
+- draft
+- issued
+- partially_paid
+- paid
+- overdue
+- cancelled
+
+---
+
+# 38. SAAS PAYMENT FLOW
+
+Organization Admin:
+
+Vernatun OS
+→ Subscription
+→ Invoice
+→ Pay
+
+Backend:
+
+PlatformBilling
+→ platform PaymentProviderInstance
+→ PaymentIntent(payment_domain=platform)
+→ hosted payment page.
+
+Money destination:
+
+VERNATUN MERCHANT ACCOUNT.
+
+---
+
+# 39. SAAS VERNATUN MERCHANT CONFIG
+
+Не hardcode Vernatun bank credentials.
+
+Создать:
+
+Console
+→ Platform Operations
+→ Integrations
+→ Payments
+→ Platform merchant.
+
+После получения merchant credentials Vernatun достаточно будет заполнить настройки.
+
+Код не должен требовать изменений.
+
+---
+
+# 40. PLATFORM SUBSCRIPTION ACTIVATION
+
+Не активировать/продлевать subscription по frontend success.
+
+Только:
+
+successful confirmed Platform Payment
+→ platform invoice allocation
+→ subscription lifecycle update.
+
+Это должно выполняться idempotently.
+
+---
+
+# 41. MANUAL SAAS BANK TRANSFER
+
+Поддержать:
+
+Manual Bank Transfer.
+
+Platform invoice показывает:
+
+- beneficiary;
+- account;
+- purpose/reference.
+
+Platform accountant/admin после reconciliation может подтвердить transaction.
+
+Все ручные подтверждения audit.
+
+---
+
+# 42. PROPERTY PAYMENT FLOW
+
+ImTun:
+
+Payments
+→ invoices
+→ select invoices
+→ Pay.
+
+Backend:
+
+PropertyBilling
+→ PaymentRouter
+→ ORGANIZATION payment provider instance.
+
+Деньги:
+
+Resident
+→ provider
+→ Management Company.
+
+---
+
+# 43. ЕСЛИ У ОРГАНИЗАЦИИ НЕТ ONLINE PROVIDER
+
+Показывать доступные способы:
+
+- bank transfer;
+- manual instructions;
+- configured external provider.
+
+НЕ fallback на merchant Vernatun.
+
+Это критично.
+
+Vernatun merchant никогда автоматически не принимает деньги клиента.
+
+---
+
+# 44. PAYMENT RECEIPT
+
+После confirmed payment пользователь видит receipt.
+
+Receipt:
+
+- payment reference;
+- provider;
+- date;
+- amount;
+- currency;
+- beneficiary;
+- billing account;
+- invoice allocations;
+- provider external reference.
+
+Не называть это fiscal receipt, если фактически это только payment confirmation.
+
+---
+
+# 45. BANK TRANSFER RECONCILIATION
+
+Сохранить/расширить систему bank statement import.
+
+`bank_transactions`
+
+Поля минимум:
+
+- organization_id
+- bank_account
+- external_id
+- transaction_date
+- amount
+- currency
+- payer_name
+- payer_account
+- purpose
+- raw_data
+- status
+
+---
+
+# 46. MATCHING
+
+Matching engine использует:
+
+- billing account number;
+- apartment;
+- payer;
+- amount;
+- payment reference;
+- invoice;
+- subscriber reference.
+
+Confidence:
+
+- exact
+- high
+- medium
+- low
+
+Не auto-post low confidence transactions.
+
+---
+
+# 47. RECONCILIATION STATES
+
+- unmatched
+- suggested
+- matched
+- partially_allocated
+- fully_allocated
+- ignored
+- reversed
+
+---
+
+# 48. DUPLICATE PROTECTION
+
+Использовать:
+
+- provider ID;
+- merchant;
+- external transaction ID;
+- amount;
+- timestamp/reference.
+
+Callback retry не должен создавать второй payment.
+
+Все payment completion handlers idempotent.
+
+---
+
+# 49. UTILITY BILLING — ОТДЕЛЬНЫЙ ДОМЕН
+
+Создать отдельный:
+
+`UtilityBillingService`
+
+Не делать utility bill обычным ЖКХ invoice организации.
+
+---
+
+# 50. UTILITY TYPES
+
+Поддержать:
+
+- electricity
+- gas
+- water
+- heating future
+- waste future
+- telecom future
+- other
+
+---
+
+# 51. UTILITY PROVIDER REGISTRY
+
+Создать:
+
+`utility_providers`
+
+Поля:
+
+- id
+- code
+- name
+- utility_type
+- country
+- supported_regions
+- capabilities
+- integration_status
+- enabled
+
+Примеры registry entries для Armenia:
+
+- electricity provider
+- gas provider
+- water provider
+
+Но реальные API endpoints не выдумывать.
+
+---
+
+# 52. UTILITY ACCOUNT
+
+Создать:
+
+`utility_accounts`
+
+Привязка:
+
+Unit
+→ Utility Account.
+
+Поля:
+
+- id
+- organization_id
+- building_id
+- unit_id
+- utility_provider_id
+- subscriber_number
+- additional_lookup_fields encrypted/safe if needed
+- display_name
+- status
+- last_synced_at
+
+Subscriber number — не заменять Vernatun billing account.
+
+---
+
+# 53. SECURITY SUBSCRIBER NUMBER
+
+Utility subscriber number может быть sensitive account information.
+
+Показывать только пользователям, имеющим доступ к unit.
+
+Логи не должны бессмысленно публиковать полный subscriber number.
+
+Поддержать masking.
+
+---
+
+# 54. UTILITY INTEGRATION ARCHITECTURE
+
+Создать interface:
+
+`UtilityProviderAdapter`
+
+Capabilities:
+
+- `lookupSubscriber()`
+- `getBalance()`
+- `getCurrentBill()`
+- `getHistory()` optional
+- `createPayment()` optional
+- `verifyPayment()` optional
+- `getMeters()` optional
+- `submitMeterReading()` optional
+- `healthCheck()`
+
+---
+
+# 55. UTILITY CAPABILITIES
+
+Каждый provider объявляет capabilities.
+
+Например:
+
+Electricity Provider:
+
+- balance_lookup
+- payment
+- payment_confirmation
+
+Water Provider:
+
+- balance_lookup
+
+и т.д.
+
+UI основывается на capabilities.
+
+---
+
+# 56. НИКАКОГО SCRAPING
+
+Запрещено интегрировать коммунальные услуги путём:
+
+- scraping личного кабинета;
+- имитации browser login;
+- обхода CAPTCHA;
+- reverse engineering private mobile API без договора.
+
+Использовать только:
+
+- официальный B2B API;
+- официальный payment aggregator API;
+- банковский bill-payment API;
+- contractual file exchange;
+- approved manual integration.
+
+---
+
+# 57. UTILITY INTEGRATION STATUS
+
+Для provider:
+
+- `not_configured`
+- `contract_required`
+- `sandbox`
+- `active`
+- `degraded`
+- `disabled`
+
+Если официального B2B API нет:
+
+UI показывает:
+
+`Contract/API access required`.
+
+Не fake implementation.
+
+---
+
+# 58. UTILITY QUERY FLOW
+
+ImTun:
+
+Utilities
+→ Electricity
+→ subscriber account.
+
+Backend:
+
+UtilityBillingService
+→ UtilityProviderAdapter
+→ getBalance(subscriberNumber).
+
+Ответ нормализовать:
+
+`UtilityBalance`
+
+- provider
+- subscriber_number_masked
+- subscriber_name optional
+- billing_period
+- current_charge
+- previous_debt
+- penalties optional
+- total_due
+- currency
+- due_date
+- retrieved_at
+- provider_reference
+
+---
+
+# 59. НИКОГДА НЕ ИСПОЛЬЗОВАТЬ СТАРЫЙ BALANCE МОЛЧА
+
+Utility debt может меняться независимо от Vernatun.
+
+Показывать:
+
+`Updated at ...`
+
+Если stale:
+
+показать предупреждение.
+
+Перед payment желательно повторно запросить balance/provider validation.
+
+---
+
+# 60. UTILITY PAYMENT FLOW
+
+Житель:
+
+ImTun
+→ Utilities
+→ Electricity
+→ debt 12,850 AMD
+→ Pay.
+
+Backend:
+
+1. reload/validate current balance;
+2. create UtilityPaymentIntent;
+3. select payment rail;
+4. associate subscriber number;
+5. initiate payment;
+6. user pays;
+7. provider/aggregator confirms;
+8. UtilityPaymentTransaction succeeded;
+9. verify utility provider balance/status when API allows;
+10. show confirmation.
+
+---
+
+# 61. КУДА ИДУТ ДЕНЬГИ UTILITY
+
+Никогда:
+
+Utility payment
+→ Management Company account.
+
+Если житель платит electricity:
+
+получатель должен быть electricity service provider через approved payment rail.
+
+Gas:
+
+gas provider.
+
+Water:
+
+water provider.
+
+---
+
+# 62. PAYMENT RAIL VS UTILITY PROVIDER
+
+Очень важно разделить:
+
+### UtilityProvider
+
+Кто выставляет долг.
+
+### UtilityPaymentRail
+
+Через кого технически проходит платеж.
+
+Пример conceptually:
+
+Electricity Provider
+← debt lookup / payment confirmation
+
+Resident
+→ Idram/Telcell/Bank bill-payment rail
+→ Electricity Provider.
+
+Поэтому не соединять эти сущности в один provider type.
+
+---
+
+# 63. UTILITY PAYMENT RAIL INTERFACE
+
+Создать:
+
+`UtilityPaymentRail`
+
+Methods:
+
+- `validateSubscriber()`
+- `lookupPayableAmount()` optional
+- `initializeUtilityPayment()`
+- `verifyUtilityPayment()`
+- `healthCheck()`
+
+---
+
+# 64. UTILITY PAYMENT VIA AGGREGATOR
+
+Архитектура должна позволять использовать:
+
+- Idram;
+- Telcell;
+- bank bill-payment APIs;
+- другие contractual utility payment gateways
+
+как payment rail.
+
+Это предпочтительнее прямой интеграции с каждым utility provider, если aggregator официально предоставляет нужный B2B API.
+
+---
+
+# 65. UTILITY PAYMENT IDENTIFIERS
+
+Каждая utility transaction хранит:
+
+- provider;
+- subscriber number;
+- utility bill/provider reference;
+- payment rail;
+- rail transaction ID;
+- amount;
+- currency;
+- provider confirmation status.
+
+Нельзя терять subscriber number/reference после оплаты.
+
+---
+
+# 66. PROVIDER ACKNOWLEDGEMENT
+
+Оплата utility имеет два разных понятия:
+
+### Payment rail succeeded
+
+Деньги приняты payment rail.
+
+### Utility acknowledged
+
+Utility provider подтвердил зачисление.
+
+Statuses:
+
+- initiated
+- rail_processing
+- rail_succeeded
+- utility_pending
+- utility_confirmed
+- failed
+- reversed
+
+Не показывать `Utility paid` только потому, что redirect был успешным.
+
+---
+
+# 67. ЕСЛИ PROVIDER НЕ ДАЁТ МГНОВЕННЫЙ ACK
+
+Показывать:
+
+`Payment accepted. Awaiting utility provider confirmation.`
+
+Background reconciliation должен позже изменить:
+
+`utility_pending`
+→
+`utility_confirmed`.
+
+---
+
+# 68. UTILITY RECONCILIATION JOB
+
+Периодически проверять pending utility payments, если provider API это поддерживает.
+
+Job idempotent.
+
+Backoff.
+
+Не бесконечно бомбардировать provider.
+
+---
+
+# 69. ELECTRICITY ADAPTER
+
+Создать adapter placeholder:
+
+`ArmeniaElectricityUtilityAdapter`
+
+Но:
+
+НЕ hardcode undocumented external URLs.
+
+Сразу реализовать:
+
+- interface;
+- configuration schema;
+- secrets handling;
+- normalized response;
+- tests с mock contractual provider;
+- status `contract_required`.
+
+После получения официальной B2B документации остаётся реализовать transport layer.
+
+---
+
+# 70. GAS ADAPTER
+
+Аналогично:
+
+`ArmeniaGasUtilityAdapter`.
+
+Поддержать future configuration:
+
+- subscriber number;
+- regional/territorial identifier if required;
+- credentials/API account;
+- base URL.
+
+Не использовать пользовательский пароль от личного кабинета как системный integration credential.
+
+---
+
+# 71. WATER ADAPTER
+
+Аналогично:
+
+`ArmeniaWaterUtilityAdapter`.
+
+Support future:
+
+- subscriber lookup;
+- current debt;
+- payment;
+- confirmation.
+
+До official API:
+
+`contract_required`.
+
+---
+
+# 72. MANUAL UTILITY FALLBACK
+
+Если utility API пока не подключён:
+
+ImTun может хранить subscriber account и дать:
+
+`Open provider payment instructions`
+
+или другие утверждённые способы.
+
+Но НЕ показывать fake balance.
+
+---
+
+# 73. UTILITY ACCOUNTS UI
+
+ImTun:
+
+`/imtun/utilities`
+
+Показать карточки:
+
+### Electricity
+Subscriber: ****1234
+Balance: 12,850 AMD
+Updated: 10:32
+
+[Pay]
+
+### Gas
+Subscriber: ****5678
+Balance: ...
+
+### Water
+Subscriber: ****9811
+Balance: ...
+
+Если integration unavailable:
+
+`Balance temporarily unavailable`
+
+а не `0 AMD`.
+
+---
+
+# 74. ADD UTILITY ACCOUNT
+
+Owner может добавить subscriber number.
+
+Но сервер должен проверить право на unit.
+
+Если provider поддерживает lookup:
+
+показать найденное имя/address для confirmation.
+
+Не сохранять account, если verification clearly показывает другое помещение, если можно установить mismatch.
+
+---
+
+# 75. RENTER POLICY
+
+Utility access не означает ownership.
+
+Org/owner policy определяет:
+
+renter может:
+
+- view utility debt;
+- pay utilities.
+
+По умолчанию renter может платить только utility accounts своего active rented unit, если permission разрешён.
+
+---
+
+# 76. FAMILY POLICY
+
+Family:
+
+utility view/pay только если delegated permission:
+
+`utilities.read`
+
+и:
+
+`utilities.pay`
+
+Не выдавать автоматически финансовые права.
+
+---
+
+# 77. AUTOPAY — НЕ СЕЙЧАС
+
+Не создавать автоматическое списание коммунальных платежей без:
+
+- provider tokenization;
+- explicit mandate;
+- cancellation policy;
+- consent records.
+
+Архитектура может предусмотреть future recurring payments.
+
+Но default:
+
+manual pay.
+
+---
+
+# 78. COMMISSION MODEL
+
+Добавить configurable fee policy.
+
+Для property payments:
+
+- merchant_absorbs
+- payer_additional_fee
+- provider_deducts
+
+Для utility payments комиссия должна соответствовать правилам конкретного rail/provider.
+
+Не придумывать комиссию Vernatun.
+
+---
+
+# 79. PROVIDER FEE
+
+PaymentTransaction может хранить:
+
+- gross_amount
+- provider_fee
+- net_amount
+
+Но invoice погашается по сумме, которую payment domain считает paid amount согласно contract.
+
+---
+
+# 80. CURRENCY
+
+Для Armenia default:
+
+AMD.
+
+Все деньги хранить integer minor units.
+
+Не использовать float.
+
+Если AMD не имеет fractional currency для конкретной бизнес-операции, внутренний money type всё равно должен быть единообразным.
+
+---
+
+# 81. IDEMPOTENCY
+
+Все financial write endpoints должны поддерживать idempotency.
+
+Особенно:
+
+- payment intent create;
+- callbacks;
+- refunds;
+- manual allocations;
+- utility confirmation.
+
+---
+
+# 82. CALLBACK SECURITY
+
+Provider callback endpoint:
+
+- provider-specific validation;
+- signature/checksum if available;
+- amount check;
+- currency;
+- merchant/receiver;
+- transaction ID;
+- replay protection;
+- idempotency;
+- rate limiting where appropriate.
+
+---
+
+# 83. CALLBACK ROUTES
+
+Не использовать один endpoint, который угадывает provider из body.
+
+Например:
+
+`/api/payments/callbacks/ameriabank`
+
+`/api/payments/callbacks/idram`
+
+`/api/utilities/callbacks/:rail`
+
+Но routing должен быть registry-driven.
+
+---
+
+# 84. LOGGING
+
+Нельзя логировать:
+
+- merchant secret;
+- API password;
+- card data;
+- callback secret;
+- full sensitive utility account identifiers.
+
+Создать payment-specific redaction.
+
+---
+
+# 85. FINANCIAL AUDIT
+
+Audit events минимум:
+
+- payment_intent.created
+- payment.succeeded
+- payment.failed
+- payment.refunded
+- allocation.created
+- allocation.changed
+- bank_transaction.matched
+- utility_account.added
+- utility_payment.started
+- utility_payment.confirmed
+- provider.configured
+- provider.disabled
+- credentials.rotated
+
+---
+
+# 86. MANUAL OVERRIDE
+
+Никогда не позволять platform admin просто поставить:
+
+`online_payment = succeeded`.
+
+Manual confirmation допустим только для типов платежей, где это бизнес-процесс:
+
+- cash;
+- bank transfer;
+- imported bank statement.
+
+Provider card/wallet transaction status приходит только из provider verification.
+
+---
+
+# 87. REFUNDS
+
+Refund workflow:
+
+1. authorized user requests refund;
+2. reason required;
+3. original payment checked;
+4. refundable amount calculated;
+5. provider refund called if supported;
+6. refund transaction stored;
+7. ledger correction;
+8. audit.
+
+Partial refund support, если provider поддерживает.
+
+---
+
+# 88. WEBHOOK/PROVIDER RETRY
+
+Provider callback может прийти:
+
+- один раз;
+- несколько раз;
+- раньше browser return;
+- после browser return.
+
+Система должна корректно работать во всех случаях.
+
+---
+
+# 89. PAYMENT PAGE UX
+
+ImTun:
+
+Step:
+
+1. Choose invoices/utilities.
+2. Review.
+3. Choose payment method.
+4. Redirect provider.
+5. Processing screen.
+6. Server verifies.
+7. Result.
+
+После return:
+
+не показывать мгновенно green success.
+
+Сначала:
+
+`Checking payment...`
+
+Backend verification.
+
+---
+
+# 90. PAYMENT METHODS DISPLAY
+
+Показывать только реально активированные organization/provider methods.
+
+Например:
+
+- Bank Card — Ameriabank
+- Idram
+- Bank Transfer
+
+Если Idram не production-ready:
+
+не показывать жильцам production option.
+
+---
+
+# 91. ACCOUNTANT VIEW
+
+Vernatun OS → Accounting:
+
+Tabs:
+
+- Charges
+- Payments
+- Bank Transactions
+- Reconciliation
+- Unmatched
+- Refunds
+- Credits
+- Provider Transactions
+
+---
+
+# 92. PAYMENT DETAILS
+
+Accountant видит:
+
+- internal reference
+- provider
+- external transaction
+- payer
+- billing account
+- gross amount
+- fee
+- net amount
+- allocations
+- provider status
+- audit timeline
+
+Но не merchant secret.
+
+---
+
+# 93. PLATFORM ADMIN VIEW
+
+Platform Admin не должен автоматически видеть детальные financial records residents.
+
+Он видит operational data:
+
+- provider health;
+- success/failure count;
+- transaction reference;
+- error codes;
+- latency.
+
+Детали property finance только через специально разрешённый support access.
+
+---
+
+# 94. METRICS
+
+Добавить safe payment metrics:
+
+Per provider:
+
+- initiated
+- succeeded
+- failed
+- pending
+- success rate
+- average latency
+
+Per organization:
+
+только пользователям с правом finance analytics.
+
+---
+
+# 95. PROVIDER HEALTH
+
+Health:
+
+- configured
+- reachable
+- credentials valid where safe to test
+- last success
+- last failure
+
+Test Connection не должен создавать реальную charge без явного sandbox test capability.
+
+---
+
+# 96. SECRET STORAGE
+
+Payment credentials обязательно encrypted at rest.
+
+Использовать platform encryption key.
+
+Frontend после сохранения не получает credentials обратно.
+
+---
+
+# 97. ROTATION
+
+Поддержать credential rotation.
+
+Старые credentials:
+
+не возвращать.
+
+Audit:
+
+- actor
+- provider
+- changed_at.
+
+---
+
+# 98. DATABASE CONSTRAINTS
+
+Добавить DB safeguards:
+
+- positive transaction amount;
+- currency required;
+- unique provider external ID в пределах merchant/provider;
+- unique payment allocation constraints;
+- no allocation above available payment;
+- no refund above refundable balance.
+
+Critical invariants дополнительно проверять в transaction.
+
+---
+
+# 99. TRANSACTIONS
+
+Payment completion:
+
+BEGIN
+
+lock PaymentIntent
+
+verify not already succeeded
+
+create/update PaymentTransaction
+
+create allocations
+
+create ledger entries
+
+update invoice statuses
+
+create notification
+
+write audit
+
+COMMIT
+
+Не оставлять ситуацию:
+
+Payment succeeded
+но invoice не обновился
+
+из-за раздельных операций.
+
+---
+
+# 100. NOTIFICATIONS
+
+После successful property payment:
+
+Resident:
+
+`Payment received — 26,000 AMD`
+
+Manager/accountant при необходимости.
+
+После utility:
+
+если rail success, но provider pending:
+
+`Payment accepted; confirmation pending.`
+
+После utility confirmation:
+
+`Electricity payment confirmed.`
+
+---
+
+# 101. SaaS NOTIFICATIONS
+
+Organization admin получает:
+
+- platform invoice issued
+- payment received
+- subscription expiring
+- payment overdue
+- subscription suspended warning
+
+---
+
+# 102. API DOCUMENTATION
+
+Обновить OpenAPI.
+
+Отдельные sections:
+
+- Platform Billing
+- Property Payments
+- Utility Billing
+- Payment Providers
+- Provider Callbacks
+- Bank Reconciliation
+
+---
+
+# 103. TEST MODE
+
+Все provider adapters должны поддерживать explicit mode:
+
+- sandbox
+- production
+
+Нельзя автоматически fallback production→sandbox.
+
+---
+
+# 104. MOCK PROVIDER
+
+Создать:
+
+`MockPaymentProvider`
+
+ТОЛЬКО:
+
+development/test.
+
+Он позволяет тестировать:
+
+- success;
+- fail;
+- timeout;
+- duplicate callback;
+- refund.
+
+Production startup должен запрещать active MockPaymentProvider.
+
+---
+
+# 105. MOCK UTILITY PROVIDER
+
+Аналогично:
+
+`MockUtilityProvider`
+
+только test/development.
+
+Tests:
+
+- balance;
+- changed balance;
+- payment pending;
+- payment confirmed;
+- rejected subscriber.
+
+---
+
+# 106. TESTS — PLATFORM PAYMENT
+
+Scenario:
+
+Vernatun creates SaaS invoice
+→ organization initiates payment
+→ platform merchant selected
+→ provider confirms
+→ invoice paid
+→ subscription updated.
+
+Проверить повтор callback.
+
+---
+
+# 107. TESTS — PROPERTY PAYMENT
+
+Resident
+→ invoice
+→ organization merchant
+→ provider success
+→ PaymentTransaction
+→ Allocation
+→ Ledger
+→ Invoice PAID.
+
+Проверить, что деньги не маршрутизируются в platform merchant.
+
+---
+
+# 108. MULTI-TENANT TEST
+
+ORG A и ORG B имеют разные Ameria credentials.
+
+Resident ORG A payment:
+
+должен использовать ТОЛЬКО provider instance ORG A.
+
+Никогда ORG B.
+
+---
+
+# 109. PROVIDER FALLBACK TEST
+
+Если ORG A Ameria disabled:
+
+система не должна fallback к Vernatun merchant.
+
+Можно предложить другой configured ORG-A provider.
+
+---
+
+# 110. PARTIAL PAYMENT TEST
+
+Invoice:
+
+30,000
+
+Payment:
+
+10,000
+
+Result:
+
+invoice partially_paid
+
+remaining:
+
+20,000.
+
+---
+
+# 111. MULTI-INVOICE TEST
+
+Invoices:
+
+10,000
+15,000
+20,000
+
+Payment:
+
+30,000
+
+Default oldest_first:
+
+10,000
+15,000
+5,000.
+
+---
+
+# 112. OVERPAYMENT TEST
+
+Invoice:
+
+26,000
+
+Payment:
+
+30,000
+
+Allocation:
+
+26,000
+
+Credit:
+
+4,000.
+
+---
+
+# 113. UTILITY TEST
+
+Electricity account:
+
+subscriber A.
+
+Provider returns:
+
+12,850 AMD.
+
+Payment:
+
+12,850.
+
+Rail:
+
+succeeded.
+
+Provider:
+
+pending.
+
+UI:
+
+confirmation pending.
+
+Later reconciliation:
+
+confirmed.
+
+---
+
+# 114. SECURITY TESTS
+
+Проверить:
+
+- resident cannot pay another unit invoice;
+- resident cannot query another subscriber;
+- family without delegation denied;
+- renter expired denied;
+- org admin cannot read another organization's merchant config;
+- merchant secrets never returned;
+- callback cannot alter wrong organization;
+- duplicate callback idempotent;
+- fake success browser URL does nothing;
+- manipulated amount rejected.
+
+---
+
+# 115. BROWSER QA
+
+Проверить:
+
+ImTun:
+
+- owner payments;
+- renter allowed payment;
+- utilities;
+- processing;
+- success;
+- failure;
+- pending.
+
+OS:
+
+- accountant reconciliation;
+- payment details.
+
+Console:
+
+- platform merchant configuration.
+
+Widths:
+
+390
+768
+1024
+1440.
+
+---
+
+# 116. DOCUMENTATION
+
+Создать:
+
+`docs/PAYMENT-ARCHITECTURE.md`
+
+Включить диаграммы трёх денежных потоков.
+
+Создать:
+
+`docs/PAYMENT-PROVIDERS.md`
+
+Для каждого adapter:
+
+- capabilities;
+- configuration;
+- status;
+- test/prod;
+- callbacks.
+
+Создать:
+
+`docs/UTILITY-INTEGRATIONS.md`
+
+Для:
+
+- electricity
+- gas
+- water
+
+показать:
+
+- adapter status;
+- official API required;
+- configuration required;
+- available capabilities.
+
+---
+
+# 117. PROVIDER READINESS MATRIX
+
+Создать таблицу:
+
+| Provider | Adapter | Sandbox | Production protocol verified | Credentials | Status |
+
+Например:
+
+Ameriabank:
+- Adapter: implemented
+- Sandbox: supported
+- Production credentials: not configured initially
+
+Idram:
+- Adapter architecture: implemented
+- Production activation: requires confirmed official merchant protocol/credentials
+
+Utility providers:
+- contractual API required until official technical interface supplied.
+
+---
+
+# 118. NEVER CLAIM READY WITHOUT REAL CREDENTIALS
+
+Различать:
+
+- CODE READY
+- SANDBOX VERIFIED
+- PRODUCTION CREDENTIALS REQUIRED
+- PROVIDER CONTRACT REQUIRED
+- PRODUCTION VERIFIED
+
+---
+
+# 119. НЕ ДЕЛАТЬ
+
+Не:
+
+- screen-scrape utility portals;
+- принимать utility деньги на Vernatun;
+- принимать property деньги на Vernatun;
+- хранить card details;
+- создавать fake provider callbacks;
+- hardcode merchant credentials;
+- использовать test account production;
+- считать redirect success подтверждением;
+- смешивать Platform Billing и Property Billing;
+- смешивать Utility account и Unit Billing Account.
+
+---
+
+# 120. КОНЕЧНАЯ СХЕМА
+
+Финальная архитектура должна быть примерно такой:
+
+                     VERNATUN CORE
+                           │
+         ┌─────────────────┼─────────────────┐
+         │                 │                 │
+  PLATFORM BILLING    PROPERTY BILLING   UTILITY BILLING
+         │                 │                 │
+         ▼                 ▼                 ▼
+ Payment Router       Payment Router    Utility Router
+         │                 │             │         │
+         ▼                 ▼             ▼         ▼
+Vernatun Merchant    Org Merchant   Utility API  Payment Rail
+         │                 │             │         │
+         ▼                 ▼             │         ▼
+Vernatun Account    Management Co.       └──→ Utility Provider
+                                           Account
+
+Money destination:
+
+Platform → Vernatun
+
+Property → Management Company
+
+Utility → Utility Provider
+
+---
+
+# 121. MAIN DESIGN PRINCIPLE
+
+**Vernatun controls the transaction lifecycle, but does not unnecessarily become the holder of client money.**
+
+Другими словами:
+
+Vernatun должен знать:
+
+- кто должен;
+- кому должен;
+- сколько;
+- за что;
+- через какого provider;
+- какой merchant;
+- какой transaction;
+- подтвердился ли;
+- куда распределился платёж;
+- что осталось неоплаченным.
+
+Но конечный денежный маршрут должен соответствовать реальному получателю.
+
+---
+
+# 122. ПОРЯДОК РЕАЛИЗАЦИИ
+
+## PHASE 1
+
+Core payment model:
+
+- PaymentIntent
+- PaymentTransaction
+- Allocation
+- Ledger
+- Provider Instances
+- PaymentRouter
+
+## PHASE 2
+
+Ameriabank adapter.
+
+## PHASE 3
+
+Idram adapter foundation + production verification gate.
+
+## PHASE 4
+
+Platform/SaaS billing integration.
+
+## PHASE 5
+
+Organization merchant configuration + ImTun property payments.
+
+## PHASE 6
+
+Bank reconciliation + credits + refunds.
+
+## PHASE 7
+
+Utility billing architecture.
+
+## PHASE 8
+
+Electricity/Gas/Water adapters in `contract_required` state.
+
+## PHASE 9
+
+Utility payment rail framework.
+
+## PHASE 10
+
+Security, QA, OpenAPI, documentation.
+
+---
+
+# 123. ФИНАЛЬНЫЙ REPORT
+
+Создать:
+
+`docs/PAYMENTS-COMPLETION-REPORT.md`
+
+Для каждой возможности:
+
+| Feature | Code | Tests | Sandbox | Production | Missing |
+
+Отдельно:
+
+### Ameriabank
+
+- endpoints implemented
+- sandbox verification
+- missing merchant credentials
+- production status
+
+### Idram
+
+- adapter status
+- protocol verification
+- callback verification
+- missing contract/credentials
+
+### Vernatun SaaS
+
+- invoice
+- payment
+- subscription activation
+
+### Property payments
+
+- organization merchant
+- resident payment
+- allocation
+- reconciliation
+
+### Utilities
+
+Electricity:
+- balance lookup
+- payment
+- confirmation
+- official API status
+
+Gas:
+same.
+
+Water:
+same.
+
+Никаких заявлений о production integration, пока реальный provider contract/credentials не протестированы.
+
+---
+
+# 124. ФИНАЛЬНАЯ ЦЕЛЬ
+
+После этой фазы подключение новой управляющей компании должно выглядеть так:
+
+Console / OS
+→ Organization
+→ Payment Integrations
+→ Add Ameriabank / Idram / another supported provider
+→ enter merchant credentials
+→ Test
+→ Activate.
+
+После этого её жители платят **не Vernatun**, а напрямую этой организации.
+
+А подключение Vernatun SaaS:
+
+Console
+→ Platform Payment Integration
+→ enter Vernatun merchant credentials
+→ Activate.
+
+Управляющие компании платят Vernatun SaaS subscription через отдельный merchant.
+
+Коммунальные:
+
+ImTun
+→ Utilities
+→ Electricity / Gas / Water
+→ subscriber number
+→ debt lookup
+→ Pay
+→ money to utility provider
+→ payment confirmation
+→ updated status.
+
+Не переписывай ядро под конкретный банк.
+
+Архитектура должна позволить подключать новые Armenian payment providers и utility providers через adapters.
