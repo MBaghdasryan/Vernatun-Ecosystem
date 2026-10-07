@@ -6,6 +6,7 @@ import {pool} from '../db.js';
 import {config} from '../config.js';
 import {observedJob,recordSystemEvent,safeCode} from '../system-observability.js';
 import {logCsvCell} from '../system-center.js';
+import {safeErrorStack,apiBuildId} from '../system-diagnostics.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
@@ -81,6 +82,34 @@ test('error groups retain safe evidence, resolve with concurrency guards and reo
  await pool.query(`INSERT INTO system_log_events(category,level,event,endpoint) SELECT 'system','fatal','qa_many','/qa/'||i FROM generate_series(1,52) i`);
  const page=await admin.call('/system/errors');assert.equal(page.data.items.length,50);assert.equal(page.data.hasMore,true);
  assert.ok((await admin.call('/system/errors?page=2')).data.items.length>0);
+});
+test('event diagnostics strip secrets and preserve historical unknowns',async()=>{
+ const secret='PASSWORD_TOKEN_COOKIE_AUTHORIZATION_SECRET';
+ const err=new Error(secret);
+ err.stack=`Error: ${secret}\n    at ${secret} (/private/${secret}/app.ts:123:4)\n    at x (https://host/${secret}/app.ts:15:4)\n    at x (/private/${secret}.ts:12:1)\n    at x (/root/app.ts?token=${secret}:15:4)\n    at x (/root/app.ts:0:1)\n    at unknown (node:internal/process/task_queues:95:5)`;
+ assert.equal(safeErrorStack(err),'app.ts:123:4');
+ assert.equal(safeErrorStack({stack:err.stack}),null);
+ const throwing=new Error();Object.defineProperty(throwing,'stack',{get(){throw Error(secret)}});
+ assert.equal(safeErrorStack(throwing),null);
+ const many=new Error();many.stack='Error\n'+Array(30).fill('    at x (/app/app.ts:4:2)').join('\n');
+ assert.equal(safeErrorStack(many)?.split('\n').length,12);
+ await recordSystemEvent({category:'application',event:'qa_diagnostics',level:'error',error:'DIAGNOSTIC_FAILURE',exception:err});
+ const logs=await admin.call('/system/logs?category=application&q=qa_diagnostics');
+ const row=logs.data.items[0];assert.equal(row.stackTrace,'app.ts:123:4');assert.equal(row.environment,'test');
+ assert.equal(row.applicationVersion,apiBuildId);assert.equal(apiBuildId,null,'unbundled tests must not invent a build ID');
+ assert.ok(!JSON.stringify(row).includes(secret));assert.ok(!JSON.stringify(row).includes('/private'));
+ const list=await admin.call('/system/errors');
+ const group=list.data.items.find((g:any)=>g.message==='DIAGNOSTIC_FAILURE');
+ const detail=await admin.call('/system/errors/'+group.fingerprint);
+ assert.equal(detail.data.stackTrace,'app.ts:123:4');assert.equal(detail.data.environment,'test');
+ // Insert a legacy-shaped row: absent metadata remains unknown, not current runtime.
+ await pool.query("INSERT INTO system_log_events(category,level,event,error_code) VALUES('application','error','qa_legacy','LEGACY_DIAGNOSTIC')");
+ const oldGroup=(await admin.call('/system/errors')).data.items.find((g:any)=>g.message==='LEGACY_DIAGNOSTIC');
+ const legacy=await admin.call('/system/errors/'+oldGroup.fingerprint);
+ assert.equal(legacy.data.environment,null);assert.equal(legacy.data.applicationVersion,null);assert.equal(legacy.data.stackTrace,null);
+ await observedJob('qa_diagnostic_job',async()=>{throw err}).catch(()=>{});
+ const jobLogs=await admin.call('/system/logs?job=qa_diagnostic_job&level=error');
+ assert.equal(jobLogs.data.items[0].stackTrace,'app.ts:123:4');
 });
 test('overview observations real and unavailable values explicit',async()=>{
  const r=await admin.call('/system/overview');assert.equal(r.status,200);

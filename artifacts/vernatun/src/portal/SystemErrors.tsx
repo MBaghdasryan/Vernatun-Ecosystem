@@ -12,8 +12,9 @@ const S:Record<string,[string,string,string]>={
  users:['Օգտատերեր','Пользователи','Users'],orgs:['Կազմակերպություններ','Организации','Organizations'],status:['Կարգավիճակ','Статус','Status'],
  requestId:['Վերջին հարցման ID','ID последнего запроса','Latest request ID'],fingerprint:['Fingerprint','Fingerprint','Fingerprint'],
  eventRequestId:['Հարցման ID','ID запроса','Request ID'],actorId:['Օգտատիրոջ ID','ID пользователя','User ID'],orgId:['Կազմակերպության ID','ID организации','Organization ID'],
- environment:['Միջավայր (ընթացիկ)','Окружение (текущее)','Environment (current runtime)'],version:['Հավելվածի տարբերակ','Версия приложения','Application version'],
- stack:['Stack trace','Стектрейс','Stack trace'],notRecorded:['Չի գրանցվել','Не записано','Not recorded'],
+ diagnostics:['Դեպքի ախտորոշում','Диагностика события','Event diagnostics'],
+ environment:['Վերջին դեպքի միջավայր','Окружение последнего события','Latest event environment'],version:['Վերջին դեպքի API build ID','ID сборки API последнего события','Latest event API build ID'],
+ stack:['Անվտանգ կոդի տողեր','Безопасные строки вызовов','Safe call locations'],notRecorded:['Չի գրանցվել','Не записано','Not recorded'],
  details:['Մանրամասներ','Подробнее','Details'],hide:['Թաքցնել','Скрыть','Hide'],refresh:['Թարմացնել','Обновить','Refresh'],retry:['Կրկնել','Повторить','Retry'],
  loading:['Բեռնվում է…','Загрузка…','Loading…'],error:['Չհաջողվեց բեռնել տվյալները։','Не удалось загрузить данные.','Could not load data.'],forbidden:['Այս բաժնի համար թույլտվություն չկա։','Нет разрешения на этот раздел.','You do not have permission for this section.'],
  empty:['Սխալների խմբեր չկան։','Групп ошибок нет.','No error groups.'],prev:['Նախորդ','Назад','Previous'],next:['Հաջորդ','Далее','Next'],page:['Էջ','Страница','Page'],
@@ -77,13 +78,16 @@ function Detail({fp,ck,l,canManage,onChanged}:{fp:string;ck:string;l:Language;ca
   <dl className="se-dl">
    <div><dt>{tx('fingerprint')}</dt><dd className="sc-mono">{g.fingerprint}</dd></div>
    <div><dt>{tx('requestId')}</dt><dd className="sc-mono">{g.latestRequestId??'—'}</dd></div>
-   <div><dt>{tx('environment')}</dt><dd className="sc-mono" data-testid="text-error-environment">{d.environment}</dd></div>
+   <div><dt>{tx('environment')}</dt>{nr(d.environment,'environment')}</div>
    <div><dt>{tx('version')}</dt>{nr(d.applicationVersion,'version')}</div>
    <div><dt>{tx('stack')}</dt>{d.stackTrace===null?nr(null,'stack'):<dd><pre className="sc-mono se-pre" data-testid="text-error-stack">{d.stackTrace}</pre></dd>}</div>
   </dl>
   <h4 className="sc-label se-h">{tx('events')} ({ev.length})</h4>
   <div className="cx-scroll"><table className="cx-table sc-table"><thead><tr><th>{tx('time')}</th><th>{tx('level')}</th><th>{tx('event')}</th><th>{tx('endpoint')}</th><th>{tx('http')}</th><th>{tx('code')}</th><th>{tx('eventRequestId')}</th><th>{tx('actorId')}</th><th>{tx('orgId')}</th></tr></thead><tbody>
-   {ev.map(e=><tr key={e.id} data-testid={'row-error-event-'+e.id}><td>{fmtDate(e.createdAt,l)}</td><td><span className={'sc-level sc-level-'+e.level}>{e.level}</span></td><td className="sc-mono">{e.event}</td><td className="sc-mono">{e.method?e.method+' ':''}{e.endpoint??'—'}</td><td>{e.status??'—'}</td><td className="sc-mono">{e.errorCode??'—'}</td><td className="sc-mono">{e.requestId??'—'}</td><td className="sc-mono">{e.actorId??'—'}</td><td className="sc-mono">{e.organizationId??'—'}</td></tr>)}
+   {ev.map(e=>[
+    <tr key={e.id} data-testid={'row-error-event-'+e.id}><td>{fmtDate(e.createdAt,l)}</td><td><span className={'sc-level sc-level-'+e.level}>{e.level}</span></td><td className="sc-mono">{e.event}</td><td className="sc-mono">{e.method?e.method+' ':''}{e.endpoint??'—'}</td><td>{e.status??'—'}</td><td className="sc-mono">{e.errorCode??'—'}</td><td className="sc-mono">{e.requestId??'—'}</td><td className="sc-mono">{e.actorId??'—'}</td><td className="sc-mono">{e.organizationId??'—'}</td></tr>,
+    <tr key={e.id+':diagnostics'}><td colSpan={9}><details data-testid={'event-diagnostics-'+e.id}><summary>{tx('diagnostics')} · {e.id}</summary><p className="sc-mono">{e.applicationVersion??tx('notRecorded')} · {e.environment??tx('notRecorded')}</p><pre className="sc-mono se-pre">{e.stackTrace??tx('notRecorded')}</pre></details></td></tr>
+   ])}
    {!ev.length&&<tr><td colSpan={9} className="sc-empty">{S.empty[L(l)]}</td></tr>}
   </tbody></table></div>
   {d.events.hasMore&&<p className="sc-note" data-testid="text-error-events-more">{tx('more')}</p>}

@@ -10,8 +10,8 @@ Status after the first implementation increment. The eight-phase prompt is
 | Health | PARTIAL | Real | API/DB evidence; external provider probes not implemented |
 | Logs | PARTIAL | Real + isolated tests | API/auth/security metadata and jobs; filters/paging; no external log drain |
 | Log exports | PARTIAL | Real + isolated API tests | JSON/CSV download UI; applied filters; mandatory range ≤31 days, ≤5000 rows and ≤5 MiB; audited; large background exports not implemented |
-| Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or stacks in new log store |
-| Error Center | PARTIAL | Real + isolated API tests | Grouping, counts, affected users/organizations, latest request, details and audited open/resolved lifecycle implemented; raw messages/stacks and historical app versions deliberately not captured |
+| Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or raw stacks; trusted basename/line/column extraction only |
+| Error Center | COMPLETE for captured API/job errors | Real + isolated tests | Grouping, counters, details, audited open/resolved lifecycle, event environment, API build ID and reduced safe call locations; not full crash/external-source monitoring |
 | Jobs | PARTIAL | Real + isolated tests | Existing three periodic jobs instrumented; no persistent queue/retry/cancel |
 | Backup | PARTIAL | Existing real CLI | Developer/test paired SQL + files tools, no Operations UI/policies yet |
 | Restore | PARTIAL | Existing isolated tools | No production restore workflow introduced |
@@ -83,8 +83,8 @@ Do not equate existing CLI support with a completed administrative workflow.
 - Resolution records and audit entries commit atomically. Revision plus event
   watermark checks reject stale updates (409); concurrent updates are serialized.
   New events reopen resolved groups without deleting their resolution history.
-- Application version and stack trace explicitly display “not recorded”; the
-  environment label refers to the current runtime, not reconstructed event history.
+- Initially version/stack were unavailable. The subsequent diagnostics increment
+  below adds event-time metadata without backfilling old events.
 - Six isolated API test groups passed, including recurrence, concurrent status
   changes, permission denial, detail lookup, paging and export regression coverage.
   Migration preservation checks passed for 13 legacy tables before and after
@@ -94,3 +94,26 @@ Do not equate existing CLI support with a completed administrative workflow.
   resolved filter, persisted state after reload, reopen, open filter, Back/Forward.
   At 390px, document width equals client width (375px); wide tables scroll locally.
   Support-role denial was covered by API tests, not repeated in this browser pass.
+
+### Event-time diagnostics increment
+
+- Additive migration adds nullable diagnostics; it does not rewrite old events.
+  Newly captured events store environment and a public API build ID. Source-mode
+  execution explicitly has no compiled build ID; no semantic release or frontend
+  version is inferred.
+- API error middleware and observed job failures use one redactor. Only up to 12
+  allowlisted source basenames and positive line/column coordinates survive.
+  Exception messages, functions, absolute paths, remote URLs, query strings,
+  unknown files and nested causes are not persisted.
+- Header metadata belongs to the latest event; per-event details expose each
+  retained event's own values. Missing values remain “not recorded”.
+- Seven isolated API test groups and both type checks passed, including synthetic
+  sensitive values, malformed/remote frames, throwing stack getters, frame limits,
+  job capture and legacy null preservation. Development migration preserved the
+  same 13 legacy table fingerprints.
+- A request to the running compiled development API confirmed persisted build ID
+  and event environment. New per-event expanders were checked in code/types; the
+  earlier browser pass covers the unchanged Error Center lifecycle, not a fresh
+  browser pass over these expanders.
+- Phase 1 is still incomplete: additional log sources/health probes, retention
+  and large background exports remain. No production deployment or live email.

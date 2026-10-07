@@ -11,7 +11,8 @@ import type { SystemLogs } from './systemLogs';
 export interface SystemErrorDetail {
   group: SystemErrorGroup;
   events: SystemLogs;
-  environment: string;
+  /** @nullable */
+  environment: string | null;
   /** @nullable */
   applicationVersion: string | null;
   /** @nullable */

@@ -43,7 +43,7 @@ proof of external service health. Unprobed or unavailable values remain null.
 The overall warning must not be misrepresented as all providers verified.
 
 Logs store an allowlist of technical metadata only. No request bodies, headers,
-cookies, query strings, full email, raw URL parameters, secrets or stack traces.
+cookies, query strings, full email, raw URL parameters, secrets or raw stack traces.
 Endpoint uses Express's static route template; unmatched paths are not stored.
 User/context identifiers are recorded when available; failed login email is
 not retained, so account correlation for failed anonymous logins is unavailable.
@@ -78,8 +78,22 @@ reopens the group. “Resolved” is an administrator's acknowledgement, not a c
 that the underlying software has been repaired.
 
 Details display at most the latest 50 events. Full operational history remains
-in Logs. Historical application versions and sanitized stack capture are not
-implemented; the UI explicitly reports these fields as not recorded.
+in Logs. New events record their runtime environment and, in a bundled API, its
+public build ID. Each build receives a unique ID; it is not a semantic application
+release, frontend version or Git revision. Source-mode tests have no build ID.
+Pre-existing events retain null metadata; no historical backfill is fabricated.
+
+For captured API exceptions resulting in error/fatal events and observed job
+failures, central diagnostics redaction retains at most 12 trusted source
+basenames with line/column numbers. It drops messages, function names, absolute
+paths, URL/query data and nested causes. Trusted source names come from the code,
+not the exception. Remote frames, unknown files and malformed locations are
+discarded. This reduced location list is not a complete stack trace.
+
+The group header describes its latest event, not today's runtime. Each of the
+latest 50 events has its own expandable diagnostics. Existing logs JSON/CSV
+exports include the same safe fields. Native/dependency frames, arbitrary process
+crashes and external provider stack collection are outside this capture boundary.
 
 ## Backups, restore, cache
 

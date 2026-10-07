@@ -109,6 +109,18 @@ export interface SystemLog {
   errorCode: string | null;
   /** @nullable */
   job: string | null;
+  /**
+     * Public API build identifier
+     * @nullable
+     */
+  applicationVersion: string | null;
+  /** @nullable */
+  environment: string | null;
+  /**
+     * Allowlisted source basenames and line/column only
+     * @nullable
+     */
+  stackTrace: string | null;
 }
 
 export interface SystemLogs {
@@ -120,7 +132,8 @@ export interface SystemLogs {
 export interface SystemErrorDetail {
   group: SystemErrorGroup;
   events: SystemLogs;
-  environment: string;
+  /** @nullable */
+  environment: string | null;
   /** @nullable */
   applicationVersion: string | null;
   /** @nullable */

@@ -10,6 +10,7 @@ import {systemQuery} from './system-query.js';
 import {emailProviderState} from './email.js';
 import {storageMode} from './storage-providers.js';
 import {registerSystemErrors} from './system-errors.js';
+import {apiBuildId} from './system-diagnostics.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -27,7 +28,8 @@ async function overview(){
   {key:'uptime_seconds',value:String(Math.floor(process.uptime())),status:'healthy'},
   {key:'started_at',value:startedAt,status:'healthy'},
   {key:'api',value:'responding',status:'healthy'},
-  ...['application_version','frontend_version','build_version','git_commit','storage','cache','integrations','last_backup','backup_storage'].map(key=>({key,value:null,status:'unavailable' as const})),
+  {key:'build_version',value:apiBuildId,status:apiBuildId?'healthy':'unavailable'},
+  ...['application_version','frontend_version','git_commit','storage','cache','integrations','last_backup','backup_storage'].map(key=>({key,value:null,status:'unavailable' as const})),
   {key:'pool_total',value:String(pool.totalCount),status:'healthy'},
   {key:'pool_idle',value:String(pool.idleCount),status:'healthy'},
   {key:'pool_waiting',value:String(pool.waitingCount),status:pool.waitingCount?'degraded':'healthy'},
@@ -76,7 +78,7 @@ function logFilters(f:z.infer<typeof query>){
 }
 const logColumns=`id::text,created_at AS "createdAt",category,level,service,event,request_id AS "requestId",
  actor_user_id AS "actorId",organization_id AS "organizationId",endpoint,method,http_status AS status,latency_ms AS "latencyMs",
- error_code AS "errorCode",job`;
+ error_code AS "errorCode",job,application_version AS "applicationVersion",environment,safe_stack AS "stackTrace"`;
 systemCenter.get('/system/logs',async(req,res)=>{
  await permit(req,'logs.read');const f=query.parse(req.query),{values,where}=logFilters(f);
  values.push((f.page-1)*50);
@@ -100,7 +102,7 @@ systemCenter.post('/system/log-exports',async(req,_res,next)=>{
  const {values,where}=logFilters({...f,page:1});
  const r=await systemQuery({text:`SELECT ${logColumns} FROM system_log_events ${where} ORDER BY created_at DESC,id DESC LIMIT 5001`,values,query_timeout:5000});
  if(r.rows.length>5000)throw new ApiError(413,'export_too_large');
- const columns=['id','createdAt','category','level','service','event','requestId','actorId','organizationId','endpoint','method','status','latencyMs','errorCode','job'];
+ const columns=['id','createdAt','category','level','service','event','requestId','actorId','organizationId','endpoint','method','status','latencyMs','errorCode','job','applicationVersion','environment','stackTrace'];
  const content=f.format==='json'?JSON.stringify(r.rows,null,2):
   '\uFEFF'+[columns.map(logCsvCell).join(','),...r.rows.map(row=>columns.map(c=>logCsvCell(row[c])).join(','))].join('\r\n')+'\r\n';
  if(Buffer.byteLength(content,'utf8')>5*1024*1024)throw new ApiError(413,'export_too_large');

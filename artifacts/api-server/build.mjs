@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, readdir } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -13,6 +14,10 @@ const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
+  // Public, non-secret identity of this exact API build (not a release/semver).
+  const buildId = 'api-' + randomUUID();
+  const sourceNames = (await readdir(path.join(artifactDir, 'archive/vernatun/server')))
+    .filter(name => /^[a-zA-Z0-9_-]+\.ts$/.test(name));
 
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
@@ -22,6 +27,10 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    define: {
+      __VERNATUN_BUILD_ID__: JSON.stringify(buildId),
+      __VERNATUN_SOURCE_NAMES__: JSON.stringify([...sourceNames, 'index.ts', 'index.mjs']),
+    },
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

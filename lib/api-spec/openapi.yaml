@@ -1878,7 +1878,7 @@ components:
       properties:
         group: {$ref: "#/components/schemas/SystemErrorGroup"}
         events: {$ref: "#/components/schemas/SystemLogs"}
-        environment: {type: string}
+        environment: {type: [string, "null"]}
         applicationVersion: {type: [string, "null"]}
         stackTrace: {type: [string, "null"]}
     SystemLogExportInput:
@@ -1908,7 +1908,7 @@ components:
         rows: {type: integer}
     SystemLog:
       type: object
-      required: [id, createdAt, category, level, service, event, requestId, actorId, organizationId, endpoint, method, status, latencyMs, errorCode, job]
+      required: [id, createdAt, category, level, service, event, requestId, actorId, organizationId, endpoint, method, status, latencyMs, errorCode, job, applicationVersion, environment, stackTrace]
       properties:
         id: {type: string}
         createdAt: {type: string}
@@ -1925,6 +1925,9 @@ components:
         latencyMs: {type: [integer, "null"]}
         errorCode: {type: [string, "null"]}
         job: {type: [string, "null"]}
+        applicationVersion: {type: [string, "null"], description: Public API build identifier, not a semantic release version}
+        environment: {type: [string, "null"]}
+        stackTrace: {type: [string, "null"], description: Allowlisted source basenames and line/column only}
     SystemLogs:
       type: object
       required: [page, hasMore, items]

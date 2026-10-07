@@ -2,7 +2,6 @@ import type {Router,Request} from 'express';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError} from './access.js';
-import {config} from './config.js';
 
 // Group only safe, stable metadata. Neither identifiers nor arbitrary messages
 // enter the fingerprint, so repeated instances share a group across users.
@@ -26,7 +25,8 @@ const stateInput=z.object({status:z.enum(['open','resolved']),lastEventId:z.stri
  occurrences:z.number().int().positive(),revision:z.number().int().min(0)}).strict();
 const fields=`id::text,created_at AS "createdAt",category,level,service,event,request_id AS "requestId",
  actor_user_id AS "actorId",organization_id AS "organizationId",endpoint,method,http_status AS status,
- latency_ms AS "latencyMs",error_code AS "errorCode",job`;
+ latency_ms AS "latencyMs",error_code AS "errorCode",job,
+ application_version AS "applicationVersion",environment,safe_stack AS "stackTrace"`;
 export function registerSystemErrors(router:Router,permit:(req:Request,permission:string)=>Promise<unknown>){
  router.get('/system/errors',async(req,res)=>{
   await permit(req,'logs.read');
@@ -48,7 +48,7 @@ export function registerSystemErrors(router:Router,permit:(req:Request,permissio
     ORDER BY created_at DESC,id DESC LIMIT 51`,[id]);
    await client.query('COMMIT');res.setHeader('Cache-Control','no-store');
    res.json({group:group.rows[0],events:{items:events.rows.slice(0,50),page:1,hasMore:events.rows.length>50},
-    environment:config.NODE_ENV,applicationVersion:null,stackTrace:null});
+    environment:events.rows[0]?.environment??null,applicationVersion:events.rows[0]?.applicationVersion??null,stackTrace:events.rows[0]?.stackTrace??null});
   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
  });
  router.patch('/system/errors/:fingerprint',async(req,res)=>{

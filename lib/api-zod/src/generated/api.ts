@@ -72,10 +72,13 @@ export const GetSystemErrorResponse = zod.object({
   "status": zod.number().int().nullable(),
   "latencyMs": zod.number().int().nullable(),
   "errorCode": zod.string().nullable(),
-  "job": zod.string().nullable()
+  "job": zod.string().nullable(),
+  "applicationVersion": zod.string().nullable().describe('Public API build identifier'),
+  "environment": zod.string().nullable(),
+  "stackTrace": zod.string().nullable().describe('Allowlisted source basenames and line/column only')
 }))
 }),
-  "environment": zod.string(),
+  "environment": zod.string().nullable(),
   "applicationVersion": zod.string().nullable(),
   "stackTrace": zod.string().nullable()
 })
@@ -168,7 +171,10 @@ export const GetSystemLogsResponse = zod.object({
   "status": zod.number().int().nullable(),
   "latencyMs": zod.number().int().nullable(),
   "errorCode": zod.string().nullable(),
-  "job": zod.string().nullable()
+  "job": zod.string().nullable(),
+  "applicationVersion": zod.string().nullable().describe('Public API build identifier'),
+  "environment": zod.string().nullable(),
+  "stackTrace": zod.string().nullable().describe('Allowlisted source basenames and line/column only')
 }))
 })
 
