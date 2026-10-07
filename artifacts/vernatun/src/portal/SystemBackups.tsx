@@ -5,6 +5,7 @@ import {getCsrfHeaders} from './client';
 import {ReauthPrompt,needsReauth,reauthDone} from './Reauth';
 import type {Language} from './i18n';
 import BackupPolicies from './BackupPolicies';
+import BackupInspect from './BackupInspect';
 
 type T3=[string,string,string];
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
@@ -32,6 +33,7 @@ const S:Record<string,T3>={
  pending:['Սպասում է','В очереди','Pending'],running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],deleted:['Ջնջված','Удалено','Deleted'],
  verified:['Ստուգված','Проверено','Verified'],verification_failed:['Ստուգումը ձախողվեց','Проверка не пройдена','Verification failed'],not_verified:['Չստուգված','Не проверено','Not verified'],
  expired:['Պահպանման ժամկետն ավարտվել է','Удалено по сроку хранения','Expired by retention'],
+ preflight:['Նախաստուգում','Предпроверка','Preflight'],
  verify:['Ստուգել','Проверить','Verify'],download:['Ներբեռնել .vbackup','Скачать .vbackup','Download .vbackup'],delete:['Ջնջել','Удалить','Delete'],
  downloadNote:['Ներբեռնվում է միայն գաղտնագրված .vbackup փաթեթը․ ապագաղտնագրված բովանդակություն չի տրամադրվում։','Скачивается только зашифрованный пакет .vbackup; расшифрованное содержимое не выдаётся.','Only the encrypted .vbackup package is downloaded; decrypted contents are never provided.'],
  protectedUntil:['Պաշտպանված է մինչև {d}','Защищено до {d}','Protected until {d}'],
@@ -70,13 +72,14 @@ function usePolled<D>(fetcher:(signal:AbortSignal)=>Promise<D>,key:string){
  return {data,error,loading,reload:load};
 }
 
-type Perms={create:boolean;download:boolean;delete:boolean;policies:boolean};
+type Perms={create:boolean;download:boolean;delete:boolean;policies:boolean;restore:boolean};
 export default function SystemBackups({ck,l,perms}:{ck:string;l:Language;perms:Perms}){
  const t=(k:string)=>S[k]?.[L(l)]??k;
  const errText=(e:unknown)=>{const c=codeOf(e),st=statusOf(e);return st===403&&!ERR[c]?t('forbidden'):(ERR[c]??ERR.failed)[L(l)]+(c&&!ERR[c]?' ('+c+')':'')};
  const [page,setPage]=useState(1);
  const q=usePolled<Registry>(signal=>getSystemBackups({page},{signal,credentials:'include'}),ck+':backups:'+page);
  const [msg,setMsg]=useState<{t:string;bad?:boolean}>();const [reauth,setReauth]=useState(false);const [busy,setBusy]=useState('');
+ const [inspect,setInspect]=useState<string>();
  const [open,setOpen]=useState<string>();const [del,setDel]=useState<Backup>();
  const ctrl=useRef<AbortController|null>(null);useEffect(()=>()=>ctrl.current?.abort(),[]);
  // Single guarded runner for every mutation: abort on unmount, reauth on 401-fresh errors, readback on success.
@@ -107,6 +110,7 @@ export default function SystemBackups({ck,l,perms}:{ck:string;l:Language;perms:P
    {msg&&<p className={msg.bad?'p-error':'p-info'} role="status" data-testid="status-backup-action">{msg.t}</p>}
    {perms.create&&<CreateForm key={ck} d={d} t={t} l={l} disabled={!canCreate||active} busy={busy==='create'} onSubmit={(kind,notes)=>run('create',async s=>{await createSystemBackup({kind,notes,confirmation:'BACKUP'},opts(s));return t('queued')})}/>}
    {del&&perms.delete&&<DeleteForm key={del.id} b={del} t={t} l={l} busy={busy==='delete'} onCancel={()=>setDel(undefined)} onSubmit={async()=>{const id=del.id;if(await run('delete',async s=>{await deleteSystemBackup(id,{confirmation:'DELETE BACKUP'},opts(s));return t('deletedOk')}))setDel(undefined)}}/>}
+   {inspect&&perms.restore&&<BackupInspect key={ck+':'+inspect} id={inspect} l={l} kindLabel={k=>KIND[k]?.[L(l)]??k} onClose={()=>setInspect(undefined)}/>}
    <BackupPolicies ck={ck} l={l} canManage={perms.policies} provider={d.provider} encryption={d.encryption} kindLabel={k=>KIND[k]?.[L(l)]??k}/>
    <section className="p-card sc-card" aria-busy={q.loading}>
     <h3 className="sb-h">{t('queue')}</h3>
@@ -121,6 +125,7 @@ export default function SystemBackups({ck,l,perms}:{ck:string;l:Language;perms:P
        <td><div className="cx-row sb-actions">
         <button className="p-button small" aria-expanded={open===b.id} onClick={()=>setOpen(o=>o===b.id?undefined:b.id)} data-testid={'button-backup-details-'+b.id}>{open===b.id?t('hide'):t('details')}</button>
         {done&&perms.create&&<button className="p-button small" disabled={!!busy} onClick={()=>void run('verify',async s=>{await verifySystemBackup(b.id,opts(s));return t('verifiedOk')})} data-testid={'button-verify-backup-'+b.id}>{t('verify')}</button>}
+        {done&&perms.restore&&<button className="p-button small" aria-pressed={inspect===b.id} onClick={()=>setInspect(b.id)} data-testid={'button-inspect-backup-'+b.id}>{t('preflight')}</button>}
         {done&&perms.download&&<button className="p-button small" disabled={!!busy} title={t('downloadNote')} onClick={()=>void run('download',async s=>{const blob=await downloadSystemBackup(b.id,{...opts(s,false),responseType:'blob'});if(s.aborted)return '';const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='vernatun-'+b.id+'.vbackup';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return t('downloadOk')})} data-testid={'button-download-backup-'+b.id}>{t('download')}</button>}
         {perms.delete&&(done||b.status==='failed')&&(deletable?<button className="p-button small" disabled={!!busy} onClick={()=>{setMsg(undefined);setDel(b)}} data-testid={'button-delete-backup-'+b.id}>{t('delete')}</button>:<small className="sc-note" data-testid={'text-protected-'+b.id}>{t('protectedUntil').replace('{d}',fmtDate(b.retainUntil,l))}</small>)}
        </div></td></tr>,

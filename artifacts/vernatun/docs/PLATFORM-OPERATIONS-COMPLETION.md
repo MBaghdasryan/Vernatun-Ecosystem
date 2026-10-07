@@ -14,8 +14,8 @@ Current implementation status. The eight-phase prompt is
 | Error Center | COMPLETE | Real + isolated tests | For captured API/job errors: grouping, counters, details, audited lifecycle, event environment, build ID and safe call locations; not full crash/external-source monitoring |
 | Log retention | COMPLETE | Real + isolated tests | Opt-in, disabled by default; typed confirmation, recent authentication, revision check, audited batches of ≤500; preserves recurrence watermarks and business audit |
 | Jobs | PARTIAL | Real + isolated tests | Original jobs, log retention, backup worker, scheduler and backup retention observed; backup queue persists; generic retry/cancel remains incomplete |
-| Backup | PARTIAL | Real + isolated tests + development App Storage verification | UI, encrypted bounded builders, queue, verification/download/delete, Local/AppStorage/S3 adapters and periodic policies with opt-in retention; recovery drill and update-triggered backup remain unfinished |
-| Restore | PARTIAL | Existing isolated tools | New package format has no full restore workflow yet; integrity verification is not a restore rehearsal; no production restore |
+| Backup | PARTIAL | Real + isolated tests + development App Storage verification | UI, encrypted builders, queue, verification/download/delete, storage adapters, periodic policies and isolated SQL/byte drill; application-level recovery acceptance and update-triggered backup remain unfinished |
+| Restore | PARTIAL | Encrypted-package preflight and real isolated SQL drill | Contents/version inspection and disposable database recovery with fingerprints; production/working restore and application authorization rehearsal remain unavailable |
 | Cache | COMPLETE | Real + isolated tests | Actual storage-health cache only; process-scoped Memory provider, audited clearing, Redis adapter boundary tested but not connected; no imaginary org/user caches |
 | Sessions | COMPLETE | Real + isolated tests | Platform-only list/count/filter/paging, timestamps, coarse device, single/user revocation with confirmation and recent auth; late-save resurrection prevented |
 | OpenAPI | PARTIAL | Real generated contract | New endpoints included; interactive API Center not built |
@@ -37,7 +37,7 @@ Current implementation status. The eight-phase prompt is
 | Concrete bank provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Manual bank statement import | COMPLETE | Existing implementation, unchanged | Not re-tested or modified in this increment |
 
-Next scope: safe recovery/drill for encrypted packages, remaining Phase 1 source
+Next scope: application-level recovery acceptance, remaining Phase 1 source
 coverage/health evidence and large exports, then outstanding API/integration/update work.
 Do not equate existing CLI support with a completed administrative workflow.
 
@@ -258,5 +258,34 @@ Do not equate existing CLI support with a completed administrative workflow.
   UTC formatting and checked separately; no second full browser pass was run.
   Logout could not be confirmed because the workspace restarted at that step;
   the isolated schema was subsequently removed, not any working account.
-- Remaining: recovery workflow/drill, pre-update trigger, API Center, integration
+- Remaining at that increment: recovery workflow/drill, pre-update trigger, API Center, integration
   vault, Modules/Extensions, Update Center, and remaining overall QA coverage.
+
+## Encrypted-package recovery preflight and isolated drill
+
+- Backup Center now provides permission-gated contents/version inspection with
+  recent authentication, audit and a 3/minute user limit. It never returns SQL,
+  file contents or private object names. No working restore action is exposed.
+- New database snapshots include table fingerprints. Old retained packages remain
+  readable but cannot claim a fingerprint-verified drill without a fresh snapshot.
+- The CLI requires `drill <id> --confirm=ISOLATED`, a matching migration version
+  and a non-production runtime. It creates a random disposable database, restores
+  SQL, compares all captured table fingerprints and checks excluded session/backup
+  rows are empty. Paired packages also compare referenced file coverage and
+  stage/read-back private bytes in a private temporary directory.
+- Cleanup attempts all allocated resources on failure; incomplete cleanup cannot
+  report success. Start/completed/failed CLI events are audited.
+- Actual development full-data backup
+  `79d7690e-6b9f-4299-bb16-d209963f14e7` was encrypted in App Storage and drilled:
+  **117 tables matched; 0 referenced private files in that working snapshot**.
+  Working business data was not a restore target; backup/audit metadata was added.
+- An isolated fixture additionally restored one referenced private file. A
+  deliberately wrong expected table hash failed recovery and still removed the
+  temporary database. All 16 system test groups passed; application type checks
+  passed. The new preflight panel was checked through code/contracts, not a new
+  authenticated browser acceptance pass.
+- Fixed backup file locking to use the same hashed advisory-lock identity as
+  uploads/cleanup, enabling successful full-data snapshots with real file references.
+- Limits: no production restore, no source deployment, no application login or
+  allowed/denied download rehearsal from the recovered copy, and no storage
+  provider recovery exercise. These remain distinct from SQL/byte integrity.

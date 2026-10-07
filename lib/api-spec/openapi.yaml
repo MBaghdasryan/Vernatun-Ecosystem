@@ -11,6 +11,20 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /system/backups/{id}/inspect:
+    post:
+      operationId: inspectSystemBackup
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Verified contents summary; not permission to overwrite working data
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BackupInspection'}
   /system/backup-policies:
     get:
       operationId: getSystemBackupPolicies
@@ -2067,6 +2081,25 @@ components:
       required: [confirmation]
       properties:
         confirmation: {type: string, enum: [DELETE BACKUP]}
+    BackupInspection:
+      type: object
+      required: [id, kind, createdAt, build, migration, currentMigration, migrationMatches, database, files, fileBytes, configuration, source, fingerprints, isolatedDrillSupported, restoreMode]
+      properties:
+        id: {type: string}
+        kind: {type: string}
+        createdAt: {type: string}
+        build: {type: [string, "null"]}
+        migration: {type: string}
+        currentMigration: {type: string}
+        migrationMatches: {type: boolean}
+        database: {type: boolean}
+        files: {type: integer}
+        fileBytes: {type: integer}
+        configuration: {type: boolean}
+        source: {type: boolean}
+        fingerprints: {type: boolean}
+        isolatedDrillSupported: {type: boolean}
+        restoreMode: {type: string, enum: [isolated_cli_only]}
     BackupPolicyInput:
       type: object
       required: [enabled, frequency, provider, retentionDays, keepLast, autoDelete, revision, confirmation]

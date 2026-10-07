@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {config} from './config.js';
-import {identifier,postgresTool,referencedFiles} from './backup-postgres.js';
+import {identifier,postgresTool,referencedFiles,tableFingerprints} from './backup-postgres.js';
 import {readPrivateFile,privateFileLockKey} from './private-files.js';
 import {operationsCipher} from './operations-encryption.js';
 import {backupStorage,backupByteLimit} from './operations-backup-storage.js';
@@ -19,6 +19,7 @@ const snapshot=z.object({
  format:z.literal(1),id:z.string().uuid(),kind:z.enum(backupKinds),createdAt:z.string().datetime(),
  build:z.string().nullable(),migration:z.string(),schema:z.string(),
  components:z.array(component).max(5003),
+ tables:z.array(z.object({name:z.string().regex(/^[a-z_][a-z0-9_]*$/),rows:z.number().int().nonnegative(),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict()).max(1000).optional(),
 }).strict();
 export type Snapshot=z.infer<typeof snapshot>;
 export async function sourceRoot(){
@@ -113,12 +114,17 @@ export async function buildSnapshot(id:string,kind:Snapshot['kind']){
    if(unique.size>5000)throw new Error('File backup exceeds bounded capacity');
    for(const [name,r] of unique){
     if(Date.now()-startedAt>120000)throw new Error('Snapshot worker deadline');
-    if(!(await db.query('SELECT pg_try_advisory_xact_lock($1::bigint) AS ok',[privateFileLockKey(r.kind,r.key)])).rows[0].ok)throw new Error('Private file busy');
+    if(!(await db.query('SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS ok',[privateFileLockKey(r.kind,r.key)])).rows[0].ok)throw new Error('Private file busy');
     add(name,await boundedRead(r.kind,r.key),r.media_type);
    }
   }
   if(kind==='platform_snapshot')add('source.json',await sourceBundle());
   const result:Snapshot={format:1,id,kind,createdAt:new Date().toISOString(),build:apiBuildId,migration,schema,components};
+  if(['database','full_data','platform_snapshot'].includes(kind)){
+   const tables=(await db.query(`SELECT tablename FROM pg_tables WHERE schemaname=$1
+    AND tablename NOT IN('session','operations_backups') ORDER BY tablename`,[schema])).rows.map(r=>String(r.tablename));
+   result.tables=await tableFingerprints(db,schema,tables);
+  }
   const bytes=gzipSync(Buffer.from(JSON.stringify(result)));
   unpackSnapshot(bytes,id);
   await db.query('COMMIT');return {bytes,build:apiBuildId,migration};

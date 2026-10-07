@@ -3,7 +3,10 @@
 The cryptographic foundation is implemented and tested. On 2026-10-07 the
 development key passed application validation and an authenticated roundtrip.
 A configuration backup was written to private App Storage and verified after
-read-back. This does not demonstrate full-data recovery or an integration vault.
+read-back. A subsequent full-data SQL drill matched 117 working-schema tables
+in a disposable database (that snapshot contained no referenced private files).
+A separate isolated fixture verified one private file. This does not demonstrate
+application authorization after recovery, production recovery or an integration vault.
 
 ## Configuration
 

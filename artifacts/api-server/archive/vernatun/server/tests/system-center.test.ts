@@ -10,13 +10,16 @@ import {safeErrorStack,apiBuildId} from '../system-diagnostics.js';
 import {emailHealthMetrics} from '../system-email-health.js';
 import {MemoryCacheProvider,RedisCacheProvider,cachedStorageHealth,clearHealthCache} from '../operations-cache.js';
 import {pruneSystemLogs} from '../system-retention.js';
-import {OperationsCipher} from '../operations-encryption.js';
-import {randomBytes} from 'node:crypto';
+import {OperationsCipher,operationsCipher} from '../operations-encryption.js';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {sessionDevice} from '../system-sessions.js';
 import {runPendingBackup,buildSnapshot,unpackSnapshot,verifyStoredBackup,verifyDatabaseComponent} from '../operations-backups.js';
+import {gzipSync} from 'node:zlib';
 import {backupHealthMetrics} from '../system-backup-health.js';
 import {scheduleBackups,pruneScheduledBackups} from '../system-backup-policies.js';
 import {backupStorage} from '../operations-backup-storage.js';
+import {drillEncryptedBackup,recoverySummary} from '../operations-restore.js';
+import {savePrivateFile,deletePrivateFile} from '../private-files.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
@@ -241,6 +244,45 @@ test('email health distinguishes retained acceptance, delivery and unknown outco
   pool.query=(()=>{throw Error('PRIVATE_DATABASE_ERROR')}) as typeof pool.query;
   assert.ok((await emailHealthMetrics()).every(m=>m.value===null&&m.status==='unavailable'));
  }finally{pool.query=original}
+});
+test('encrypted full-data recovery pairs SQL fingerprints and private bytes in a disposable database',async()=>{
+ const orgId=(await pool.query('SELECT id FROM organizations LIMIT 1')).rows[0].id;
+ const old=(await pool.query('SELECT web_branding FROM organizations WHERE id=$1',[orgId])).rows[0].web_branding;
+ const key='00000000-0000-4000-8000-000000000704.jpg';
+ await savePrivateFile('photos',key,Buffer.from('TEST_ONLY_RECOVERY_BYTES'),'image/jpeg');
+ let id:string|undefined;
+ try{
+  await pool.query("UPDATE organizations SET web_branding=web_branding||jsonb_build_object('logo_key',$2::text) WHERE id=$1",[orgId,key]);
+  const created=await admin.call('/system/backups','POST',{kind:'full_data',confirmation:'BACKUP'});
+  assert.equal(created.status,202);id=created.data.id;assert.equal(await runPendingBackup(),1);
+  assert.equal((await support.call('/system/backups/'+id+'/inspect','POST',{})).status,403);
+  const summary=await admin.call('/system/backups/'+id+'/inspect','POST',{});
+  assert.equal(summary.status,200);assert.equal(summary.data.files,1);
+  assert.equal(summary.data.isolatedDrillSupported,true);assert.equal(summary.data.migrationMatches,true);
+  assert.ok(!JSON.stringify(summary.data).includes('TEST_ONLY_RECOVERY_BYTES'));
+  const row=(await pool.query('SELECT checksum,provider FROM operations_backups WHERE id=$1',[id])).rows[0];
+  const snapshot=await verifyStoredBackup(id!,row.checksum,row.provider);
+  assert.equal(recoverySummary({...snapshot,tables:undefined},snapshot.migration).isolatedDrillSupported,false);
+  assert.equal(recoverySummary(snapshot,'999_future.sql').isolatedDrillSupported,false);
+  const before=(await pool.query("SELECT datname FROM pg_database WHERE datname LIKE 'vernatun_restore_%' ORDER BY datname")).rows;
+  const result=await drillEncryptedBackup(id!);
+  assert.equal(result.paired,true);assert.equal(result.files,1);assert.ok(result.tables>10);
+  assert.deepEqual((await pool.query("SELECT datname FROM pg_database WHERE datname LIKE 'vernatun_restore_%' ORDER BY datname")).rows,before);
+  assert.equal((await pool.query("SELECT web_branding->>'logo_key' AS key FROM organizations WHERE id=$1",[orgId])).rows[0].key,key);
+  // Valid encrypted package with deliberately wrong expected table digest:
+  // recovery must fail after SQL restore and still remove its scratch database.
+  const badId=randomUUID();const bad={...snapshot,id:badId,tables:snapshot.tables!.map((t,i)=>i===0?{...t,sha256:'0'.repeat(64)}:t)};
+  const encrypted=Buffer.from(JSON.stringify(operationsCipher().seal(gzipSync(Buffer.from(JSON.stringify(bad))),'backup:'+badId)));
+  const store=backupStorage();await store.write(badId,encrypted);
+  await pool.query(`INSERT INTO operations_backups(id,kind,status,provider,checksum,verification)
+   VALUES($1,'full_data','completed',$2,$3,'verification_failed')`,[badId,store.name,createHash('sha256').update(encrypted).digest('hex')]);
+  await assert.rejects(drillEncryptedBackup(badId),/Restored table mismatch/);
+  assert.deepEqual((await pool.query("SELECT datname FROM pg_database WHERE datname LIKE 'vernatun_restore_%' ORDER BY datname")).rows,before);
+ }finally{
+  await pool.query('UPDATE organizations SET web_branding=$2 WHERE id=$1',[orgId,old]);
+  await deletePrivateFile('photos',key);
+  if(id)await pool.query("UPDATE operations_backups SET verification='verification_failed' WHERE id=$1",[id]);
+ }
 });
 test('retention is opt-in, audited, bounded and preserves recurrence after pruning',async()=>{
  const p=await admin.call('/system/log-retention');assert.equal(p.data.enabled,false);

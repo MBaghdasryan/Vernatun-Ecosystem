@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "backup:encrypted-drill": "tsx archive/vernatun/server/operations-restore-cli.ts",
     "test:system": "cd archive/vernatun && node --import tsx server/tests/run.ts --system-only",
     "test:readiness": "cd archive/vernatun && node --import tsx server/tests/run.ts --readiness-only",
     "test:unit-plans": "cd archive/vernatun && node --import tsx server/tests/run.ts --unit-plans-only",

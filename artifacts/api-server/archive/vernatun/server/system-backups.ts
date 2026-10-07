@@ -7,9 +7,32 @@ import {requireRecentAuthentication} from './recent-auth.js';
 import {operationsEncryptionState} from './operations-encryption.js';
 import {backupStorage} from './operations-backup-storage.js';
 import {backupKinds,sourceRoot,verifyStoredBackup} from './operations-backups.js';
+import {recoverySummary} from './operations-restore.js';
+import {rateLimit} from 'express-rate-limit';
+import {PostgresRateStore} from './rate-limit.js';
 const recordAudit=(req:Request,action:string,id:string)=>audit(req.user!.id,null,action,'backup',id,{});
 
 export function registerSystemBackups(router:Router,permit:(req:Request,p:string)=>Promise<unknown>){
+ const inspectLimit=rateLimit({windowMs:60000,limit:3,store:new PostgresRateStore('backup-inspection'),
+  keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}});
+ router.post('/system/backups/:id/inspect',async(req,_res,next)=>{
+  await permit(req,'backups.read');await permit(req,'backups.restore');requireRecentAuthentication(req);next();
+ },inspectLimit,async(req,res)=>{
+  const id=z.string().uuid().parse(req.params.id);
+  if(operationsEncryptionState()!=='configured')throw new ApiError(503,'operations_encryption_not_configured');
+  const db=await pool.connect();let locked=false;
+  try{
+   locked=!!(await db.query('SELECT pg_try_advisory_lock(73192843) AS ok')).rows[0].ok;
+   if(!locked)throw new ApiError(409,'backup_busy');
+   const row=(await db.query("SELECT checksum,provider FROM operations_backups WHERE id=$1 AND status='completed'",[id])).rows[0];
+   if(!row)throw new ApiError(404,'backup_not_found');
+   const snapshot=await verifyStoredBackup(id,row.checksum,row.provider).catch(()=>{throw new ApiError(409,'backup_verification_failed')});
+   const current=String((await db.query('SELECT max(name) AS name FROM schema_migrations')).rows[0].name);
+   const summary=recoverySummary(snapshot,current);
+   await db.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id) VALUES($1,'system.backup.inspected','backup',$2)",[req.user!.id,id]);
+   res.set('Cache-Control','private, no-store').json(summary);
+  }finally{if(locked)await db.query('SELECT pg_advisory_unlock(73192843)');db.release()}
+ });
  router.get('/system/backups',async(req,res)=>{
   await permit(req,'backups.read');
   const q=z.object({page:z.coerce.number().int().min(1).max(10000).default(1)}).parse(req.query);

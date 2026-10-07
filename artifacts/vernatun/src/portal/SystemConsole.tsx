@@ -189,7 +189,7 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
    {current==='errors'&&<SystemErrors key={ck+':e'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
     {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
     {current==='retention'&&<RetentionPanel key={ck+':r'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
-    {current==='backups'&&<SystemBackups key={ck+':b'} ck={ck} l={l} perms={{create:c.permissions.includes('backups.create'),download:c.permissions.includes('backups.download'),delete:c.permissions.includes('backups.delete'),policies:c.permissions.includes('backups.policies.manage')}}/>}
+    {current==='backups'&&<SystemBackups key={ck+':b'} ck={ck} l={l} perms={{create:c.permissions.includes('backups.create'),download:c.permissions.includes('backups.download'),delete:c.permissions.includes('backups.delete'),policies:c.permissions.includes('backups.policies.manage'),restore:c.permissions.includes('backups.restore')}}/>}
     {current==='cache'&&<CachePanel key={ck+':c'} ck={ck} l={l} canClear={c.permissions.includes('cache.clear')}/>}
     {current==='sessions'&&<SessionsPanel key={ck+':s'} ck={ck} l={l} canRevoke={c.permissions.includes('sessions.revoke')}/>}
     {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}

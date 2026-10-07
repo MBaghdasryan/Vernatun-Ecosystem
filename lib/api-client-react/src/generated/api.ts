@@ -24,6 +24,7 @@ import type {
   AvailabilityBlockChange,
   AvailabilityBlockInput,
   AvailabilityUnit,
+  BackupInspection,
   BackupPolicy,
   BackupPolicyInput,
   BankConfirmationInput,
@@ -219,6 +220,74 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getInspectSystemBackupUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/backups/${id}/inspect`
+}
+
+export const inspectSystemBackup = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<BackupInspection> => {
+
+  return customFetch<BackupInspection>(getInspectSystemBackupUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getInspectSystemBackupMutationKey = () => ['inspectSystemBackup'] as const;
+
+export const getInspectSystemBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inspectSystemBackup>>, TError,InspectSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof inspectSystemBackup>>, TError,InspectSystemBackupMutationVariables, TContext> => {
+
+const mutationKey = getInspectSystemBackupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inspectSystemBackup>>, InspectSystemBackupMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  inspectSystemBackup(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InspectSystemBackupMutationResult = NonNullable<Awaited<ReturnType<typeof inspectSystemBackup>>>
+
+    export type InspectSystemBackupMutationError = ErrorType<unknown>
+    export type InspectSystemBackupMutationVariables = {id: string}
+
+    export const useInspectSystemBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inspectSystemBackup>>, TError,InspectSystemBackupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof inspectSystemBackup>>,
+        TError,
+        InspectSystemBackupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getInspectSystemBackupMutationOptions(options));
+    }
 
 export const getGetSystemBackupPoliciesUrl = () => {
 

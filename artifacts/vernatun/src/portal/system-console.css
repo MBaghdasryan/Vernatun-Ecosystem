@@ -69,3 +69,8 @@
 .bp-auto{border-radius:8px;padding:.6rem;background:rgba(194,65,12,.05);display:grid;gap:.4rem}
 .bp-auto.armed{background:rgba(194,65,12,.12)}
 @media (max-width:767px){.bp-summary{grid-template-columns:1fr}}
+.bi-wrap{display:grid;gap:.7rem}
+.bi-limits{margin:0;padding-left:1.1rem;display:grid;gap:.3rem}
+.bi-cli{display:grid;gap:.4rem;padding:.6rem;border-radius:8px;background:rgba(0,0,0,.04)}
+.bi-cmd{display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap}
+.bi-cmd code{flex:1 1 240px;padding:.4rem;background:rgba(0,0,0,.05);border-radius:6px}

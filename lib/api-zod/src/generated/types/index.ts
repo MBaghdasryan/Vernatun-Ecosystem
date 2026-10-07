@@ -15,6 +15,8 @@ export * from './availabilityBlockInputKind';
 export * from './availabilityBlockInputScope';
 export * from './availabilityBlockKind';
 export * from './availabilityUnit';
+export * from './backupInspection';
+export * from './backupInspectionRestoreMode';
 export * from './backupPolicy';
 export * from './backupPolicyInput';
 export * from './backupPolicyInputConfirmation';

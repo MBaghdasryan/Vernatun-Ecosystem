@@ -59,6 +59,32 @@ export interface SystemBackupDeleteInput {
   confirmation: SystemBackupDeleteInputConfirmation;
 }
 
+export type BackupInspectionRestoreMode = typeof BackupInspectionRestoreMode[keyof typeof BackupInspectionRestoreMode];
+
+
+export const BackupInspectionRestoreMode = {
+  isolated_cli_only: 'isolated_cli_only',
+} as const;
+
+export interface BackupInspection {
+  id: string;
+  kind: string;
+  createdAt: string;
+  /** @nullable */
+  build: string | null;
+  migration: string;
+  currentMigration: string;
+  migrationMatches: boolean;
+  database: boolean;
+  files: number;
+  fileBytes: number;
+  configuration: boolean;
+  source: boolean;
+  fingerprints: boolean;
+  isolatedDrillSupported: boolean;
+  restoreMode: BackupInspectionRestoreMode;
+}
+
 export type BackupPolicyInputFrequency = typeof BackupPolicyInputFrequency[keyof typeof BackupPolicyInputFrequency];
 
 

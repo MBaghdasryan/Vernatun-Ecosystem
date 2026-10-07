@@ -8,6 +8,29 @@
 import * as zod from 'zod';
 
 
+export const InspectSystemBackupParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const InspectSystemBackupResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "createdAt": zod.string(),
+  "build": zod.string().nullable(),
+  "migration": zod.string(),
+  "currentMigration": zod.string(),
+  "migrationMatches": zod.boolean(),
+  "database": zod.boolean(),
+  "files": zod.number().int(),
+  "fileBytes": zod.number().int(),
+  "configuration": zod.boolean(),
+  "source": zod.boolean(),
+  "fingerprints": zod.boolean(),
+  "isolatedDrillSupported": zod.boolean(),
+  "restoreMode": zod.enum(['isolated_cli_only'])
+})
+
+
 export const GetSystemBackupPoliciesResponseItem = zod.object({
   "kind": zod.string(),
   "enabled": zod.boolean(),

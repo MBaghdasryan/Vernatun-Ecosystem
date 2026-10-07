@@ -124,6 +124,18 @@ restore workflow remains incomplete.
 The new encrypted package format is not automatically accepted by the legacy
 restore CLI. Verification is not a successful restore rehearsal.
 
+Encrypted packages now have their own operator-only drill:
+`pnpm --filter @workspace/api-server run backup:encrypted-drill drill <backup-uuid> --confirm=ISOLATED`.
+It only accepts a registered completed copy with new table fingerprints and an
+exact migration match, outside production. It allocates and removes a disposable
+database and private temporary directory; no target connection or working-file
+destination can be supplied. Database-only copies do not restore private files.
+Full-data packages compare referenced bytes as well as SQL table fingerprints.
+Backup Center preflight requires `backups.read`, `backups.restore` and recent
+authentication; it inspects contents without executing a restore. A successful
+preflight is not a successful drill. The drill does not verify application login,
+download authorization, deployment or production readiness.
+
 ### Scheduled backup policies
 
 Backup Center exposes five fixed policies, all initially disabled. Editing needs
