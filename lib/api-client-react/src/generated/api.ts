@@ -150,6 +150,8 @@ import type {
   StaffAvailability,
   SuggestBankMatchesParams,
   SystemJobs,
+  SystemLogExport,
+  SystemLogExportInput,
   SystemLogs,
   SystemOverview,
   UnitPlanChange,
@@ -414,6 +416,88 @@ export function useGetSystemLogs<TData = Awaited<ReturnType<typeof getSystemLogs
 
 
 
+
+export const getCreateSystemLogExportUrl = () => {
+
+
+
+
+  return `/api/system/log-exports`
+}
+
+export const createSystemLogExport = async (systemLogExportInput: SystemLogExportInput, options?: Parameters<typeof customFetch>[1]): Promise<SystemLogExport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SystemLogExport>(getCreateSystemLogExportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemLogExportInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSystemLogExportMutationKey = () => ['createSystemLogExport'] as const;
+
+export const getCreateSystemLogExportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemLogExport>>, TError,CreateSystemLogExportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSystemLogExport>>, TError,CreateSystemLogExportMutationVariables, TContext> => {
+
+const mutationKey = getCreateSystemLogExportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSystemLogExport>>, CreateSystemLogExportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSystemLogExport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSystemLogExportMutationResult = NonNullable<Awaited<ReturnType<typeof createSystemLogExport>>>
+    export type CreateSystemLogExportMutationBody = BodyType<SystemLogExportInput>
+    export type CreateSystemLogExportMutationError = ErrorType<void>
+    export type CreateSystemLogExportMutationVariables = {data: BodyType<SystemLogExportInput>}
+
+    export const useCreateSystemLogExport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemLogExport>>, TError,CreateSystemLogExportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSystemLogExport>>,
+        TError,
+        CreateSystemLogExportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSystemLogExportMutationOptions(options));
+    }
 
 export const getGetSystemJobsUrl = (params?: GetSystemJobsParams,) => {
   const normalizedParams = new URLSearchParams();

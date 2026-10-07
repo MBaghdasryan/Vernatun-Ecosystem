@@ -9,6 +9,7 @@ Status after the first implementation increment. The eight-phase prompt is
 | System overview | PARTIAL | Real | Actual runtime/database/pool metrics; unavailable values explicit |
 | Health | PARTIAL | Real | API/DB evidence; external provider probes not implemented |
 | Logs | PARTIAL | Real + isolated tests | API/auth/security metadata and jobs; filters/paging; no external log drain |
+| Log exports | PARTIAL | Real + isolated API tests | JSON/CSV download UI; applied filters; mandatory range ≤31 days, ≤5000 rows and ≤5 MiB; audited; large background exports not implemented |
 | Redaction | COMPLETE | Real + isolated tests | No arbitrary payloads, secrets, query values or stacks in new log store |
 | Error Center | NOT IMPLEMENTED | — | No grouped-error detail center yet; errors visible in logs |
 | Jobs | PARTIAL | Real + isolated tests | Existing three periodic jobs instrumented; no persistent queue/retry/cancel |
@@ -52,3 +53,20 @@ Do not equate existing CLI support with a completed administrative workflow.
 - Mobile Logs at 390px: document and body width 375px after the fix, with no
   page-level horizontal overflow. Wide tables scroll within their own container.
 - No real email was sent. No production migration or deployment was performed.
+
+### Bounded log export increment
+
+- Five isolated System API test groups passed, including export filters, JSON and
+  CSV responses, audit records, permission denials, invalid date ranges, 5001-row
+  rejection, CSV formula escaping and a separate export rate limit.
+- Export requires both `logs.read` and `logs.export` in a platform context.
+  Anonymous, support without permission and tenant contexts are denied.
+- Files contain only the same allowlisted metadata as Logs. Successful export
+  is audited before returning data; free-text filters and exported rows are not
+  copied into business audit. Failed/oversized exports return no partial file.
+- UI offers JSON/CSV only to permitted users, uses the applied filters (not
+  unsaved edits), and downloads the returned content locally. Pending requests
+  are aborted when the Logs component unmounts.
+- Type checks passed for API and web. The download buttons have not yet had a
+  separate authenticated browser acceptance pass; previous browser acceptance
+  above applies to the original Logs flow, not this export increment.

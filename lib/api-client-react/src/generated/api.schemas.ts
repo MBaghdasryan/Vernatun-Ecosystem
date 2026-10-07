@@ -38,6 +38,37 @@ export interface SystemOverview {
   metrics: SystemMetric[];
 }
 
+export type SystemLogExportInputFormat = typeof SystemLogExportInputFormat[keyof typeof SystemLogExportInputFormat];
+
+
+export const SystemLogExportInputFormat = {
+  json: 'json',
+  csv: 'csv',
+} as const;
+
+export interface SystemLogExportInput {
+  format: SystemLogExportInputFormat;
+  from: string;
+  to: string;
+  level?: string;
+  category?: string;
+  user?: string;
+  organization?: string;
+  requestId?: string;
+  status?: number;
+  endpoint?: string;
+  errorCode?: string;
+  job?: string;
+  q?: string;
+}
+
+export interface SystemLogExport {
+  filename: string;
+  contentType: string;
+  content: string;
+  rows: number;
+}
+
 export interface SystemLog {
   id: string;
   createdAt: string;

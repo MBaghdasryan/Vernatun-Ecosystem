@@ -5,6 +5,7 @@ import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
 import {observedJob,recordSystemEvent,safeCode} from '../system-observability.js';
+import {logCsvCell} from '../system-center.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
@@ -72,4 +73,33 @@ test('job persistence records success, failure and stale heartbeats without arbi
  assert.equal(r.data.items.find((x:any)=>x.job==='qa_interrupted').status,'interrupted');
  assert.ok(!JSON.stringify(r.data).includes('sensitive message'));
  assert.equal((await admin.call('/system/jobs/qa_failure/retry','POST',{})).status,404);
+});
+test('bounded JSON/CSV exports require both permissions, preserve filters and are audited',async()=>{
+ const body={format:'json',from:new Date(Date.now()-86400000).toISOString(),to:new Date(Date.now()+1000).toISOString(),category:'system',q:'qa_pagination'};
+ assert.equal((await support.call('/system/log-exports','POST',body)).status,403);
+ assert.equal((await org.call('/system/log-exports','POST',body)).status,403);
+ const anonymous=new Client();await anonymous.call('/auth/session');
+ assert.equal((await anonymous.call('/system/log-exports','POST',body)).status,401);
+ for(const permission of ['logs.export','logs.read']){
+  await pool.query(`INSERT INTO iam_assignment_rules(assignment_id,permission_key,effect,reason,created_by) VALUES($1,$3,'deny','QA export denial',$2)`,[admin.assignment,admin.user,permission]);
+  assert.equal((await admin.call('/system/log-exports','POST',body)).status,403);
+  await pool.query('DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key=$2',[admin.assignment,permission]);
+ }
+ // Permission denials do not consume the separate authorized export budget.
+ const json=await admin.call('/system/log-exports','POST',body);assert.equal(json.status,200);
+ assert.equal(json.data.rows,53);assert.equal(JSON.parse(json.data.content).length,53);
+ assert.ok(JSON.parse(json.data.content).every((row:any)=>row.category==='system'&&row.event==='qa_pagination'));
+ const csv=await admin.call('/system/log-exports','POST',{...body,format:'csv'});assert.equal(csv.status,200);
+ assert.ok(csv.data.content.startsWith('\uFEFF"id","createdAt"'));assert.equal(csv.data.rows,53);
+ const a=await pool.query("SELECT details FROM audit_events WHERE actor_user_id=$1 AND action='system.logs.export'",[admin.user]);
+ assert.equal(a.rows.length,2);assert.equal(a.rows[0].details.rows,53);
+ assert.ok(!JSON.stringify(a.rows).includes('qa_pagination'));
+ assert.equal(logCsvCell(' =HYPERLINK("bad")'),'"\' =HYPERLINK(""bad"")"');
+ assert.equal(logCsvCell('a,b\n"c"'),'"a,b\n""c"""');
+ assert.equal((await admin.call('/system/log-exports','POST',{...body,from:body.to,to:body.from})).status,400);
+ assert.equal((await admin.call('/system/log-exports','POST',{...body,from:'2000-01-01T00:00:00Z'})).status,400);
+ await pool.query("INSERT INTO system_log_events(category,level,event) SELECT 'system','info','qa_export_limit' FROM generate_series(1,5001)");
+ assert.equal((await admin.call('/system/log-exports','POST',{...body,to:new Date(Date.now()+1000).toISOString(),q:'qa_export_limit'})).status,413);
+ assert.equal((await admin.call('/system/log-exports','POST',body)).status,429);
+ const after=await pool.query("SELECT count(*)::int AS n FROM audit_events WHERE actor_user_id=$1 AND action='system.logs.export'",[admin.user]);assert.equal(after.rows[0].n,2);
 });

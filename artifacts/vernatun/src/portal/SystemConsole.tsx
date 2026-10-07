@@ -5,6 +5,8 @@ import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import './console.css';
 import './system-console.css';
+import {createSystemLogExport} from '@workspace/api-client-react';
+import {getCsrfHeaders} from './client';
 
 type Tab='overview'|'health'|'logs'|'jobs';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
@@ -25,6 +27,10 @@ const S:Record<string,[string,string,string]>={
  jobsNote:['Միայն դիտում։ 1-ին փուլում առաջադրանքների կրկնում կամ չեղարկում հասանելի չէ։','Только просмотр. Повтор и отмена заданий в Фазе 1 недоступны.','Read-only. Retrying or cancelling jobs is not available in Phase 1.'],
  logsNote:['Ցուցադրվում են միայն գործառնական մետատվյալներ․ հարցումների մարմիններ, վերնագրեր և stack trace չեն ցուցադրվում։','Показываются только операционные метаданные; тела запросов, заголовки и стектрейсы не отображаются.','Operational metadata only; request bodies, headers and stack traces are never shown.'],
  autoRefresh:['Ավտոթարմացում՝ 30 վ','Автообновление: 30 с','Auto-refresh: 30 s'],any:['Բոլորը','Все','Any'],
+ exportNote:['Արտահանումը կիրառում է հաստատված ֆիլտրերը՝ մինչև 31 օր և 5000 գրառում։','Экспорт использует применённые фильтры: до 31 дня и 5000 записей.','Export uses applied filters: up to 31 days and 5000 records.'],
+ exportRange:['Ընտրեք և կիրառեք ամսաթվերի միջակայքը՝ մինչև 31 օր։','Выберите и примените диапазон дат не более 31 дня.','Select and apply a date range of at most 31 days.'],
+ exportLarge:['Նեղացրեք միջակայքը կամ ֆիլտրերը։ Արտահանումը չափազանց մեծ է։','Сузьте диапазон или фильтры: экспорт слишком большой.','Narrow the range or filters: export is too large.'],
+ exportDone:['Ֆայլը պատրաստ է։','Файл подготовлен для скачивания.','File prepared for download.'],
 };
 const M:Record<string,[string,string,string]>={
  environment:['Միջավայր','Окружение','Environment'],node:['Node.js տարբերակ','Версия Node.js','Node.js version'],uptime_seconds:['Աշխատանքի ժամանակ (վ)','Время работы (с)','Uptime (seconds)'],started_at:['Գործարկման պահ','Время запуска','Started at'],api:['API','API','API'],
@@ -78,14 +84,31 @@ function Metrics({kind,ck,l}:{kind:'overview'|'health';ck:string;l:Language}){
 
 const EMPTY={from:'',to:'',level:'',category:'',user:'',organization:'',requestId:'',status:'',endpoint:'',errorCode:'',job:'',q:''};
 type Filters=typeof EMPTY;
-function Logs({ck,l}:{ck:string;l:Language}){
+function Logs({ck,l,canExport}:{ck:string;l:Language;canExport:boolean}){
  const tx=(k:string)=>S[k][L(l)];
  const initial=():Filters=>{const p=new URLSearchParams(location.search);const u=(p.get('user')??'').trim().slice(0,36);return {...EMPTY,user:u}};
  const [draft,setDraft]=useState<Filters>(initial);
  const [applied,setApplied]=useState<Filters>(()=>{const f=initial();return UUID.test(f.user)?f:{...f,user:''}});
  const [page,setPage]=useState(1);const [invalid,setInvalid]=useState<string[]>([]);const [open,setOpen]=useState<string>();
+ const [exporting,setExporting]=useState(false);const [exportMessage,setExportMessage]=useState('');
+ const exportController=useRef<AbortController|null>(null);
+ useEffect(()=>()=>exportController.current?.abort(),[]);
  const params=():GetSystemLogsParams=>{const p:GetSystemLogsParams={page};for(const [k,v] of Object.entries(applied)){const t=v.trim();if(!t)continue;if(k==='from'||k==='to')(p as Record<string,unknown>)[k]=yerevanInstant(t);else if(k==='status')p.status=Number(t);else (p as Record<string,unknown>)[k]=t}return p};
  const key=ck+':logs:'+page+':'+JSON.stringify(applied);
+ const download=async(format:'json'|'csv')=>{
+  if(exportController.current)return;
+  if(!applied.from||!applied.to||applied.from>applied.to||Date.parse(yerevanInstant(applied.to))-Date.parse(yerevanInstant(applied.from))>31*86400000){setExportMessage(tx('exportRange'));return}
+  const controller=new AbortController();exportController.current=controller;setExporting(true);setExportMessage('');
+  try{
+   const {page:_page,...filters}=params();
+   const file=await createSystemLogExport({...filters,format,from:filters.from!,to:filters.to!},{credentials:'include',headers:getCsrfHeaders(),signal:controller.signal});
+   if(controller.signal.aborted)return;
+   const url=URL.createObjectURL(new Blob([file.content],{type:file.contentType}));
+   const link=document.createElement('a');link.href=url;link.download=file.filename;document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);setExportMessage(tx('exportDone')+' ('+file.rows+')');
+  }catch(e){if(!controller.signal.aborted)setExportMessage(tx(statusOf(e)===413?'exportLarge':statusOf(e)===403?'forbidden':'error'))}
+  finally{exportController.current=null;if(!controller.signal.aborted)setExporting(false)}
+ };
  const q=usePolled<SystemLogs>(signal=>getSystemLogs(params(),{signal,credentials:'include'}),key);
  const submit=(e:FormEvent)=>{e.preventDefault();const bad:string[]=[];if(draft.user.trim()&&!UUID.test(draft.user.trim()))bad.push('user');if(draft.organization.trim()&&!UUID.test(draft.organization.trim()))bad.push('organization');if(draft.requestId.trim()&&!UUID.test(draft.requestId.trim()))bad.push('requestId');if(draft.from&&draft.to&&draft.from>draft.to)bad.push('to');if(draft.status.trim()&&!(/^\d{3}$/.test(draft.status.trim())&&+draft.status>=100&&+draft.status<=599))bad.push('status');setInvalid(bad);if(bad.length)return;setPage(1);setApplied(draft)};
  const inp=(k:keyof Filters,label:string,type='text',extra?:Record<string,string>)=><label>{tx(label)}<input type={type} value={draft[k]} maxLength={MAX[k]??160} aria-invalid={invalid.includes(k)} onChange={e=>setDraft(d=>({...d,[k]:e.target.value}))} data-testid={'input-log-'+k} {...extra}/>{invalid.includes(k)&&<small className="p-field-error">{tx(k==='status'?'invalidStatus':k==='to'?'invalidRange':'invalidUuid')}</small>}</label>;
@@ -97,6 +120,7 @@ function Logs({ck,l}:{ck:string;l:Language}){
    <label>{tx('category')}<select value={draft.category} onChange={e=>setDraft(d=>({...d,category:e.target.value}))} data-testid="select-log-category"><option value="">{tx('any')}</option>{CATEGORIES.map(v=><option key={v} value={v}>{CAT[v][L(l)]}</option>)}</select></label>{inp('user','user','text',{placeholder:'xxxxxxxx-xxxx-…',spellCheck:'false'})}{inp('organization','organization','text',{placeholder:'xxxxxxxx-xxxx-…',spellCheck:'false'})}{inp('requestId','requestId')}{inp('status','httpStatus','text',{inputMode:'numeric'})}{inp('endpoint','endpoint')}{inp('errorCode','errorCode')}{inp('job','job')}{inp('q','q')}
   </div><div className="cx-row"><button className="p-button orange" data-testid="button-apply-filters">{tx('apply')}</button><button type="button" className="p-button" onClick={()=>{setDraft(EMPTY);setApplied(EMPTY);setInvalid([]);setPage(1)}} data-testid="button-reset-filters">{tx('reset')}</button><button type="button" className="p-button" disabled={q.loading} onClick={q.reload} data-testid="button-refresh-logs">{tx('refresh')}</button></div>
   <p className="sc-note">{tx('logsNote')}</p></form>
+  {canExport&&<section className="p-card sc-card" aria-busy={exporting}><div className="cx-row">{(['json','csv'] as const).map(format=><button type="button" className="p-button" key={format} disabled={exporting||q.loading||!!q.error} onClick={()=>void download(format)} data-testid={'button-export-'+format}>{exporting?tx('loading'):'↓ '+format.toUpperCase()}</button>)}</div><p className="sc-note">{tx('exportNote')}</p><p role="status">{exportMessage}</p></section>}
   {q.error?<Failure error={q.error} l={l} onRetry={q.reload}/>:!q.data?<Skeleton/>:<section className="p-card sc-card" aria-busy={q.loading}>
    <div className="cx-scroll"><table className="cx-table sc-table"><thead><tr><th>{tx('time')}</th><th>{tx('level')}</th><th>{tx('category')}</th><th>{tx('event')}</th><th>{tx('endpoint')}</th><th>{tx('httpStatus')}</th><th>{tx('errorCode')}</th><th><span className="sr-only">{tx('details')}</span></th></tr></thead><tbody>
     {items.map(i=>[<tr key={i.id} data-testid={'row-log-'+i.id}><td>{fmtDate(i.createdAt,l)}</td><td><span className={'sc-level sc-level-'+i.level}>{LEV[i.level]?.[L(l)]??i.level}</span></td><td>{CAT[i.category]?.[L(l)]??i.category}</td><td>{i.event}</td><td className="sc-mono">{i.method?i.method+' ':''}{i.endpoint??'—'}</td><td>{i.status??'—'}</td><td className="sc-mono">{i.errorCode??'—'}</td><td><button className="p-button small" aria-expanded={open===i.id} onClick={()=>setOpen(o=>o===i.id?undefined:i.id)} data-testid={'button-log-details-'+i.id}>{open===i.id?tx('hide'):tx('details')}</button></td></tr>,
@@ -141,7 +165,7 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
   <div role="tabpanel">
    {current==='overview'&&<Metrics key={ck+':o'} kind="overview" ck={ck} l={l}/>}
    {current==='health'&&<Metrics key={ck+':h'} kind="health" ck={ck} l={l}/>}
-   {current==='logs'&&<Logs key={ck+':l'} ck={ck} l={l}/>}
+   {current==='logs'&&<Logs key={ck+':l'} ck={ck} l={l} canExport={c.permissions.includes('logs.export')}/>}
    {current==='jobs'&&<Jobs key={ck+':j'} ck={ck} l={l}/>}
   </div>
  </div>;

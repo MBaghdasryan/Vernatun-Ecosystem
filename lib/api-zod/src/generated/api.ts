@@ -72,6 +72,30 @@ export const GetSystemLogsResponse = zod.object({
 })
 
 
+export const CreateSystemLogExportBody = zod.object({
+  "format": zod.enum(['json', 'csv']),
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date(),
+  "level": zod.string().optional(),
+  "category": zod.string().optional(),
+  "user": zod.string().optional(),
+  "organization": zod.string().optional(),
+  "requestId": zod.string().optional(),
+  "status": zod.number().int().optional(),
+  "endpoint": zod.string().optional(),
+  "errorCode": zod.string().optional(),
+  "job": zod.string().optional(),
+  "q": zod.string().optional()
+})
+
+export const CreateSystemLogExportResponse = zod.object({
+  "filename": zod.string(),
+  "contentType": zod.string(),
+  "content": zod.string(),
+  "rows": zod.number().int()
+})
+
+
 
 
 

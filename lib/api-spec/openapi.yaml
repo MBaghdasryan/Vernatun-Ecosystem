@@ -52,6 +52,22 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/SystemLogs"}
+  /system/log-exports:
+    post:
+      operationId: createSystemLogExport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SystemLogExportInput"}
+      responses:
+        "200":
+          description: Audited download, at most 5000 rows and 5 MiB; no silent truncation
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemLogExport"}
+        "413": {description: Narrow the date range or filters}
+        "403": {description: Export permission and platform scope required}
   /system/jobs:
     get:
       operationId: getSystemJobs
@@ -1785,6 +1801,31 @@ components:
         observedAt: {type: string}
         status: {type: string, enum: [healthy, warning, critical]}
         metrics: {type: array, items: {$ref: "#/components/schemas/SystemMetric"}}
+    SystemLogExportInput:
+      type: object
+      required: [format, from, to]
+      properties:
+        format: {type: string, enum: [json, csv]}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        level: {type: string}
+        category: {type: string}
+        user: {type: string}
+        organization: {type: string}
+        requestId: {type: string}
+        status: {type: integer}
+        endpoint: {type: string}
+        errorCode: {type: string}
+        job: {type: string}
+        q: {type: string}
+    SystemLogExport:
+      type: object
+      required: [filename, contentType, content, rows]
+      properties:
+        filename: {type: string}
+        contentType: {type: string}
+        content: {type: string}
+        rows: {type: integer}
     SystemLog:
       type: object
       required: [id, createdAt, category, level, service, event, requestId, actorId, organizationId, endpoint, method, status, latencyMs, errorCode, job]
