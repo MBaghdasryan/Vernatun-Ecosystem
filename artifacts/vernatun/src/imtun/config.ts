@@ -3,7 +3,8 @@ export type BrandConfig={name:string;signature:string;logo:string;primary:string
 export type AppBuildProfile={environment:'development'|'staging'|'production';brand:BrandConfig;packageId:string;bundleId:string;deepLinkDomains:string[];icon:string;splash:string;storeMetadata:{name:string;description:string};pushConfigurationRef?:string};
 export const defaultBrand:BrandConfig={name:'ImTun',signature:'by Vernatun',logo:'/assets/imtun-original.png',primary:'#FF6B0A',navy:'#0B2230',background:'#F7F5F0'};
 // Runtime theme changes presentation only. Permissions always come from the session.
-export function tenantBrand(c:RoleContext):BrandConfig{return {...defaultBrand,primary:c.brand_color&&/^#[0-9a-f]{6}$/i.test(c.brand_color)?c.brand_color:defaultBrand.primary}}
+const hex=(v?:string|null)=>/^#[0-9a-f]{6}$/i.test(v??'')?v!:undefined;
+export function tenantBrand(c:RoleContext):BrandConfig&{accent?:string}{const b=c.branding,k=b?.logo_key;return {...defaultBrand,name:b?.brand_name||defaultBrand.name,logo:k&&c.organization_id?`/api/organizations/${encodeURIComponent(c.organization_id)}/branding/logo?key=${encodeURIComponent(k)}`:defaultBrand.logo,primary:hex(b?.primary_color)??hex(c.brand_color)??defaultBrand.primary,accent:hex(b?.accent_color),supportEmail:b?.support_email||undefined,supportPhone:b?.support_phone||undefined,websiteUrl:b?.website_url||undefined,privacyUrl:b?.privacy_url||undefined,termsUrl:b?.terms_url||undefined}}
 export function buildProfile(environment:AppBuildProfile['environment'],brand=defaultBrand):AppBuildProfile{return {environment,brand,packageId:'am.vernatun.imtun'+(environment==='production'?'':'.'+environment),bundleId:'am.vernatun.imtun'+(environment==='production'?'':'.'+environment),deepLinkDomains:[],icon:'/assets/favicon.png',splash:brand.logo,storeMetadata:{name:brand.name,description:brand.signature}}}
 export const features={
  ownership:{permission:'ownership.read'},

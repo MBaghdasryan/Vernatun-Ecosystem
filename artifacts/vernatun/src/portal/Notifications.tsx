@@ -11,11 +11,12 @@ const S={
  switch:['Անցնել այլ դերի','Переключить роль','Switch role'],confirm:['Այս ծանուցումը վերաբերում է մեկ այլ դերի։ Անցնե՞լ դրան։ Իրավունքները չեն միավորվում․ գործում է միայն ընտրված դերը։','Уведомление относится к другой роли. Переключиться? Права не объединяются: действует только выбранная роль.','This notification belongs to another role. Switch to it? Permissions are never merged; only the selected role applies.'],
  yes:['Անցնել և բացել','Переключить и открыть','Switch and open'],no:['Չեղարկել','Отмена','Cancel'],
  newUpdate:['Հայտի թարմացում','Обновление заявки','Request update'],unit:['բն.','пом.','unit']} as const;
+export function eventLabel(code:string,cat:Row|undefined,language:Language){const known=(cat?.events??[]).find((e:Row)=>e.code===code);const words=String(code).replace(/[._]+/g,' ').trim();const text=words.charAt(0).toUpperCase()+words.slice(1);return known?.critical?text+(language==='hy'?' (կարևոր)':language==='ru'?' (важное)':' (critical)'):text}
 export default function Notifications({c,language}:{c:RoleContext;language:Language}){
  const i=language==='hy'?0:language==='ru'?1:2;const t=(k:keyof typeof S)=>S[k][i];
  const [rows,setRows]=useState<Row[]>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState<{n:Row;target:Row;to:string}>();
- const key=useRef(c.id);key.current=c.id;const busyRef=useRef(false);const seq=useRef(0);
- async function load(){const k=c.id;const n=++seq.current;try{const r=await request<Row[]>('/notifications');if(k!==key.current||n!==seq.current)return;setRows(r);setError('')}catch(e){if(k===key.current&&n===seq.current)setError(t('error')+(e instanceof ApiClientError?' ('+e.code+')':''))}}
+ const [cat,setCat]=useState<Row>();const key=useRef(c.id);key.current=c.id;const busyRef=useRef(false);const seq=useRef(0);
+ async function load(){const k=c.id;const n=++seq.current;try{const r=await request<Row[]>('/notifications');request<Row>('/notifications/catalog').then(x=>{if(k===key.current)setCat(x)}).catch(()=>{});if(k!==key.current||n!==seq.current)return;setRows(r);setError('')}catch(e){if(k===key.current&&n===seq.current)setError(t('error')+(e instanceof ApiClientError?' ('+e.code+')':''))}}
  useEffect(()=>{busyRef.current=false;setBusy(false);seq.current++;setRows(undefined);setPending(undefined);setError('');void load()},[c.id]);
  usePolling(()=>void load(),[c.id],false);
  async function guard(fn:(live:()=>boolean)=>Promise<void>){if(busyRef.current)return;busyRef.current=true;setBusy(true);setError('');const k=c.id;const live=()=>k===key.current;try{await fn(live)}catch(e){if(live())setError(t('error')+(e instanceof ApiClientError?' ('+e.code+')':''))}finally{if(live()){busyRef.current=false;setBusy(false)}}}
@@ -28,6 +29,6 @@ export default function Notifications({c,language}:{c:RoleContext;language:Langu
   {error&&<p className="p-error" role="alert">{error} <button className="p-button" onClick={()=>void load()}>{t('retry')}</button></p>}
   {!rows&&!error&&<p role="status">{t('loading')}</p>}{rows&&!rows.length&&<p>{t('empty')}</p>}
   {pending&&<div className="p-card" role="alertdialog" aria-label={t('switch')}><p>{t('confirm')}</p><p><strong>{label(pending.target)}</strong></p><button className="p-button orange" disabled={busy} onClick={confirmSwitch}>{t('yes')}</button> <button className="p-button" disabled={busy} onClick={()=>setPending(undefined)}>{t('no')}</button></div>}
-  {rows?.map(n=><div className="p-message" key={n.id}><strong>{n.kind==='request_update'||!n.kind?t('newUpdate'):n.kind}</strong><p>{date(n.created_at,language)}</p>
+  {rows?.map(n=><div className="p-message" key={n.id}><strong>{n.kind==='request_update'||(!n.kind&&!n.event_code)?t('newUpdate'):eventLabel(n.event_code??n.kind,cat,language)}</strong><p>{date(n.created_at,language)}</p>
    {n.access_denied?<p className="p-error">{t('denied')}</p>:<div className="p-modal-actions">{(n.targets??[]).map((x:Row)=><button key={x.id} className="p-button" disabled={busy} onClick={()=>openTarget(n,x)}>{t('open')} {label(x)}</button>)}</div>}
    {!n.read_at&&<button className="p-button" disabled={busy} onClick={()=>mark(n)}>{t('read')}</button>}</div>)}</section>}
