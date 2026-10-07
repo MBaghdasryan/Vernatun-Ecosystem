@@ -11,6 +11,35 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /handover-readiness:
+    get:
+      operationId: getHandoverReadiness
+      responses:
+        '200':
+          description: Scoped units, floor registry and evidence-based readiness
+          content: {application/json: {schema: {$ref: '#/components/schemas/HandoverReadiness'}}}
+  /handover-floors:
+    post:
+      operationId: createHandoverFloor
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/HandoverFloorInput'}}}
+      responses:
+        '201':
+          description: Existing or newly created floor
+          content: {application/json: {schema: {$ref: '#/components/schemas/HandoverFloorReceipt'}}}
+  /handover-readiness/{unitId}/floor:
+    post:
+      operationId: assignHandoverFloor
+      parameters:
+        - {in: path, name: unitId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/HandoverFloorAssignment'}}}
+      responses:
+        '200':
+          description: Saved mapping revision
+          content: {application/json: {schema: {$ref: '#/components/schemas/UnitPlanReceipt'}}}
   /unit-plans/{unitId}:
     parameters:
       - {in: path, name: unitId, required: true, schema: {type: string, format: uuid}}
@@ -1690,6 +1719,58 @@ components:
         application/json:
           schema: { type: array, items: { $ref: '#/components/schemas/PlatformRecord' } }
   schemas:
+    HandoverFloorReceipt:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+    HandoverFloorInput:
+      type: object
+      required: [key, buildingId, entrance, number]
+      properties:
+        key: {type: string, format: uuid}
+        buildingId: {type: string, format: uuid}
+        entrance: {type: string}
+        number: {type: integer, minimum: -20, maximum: 300}
+    HandoverFloorAssignment:
+      type: object
+      required: [key, revision, floorId]
+      properties:
+        key: {type: string, format: uuid}
+        revision: {type: integer, minimum: 0}
+        floorId: {type: [string, 'null'], format: uuid}
+    HandoverFloor:
+      type: object
+      required: [id, buildingId, entrance, number]
+      properties:
+        id: {type: string}
+        buildingId: {type: string}
+        entrance: {type: string}
+        number: {type: integer}
+    HandoverReadinessUnit:
+      type: object
+      required: [id, number, buildingId, buildingName, floorId, revision, handoverId, handoverStatus, openDefects, pendingInspections, completedInspections, status]
+      properties:
+        id: {type: string}
+        number: {type: string}
+        buildingId: {type: string}
+        buildingName: {type: string}
+        floorId: {type: [string, 'null']}
+        revision: {type: integer}
+        handoverId: {type: [string, 'null']}
+        handoverStatus: {type: [string, 'null']}
+        openDefects: {type: integer}
+        pendingInspections: {type: integer}
+        completedInspections: {type: integer}
+        status: {type: string, enum: [unknown, defects, inspection, awaiting_confirmation, ready, operational]}
+    HandoverReadiness:
+      type: object
+      required: [canManage, canCreateFloor, units, floors]
+      properties:
+        canManage: {type: boolean}
+        canCreateFloor: {type: boolean}
+        units: {type: array, items: {$ref: '#/components/schemas/HandoverReadinessUnit'}}
+        floors: {type: array, items: {$ref: '#/components/schemas/HandoverFloor'}}
     UnitPlanReceipt:
       type: object
       required: [id, revision]

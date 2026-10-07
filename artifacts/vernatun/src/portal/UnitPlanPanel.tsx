@@ -46,17 +46,18 @@ const st=(e:unknown)=>(e as {status?:number})?.status;
 const ST=['assigned','in_progress','review','accepted'];
 const TYPES=['image/png','image/jpeg','image/webp'];
 
-export default function UnitPlanPanel({c,language}:{c:RoleContext;language:Language}){
+export default function UnitPlanPanel({c,language,selectedUnitId,onUnitChange}:{c:RoleContext;language:Language;selectedUnitId?:string;onUnitChange?:(unitId:string)=>void}){
  const t=(k:K)=>L[k][language==='hy'?0:language==='ru'?1:2];
  const allowed=c.permissions.includes('properties.read');
  const [units,setUnits]=useState<Unit[]>(),[uErr,setUErr]=useState(false),[uRev,setURev]=useState(0),[unit,setUnit]=useState('');
  useEffect(()=>{if(!allowed)return;let live=true;setUnits(undefined);setUErr(false);
   request<Unit[]>('/units').then(u=>{if(!live)return;setUnits(u);setUnit(p=>u.some(x=>x.id===p)?p:u[0]?.id??'')}).catch(()=>{if(live)setUErr(true)});
   return()=>{live=false}},[c.id,uRev,allowed]);
+ useEffect(()=>{if(selectedUnitId&&units?.some(x=>x.id===selectedUnitId))setUnit(selectedUnitId)},[selectedUnitId,units]);
  if(!allowed)return null;
  return <section className="p-card up-root" data-testid="unit-plan-panel">
   <header className="up-head"><h3>{t('title')}</h3>
-   {units&&units.length>0&&<label className="up-unit">{t('unit')}<select data-testid="select-plan-unit" value={unit} onChange={e=>setUnit(e.target.value)}>{units.map(u=><option key={u.id} value={u.id}>{u.building_name} · {u.number}</option>)}</select></label>}
+   {units&&units.length>0&&<label className="up-unit">{t('unit')}<select data-testid="select-plan-unit" value={unit} onChange={e=>{setUnit(e.target.value);onUnitChange?.(e.target.value)}}>{units.map(u=><option key={u.id} value={u.id}>{u.building_name} · {u.number}</option>)}</select></label>}
   </header>
   {uErr?<p className="p-error" role="alert">{t('error')} <button type="button" className="p-button" onClick={()=>setURev(n=>n+1)}>{t('retry')}</button></p>
   :!units?<div className="up-skel" role="status" aria-label={t('loading')}><i/><i/></div>

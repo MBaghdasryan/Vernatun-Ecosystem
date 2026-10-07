@@ -5,6 +5,73 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface HandoverFloorReceipt {
+  id: string;
+}
+
+export interface HandoverFloorInput {
+  key: string;
+  buildingId: string;
+  entrance: string;
+  /**
+     * @minimum -20
+     * @maximum 300
+     */
+  number: number;
+}
+
+export interface HandoverFloorAssignment {
+  key: string;
+  /** @minimum 0 */
+  revision: number;
+  /** @nullable */
+  floorId: string | null;
+}
+
+export interface HandoverFloor {
+  id: string;
+  buildingId: string;
+  entrance: string;
+  number: number;
+}
+
+export type HandoverReadinessUnitStatus = typeof HandoverReadinessUnitStatus[keyof typeof HandoverReadinessUnitStatus];
+
+
+export const HandoverReadinessUnitStatus = {
+  unknown: 'unknown',
+  defects: 'defects',
+  inspection: 'inspection',
+  awaiting_confirmation: 'awaiting_confirmation',
+  ready: 'ready',
+  operational: 'operational',
+} as const;
+
+export interface HandoverReadinessUnit {
+  id: string;
+  number: string;
+  buildingId: string;
+  buildingName: string;
+  /** @nullable */
+  floorId: string | null;
+  revision: number;
+  /** @nullable */
+  handoverId: string | null;
+  /** @nullable */
+  handoverStatus: string | null;
+  openDefects: number;
+  pendingInspections: number;
+  completedInspections: number;
+  status: HandoverReadinessUnitStatus;
+}
+
+export interface HandoverReadiness {
+  canManage: boolean;
+  canCreateFloor: boolean;
+  units: HandoverReadinessUnit[];
+  floors: HandoverFloor[];
+}
+
 export interface UnitPlanReceipt {
   id: string;
   revision: number;

@@ -1,6 +1,7 @@
 import {notificationCenter} from './notification-center.js';
 import {staffAvailability} from './staff-availability.js';
 import {unitPlans} from './unit-plans.js';
+import {handoverReadiness} from './handover-readiness.js';
 import {branding} from './branding.js';
 import {portfolioObjects} from './portfolio-objects.js';
 import {platformFoundation} from './platform-foundation.js';
@@ -69,6 +70,7 @@ app.use('/api/auth',auth);app.use('/api/mfa',mfaPolicy);app.use('/api/mfa',mfa);
 app.use('/api',leads);
 app.use('/api',staffAvailability);
 app.use('/api',unitPlans);
+app.use('/api',handoverReadiness);
 app.use('/api',pagedRecords);
 app.use('/api',documentVersions);app.use('/api',ownership);app.use('/api',governance);app.use('/api',portfolioAnalytics);
 app.use('/api',notificationCenter);app.use('/api',branding);app.use('/api',portfolioObjects);

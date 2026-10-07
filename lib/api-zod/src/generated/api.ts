@@ -8,6 +8,69 @@
 import * as zod from 'zod';
 
 
+export const GetHandoverReadinessResponse = zod.object({
+  "canManage": zod.boolean(),
+  "canCreateFloor": zod.boolean(),
+  "units": zod.array(zod.object({
+  "id": zod.string(),
+  "number": zod.string(),
+  "buildingId": zod.string(),
+  "buildingName": zod.string(),
+  "floorId": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "handoverId": zod.string().nullable(),
+  "handoverStatus": zod.string().nullable(),
+  "openDefects": zod.number().int(),
+  "pendingInspections": zod.number().int(),
+  "completedInspections": zod.number().int(),
+  "status": zod.enum(['unknown', 'defects', 'inspection', 'awaiting_confirmation', 'ready', 'operational'])
+})),
+  "floors": zod.array(zod.object({
+  "id": zod.string(),
+  "buildingId": zod.string(),
+  "entrance": zod.string(),
+  "number": zod.number().int()
+}))
+})
+
+
+export const createHandoverFloorBodyNumberMin = -20;
+export const createHandoverFloorBodyNumberMax = 300;
+
+
+
+export const CreateHandoverFloorBody = zod.object({
+  "key": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "entrance": zod.string(),
+  "number": zod.number().int().min(createHandoverFloorBodyNumberMin).max(createHandoverFloorBodyNumberMax)
+})
+
+export const CreateHandoverFloorResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const AssignHandoverFloorParams = zod.object({
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const assignHandoverFloorBodyRevisionMin = 0;
+
+
+
+export const AssignHandoverFloorBody = zod.object({
+  "key": zod.string().uuid(),
+  "revision": zod.number().int().min(assignHandoverFloorBodyRevisionMin),
+  "floorId": zod.string().uuid().nullable()
+})
+
+export const AssignHandoverFloorResponse = zod.object({
+  "id": zod.string(),
+  "revision": zod.number().int()
+})
+
+
 export const GetUnitPlanParams = zod.object({
   "unitId": zod.coerce.string().uuid()
 })

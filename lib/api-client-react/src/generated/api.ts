@@ -75,6 +75,10 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  HandoverFloorAssignment,
+  HandoverFloorInput,
+  HandoverFloorReceipt,
+  HandoverReadiness,
   HealthStatus,
   IamAccessInput,
   IamAccountStatusInput,
@@ -185,6 +189,242 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetHandoverReadinessUrl = () => {
+
+
+
+
+  return `/api/handover-readiness`
+}
+
+export const getHandoverReadiness = async ( options?: Parameters<typeof customFetch>[1]): Promise<HandoverReadiness> => {
+
+  return customFetch<HandoverReadiness>(getGetHandoverReadinessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHandoverReadinessQueryKey = () => {
+    return [
+    `/api/handover-readiness`
+    ] as const;
+    }
+
+
+export const getGetHandoverReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getHandoverReadiness>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHandoverReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHandoverReadinessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHandoverReadiness>>> = ({ signal }) => getHandoverReadiness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHandoverReadiness>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHandoverReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getHandoverReadiness>>>
+export type GetHandoverReadinessQueryError = ErrorType<unknown>
+
+
+
+export function useGetHandoverReadiness<TData = Awaited<ReturnType<typeof getHandoverReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHandoverReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHandoverReadinessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateHandoverFloorUrl = () => {
+
+
+
+
+  return `/api/handover-floors`
+}
+
+export const createHandoverFloor = async (handoverFloorInput: HandoverFloorInput, options?: Parameters<typeof customFetch>[1]): Promise<HandoverFloorReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<HandoverFloorReceipt>(getCreateHandoverFloorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(handoverFloorInput)
+  }
+);}
+
+
+
+
+
+export const getCreateHandoverFloorMutationKey = () => ['createHandoverFloor'] as const;
+
+export const getCreateHandoverFloorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHandoverFloor>>, TError,CreateHandoverFloorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createHandoverFloor>>, TError,CreateHandoverFloorMutationVariables, TContext> => {
+
+const mutationKey = getCreateHandoverFloorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createHandoverFloor>>, CreateHandoverFloorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createHandoverFloor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateHandoverFloorMutationResult = NonNullable<Awaited<ReturnType<typeof createHandoverFloor>>>
+    export type CreateHandoverFloorMutationBody = BodyType<HandoverFloorInput>
+    export type CreateHandoverFloorMutationError = ErrorType<unknown>
+    export type CreateHandoverFloorMutationVariables = {data: BodyType<HandoverFloorInput>}
+
+    export const useCreateHandoverFloor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHandoverFloor>>, TError,CreateHandoverFloorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createHandoverFloor>>,
+        TError,
+        CreateHandoverFloorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateHandoverFloorMutationOptions(options));
+    }
+
+export const getAssignHandoverFloorUrl = (unitId: string,) => {
+
+
+
+
+  return `/api/handover-readiness/${unitId}/floor`
+}
+
+export const assignHandoverFloor = async (unitId: string,
+    handoverFloorAssignment: HandoverFloorAssignment, options?: Parameters<typeof customFetch>[1]): Promise<UnitPlanReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UnitPlanReceipt>(getAssignHandoverFloorUrl(unitId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(handoverFloorAssignment)
+  }
+);}
+
+
+
+
+
+export const getAssignHandoverFloorMutationKey = () => ['assignHandoverFloor'] as const;
+
+export const getAssignHandoverFloorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignHandoverFloor>>, TError,AssignHandoverFloorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignHandoverFloor>>, TError,AssignHandoverFloorMutationVariables, TContext> => {
+
+const mutationKey = getAssignHandoverFloorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignHandoverFloor>>, AssignHandoverFloorMutationVariables> = (props) => {
+          const {unitId,data} = props ?? {};
+
+          return  assignHandoverFloor(unitId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignHandoverFloorMutationResult = NonNullable<Awaited<ReturnType<typeof assignHandoverFloor>>>
+    export type AssignHandoverFloorMutationBody = BodyType<HandoverFloorAssignment>
+    export type AssignHandoverFloorMutationError = ErrorType<unknown>
+    export type AssignHandoverFloorMutationVariables = {unitId: string;data: BodyType<HandoverFloorAssignment>}
+
+    export const useAssignHandoverFloor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignHandoverFloor>>, TError,AssignHandoverFloorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignHandoverFloor>>,
+        TError,
+        AssignHandoverFloorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAssignHandoverFloorMutationOptions(options));
+    }
 
 export const getGetUnitPlanUrl = (unitId: string,) => {
 
