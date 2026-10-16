@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/imtun-mobile/"
+title = "ImTun"
+description = "Mobile home and service-request app for residents, connected to the Vernatun API."
+version = "1.0.0"
+id = "artifacts/imtun-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/imtun-mobile/" ]
+localPort = 25342
+
+[services.development]
+run = "pnpm --filter @workspace/imtun-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/imtun-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/imtun-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "25342"
+BASE_PATH = "/imtun-mobile/"
