@@ -10,6 +10,41 @@ export interface OperationIdResult {
   status?: string;
 }
 
+export type IntegrationInstanceActionInputConfirmation = typeof IntegrationInstanceActionInputConfirmation[keyof typeof IntegrationInstanceActionInputConfirmation];
+
+
+export const IntegrationInstanceActionInputConfirmation = {
+  INTEGRATION: 'INTEGRATION',
+} as const;
+
+export interface IntegrationInstanceActionInput {
+  revision: number;
+  confirmation: IntegrationInstanceActionInputConfirmation;
+}
+
+export type OutgoingWebhookStateInputConfirmation = typeof OutgoingWebhookStateInputConfirmation[keyof typeof OutgoingWebhookStateInputConfirmation];
+
+
+export const OutgoingWebhookStateInputConfirmation = {
+  WEBHOOK: 'WEBHOOK',
+} as const;
+
+export interface OutgoingWebhookStateInput {
+  enabled: boolean;
+  confirmation: OutgoingWebhookStateInputConfirmation;
+}
+
+export type WebhookDeliveryActionInputConfirmation = typeof WebhookDeliveryActionInputConfirmation[keyof typeof WebhookDeliveryActionInputConfirmation];
+
+
+export const WebhookDeliveryActionInputConfirmation = {
+  WEBHOOK: 'WEBHOOK',
+} as const;
+
+export interface WebhookDeliveryActionInput {
+  confirmation: WebhookDeliveryActionInputConfirmation;
+}
+
 export type IntegrationCreateInputProvider = typeof IntegrationCreateInputProvider[keyof typeof IntegrationCreateInputProvider];
 
 
@@ -2259,46 +2294,11 @@ export type GetIntegrationCenterParams = {
 page?: number;
 };
 
-export type ActIntegrationInstanceBodyConfirmation = typeof ActIntegrationInstanceBodyConfirmation[keyof typeof ActIntegrationInstanceBodyConfirmation];
-
-
-export const ActIntegrationInstanceBodyConfirmation = {
-  INTEGRATION: 'INTEGRATION',
-} as const;
-
-export type ActIntegrationInstanceBody = {
-  revision: number;
-  confirmation: ActIntegrationInstanceBodyConfirmation;
-};
-
 export type GetWebhookCenterParams = {
 /**
  * @minimum 1
  */
 page?: number;
-};
-
-export type SetOutgoingWebhookStateBodyConfirmation = typeof SetOutgoingWebhookStateBodyConfirmation[keyof typeof SetOutgoingWebhookStateBodyConfirmation];
-
-
-export const SetOutgoingWebhookStateBodyConfirmation = {
-  WEBHOOK: 'WEBHOOK',
-} as const;
-
-export type SetOutgoingWebhookStateBody = {
-  enabled: boolean;
-  confirmation: SetOutgoingWebhookStateBodyConfirmation;
-};
-
-export type ActWebhookDeliveryBodyConfirmation = typeof ActWebhookDeliveryBodyConfirmation[keyof typeof ActWebhookDeliveryBodyConfirmation];
-
-
-export const ActWebhookDeliveryBodyConfirmation = {
-  WEBHOOK: 'WEBHOOK',
-} as const;
-
-export type ActWebhookDeliveryBody = {
-  confirmation: ActWebhookDeliveryBodyConfirmation;
 };
 
 export type GetSystemApiDocumentation200 = { [key: string]: unknown };

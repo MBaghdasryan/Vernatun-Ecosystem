@@ -72,12 +72,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [revision, confirmation]
-              properties:
-                revision: {type: integer}
-                confirmation: {type: string, enum: [INTEGRATION]}
+            schema: {$ref: '#/components/schemas/IntegrationInstanceActionInput'}
       responses:
         '200':
           description: Action result
@@ -122,12 +117,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [enabled, confirmation]
-              properties:
-                enabled: {type: boolean}
-                confirmation: {type: string, enum: [WEBHOOK]}
+            schema: {$ref: '#/components/schemas/OutgoingWebhookStateInput'}
       responses:
         '200':
           description: State changed
@@ -150,11 +140,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [confirmation]
-              properties:
-                confirmation: {type: string, enum: [WEBHOOK]}
+            schema: {$ref: '#/components/schemas/WebhookDeliveryActionInput'}
       responses:
         '200':
           description: Queued retry or cancelled queued delivery
@@ -2392,6 +2378,23 @@ components:
       properties:
         id: {type: string}
         status: {type: string}
+    IntegrationInstanceActionInput:
+      type: object
+      required: [revision, confirmation]
+      properties:
+        revision: {type: integer}
+        confirmation: {type: string, enum: [INTEGRATION]}
+    OutgoingWebhookStateInput:
+      type: object
+      required: [enabled, confirmation]
+      properties:
+        enabled: {type: boolean}
+        confirmation: {type: string, enum: [WEBHOOK]}
+    WebhookDeliveryActionInput:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation: {type: string, enum: [WEBHOOK]}
     IntegrationCreateInput:
       type: object
       required: [provider, organizationId, displayName, environment, config, credentials, confirmation]

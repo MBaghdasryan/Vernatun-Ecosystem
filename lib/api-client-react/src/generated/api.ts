@@ -20,9 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ActIntegrationInstanceBody,
   ActManagedApiKeyBody,
-  ActWebhookDeliveryBody,
   ApiKeyActionResult,
   AvailabilityBlock,
   AvailabilityBlockChange,
@@ -116,6 +114,7 @@ import type {
   IncidentTransitionInput,
   IntegrationCenter,
   IntegrationCreateInput,
+  IntegrationInstanceActionInput,
   IntegrationUpdateInput,
   Invitation,
   InvitationResendInput,
@@ -153,6 +152,7 @@ import type {
   OperationalRequestInput,
   OperationalRow,
   OrganizationBrandingState,
+  OutgoingWebhookStateInput,
   PlatformCaseChange,
   PlatformCaseInput,
   PlatformCaseMessage,
@@ -178,7 +178,6 @@ import type {
   SaveSystemLogRetention200,
   ScopedRecordPage,
   SetApiClientStatusBody,
-  SetOutgoingWebhookStateBody,
   SlaPolicyInput,
   StaffAvailability,
   SuggestBankMatchesParams,
@@ -214,6 +213,7 @@ import type {
   VisitResponseInput,
   WebhookCenter,
   WebhookCreateInput,
+  WebhookDeliveryActionInput,
   WorkTransitionInput
 } from './api.schemas';
 
@@ -498,7 +498,7 @@ export const getActIntegrationInstanceUrl = (id: string,
 
 export const actIntegrationInstance = async (id: string,
     action: 'test' | 'activate' | 'deactivate' | 'delete',
-    actIntegrationInstanceBody: ActIntegrationInstanceBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+    integrationInstanceActionInput: IntegrationInstanceActionInput, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -519,7 +519,7 @@ return customFetch<OperationIdResult>(getActIntegrationInstanceUrl(id,action),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(actIntegrationInstanceBody)
+    body: JSON.stringify(integrationInstanceActionInput)
   }
 );}
 
@@ -557,9 +557,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ActIntegrationInstanceMutationResult = NonNullable<Awaited<ReturnType<typeof actIntegrationInstance>>>
-    export type ActIntegrationInstanceMutationBody = BodyType<ActIntegrationInstanceBody>
+    export type ActIntegrationInstanceMutationBody = BodyType<IntegrationInstanceActionInput>
     export type ActIntegrationInstanceMutationError = ErrorType<unknown>
-    export type ActIntegrationInstanceMutationVariables = {id: string;action: 'test' | 'activate' | 'deactivate' | 'delete';data: BodyType<ActIntegrationInstanceBody>}
+    export type ActIntegrationInstanceMutationVariables = {id: string;action: 'test' | 'activate' | 'deactivate' | 'delete';data: BodyType<IntegrationInstanceActionInput>}
 
     export const useActIntegrationInstance = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actIntegrationInstance>>, TError,ActIntegrationInstanceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -741,7 +741,7 @@ export const getSetOutgoingWebhookStateUrl = (id: string,) => {
 }
 
 export const setOutgoingWebhookState = async (id: string,
-    setOutgoingWebhookStateBody: SetOutgoingWebhookStateBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+    outgoingWebhookStateInput: OutgoingWebhookStateInput, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -762,7 +762,7 @@ return customFetch<OperationIdResult>(getSetOutgoingWebhookStateUrl(id),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(setOutgoingWebhookStateBody)
+    body: JSON.stringify(outgoingWebhookStateInput)
   }
 );}
 
@@ -800,9 +800,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SetOutgoingWebhookStateMutationResult = NonNullable<Awaited<ReturnType<typeof setOutgoingWebhookState>>>
-    export type SetOutgoingWebhookStateMutationBody = BodyType<SetOutgoingWebhookStateBody>
+    export type SetOutgoingWebhookStateMutationBody = BodyType<OutgoingWebhookStateInput>
     export type SetOutgoingWebhookStateMutationError = ErrorType<unknown>
-    export type SetOutgoingWebhookStateMutationVariables = {id: string;data: BodyType<SetOutgoingWebhookStateBody>}
+    export type SetOutgoingWebhookStateMutationVariables = {id: string;data: BodyType<OutgoingWebhookStateInput>}
 
     export const useSetOutgoingWebhookState = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOutgoingWebhookState>>, TError,SetOutgoingWebhookStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -826,7 +826,7 @@ export const getActWebhookDeliveryUrl = (id: string,
 
 export const actWebhookDelivery = async (id: string,
     action: 'retry' | 'cancel',
-    actWebhookDeliveryBody: ActWebhookDeliveryBody, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
+    webhookDeliveryActionInput: WebhookDeliveryActionInput, options?: Parameters<typeof customFetch>[1]): Promise<OperationIdResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -847,7 +847,7 @@ return customFetch<OperationIdResult>(getActWebhookDeliveryUrl(id,action),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(actWebhookDeliveryBody)
+    body: JSON.stringify(webhookDeliveryActionInput)
   }
 );}
 
@@ -885,9 +885,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ActWebhookDeliveryMutationResult = NonNullable<Awaited<ReturnType<typeof actWebhookDelivery>>>
-    export type ActWebhookDeliveryMutationBody = BodyType<ActWebhookDeliveryBody>
+    export type ActWebhookDeliveryMutationBody = BodyType<WebhookDeliveryActionInput>
     export type ActWebhookDeliveryMutationError = ErrorType<unknown>
-    export type ActWebhookDeliveryMutationVariables = {id: string;action: 'retry' | 'cancel';data: BodyType<ActWebhookDeliveryBody>}
+    export type ActWebhookDeliveryMutationVariables = {id: string;action: 'retry' | 'cancel';data: BodyType<WebhookDeliveryActionInput>}
 
     export const useActWebhookDelivery = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actWebhookDelivery>>, TError,ActWebhookDeliveryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

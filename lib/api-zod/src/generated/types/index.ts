@@ -6,12 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './actIntegrationInstanceBody';
-export * from './actIntegrationInstanceBodyConfirmation';
 export * from './actManagedApiKeyBody';
 export * from './actManagedApiKeyBodyConfirmation';
-export * from './actWebhookDeliveryBody';
-export * from './actWebhookDeliveryBodyConfirmation';
 export * from './apiKeyActionResult';
 export * from './availabilityBlock';
 export * from './availabilityBlockChange';
@@ -169,6 +165,8 @@ export * from './integrationCreateInput';
 export * from './integrationCreateInputConfirmation';
 export * from './integrationCreateInputEnvironment';
 export * from './integrationCreateInputProvider';
+export * from './integrationInstanceActionInput';
+export * from './integrationInstanceActionInputConfirmation';
 export * from './integrationUpdateInput';
 export * from './integrationUpdateInputConfirmation';
 export * from './invitation';
@@ -230,6 +228,8 @@ export * from './operationIdResult';
 export * from './organizationBrandingMetadata';
 export * from './organizationBrandingState';
 export * from './organizationBrandingStateBranding';
+export * from './outgoingWebhookStateInput';
+export * from './outgoingWebhookStateInputConfirmation';
 export * from './platformCaseChange';
 export * from './platformCaseChangePriority';
 export * from './platformCaseChangeStatus';
@@ -280,8 +280,6 @@ export * from './scopedRecordPageDirection';
 export * from './setApiClientStatusBody';
 export * from './setApiClientStatusBodyConfirmation';
 export * from './setApiClientStatusBodyStatus';
-export * from './setOutgoingWebhookStateBody';
-export * from './setOutgoingWebhookStateBodyConfirmation';
 export * from './slaPolicyInput';
 export * from './smtpIntegrationConfig';
 export * from './smtpIntegrationConfigPort';
@@ -351,6 +349,8 @@ export * from './webhookCenterDeliveriesItem';
 export * from './webhookCenterWebhooksItem';
 export * from './webhookCreateInput';
 export * from './webhookCreateInputConfirmation';
+export * from './webhookDeliveryActionInput';
+export * from './webhookDeliveryActionInputConfirmation';
 export * from './workTransitionInput';
 export * from './workTransitionInputAction';
 export * from './workTransitionInputChecklistItem';
