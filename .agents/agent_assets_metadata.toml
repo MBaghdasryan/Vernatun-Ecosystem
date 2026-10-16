@@ -364,3 +364,17 @@ mtime_ms = 1791289213631
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/d971896a-0d3b-4d51-b21d-3a3069396424/13fba976-d2be-4b3c-a471-5bdc7784e7a9"
 storage_version_token = "1792175544326313"
 content_type = "image/png"
+
+[[outputs]]
+id = "SKi7XTjqgZkO90ogB3DdZ"
+uri = "file://generated-artifacts/ImTun-Expo-Ready.zip"
+type = "unspecified"
+title = "ImTun Expo EAS-ready project ZIP"
+description = "Standalone ImTun Expo project with its pnpm lockfile, API client workspace package, Android target SDK 36, APK/AAB EAS profiles, and build instructions. No cloud build or secrets included."
+logical_id = "dea64a6b-4d83-45ba-8dbf-d1c5afb9e953"
+content_hash = "sha256:df86211a2b7863944d1dedb410699c0e2275f6a8b4c5d5657d75a2519102b836"
+size = 2937928
+mtime_ms = 1792192221414
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/dea64a6b-4d83-45ba-8dbf-d1c5afb9e953/6659b3dd-12ba-413a-83c9-7614529da26b"
+storage_version_token = "1792192301500313"
+content_type = "application/octet-stream"
