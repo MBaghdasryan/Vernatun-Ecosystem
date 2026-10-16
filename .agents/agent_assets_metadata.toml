@@ -308,3 +308,17 @@ mtime_ms = 1791367758212
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/22cde23c-7c95-41ed-bd9d-f326788eb13e/93ae74c0-14f8-43f6-8d3c-1208cb62686f"
 storage_version_token = "1791367808136140"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "GQavEV72kv-JLVcjEkbBS"
+uri = "file://HAYAT_ANDROID_HANDOFF.md"
+type = "text"
+title = "HAYAT Android — подробное ТЗ для отдельного проекта"
+description = "Готовая передача для Replit-проекта HAYAT: экранный MVP подрядчика, API-контракт, безопасность, бренд и критерии проверки."
+logical_id = "3acda6e4-6bb9-4305-adae-b1c5eeeed4a9"
+content_hash = "sha256:43a77ca9ec237d42790cac6dc137eef3104d3aa6a36f39a73c20acff964969bc"
+size = 20049
+mtime_ms = 1792175224675
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/3acda6e4-6bb9-4305-adae-b1c5eeeed4a9/07de8390-5c55-44d6-bd44-6c559a0c9719"
+storage_version_token = "1792175249042013"
+content_type = "text/markdown"
