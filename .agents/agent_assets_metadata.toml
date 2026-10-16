@@ -322,3 +322,45 @@ mtime_ms = 1792175224675
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/3acda6e4-6bb9-4305-adae-b1c5eeeed4a9/07de8390-5c55-44d6-bd44-6c559a0c9719"
 storage_version_token = "1792175249042013"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "O1gxBXolzfkszu5U6ePLX"
+uri = "file://attached_assets/hayat_1791285568838.zip"
+type = "unspecified"
+title = "HAYAT исходники — ZIP"
+description = "Архив исходных HAYAT web-компонентов, стилей, переводов и конфигурации."
+logical_id = "2ac589d0-6998-4e67-9fbb-790813700181"
+content_hash = "sha256:42f2771ba78b29108adb69a6ce1bd70a3c3e05df94cb513154efa6c450acbc65"
+size = 17504
+mtime_ms = 1791285582751
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/2ac589d0-6998-4e67-9fbb-790813700181/fe875353-43d3-4d41-b33e-0a1bd3508179"
+storage_version_token = "1792175541415573"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "QdlpIgGGA6wq1jkRec9_S"
+uri = "file://attached_assets/HAYAT-IMPLEMENTATION_1791285553155.md"
+type = "text"
+title = "HAYAT — отчёт реализации"
+description = "Описание существующей HAYAT реализации, API, возможностей и ограничений."
+logical_id = "eefd6214-8cd1-438d-89a0-e81e11ecdb46"
+content_hash = "sha256:896ac7d83929dfe7ee29a50c043642f10ee75b92424f33b0aa4de1bd626c4d99"
+size = 14604
+mtime_ms = 1791285567151
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/eefd6214-8cd1-438d-89a0-e81e11ecdb46/eaab3b68-a8f8-4492-8422-2422b98af715"
+storage_version_token = "1792175542869086"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "z7Pfs0Z6cf7oLemMSwkAr"
+uri = "file://attached_assets/Contractor_dashboard_for_assigned_repairs_1791289210913.png"
+type = "image"
+title = "HAYAT — интерфейс кабинета подрядчика"
+description = "Скриншот-референс интерфейса подрядчика."
+logical_id = "d971896a-0d3b-4d51-b21d-3a3069396424"
+content_hash = "sha256:3d68e6fb62154bc4372708c97cbe4ba4523f12d800c64fd58b6151befd32bca1"
+size = 1271882
+mtime_ms = 1791289213631
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/d971896a-0d3b-4d51-b21d-3a3069396424/13fba976-d2be-4b3c-a471-5bdc7784e7a9"
+storage_version_token = "1792175544326313"
+content_type = "image/png"
