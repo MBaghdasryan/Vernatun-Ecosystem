@@ -29,10 +29,8 @@
     "expo-glass-effect": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-image": "~57.0.1",
-    "expo-image-picker": "~57.0.5",
     "expo-linear-gradient": "~57.0.1",
     "expo-linking": "~57.0.3",
-    "expo-location": "~57.0.5",
     "expo-router": "~57.0.7",
     "expo-splash-screen": "~57.0.4",
     "expo-status-bar": "~57.0.1",
@@ -53,5 +51,8 @@
     "typescript": "~6.0.3",
     "zod": "catalog:",
     "zod-validation-error": "^3.4.0"
+  },
+  "dependencies": {
+    "expo-build-properties": "~57.0.22"
   }
 }

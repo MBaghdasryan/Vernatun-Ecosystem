@@ -1,24 +1,43 @@
 {
   "expo": {
-    "name": "ImTun",
-    "slug": "imtun-mobile",
+    "name": "ImTun by Vernatun",
+    "slug": "imtun-by-vernatun",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "imtun-mobile",
+    "scheme": "imtun",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.vernatun.imtun",
+      "buildNumber": "1",
       "supportsTablet": false
     },
     "android": {
-      "package": "com.vernatun.imtun"
+      "package": "com.vernatun.imtun",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#f5f3ed"
+      }
     },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "targetSdkVersion": 36
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {

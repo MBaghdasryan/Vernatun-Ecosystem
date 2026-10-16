@@ -20,7 +20,17 @@ import { palette } from '@/constants/colors';
 SplashScreen.preventAutoHideAsync();
 
 export const csrfSessionRef: { current: string | null } = { current: null };
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+const configuredApiUrl =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  process.env.EXPO_PUBLIC_DOMAIN?.trim();
+if (!configuredApiUrl) {
+  throw new Error('Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN to connect to Vernatun API.');
+}
+setBaseUrl(
+  /^https?:\/\//i.test(configuredApiUrl)
+    ? configuredApiUrl.replace(/\/+$/, '')
+    : `https://${configuredApiUrl.replace(/\/+$/, '')}`,
+);
 setCsrfTokenGetter(() => csrfSessionRef.current);
 
 const queryClient = new QueryClient();
