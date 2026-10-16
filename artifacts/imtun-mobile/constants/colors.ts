@@ -1,59 +1,67 @@
-/**
- * Semantic design tokens for the mobile app.
- *
- * These tokens mirror the naming conventions used in web artifacts (index.css)
- * so that multi-artifact projects share a cohesive visual identity.
- *
- * Replace the placeholder values below with values that match the project's
- * brand. If a sibling web artifact exists, read its index.css and convert the
- * HSL values to hex so both artifacts use the same palette.
- *
- * To add dark mode, add a `dark` key with the same token names.
- * The useColors() hook will automatically pick it up.
- */
+export const palette = {
+  background: '#f7f5f0',
+  foreground: '#0b2230',
+  surface: '#fffdf9',
+  warmSurface: '#f9f8f4',
+  primary: '#f76a0a',
+  primaryForeground: '#0b2230',
+  secondary: '#eeeae2',
+  muted: '#efeee9',
+  mutedForeground: '#52616b',
+  subdued: '#728087',
+  placeholder: '#849097',
+  border: '#d7dfe3',
+  accent: '#fff0e4',
+  accentForeground: '#a64100',
+  destructive: '#b63c2f',
+  destructiveForeground: '#94362b',
+  destructiveSurface: '#fff0ee',
+  skeleton: '#e9e6de',
+  alternateSurface: '#e9efed',
+  heroMuted: '#c6d1d5',
+  success: '#478566',
+  successStrong: '#28634b',
+  successDeep: '#205c46',
+  successSurface: '#e8f1eb',
+  successSoft: '#d9e9dd',
+  warning: '#d98b2e',
+  warningText: '#8d570d',
+  dangerText: '#a43d32',
+  dangerBorder: '#e4c8c3',
+  dangerSurface: '#fff9f7',
+  selectedBorder: '#f1b48e',
+  selectedSurface: '#fffaf4',
+  divider: '#edf0ee',
+  handle: '#c9cfcb',
+  version: '#9aa3a5',
+  overlay: 'rgba(11,34,48,0.42)',
+  heroOverlay: 'rgba(255,255,255,0.12)',
+  heroDecoration: 'rgba(255,255,255,0.07)',
+  shadow: '#0b2230',
+};
 
 const colors = {
   light: {
-    // Legacy aliases (kept for backward compatibility)
-    text: '#0a0a0a',
-    tint: '#2f95dc',
-
-    // Core surfaces
-    background: '#ffffff',
-    foreground: '#0a0a0a',
-
-    // Cards / elevated surfaces
-    card: '#f9f9f9',
-    cardForeground: '#0a0a0a',
-
-    // Primary action color (buttons, links, active states)
-    primary: '#2f95dc',
-    primaryForeground: '#ffffff',
-
-    // Secondary / less-emphasis interactive surfaces
-    secondary: '#f0f0f0',
-    secondaryForeground: '#1a1a1a',
-
-    // Muted / subdued elements (dividers, timestamps, placeholders)
-    muted: '#f0f0f0',
-    mutedForeground: '#737373',
-
-    // Accent highlights (badges, selected items, focus rings)
-    accent: '#f0f0f0',
-    accentForeground: '#1a1a1a',
-
-    // Destructive actions (delete, error states)
-    destructive: '#ef4444',
-    destructiveForeground: '#ffffff',
-
-    // Borders and input outlines
-    border: '#e5e5e5',
-    input: '#e5e5e5',
+    text: palette.foreground,
+    tint: palette.primary,
+    background: palette.background,
+    foreground: palette.foreground,
+    card: palette.surface,
+    cardForeground: palette.foreground,
+    primary: palette.primary,
+    primaryForeground: palette.primaryForeground,
+    secondary: palette.secondary,
+    secondaryForeground: palette.foreground,
+    muted: palette.muted,
+    mutedForeground: palette.mutedForeground,
+    accent: palette.accent,
+    accentForeground: palette.accentForeground,
+    destructive: palette.destructive,
+    destructiveForeground: palette.surface,
+    border: palette.border,
+    input: palette.border,
   },
-
-  // Border radius (in px). Sync from the sibling web artifact's --radius
-  // CSS variable. This value applies to cards, buttons, inputs, and modals.
-  radius: 8,
+  radius: 14,
 };
 
 export default colors;

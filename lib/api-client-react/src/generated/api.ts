@@ -53,6 +53,7 @@ import type {
   DefectCollaboration,
   DefectMessage,
   DefectMessageInput,
+  DefectTransitionInput,
   DelegationExpirationInput,
   DelegationResendInput,
   DeleteEmptyPortfolioObject200,
@@ -79,6 +80,7 @@ import type {
   GetExternalRecordsParams,
   GetGovernanceMeeting200,
   GetGovernanceSettings200,
+  GetHayatQueueParams,
   GetIntegrationCenterParams,
   GetLandingLeadsParams,
   GetNotificationCatalog200,
@@ -102,6 +104,7 @@ import type {
   HandoverFloorInput,
   HandoverFloorReceipt,
   HandoverReadiness,
+  HayatQueueResponse,
   HealthStatus,
   IamAccessInput,
   IamAccountStatusInput,
@@ -146,6 +149,11 @@ import type {
   MfaPolicy,
   MfaPolicyInput,
   MfaPolicyState,
+  MobileAuthContextInput,
+  MobileAuthContextResult,
+  MobileAuthLoginInput,
+  MobileAuthLoginResult,
+  MobileAuthSession,
   NotificationDestination,
   NotificationPreferences,
   OperationIdResult,
@@ -243,6 +251,476 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetMobileAuthSessionUrl = () => {
+
+
+
+
+  return `/api/auth/session`
+}
+
+export const getMobileAuthSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<MobileAuthSession> => {
+
+  return customFetch<MobileAuthSession>(getGetMobileAuthSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMobileAuthSessionQueryKey = () => {
+    return [
+    `/api/auth/session`
+    ] as const;
+    }
+
+
+export const getGetMobileAuthSessionQueryOptions = <TData = Awaited<ReturnType<typeof getMobileAuthSession>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMobileAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMobileAuthSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMobileAuthSession>>> = ({ signal }) => getMobileAuthSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMobileAuthSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMobileAuthSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getMobileAuthSession>>>
+export type GetMobileAuthSessionQueryError = ErrorType<unknown>
+
+
+
+export function useGetMobileAuthSession<TData = Awaited<ReturnType<typeof getMobileAuthSession>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMobileAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMobileAuthSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLoginMobileAuthUrl = () => {
+
+
+
+
+  return `/api/auth/login`
+}
+
+export const loginMobileAuth = async (mobileAuthLoginInput: MobileAuthLoginInput, options?: Parameters<typeof customFetch>[1]): Promise<MobileAuthLoginResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MobileAuthLoginResult>(getLoginMobileAuthUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(mobileAuthLoginInput)
+  }
+);}
+
+
+
+
+
+export const getLoginMobileAuthMutationKey = () => ['loginMobileAuth'] as const;
+
+export const getLoginMobileAuthMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginMobileAuth>>, TError,LoginMobileAuthMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginMobileAuth>>, TError,LoginMobileAuthMutationVariables, TContext> => {
+
+const mutationKey = getLoginMobileAuthMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginMobileAuth>>, LoginMobileAuthMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  loginMobileAuth(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginMobileAuthMutationResult = NonNullable<Awaited<ReturnType<typeof loginMobileAuth>>>
+    export type LoginMobileAuthMutationBody = BodyType<MobileAuthLoginInput>
+    export type LoginMobileAuthMutationError = ErrorType<void>
+    export type LoginMobileAuthMutationVariables = {data: BodyType<MobileAuthLoginInput>}
+
+    export const useLoginMobileAuth = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginMobileAuth>>, TError,LoginMobileAuthMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginMobileAuth>>,
+        TError,
+        LoginMobileAuthMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLoginMobileAuthMutationOptions(options));
+    }
+
+export const getSwitchMobileAuthContextUrl = () => {
+
+
+
+
+  return `/api/auth/context`
+}
+
+export const switchMobileAuthContext = async (mobileAuthContextInput: MobileAuthContextInput, options?: Parameters<typeof customFetch>[1]): Promise<MobileAuthContextResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MobileAuthContextResult>(getSwitchMobileAuthContextUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(mobileAuthContextInput)
+  }
+);}
+
+
+
+
+
+export const getSwitchMobileAuthContextMutationKey = () => ['switchMobileAuthContext'] as const;
+
+export const getSwitchMobileAuthContextMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof switchMobileAuthContext>>, TError,SwitchMobileAuthContextMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof switchMobileAuthContext>>, TError,SwitchMobileAuthContextMutationVariables, TContext> => {
+
+const mutationKey = getSwitchMobileAuthContextMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof switchMobileAuthContext>>, SwitchMobileAuthContextMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  switchMobileAuthContext(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SwitchMobileAuthContextMutationResult = NonNullable<Awaited<ReturnType<typeof switchMobileAuthContext>>>
+    export type SwitchMobileAuthContextMutationBody = BodyType<MobileAuthContextInput>
+    export type SwitchMobileAuthContextMutationError = ErrorType<void>
+    export type SwitchMobileAuthContextMutationVariables = {data: BodyType<MobileAuthContextInput>}
+
+    export const useSwitchMobileAuthContext = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof switchMobileAuthContext>>, TError,SwitchMobileAuthContextMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof switchMobileAuthContext>>,
+        TError,
+        SwitchMobileAuthContextMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSwitchMobileAuthContextMutationOptions(options));
+    }
+
+export const getLogoutMobileAuthUrl = () => {
+
+
+
+
+  return `/api/auth/logout`
+}
+
+export const logoutMobileAuth = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutMobileAuthUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMobileAuthMutationKey = () => ['logoutMobileAuth'] as const;
+
+export const getLogoutMobileAuthMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutMobileAuth>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutMobileAuth>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutMobileAuthMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutMobileAuth>>, void> = () => {
+
+
+          return  logoutMobileAuth(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMobileAuthMutationResult = NonNullable<Awaited<ReturnType<typeof logoutMobileAuth>>>
+
+    export type LogoutMobileAuthMutationError = ErrorType<unknown>
+
+
+    export const useLogoutMobileAuth = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutMobileAuth>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutMobileAuth>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMobileAuthMutationOptions(options));
+    }
+
+export const getGetHayatQueueUrl = (params?: GetHayatQueueParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hayat/queue?${stringifiedParams}` : `/api/hayat/queue`
+}
+
+/**
+ * Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+ */
+export const getHayatQueue = async (params?: GetHayatQueueParams, options?: Parameters<typeof customFetch>[1]): Promise<HayatQueueResponse> => {
+
+  return customFetch<HayatQueueResponse>(getGetHayatQueueUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHayatQueueQueryKey = (params?: GetHayatQueueParams,) => {
+    return [
+    `/api/hayat/queue`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHayatQueueQueryOptions = <TData = Awaited<ReturnType<typeof getHayatQueue>>, TError = ErrorType<void>>(params?: GetHayatQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHayatQueue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHayatQueueQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHayatQueue>>> = ({ signal }) => getHayatQueue(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHayatQueue>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHayatQueueQueryResult = NonNullable<Awaited<ReturnType<typeof getHayatQueue>>>
+export type GetHayatQueueQueryError = ErrorType<void>
+
+
+
+export function useGetHayatQueue<TData = Awaited<ReturnType<typeof getHayatQueue>>, TError = ErrorType<void>>(
+ params?: GetHayatQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHayatQueue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHayatQueueQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getTransitionAssignedDefectUrl = (id: string,) => {
+
+
+
+
+  return `/api/defects/${id}/transition`
+}
+
+/**
+ * Existing versioned, server-authorized defect transition; contractor actions are checked against the assigned user.
+ */
+export const transitionAssignedDefect = async (id: string,
+    defectTransitionInput: DefectTransitionInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getTransitionAssignedDefectUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(defectTransitionInput)
+  }
+);}
+
+
+
+
+
+export const getTransitionAssignedDefectMutationKey = () => ['transitionAssignedDefect'] as const;
+
+export const getTransitionAssignedDefectMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionAssignedDefect>>, TError,TransitionAssignedDefectMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof transitionAssignedDefect>>, TError,TransitionAssignedDefectMutationVariables, TContext> => {
+
+const mutationKey = getTransitionAssignedDefectMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof transitionAssignedDefect>>, TransitionAssignedDefectMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  transitionAssignedDefect(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TransitionAssignedDefectMutationResult = NonNullable<Awaited<ReturnType<typeof transitionAssignedDefect>>>
+    export type TransitionAssignedDefectMutationBody = BodyType<DefectTransitionInput>
+    export type TransitionAssignedDefectMutationError = ErrorType<void>
+    export type TransitionAssignedDefectMutationVariables = {id: string;data: BodyType<DefectTransitionInput>}
+
+    export const useTransitionAssignedDefect = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionAssignedDefect>>, TError,TransitionAssignedDefectMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof transitionAssignedDefect>>,
+        TError,
+        TransitionAssignedDefectMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTransitionAssignedDefectMutationOptions(options));
+    }
 
 export const getGetIntegrationCenterUrl = (params?: GetIntegrationCenterParams,) => {
   const normalizedParams = new URLSearchParams();

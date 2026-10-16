@@ -11,6 +11,83 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /auth/session:
+    get:
+      operationId: getMobileAuthSession
+      responses:
+        "200":
+          description: Current cookie session and authorized contexts; csrf is safe to return to this client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileAuthSession" }
+  /auth/login:
+    post:
+      operationId: loginMobileAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileAuthLoginInput" }
+      responses:
+        "200":
+          description: Authenticated cookie session and available contexts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileAuthLoginResult" }
+        "401": { description: Invalid credentials }
+  /auth/context:
+    post:
+      operationId: switchMobileAuthContext
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileAuthContextInput" }
+      responses:
+        "200":
+          description: Switched to an already authorized context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileAuthContextResult" }
+        "403": { description: Context is not authorized for this user }
+  /auth/logout:
+    post:
+      operationId: logoutMobileAuth
+      responses:
+        "204": { description: Session ended and cookie cleared }
+  /hayat/queue:
+    get:
+      operationId: getHayatQueue
+      description: Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+      parameters:
+        - { name: search, in: query, schema: { type: string, maxLength: 200 } }
+        - { name: status, in: query, schema: { type: string, maxLength: 40 } }
+        - { name: priority, in: query, schema: { type: string, enum: ["", low, normal, high, urgent, emergency] } }
+        - { name: sort, in: query, schema: { type: string, enum: [created, priority, due] } }
+        - { name: building, in: query, schema: { type: string, format: uuid } }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, maximum: 100000 } }
+      responses:
+        "200":
+          description: Server-filtered queue and status counts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HayatQueueResponse" }
+        "403": { description: Active context does not have a supported queue role or permission }
+  /defects/{id}/transition:
+    post:
+      operationId: transitionAssignedDefect
+      description: Existing versioned, server-authorized defect transition; contractor actions are checked against the assigned user.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DefectTransitionInput" }
+      responses:
+        "200": { description: Defect after an authorized transition }
+        "403": { description: User or active context is not authorized for this action }
+        "409": { description: Stale version or invalid transition }
   /system/integrations:
     get:
       operationId: getIntegrationCenter
@@ -3513,6 +3590,122 @@ components:
             properties:
               text: { type: string, maxLength: 200 }
               done: { type: boolean }
+    MobileAuthUser:
+      type: object
+      required: [id, email, name, locale, currency]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: string }
+        locale: { type: string }
+        currency: { type: string }
+    MobileAuthContext:
+      type: object
+      required: [id, role_key, shell, organization_id, organization_name, building_id, unit_id, expires_at, permissions]
+      properties:
+        id: { type: string, format: uuid }
+        role_key: { type: string }
+        shell: { type: string }
+        organization_id: { type: [string, "null"], format: uuid }
+        organization_name: { type: [string, "null"] }
+        brand_color: { type: string }
+        building_id: { type: [string, "null"], format: uuid }
+        building_name: { type: string }
+        unit_id: { type: [string, "null"], format: uuid }
+        unit_number: { type: string }
+        expires_at: { type: [string, "null"], format: date-time }
+        permissions: { type: array, items: { type: string } }
+        product: { type: string }
+        products: { type: array, items: { type: string } }
+        startRoute: { type: string }
+        modules: { type: array, items: { type: string } }
+    MobileAuthSession:
+      type: object
+      required: [user, contexts, contextId, csrf, demo, mfaAvailable]
+      properties:
+        user: { oneOf: [{ $ref: "#/components/schemas/MobileAuthUser" }, { type: "null" }] }
+        contexts: { type: array, items: { $ref: "#/components/schemas/MobileAuthContext" } }
+        contextId: { type: [string, "null"], format: uuid }
+        csrf: { type: string }
+        demo: { type: boolean }
+        mfaAvailable: { type: boolean }
+    MobileAuthLoginInput:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 72 }
+        code: { type: string, minLength: 6, maxLength: 30 }
+    MobileAuthLoginResult:
+      type: object
+      required: [user, contexts, contextId, csrf]
+      properties:
+        user: { $ref: "#/components/schemas/MobileAuthUser" }
+        contexts: { type: array, items: { $ref: "#/components/schemas/MobileAuthContext" } }
+        contextId: { type: [string, "null"], format: uuid }
+        csrf: { type: string }
+    MobileAuthContextInput:
+      type: object
+      required: [id]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+    MobileAuthContextResult:
+      type: object
+      required: [contextId]
+      properties:
+        contextId: { type: string, format: uuid }
+    HayatQueueRow:
+      type: object
+      required: [id, subject, description, status, version, created_at, number, building_id, building_name]
+      properties:
+        id: { type: string, format: uuid }
+        subject: { type: string }
+        description: { type: string }
+        status: { type: string }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        due_on: { type: [string, "null"], format: date }
+        location: { type: [string, "null"] }
+        number: { type: string }
+        building_id: { type: string, format: uuid }
+        building_name: { type: string }
+        technician_name: { type: [string, "null"] }
+        work_order_id: { type: [string, "null"], format: uuid }
+    HayatQueueResponse:
+      type: object
+      required: [rows, total, stats, buildings, pageSize, serverTime]
+      properties:
+        rows: { type: array, items: { $ref: "#/components/schemas/HayatQueueRow" } }
+        total: { type: integer }
+        stats:
+          type: array
+          items:
+            type: object
+            required: [status, count]
+            properties:
+              status: { type: string }
+              count: { type: integer }
+        buildings:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+        pageSize: { type: integer }
+        serverTime: { type: string, format: date-time }
+    DefectTransitionInput:
+      type: object
+      required: [action, version]
+      additionalProperties: false
+      properties:
+        key: { type: string, format: uuid }
+        action: { type: string, enum: [start, report, accept, return, reopen] }
+        version: { type: integer, minimum: 1 }
+        note: { type: string, maxLength: 4000 }
     VisitProposalInput:
       type: object
       required: [key, version, startsAt, endsAt]

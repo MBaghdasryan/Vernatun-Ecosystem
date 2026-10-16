@@ -13,15 +13,21 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { setBaseUrl, setCsrfTokenGetter } from '@workspace/api-client-react';
+import { palette } from '@/constants/colors';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+export const csrfSessionRef: { current: string | null } = { current: null };
+setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+setCsrfTokenGetter(() => csrfSessionRef.current);
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+    <Stack screenOptions={{ headerBackTitle: 'Назад', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );

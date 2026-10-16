@@ -1783,6 +1783,138 @@ export interface WorkTransitionInput {
   checklist?: WorkTransitionInputChecklistItem[];
 }
 
+export interface MobileAuthUser {
+  id: string;
+  email: string;
+  name: string;
+  locale: string;
+  currency: string;
+}
+
+export interface MobileAuthContext {
+  id: string;
+  role_key: string;
+  shell: string;
+  /** @nullable */
+  organization_id: string | null;
+  /** @nullable */
+  organization_name: string | null;
+  brand_color?: string;
+  /** @nullable */
+  building_id: string | null;
+  building_name?: string;
+  /** @nullable */
+  unit_id: string | null;
+  unit_number?: string;
+  /** @nullable */
+  expires_at: string | null;
+  permissions: string[];
+  product?: string;
+  products?: string[];
+  startRoute?: string;
+  modules?: string[];
+}
+
+export interface MobileAuthSession {
+  user: MobileAuthUser | null;
+  contexts: MobileAuthContext[];
+  /** @nullable */
+  contextId: string | null;
+  csrf: string;
+  demo: boolean;
+  mfaAvailable: boolean;
+}
+
+export interface MobileAuthLoginInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 1
+     * @maxLength 72
+     */
+  password: string;
+  /**
+     * @minLength 6
+     * @maxLength 30
+     */
+  code?: string;
+}
+
+export interface MobileAuthLoginResult {
+  user: MobileAuthUser;
+  contexts: MobileAuthContext[];
+  /** @nullable */
+  contextId: string | null;
+  csrf: string;
+}
+
+export interface MobileAuthContextInput {
+  id: string;
+}
+
+export interface MobileAuthContextResult {
+  contextId: string;
+}
+
+export interface HayatQueueRow {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  version: number;
+  created_at: string;
+  /** @nullable */
+  due_on?: string | null;
+  /** @nullable */
+  location?: string | null;
+  number: string;
+  building_id: string;
+  building_name: string;
+  /** @nullable */
+  technician_name?: string | null;
+  /** @nullable */
+  work_order_id?: string | null;
+}
+
+export type HayatQueueResponseStatsItem = {
+  status: string;
+  count: number;
+};
+
+export type HayatQueueResponseBuildingsItem = {
+  id: string;
+  name: string;
+};
+
+export interface HayatQueueResponse {
+  rows: HayatQueueRow[];
+  total: number;
+  stats: HayatQueueResponseStatsItem[];
+  buildings: HayatQueueResponseBuildingsItem[];
+  pageSize: number;
+  serverTime: string;
+}
+
+export type DefectTransitionInputAction = typeof DefectTransitionInputAction[keyof typeof DefectTransitionInputAction];
+
+
+export const DefectTransitionInputAction = {
+  start: 'start',
+  report: 'report',
+  accept: 'accept',
+  return: 'return',
+  reopen: 'reopen',
+} as const;
+
+export interface DefectTransitionInput {
+  key?: string;
+  action: DefectTransitionInputAction;
+  /** @minimum 1 */
+  version: number;
+  /** @maxLength 4000 */
+  note?: string;
+}
+
 export interface VisitProposalInput {
   key: string;
   /** @minimum 1 */
@@ -2286,6 +2418,46 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetHayatQueueParams = {
+/**
+ * @maxLength 200
+ */
+search?: string;
+/**
+ * @maxLength 40
+ */
+status?: string;
+priority?: GetHayatQueuePriority;
+sort?: GetHayatQueueSort;
+building?: string;
+/**
+ * @minimum 0
+ * @maximum 100000
+ */
+page?: number;
+};
+
+export type GetHayatQueuePriority = typeof GetHayatQueuePriority[keyof typeof GetHayatQueuePriority];
+
+
+export const GetHayatQueuePriority = {
+  '': '',
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  urgent: 'urgent',
+  emergency: 'emergency',
+} as const;
+
+export type GetHayatQueueSort = typeof GetHayatQueueSort[keyof typeof GetHayatQueueSort];
+
+
+export const GetHayatQueueSort = {
+  created: 'created',
+  priority: 'priority',
+  due: 'due',
+} as const;
 
 export type GetIntegrationCenterParams = {
 /**

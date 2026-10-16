@@ -8,6 +8,170 @@
 import * as zod from 'zod';
 
 
+export const GetMobileAuthSessionResponse = zod.object({
+  "user": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "name": zod.string(),
+  "locale": zod.string(),
+  "currency": zod.string()
+}),zod.null()]),
+  "contexts": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role_key": zod.string(),
+  "shell": zod.string(),
+  "organization_id": zod.string().uuid().nullable(),
+  "organization_name": zod.string().nullable(),
+  "brand_color": zod.string().optional(),
+  "building_id": zod.string().uuid().nullable(),
+  "building_name": zod.string().optional(),
+  "unit_id": zod.string().uuid().nullable(),
+  "unit_number": zod.string().optional(),
+  "expires_at": zod.coerce.date().nullable(),
+  "permissions": zod.array(zod.string()),
+  "product": zod.string().optional(),
+  "products": zod.array(zod.string()).optional(),
+  "startRoute": zod.string().optional(),
+  "modules": zod.array(zod.string()).optional()
+})),
+  "contextId": zod.string().uuid().nullable(),
+  "csrf": zod.string(),
+  "demo": zod.boolean(),
+  "mfaAvailable": zod.boolean()
+})
+
+
+export const loginMobileAuthBodyEmailMax = 254;
+
+export const loginMobileAuthBodyPasswordMax = 72;
+
+export const loginMobileAuthBodyCodeMin = 6;
+export const loginMobileAuthBodyCodeMax = 30;
+
+
+
+export const LoginMobileAuthBody = zod.object({
+  "email": zod.string().email().max(loginMobileAuthBodyEmailMax),
+  "password": zod.string().min(1).max(loginMobileAuthBodyPasswordMax),
+  "code": zod.string().min(loginMobileAuthBodyCodeMin).max(loginMobileAuthBodyCodeMax).optional()
+})
+
+export const LoginMobileAuthResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "name": zod.string(),
+  "locale": zod.string(),
+  "currency": zod.string()
+}),
+  "contexts": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role_key": zod.string(),
+  "shell": zod.string(),
+  "organization_id": zod.string().uuid().nullable(),
+  "organization_name": zod.string().nullable(),
+  "brand_color": zod.string().optional(),
+  "building_id": zod.string().uuid().nullable(),
+  "building_name": zod.string().optional(),
+  "unit_id": zod.string().uuid().nullable(),
+  "unit_number": zod.string().optional(),
+  "expires_at": zod.coerce.date().nullable(),
+  "permissions": zod.array(zod.string()),
+  "product": zod.string().optional(),
+  "products": zod.array(zod.string()).optional(),
+  "startRoute": zod.string().optional(),
+  "modules": zod.array(zod.string()).optional()
+})),
+  "contextId": zod.string().uuid().nullable(),
+  "csrf": zod.string()
+})
+
+
+export const SwitchMobileAuthContextBody = zod.object({
+  "id": zod.string().uuid()
+})
+
+export const SwitchMobileAuthContextResponse = zod.object({
+  "contextId": zod.string().uuid()
+})
+
+
+export const LogoutMobileAuthResponse = zod.void()
+
+
+/**
+ * Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+ */
+export const getHayatQueueQuerySearchMax = 200;
+
+export const getHayatQueueQueryStatusMax = 40;
+
+export const getHayatQueueQueryPageMin = 0;
+export const getHayatQueueQueryPageMax = 100000;
+
+
+
+export const GetHayatQueueQueryParams = zod.object({
+  "search": zod.coerce.string().max(getHayatQueueQuerySearchMax).optional(),
+  "status": zod.coerce.string().max(getHayatQueueQueryStatusMax).optional(),
+  "priority": zod.enum(['', 'low', 'normal', 'high', 'urgent', 'emergency']).optional(),
+  "sort": zod.enum(['created', 'priority', 'due']).optional(),
+  "building": zod.coerce.string().uuid().optional(),
+  "page": zod.coerce.number().int().min(getHayatQueueQueryPageMin).max(getHayatQueueQueryPageMax).optional()
+})
+
+export const GetHayatQueueResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "subject": zod.string(),
+  "description": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "created_at": zod.coerce.date(),
+  "due_on": zod.coerce.date().nullish(),
+  "location": zod.string().nullish(),
+  "number": zod.string(),
+  "building_id": zod.string().uuid(),
+  "building_name": zod.string(),
+  "technician_name": zod.string().nullish(),
+  "work_order_id": zod.string().uuid().nullish()
+})),
+  "total": zod.number().int(),
+  "stats": zod.array(zod.object({
+  "status": zod.string(),
+  "count": zod.number().int()
+})),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})),
+  "pageSize": zod.number().int(),
+  "serverTime": zod.coerce.date()
+})
+
+
+/**
+ * Existing versioned, server-authorized defect transition; contractor actions are checked against the assigned user.
+ */
+export const TransitionAssignedDefectParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const transitionAssignedDefectBodyNoteMax = 4000;
+
+
+
+export const TransitionAssignedDefectBody = zod.object({
+  "key": zod.string().uuid().optional(),
+  "action": zod.enum(['start', 'report', 'accept', 'return', 'reopen']),
+  "version": zod.number().int().min(1),
+  "note": zod.string().max(transitionAssignedDefectBodyNoteMax).optional()
+})
+
+export const TransitionAssignedDefectResponse = zod.unknown()
+
+
 
 
 
