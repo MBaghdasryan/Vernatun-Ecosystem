@@ -35,6 +35,7 @@ import {grants} from './grants.js';
 import {photos} from './photos.js';
 import {workflow} from './workflow.js';
 import express from 'express';
+import cors from 'cors';
 import session from 'express-session';
 import {sessionRevocationGuard} from './system-sessions.js';
 import pgSession from 'connect-pg-simple';
@@ -56,6 +57,10 @@ import {mfaPolicy} from './mfa-policy.js';
 import {leads} from './leads.js';
 import {pagedRecords} from './paged-records.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
+app.use('/api',cors({
+ origin(origin,callback){callback(null,origin===config.APP_ORIGIN?origin:false)},
+ credentials:true,
+}));
 app.use('/api',systemRequestLog);
 // Only this signed, raw-body endpoint bypasses session CSRF.
 app.use('/api/webhooks',emailWebhooks);

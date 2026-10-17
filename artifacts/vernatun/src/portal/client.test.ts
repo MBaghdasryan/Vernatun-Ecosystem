@@ -2,6 +2,38 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {request,ApiClientError,uploadDocument,syncPhoto,syncTransition,verifySyncScope} from './client';
 import {identityKey,identity} from '../hayat/offline-store';
+import {apiCredentials,apiUrl,resolveApiBaseUrl} from '../api-base';
+import {getMobileAuthSession,setBaseUrl} from '@workspace/api-client-react';
+
+test('Vernatun production host resolves the separate API and uses credentialed URLs',()=>{
+ const production=resolveApiBaseUrl(undefined,'vernatun.io');
+ assert.equal(production,'https://api.vernatun.io');
+ assert.equal(resolveApiBaseUrl(undefined,'www.vernatun.io'),production);
+ assert.equal(resolveApiBaseUrl('https://api.example.test/','vernatun.io'),'https://api.example.test');
+ assert.equal(resolveApiBaseUrl(undefined,'localhost'),'');
+ assert.equal(apiUrl('/api/auth/session',production),'https://api.vernatun.io/api/auth/session');
+ assert.equal(apiCredentials(production),'include');
+ assert.equal(apiCredentials(''),'same-origin');
+});
+
+test('shared generated API client sends session requests to the configured API with cookies',async()=>{
+ const original=globalThis.fetch;
+ try{
+  setBaseUrl('https://api.vernatun.io');
+  globalThis.fetch=async(input,init)=>{
+   assert.equal(input,'https://api.vernatun.io/api/auth/session');
+   assert.equal(init?.credentials,'include');
+   return new Response('{"user":null,"contexts":[],"contextId":null,"csrf":"test-csrf","demo":false,"mfaAvailable":true}',{
+    headers:{'Content-Type':'application/json'},
+   });
+  };
+  const session=await getMobileAuthSession();
+  assert.equal(session.user,null);
+ }finally{
+  setBaseUrl(null);
+  globalThis.fetch=original;
+ }
+});
 
 test('API client distinguishes outages, proxy HTML, errors and empty responses',async()=>{
  const original=globalThis.fetch;
@@ -25,9 +57,11 @@ test('API client distinguishes outages, proxy HTML, errors and empty responses',
 test('bootstrap shares StrictMode request and subsequent mutation uses issued CSRF',async()=>{
  const original=globalThis.fetch;
  let count=0;
+ let requestedUrl='';
  try{
-  globalThis.fetch=async(_url,init)=>{
+  globalThis.fetch=async(url,init)=>{
    count++;
+    requestedUrl=String(url);
    if(init?.method==='GET')return new Response('{"csrf":"test-csrf","user":null,"contexts":[]}',{headers:{'Content-Type':'application/json'}});
    assert.equal((init?.headers as Record<string,string>)['X-CSRF-Token'],'test-csrf');
    assert.equal(init?.credentials,'same-origin');
@@ -35,6 +69,7 @@ test('bootstrap shares StrictMode request and subsequent mutation uses issued CS
   };
   await Promise.all([request('/auth/session'),request('/auth/session')]);
   assert.equal(count,1);
+  assert.equal(requestedUrl,'/api/auth/session');
   await request('/auth/logout','POST');
   assert.equal(count,2);
  }finally{globalThis.fetch=original}

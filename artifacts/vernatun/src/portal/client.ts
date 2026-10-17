@@ -1,5 +1,6 @@
 import {cacheKey,forgetSession,get,identity,logoutKey,offlineSession,rememberSession,sameScope,update,type Scope} from '../hayat/offline-store';
 import type {AuthState} from './types';
+import {apiCredentials,apiUrl} from '../api-base';
 let csrf='';
 // Generated mutation clients share the authenticated session's CSRF token.
 export const getCsrfHeaders=()=>({'X-CSRF-Token':csrf});
@@ -17,7 +18,7 @@ async function decode<T>(response:Response):Promise<T>{
 async function fetchApi<T>(path:string,init:RequestInit):Promise<T>{
  if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new ApiClientError('connection',0);
  let response:Response;
- try{response=await fetch('/api'+path,{...init,credentials:'same-origin',signal:AbortSignal.timeout(30000)})}
+ try{response=await fetch(apiUrl('/api'+path),{...init,credentials:apiCredentials(),signal:AbortSignal.timeout(30000)})}
  catch{throw new ApiClientError('connection',0)}
  return decode<T>(response);
 }

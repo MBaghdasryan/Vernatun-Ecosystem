@@ -1,10 +1,13 @@
 import './pwa-state';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import {setBaseUrl} from '@workspace/api-client-react';
+import {apiBaseUrl} from './api-base';
 import App from './App';
 const Portal = React.lazy(() => import('./portal/Portal'));
 import './styles.css';
 import './reference.css';
+setBaseUrl(apiBaseUrl || null);
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><React.Suspense fallback={<div role="status" aria-busy="true">Vernatun</div>}>{location.pathname==='/'?<App/>:<Portal/>}</React.Suspense></React.StrictMode>);
 
 import './ecosystem.css';

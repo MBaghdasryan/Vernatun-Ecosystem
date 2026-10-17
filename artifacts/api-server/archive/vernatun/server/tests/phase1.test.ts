@@ -47,6 +47,28 @@ before(async()=>{
 });
 after(async()=>{server.close();server.closeAllConnections();await pool.end()});
 
+test('API allows credentialed CORS only for the configured frontend origin',async()=>{
+ const preflight=await fetch(base+'/api/auth/login',{method:'OPTIONS',headers:{
+  Origin:config.APP_ORIGIN,
+  'Access-Control-Request-Method':'POST',
+  'Access-Control-Request-Headers':'content-type,x-csrf-token',
+ }});
+ assert.equal(preflight.status,204);
+ assert.equal(preflight.headers.get('access-control-allow-origin'),config.APP_ORIGIN);
+ assert.equal(preflight.headers.get('access-control-allow-credentials'),'true');
+ assert.match(preflight.headers.get('access-control-allow-methods')??'',/POST/);
+ assert.match(preflight.headers.get('access-control-allow-headers')??'',/x-csrf-token/i);
+
+ const session=await fetch(base+'/api/auth/session',{headers:{Origin:config.APP_ORIGIN}});
+ assert.equal(session.status,200);
+ assert.equal(session.headers.get('access-control-allow-origin'),config.APP_ORIGIN);
+ assert.equal(session.headers.get('access-control-allow-credentials'),'true');
+ assert.ok(session.headers.get('set-cookie')?.includes('vernatun.sid='));
+
+ const denied=await fetch(base+'/api/auth/session',{headers:{Origin:'https://untrusted.example'}});
+ assert.equal(denied.headers.get('access-control-allow-origin'),null);
+});
+
 test('Platform invitation list and revocation use platform.invite, while organization scope stays isolated',async()=>{
  const platform=clients.platform_admin,org=clients.org_admin;
  const pc=(await platform.call('/auth/session')).data.contexts.find((c:any)=>c.id===platform.contextId);
