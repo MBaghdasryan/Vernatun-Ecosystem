@@ -6,7 +6,7 @@ import {pool} from '../db.js';
 import {config} from '../config.js';
 import {observedJob,recordSystemEvent,safeCode} from '../system-observability.js';
 import {logCsvCell} from '../system-center.js';
-import {safeErrorStack,apiBuildId} from '../system-diagnostics.js';
+import {safeErrorStack,safeDatabaseFailure,apiBuildId} from '../system-diagnostics.js';
 import {emailHealthMetrics} from '../system-email-health.js';
 import {MemoryCacheProvider,RedisCacheProvider,cachedStorageHealth,clearHealthCache} from '../operations-cache.js';
 import {pruneSystemLogs} from '../system-retention.js';
@@ -23,6 +23,37 @@ import {savePrivateFile,deletePrivateFile} from '../private-files.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
+test('database diagnostics expose only safe missing-object identifiers',()=>{
+ const pgError=(code:string,message:string)=>Object.assign(new Error(message),{code});
+ assert.deepEqual(safeDatabaseFailure(pgError('42P01','relation "system_revoked_sessions" does not exist')),
+  {databaseCode:'42P01',missingObject:'relation system_revoked_sessions'});
+ assert.deepEqual(safeDatabaseFailure(pgError('42883','function expire_support_grants(unknown) does not exist')),
+  {databaseCode:'42883',missingObject:'function expire_support_grants'});
+ assert.deepEqual(safeDatabaseFailure(pgError('42P01','password=not-for-logs')),
+  {databaseCode:'42P01'});
+ assert.equal(safeDatabaseFailure(new Error('unrelated')),null);
+});
+test('Coolify preflight can recognize the canonical session primary key',async()=>{
+ const tables=await pool.query<{table_name:string}>(`
+  SELECT table_name FROM information_schema.tables
+  WHERE table_schema=current_schema() AND table_type='BASE TABLE'
+   AND table_name<>'schema_migrations' AND table_name !~ '^pg_' ORDER BY table_name`);
+ assert.ok(tables.rows.some(row=>row.table_name==='session'));
+ const result=await pool.query<{present:boolean}>(`
+  SELECT EXISTS(
+   SELECT 1 FROM information_schema.table_constraints tc
+   JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_catalog=kcu.constraint_catalog AND tc.constraint_schema=kcu.constraint_schema
+    AND tc.constraint_name=kcu.constraint_name AND tc.table_schema=kcu.table_schema AND tc.table_name=kcu.table_name
+   WHERE tc.table_schema=current_schema() AND tc.table_name='session'
+    AND tc.constraint_type IN ('PRIMARY KEY','UNIQUE') AND kcu.column_name='sid'
+    AND (SELECT count(*) FROM information_schema.key_column_usage kcu2
+     WHERE kcu2.constraint_catalog=tc.constraint_catalog AND kcu2.constraint_schema=tc.constraint_schema
+      AND kcu2.constraint_name=tc.constraint_name AND kcu2.table_schema=tc.table_schema
+      AND kcu2.table_name=tc.table_name)=1
+  ) AS present`);
+ assert.equal(result.rows[0].present,true);
+});
 class Client{
  cookie='';csrf='';assignment='';user='';
  async call(path:string,method='GET',body?:unknown){

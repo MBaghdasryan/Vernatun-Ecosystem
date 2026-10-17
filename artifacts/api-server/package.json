@@ -24,6 +24,8 @@
     "test:storage": "cd archive/vernatun && tsx server/tests/run.ts --storage-only",
     "test:offline": "cd archive/vernatun && node --import tsx server/tests/run.ts --offline-only",
     "test:delivery": "cd archive/vernatun && tsx server/tests/run.ts --delivery-only",
+    "db:migrate:coolify:plan": "node dist/migrate.mjs --coolify-plan",
+    "db:migrate:coolify:apply": "node dist/migrate.mjs --coolify-apply",
     "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts",
     "storage:inventory": "tsx archive/vernatun/server/inventory-files.ts",
     "backup:create": "tsx archive/vernatun/server/backup-files.ts create",

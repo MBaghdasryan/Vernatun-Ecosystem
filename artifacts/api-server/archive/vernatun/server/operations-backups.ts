@@ -10,7 +10,8 @@ import {identifier,postgresTool,referencedFiles,tableFingerprints} from './backu
 import {readPrivateFile,privateFileLockKey} from './private-files.js';
 import {operationsCipher} from './operations-encryption.js';
 import {backupStorage,backupByteLimit} from './operations-backup-storage.js';
-import {apiBuildId} from './system-diagnostics.js';
+import {apiBuildId,safeDatabaseFailure} from './system-diagnostics.js';
+import {logger} from '../../../src/lib/logger.js';
 
 export const backupKinds=['database','files','full_data','configuration','platform_snapshot'] as const;
 const digest=(b:Buffer)=>createHash('sha256').update(b).digest('hex');
@@ -180,7 +181,9 @@ export async function runPendingBackup(){
    await lock.query(`INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id,details)
     VALUES($1,'system.backup.completed','backup',$2,jsonb_build_object('bytes',$3::bigint))`,[row.created_by,row.id,bytes.length]);
    await lock.query('COMMIT');return 1;
-  }catch{
+   }catch(error){
+    const diagnostic=safeDatabaseFailure(error);
+    if(diagnostic)logger.error(diagnostic,'Operations backup database error');
    await lock.query('ROLLBACK');
    // Delete only the random object created by this failed job, never a prior snapshot.
    if(written)try{await backupStorage().remove(row.id)}catch{/* Marked failed, never eligible for restore. */}

@@ -31,3 +31,22 @@ export function safeErrorStack(error:unknown):string|null{
  }
  return frames.length?frames.join('\n'):null;
 }
+
+/** Log only PostgreSQL's SQLSTATE and a tightly allowlisted missing object name.
+ * Never persist the full message, query, detail, parameters or connection data.
+ */
+export function safeDatabaseFailure(error:unknown):{databaseCode:string;missingObject?:string}|null{
+ if(!error||typeof error!=='object')return null;
+ const value=error as {code?:unknown;message?:unknown};
+ if(typeof value.code!=='string'||!/^[0-9A-Z]{5}$/.test(value.code))return null;
+ const result:{databaseCode:string;missingObject?:string}={databaseCode:value.code};
+ if(typeof value.message!=='string')return result;
+ if(value.code==='42P01'){
+  const relation=/^relation "([a-zA-Z_][a-zA-Z0-9_.$-]{0,127})" does not exist$/i.exec(value.message);
+  if(relation)result.missingObject=`relation ${relation[1]}`;
+ }else if(value.code==='42883'){
+  const fn=/^(function|procedure) ([a-zA-Z_][a-zA-Z0-9_$.]*)\([^()\r\n]{1,200}\) does not exist$/i.exec(value.message);
+  if(fn)result.missingObject=`${fn[1].toLowerCase()} ${fn[2]}`;
+ }
+ return result;
+}

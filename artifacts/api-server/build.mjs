@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm, readdir } from "node:fs/promises";
+import { cp, rm, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
@@ -127,6 +127,32 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+  await esbuild({
+    entryPoints: {
+      migrate: path.resolve(artifactDir, "archive/vernatun/server/migrate.ts"),
+    },
+    platform: "node",
+    bundle: true,
+    format: "esm",
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
+    external: ["pg", "dotenv"],
+    define: {
+      __VERNATUN_BUILD_ID__: JSON.stringify(buildId),
+    },
+    banner: {
+      js: `import { createRequire as __bannerCrReq } from 'node:module';
+globalThis.require = __bannerCrReq(import.meta.url);
+    `,
+    },
+    sourcemap: "linked",
+    logLevel: "info",
+  });
+  await cp(
+    path.join(artifactDir, "archive/vernatun/server/migrations"),
+    path.join(distDir, "migrations"),
+    { recursive: true },
+  );
 }
 
 // Importers must not start dist/index.mjs until the new bundle exists.

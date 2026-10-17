@@ -10,6 +10,7 @@ Console, OS, HAYAT and ImTun portals over one permission-scoped API.
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/api-server run db:migrate` — restored SQL migrations (development only)
+- Coolify production schema: run `pnpm --filter @workspace/api-server run db:migrate:coolify:plan` first; only if the target, migration history, and drift checks are clean, take a database backup, stop the API resource, and run `VERNATUN_COOLIFY_MIGRATION_CONFIRM=APPLY pnpm --filter @workspace/api-server run db:migrate:coolify:apply`. The command accepts only production mode and database `vernatun`, validates migration checksums/order and schema permissions, then applies pending numbered migrations in order without seeding or resetting data.
 - `pnpm --filter @workspace/api-server run test:api` — original integration tests in an isolated test database
 - Required env: `DATABASE_URL`, `SESSION_SECRET`; production also requires HTTPS `APP_ORIGIN`.
 
