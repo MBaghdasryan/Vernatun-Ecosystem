@@ -379,3 +379,30 @@ storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bf
 storage_version_token = "1792192301500313"
 content_type = "application/octet-stream"
 
+[[outputs]]
+id = "p--iw53dYoqJ0n-gKYd6L"
+uri = "file://.local/outputs/Vernatun-Client-HY.pdf"
+type = "pdf"
+title = "Vernatun — коммерческое предложение, финальный PDF"
+description = "10 слайдов на армянском. Проверены все страницы; шрифт встроен. Версия для отправки клиентам."
+logical_id = "884c1bf1-649c-4716-8f89-6d89d0ab1eea"
+content_hash = "sha256:e336795d72f61a0273ccf8622139426cf28e5e65ba30588006312fe9dfa7ffcb"
+size = 1271637
+mtime_ms = 1792577857826
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/884c1bf1-649c-4716-8f89-6d89d0ab1eea/ecb670de-44e8-4b1d-adab-b24ea70893f3"
+storage_version_token = "1792577891219708"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "FgLywJsRBnggdQ7y-Du11"
+uri = "file://.local/outputs/Vernatun-Client-HY.pptx"
+type = "slides"
+title = "Vernatun — коммерческое предложение, финальный PowerPoint"
+description = "10 редактируемых слайдов. Для сохранения вида установите Noto Sans Armenian. Рендеринг в настольном PowerPoint не проверен."
+logical_id = "a6e574fc-d0d2-4f7f-ba4a-a9084d89d63b"
+content_hash = "sha256:10663f5866f7ba1e959951780b48cbe5f288040773f7ddbb645d45a2dbba4e29"
+size = 6083927
+mtime_ms = 1792577857842
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/a6e574fc-d0d2-4f7f-ba4a-a9084d89d63b/efea7205-2afd-4f70-86d7-4e999c938293"
+storage_version_token = "1792577892666399"
+content_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"

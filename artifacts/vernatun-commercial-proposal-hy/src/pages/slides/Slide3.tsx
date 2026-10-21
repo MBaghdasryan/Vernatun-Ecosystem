@@ -3,8 +3,8 @@ import { base, DeckFooter } from '../../components/DeckShared';
 export default function Slide3() {
   return (
     <div className="relative h-screen w-screen overflow-hidden deck-slide">
-      <h1 className="deck-title">Մեկ էկոհամակարգ՝ յուրաքանչյուր դերի համար իր միջերեսով</h1>
-      <div className="ecosystem-grid">
+      <h1 className="deck-title" style={{ maxWidth: '88vw' }}>Մեկ էկոհամակարգ՝ յուրաքանչյուր դերի համար իր միջերեսով</h1>
+      <div className="ecosystem-grid" style={{ marginTop: '3vh' }}>
         <section className="ecosystem-item">
           <img src={`${base}assets/vernatun.png`} crossOrigin="anonymous" alt="Vernatun OS լոգո" />
           <h2>Vernatun OS</h2>
@@ -25,7 +25,7 @@ export default function Slide3() {
           <span style={{ fontSize: '1.5vw' }}>ImTun · Expo Web</span>
         </section>
       </div>
-      <p className="deck-subtitle">Միասնական տվյալներ և փոխկապակցված գործընթացներ</p>
+      <p className="deck-subtitle" style={{ maxWidth: '88vw' }}>Միասնական տվյալներ և փոխկապակցված գործընթացներ</p>
       <DeckFooter />
     </div>
   );

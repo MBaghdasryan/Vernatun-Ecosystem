@@ -3,7 +3,7 @@ import { base, DeckFooter } from '../../components/DeckShared';
 export default function Slide7() {
   return (
     <div className="relative h-screen w-screen overflow-hidden deck-slide">
-      <h1 className="deck-title">Ֆինանսական գործընթաց՝ հաշվարկից մինչև բանկային համադրում</h1>
+      <h1 className="deck-title" style={{ maxWidth: '88vw' }}>Ֆինանսական գործընթաց՝ հաշվարկից մինչև բանկային համադրում</h1>
       <div className="deck-split finance-layout">
         <div>
           <ul className="deck-bullets">
