@@ -3,6 +3,7 @@ import type {MaintenancePlanInput} from '@workspace/api-client-react';
 import {request,ApiClientError} from './client';
 import {usePolling} from './Phase2';
 import {date,type Language} from './i18n';
+import {calendarDay} from './calendar-date';
 import type {RoleContext} from './types';
 type Row=Record<string,any>;
 const L={
@@ -39,7 +40,7 @@ export default function MaintenancePlans({c,asset,language,onChanged}:{c:RoleCon
   const body:MaintenancePlanInput={assetId:asset.id,title:String(f.get('title')).trim(),dueOn:String(f.get('dueOn')),categoryId:String(f.get('categoryId')),frequency:f.get('frequency') as MaintenancePlanInput['frequency'],priority:f.get('priority') as MaintenancePlanInput['priority'],instructions:String(f.get('instructions')??''),checklist:String(f.get('checklist')??'').split('\n').map(x=>x.trim()).filter(Boolean),active:f.get('active')==='on',automatic:f.get('automatic')==='on'};
   if(body.frequency==='custom')body.intervalDays=Number(f.get('intervalDays'));
    void run(async live=>{await request('/maintenance','POST',body);if(live()){form.reset();setFreq('once')}},'created')}
- const today=new Date().toISOString().slice(0,10);
+ const today=calendarDay();
  const draftOf=(p:Row)=>drafts[p.id];
  const patch=(p:Row,v:Row)=>setDrafts(o=>({...o,[p.id]:{version:o[p.id]?.version??p.version,active:p.active,automatic:p.automatic,categoryId:p.category_id??'',...o[p.id],...v}}));
  const save=(p:Row)=>{const d=draftOf(p);if(!d)return;if(d.active&&!d.categoryId){setError(t('needCat'));return}void run(async live=>{await request('/maintenance/'+p.id+'/configure','POST',{version:d.version,active:d.active,automatic:d.automatic,...(d.categoryId?{categoryId:d.categoryId}:{})});if(live())setDrafts(o=>{const n={...o};delete n[p.id];return n})},'save')};

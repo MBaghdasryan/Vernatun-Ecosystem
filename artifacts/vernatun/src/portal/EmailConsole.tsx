@@ -1,6 +1,7 @@
 import {useState,useEffect,useCallback,useRef} from 'react';
 import {request} from './client';
 import {errText,fmtDate} from './console-util';
+import {calendarDay as day} from './calendar-date';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import './console.css';
@@ -27,7 +28,6 @@ const S:Record<string,[string,string,string]>={
  note:['Առաքված նշանակում է՝ ստացողի սերվերն ընդունել է։ Բացումներ և սեղմումներ չեն հետևվում։','Доставлено означает, что сервер адресата принял письмо. Открытия и клики не отслеживаются.','Delivered means the recipient server accepted the message. Opens and clicks are not tracked.']};
 const STATUSES=['unknown','local','accepted','sent','delayed','delivered','bounced','complained','failed'],TYPES=['invitation','password_reset','delegation','notification','platform_invoice','support','other'];
 const L={en:2,ru:1,hy:0} as const;
-const day=(d:Date)=>d.toISOString().slice(0,10);
 export default function EmailConsole({c,language}:{c:RoleContext;language:Language}){
  const t=(k:string)=>(S[k]??[k,k,k])[L[language]];
  const [from,setFrom]=useState(()=>day(new Date(Date.now()-29*864e5))),[to,setTo]=useState(()=>day(new Date()));

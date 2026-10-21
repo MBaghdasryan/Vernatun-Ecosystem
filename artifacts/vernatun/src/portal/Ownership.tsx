@@ -1,10 +1,11 @@
 import {useState,type FormEvent} from 'react';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
+import {calendarDay} from './calendar-date';
 import {Dlg,Fail,Frozen,useFrozen,useMounted,useLoad,LoadFail,Empty,p6,bp,parsePct,dayText,fmt,g,ISO_DAY,type Row} from './phase6-ui';
 
 function state(r:Row,today:string,l:Language){const s=String(g(r,'starts_on')).slice(0,10),e=g(r,'ends_on')?String(g(r,'ends_on')).slice(0,10):'';return e&&e<today?p6(l,'ownEnded'):s>today?p6(l,'ownFuture'):p6(l,'ownActive')}
-const todayIso=()=>new Date().toISOString().slice(0,10);
+const todayIso=()=>calendarDay();
 
 function EndDialog({l,row,onClose,onDone}:{l:Language;row:Row;onClose:()=>void;onDone:()=>void}){
  const h=useFrozen(),live=useMounted();const [endsOn,setEnds]=useState(''),[reason,setReason]=useState(''),[err,setErr]=useState<unknown>(),[bad,setBad]=useState(false);

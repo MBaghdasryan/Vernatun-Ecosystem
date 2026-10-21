@@ -1,4 +1,5 @@
-export function todayYerevan(){return new Date(Date.now()+4*3600000).toISOString().slice(0,10)}
+import {calendarDay} from './calendar-date';
+export function todayYerevan(){return calendarDay()}
 export function calendarWindow(from:string,to:string){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to))return null;
  const start=Date.parse(from+'T00:00:00+04:00'),end=Date.parse(to+'T00:00:00+04:00')+86400000;
