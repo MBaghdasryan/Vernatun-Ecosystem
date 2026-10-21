@@ -18,4 +18,6 @@ checks passed again once the version-switch resource pressure was removed.
 
 **How to apply:** Check shared process pressure before treating simultaneous native
 startup failures as code regressions. Use Corepack in post-merge automation as well
-as interactive checks.
+as interactive checks and validation workflows. Workflow reconciliation can restart
+an old bare-pnpm command and recreate the resource exhaustion even when the setup
+script itself already uses Corepack.

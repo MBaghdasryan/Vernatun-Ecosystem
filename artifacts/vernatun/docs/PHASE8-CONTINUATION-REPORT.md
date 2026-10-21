@@ -54,6 +54,10 @@ MFA activation, явно обозначенная как UTC, не меняла�
   migrations и проверка private-file migration. Источники файлов не удалялись.
 - Основной Web и API запущены; публичная главная страница и мобильная форма входа
   визуально проверены после восстановления.
+- После последующих слияний устранён повторный источник исчерпания ресурсов:
+  команды validation workflows, Canvas и slides теперь тоже используют Corepack.
+  Финальный post-merge setup с reconciliation прошёл за 5,3 секунды при прежнем
+  лимите 180 секунд; версия pnpm и правила зависимостей не менялись.
 
 ## Подтверждённые проверки
 
@@ -61,6 +65,7 @@ MFA activation, явно обозначенная как UTC, не меняла�
 |---|---|
 | Общий workspace TypeScript, включая последние изменения | PASS |
 | Phase 8 API: leads, paging/scope, 14 dashboards, MFA rollout/recovery | **6/6 PASS**, отдельная тестовая схема |
+| Delivery/invitations после объединения исправления audit-immutability | **36/36 PASS**: 8 adapters + 16 webhook/evidence + 12 access/invitation/audit |
 | Новые тесты календарной даты + существующие тесты календаря визитов | **5/5 PASS** |
 | Новые тесты AST inventory | **3/3 PASS** |
 | API production bundle | PASS |
@@ -105,16 +110,13 @@ Vite-конфигурация mockup требует `PORT`. Повторный �
 5. Выполнить последовательные browser journeys A–H: заявка → закрытие;
    phone intake/SLA; maintenance → history; billing → bank → resident;
    onboarding/invite; support expiry; delegation revoke; voting → protocol.
-6. Объединить ожидающее одобрения исправление audit-immutability теста и повторить
-   invitation-delivery regression. Известный FK-порядок в старом тесте не
-   объявлен исправленным в текущей ветке.
-7. Устранить конфликт Metro при общей mobile-сборке и подтвердить чистый общий build.
-8. Актуализировать security/dependency/performance проверки. Исторические результаты
+6. Устранить конфликт Metro при общей mobile-сборке и подтвердить чистый общий build.
+7. Актуализировать security/dependency/performance проверки. Исторические результаты
    scans от 7 октября не считаются новым сканированием.
-9. Пройти production checklist: schema/backup + private bytes/storage,
+8. Пройти production checklist: schema/backup + private bytes/storage,
    scheduler, credentials/CORS/session, мониторинг и production smoke acceptance.
    DNS и production-база этим продолжением не изменялись.
-10. Live email/invite/reset — только после готовности домена и явного разрешения
+9. Live email/invite/reset — только после готовности домена и явного разрешения
     пользователя. Отправка тестового письма не выполнялась.
 
 **Следующий незакрытый технический блок:** реальные OpenAPI-контракты и

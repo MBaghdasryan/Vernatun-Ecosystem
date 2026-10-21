@@ -30,7 +30,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm run typecheck"
+args = "corepack pnpm run typecheck"
 
 [workflows.workflow.metadata]
 isValidation = true
@@ -41,7 +41,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run test:delivery"
+args = "corepack pnpm --filter @workspace/api-server run test:delivery"
 
 [workflows.workflow.metadata]
 isValidation = true

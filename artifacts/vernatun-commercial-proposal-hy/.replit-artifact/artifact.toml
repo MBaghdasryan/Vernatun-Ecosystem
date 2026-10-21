@@ -12,7 +12,7 @@ paths = [ "/vernatun-commercial-proposal-hy/" ]
 localPort = 21301
 
 [services.development]
-run = "pnpm --filter @workspace/vernatun-commercial-proposal-hy run dev"
+run = "corepack pnpm --filter @workspace/vernatun-commercial-proposal-hy run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/vernatun-commercial-proposal-hy", "run", "build" ]
