@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/vernatun-commercial-proposal-hy/"
+title = "Vernatun — կոմերցիոն առաջարկ"
+description = "Հայերեն կոմերցիոն ներկայացում Vernatun բնակելի շենքերի կառավարման էկոհամակարգի համար՝ Vernatun OS, HAYAT և ImTun իրական արտադրանքային միջերեսներով։"
+version = "1.0.0"
+id = "artifacts/vernatun-commercial-proposal-hy"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/vernatun-commercial-proposal-hy/" ]
+localPort = 21301
+
+[services.development]
+run = "pnpm --filter @workspace/vernatun-commercial-proposal-hy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vernatun-commercial-proposal-hy", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vernatun-commercial-proposal-hy/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21301"
+BASE_PATH = "/vernatun-commercial-proposal-hy/"

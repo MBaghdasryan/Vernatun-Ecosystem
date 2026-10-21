@@ -1,0 +1,82 @@
+[
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f01",
+    "position": 1,
+    "filepath": "src/pages/slides/Slide1.tsx",
+    "title": "Vernatun — բնակելի շենքերի կառավարման ամբողջական միջավայր",
+    "description": "Կոմերցիոն առաջարկ համատիրությունների, կառավարման ընկերությունների և կառուցապատողների համար",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f02",
+    "position": 2,
+    "filepath": "src/pages/slides/Slide2.tsx",
+    "title": "Կառավարումը չպետք է կախված լինի ցրված հաղորդագրություններից",
+    "description": "Բնակելի շենքի կառավարման մարտահրավերներ",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f03",
+    "position": 3,
+    "filepath": "src/pages/slides/Slide3.tsx",
+    "title": "Մեկ էկոհամակարգ՝ յուրաքանչյուր դերի համար իր միջերեսով",
+    "description": "Vernatun OS, HAYAT և ImTun",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f04",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide4.tsx",
+    "title": "Դիմումից մինչև հաստատված աշխատանք՝ մեկ վերահսկվող շղթայով",
+    "description": "HAYAT-ի աշխատանքային գործընթացը",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f05",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide5.tsx",
+    "title": "ImTun — տան ծառայությունները բնակչի հեռախոսում",
+    "description": "Բնակչի բջջային ծառայություններ",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f06",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide6.tsx",
+    "title": "Կազմակերպության ամբողջ կառուցվածքը՝ մեկ վերահսկվող միջավայրում",
+    "description": "Շենքեր, տարածքներ, օգտատերեր և դերեր",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f07",
+    "position": 7,
+    "filepath": "src/pages/slides/Slide7.tsx",
+    "title": "Ֆինանսական գործընթաց՝ հաշվարկից մինչև բանկային համադրում",
+    "description": "Հաշվարկներ, CSV ներմուծում և գործարքների համադրում",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f08",
+    "position": 8,
+    "filepath": "src/pages/slides/Slide8.tsx",
+    "title": "Յուրաքանչյուր գործողություն ունի պատասխանատու, ապացույց և պատմություն",
+    "description": "Աշխատանքների վերահսկում և աուդիտ",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f09",
+    "position": 9,
+    "filepath": "src/pages/slides/Slide9.tsx",
+    "title": "Ներդրումը սկսվում է ձեր իրական գործընթացներից",
+    "description": "Ներդրման և փորձնական ծրագրի փուլերը",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c7d2818c-54a2-4c15-ae8d-716b0f981f10",
+    "position": 10,
+    "filepath": "src/pages/slides/Slide10.tsx",
+    "title": "Քննարկենք ձեր շենքի առաջին կիրառելի սցենարը",
+    "description": "Հաջորդ քայլը՝ Vernatun-ի հետ",
+    "speakerNotes": ""
+  }
+]
