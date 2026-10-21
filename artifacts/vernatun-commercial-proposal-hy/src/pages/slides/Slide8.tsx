@@ -15,7 +15,7 @@ export default function Slide8() {
           </ul>
         </div>
         <div className="deck-photo">
-          <img className="deck-image" src={`${base}assets/technician.jpg`} crossOrigin="anonymous" alt="Կցված տեխնիկի առաջադրանքների և աշխատանքների միջերեսի պատկեր" />
+          <img className="deck-image" src={`${base}assets/technician.jpg`} crossOrigin="anonymous" alt="HAYAT տեխնիկի իրական ցուցադրական էկրան" />
         </div>
       </div>
       <DeckFooter />

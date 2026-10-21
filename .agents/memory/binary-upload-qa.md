@@ -25,3 +25,9 @@ retained its original hashes, so a healthy login endpoint correctly returned 401
 **How to apply:** Finish other seeding runs before starting browser QA, preserve
 a private schema-specific credential snapshot, and tell the tester which
 snapshot belongs to its bridge. Do not reset working accounts to repair QA.
+
+For presentation captures, distinguish Expo Web from native Android evidence.
+
+**Why:** The Expo web renderer can authenticate against the isolated API through a browser-local transport redirect even when production CORS prevents preview access. That proves the rendered demo flow, not production CORS or native-device behavior.
+
+**How to apply:** Preserve normal login, cookies, and CSRF; document the isolated transport and renderer alongside screenshots. Never present browser-local CORS headers as a deployed fix or Expo Web as an APK capture.

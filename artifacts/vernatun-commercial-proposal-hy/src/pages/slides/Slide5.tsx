@@ -14,8 +14,15 @@ export default function Slide5() {
             <li className="deck-bullet">Ընտանեկան հասանելիություն՝ վերահսկվող իրավունքներով</li>
           </ul>
         </div>
-        <div className="portrait-screen">
-          <img src={`${base}assets/resident.jpg`} crossOrigin="anonymous" alt="Կցված ImTun բնակչի բջջային գլխավոր էջի պատկեր" />
+        <div className="portrait-screen" style={{ gap: '1vw', background: 'transparent' }}>
+          <figure style={{ width: '48%', margin: 0, textAlign: 'center' }}>
+            <img src={`${base}assets/imtun-expo.jpg`} style={{ width: '100%', height: '62vh' }} crossOrigin="anonymous" alt="ImTun Expo հավելվածի իրական վեբ նախադիտում՝ ցուցադրական տվյալներով" />
+            <figcaption style={{ fontSize: '1.5vw', marginTop: '1vh' }}>ImTun · Expo Web</figcaption>
+          </figure>
+          <figure style={{ width: '48%', margin: 0, textAlign: 'center' }}>
+            <img src={`${base}assets/resident.jpg`} style={{ width: '100%', height: '62vh' }} crossOrigin="anonymous" alt="ImTun բնակչի իրական ցուցադրական վեբ էկրան՝ հեռախոսի չափերով" />
+            <figcaption style={{ fontSize: '1.5vw', marginTop: '1vh' }}>ImTun · բջջային վեբ</figcaption>
+          </figure>
         </div>
       </div>
       <DeckFooter />

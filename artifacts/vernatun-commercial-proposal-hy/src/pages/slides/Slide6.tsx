@@ -14,7 +14,7 @@ export default function Slide6() {
           </ul>
         </div>
         <div className="deck-photo">
-          <img className="deck-image" src={`${base}assets/organization.jpg`} crossOrigin="anonymous" alt="Կցված Vernatun կազմակերպության կառավարման միջերեսի պատկեր" />
+          <img className="deck-image" src={`${base}assets/organization.jpg`} crossOrigin="anonymous" alt="Vernatun OS աշխատակիցների իրական ցուցադրական էկրան" />
         </div>
       </div>
       <DeckFooter />

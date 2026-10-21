@@ -14,7 +14,7 @@ export default function Slide2() {
           </ul>
         </div>
         <div className="deck-photo">
-          <img className="deck-image" src={`${base}assets/console.jpg`} crossOrigin="anonymous" alt="Կցված Vernatun պլատֆորմի կառավարման վահանակի պատկեր" />
+          <img className="deck-image" src={`${base}assets/console.jpg`} crossOrigin="anonymous" alt="Vernatun OS կազմակերպության իրական ցուցադրական վահանակ" />
         </div>
       </div>
       <DeckFooter />

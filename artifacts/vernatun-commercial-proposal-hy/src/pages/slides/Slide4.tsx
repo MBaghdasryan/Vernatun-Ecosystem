@@ -15,7 +15,7 @@ export default function Slide4() {
           </div>
         </div>
         <div className="deck-photo">
-          <img className="deck-image" src={`${base}assets/contractor.jpg`} crossOrigin="anonymous" alt="Կցված կապալառուի առաջադրանքների բջջային միջերեսի պատկեր" />
+          <img className="deck-image" src={`${base}assets/contractor.jpg`} crossOrigin="anonymous" alt="HAYAT կապալառուի իրական ցուցադրական վեբ էկրան" />
         </div>
       </div>
       <DeckFooter />

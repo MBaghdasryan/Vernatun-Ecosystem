@@ -15,7 +15,7 @@ export default function Slide7() {
           </ul>
         </div>
         <div className="finance-screen">
-          <img className="deck-image" src={`${base}assets/finance.jpg`} crossOrigin="anonymous" alt="Կցված հաշվապահական հաշվեգրումների և համադրման միջերեսի պատկեր" />
+          <img className="deck-image" src={`${base}assets/finance.jpg`} crossOrigin="anonymous" alt="Vernatun OS հաշվապահի իրական ցուցադրական էկրան" />
         </div>
       </div>
       <DeckFooter />
