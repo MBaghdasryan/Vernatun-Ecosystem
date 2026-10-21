@@ -141,10 +141,10 @@ test('Audit rejects UPDATE, DELETE and TRUNCATE at database level, including ins
  for(const statement of [
   `UPDATE audit_events SET action='changed' WHERE id='${inserted.id}'`,
   `DELETE FROM audit_events WHERE id='${inserted.id}'`,
-  'TRUNCATE audit_events'
+  'TRUNCATE audit_events CASCADE'
  ]){
   const db=await pool.connect();
-  try{await db.query('BEGIN');await assert.rejects(db.query(statement),(e:any)=>e.code==='23514')}
+  try{await db.query('BEGIN');await assert.rejects(db.query(statement),(e:any)=>e.code==='23514'&&e.message==='Audit events are append-only')}
   finally{await db.query('ROLLBACK');db.release()}
  }
  assert.equal((await pool.query('SELECT action FROM audit_events WHERE id=$1',[inserted.id])).rows[0].action,'qa.immutable');
