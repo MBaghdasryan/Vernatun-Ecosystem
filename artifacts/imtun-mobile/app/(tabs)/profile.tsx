@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { palette } from '@/constants/colors';
 import { csrfSessionRef } from '../_layout';
 import { useColors } from '@/hooks/useColors';
+import { armenianCurrency, friendlyError } from '@/constants/armenian';
 
 function isResidentContext(context: MobileAuthContext) {
   const product = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
@@ -34,7 +35,7 @@ export default function ProfileScreen() {
         setContextSheet(false);
         client.invalidateQueries({ queryKey: session.queryKey });
       },
-      onError: (cause) => setError(cause instanceof Error ? cause.message : 'Не удалось переключить дом. Попробуйте ещё раз.'),
+      onError: (cause) => setError(friendlyError(cause, 'Չհաջողվեց փոխել տունը։ Կրկին փորձեք։')),
     });
   };
 
@@ -46,46 +47,46 @@ export default function ProfileScreen() {
         client.clear();
         router.replace('/');
       },
-      onError: (cause) => setError(cause instanceof Error ? cause.message : 'Не удалось завершить сеанс. Попробуйте снова.'),
+      onError: (cause) => setError(friendlyError(cause, 'Չհաջողվեց ավարտել սեսիան։ Կրկին փորձեք։')),
     });
   };
 
   if (session.isLoading) return <View style={styles.center}><View style={styles.skeleton} /><View style={[styles.skeleton, { width: '65%' }]} /><View style={[styles.skeleton, { height: 170 }]} /></View>;
-  if (session.isError && !session.data) return <View style={styles.center}><Feather name="wifi-off" size={27} color={colors.mutedForeground} /><Text style={styles.title}>Профиль недоступен</Text><Text style={styles.muted}>Не удалось получить сведения аккаунта.</Text><Pressable accessibilityRole="button" testID="profile-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Повторить</Text></Pressable></View>;
+  if (session.isError && !session.data) return <View style={styles.center}><Feather name="wifi-off" size={27} color={colors.mutedForeground} /><Text style={styles.title}>Անձնական էջն անհասանելի է</Text><Text style={styles.muted}>Չհաջողվեց ստանալ հաշվի տվյալները։</Text><Pressable accessibilityRole="button" testID="profile-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին փորձել</Text></Pressable></View>;
 
   const initials = (user?.name || ' ').trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || '•';
   return <>
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <View style={styles.top}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ВАШ АККАУНТ</Text></View>
-      <Text style={styles.title}>Профиль</Text><Text style={styles.subtitle}>Личные данные и выбранный дом.</Text>
-      <View style={styles.identityCard}><View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{user?.name || 'Пользователь ImTun'}</Text><Text style={styles.email}>{user?.email || 'Электронная почта не указана'}</Text></View><Feather name="check-circle" size={19} color={palette.success} /></View>
-      <Text style={styles.section}>ДОМ И КВАРТИРА</Text>
+      <View style={styles.top}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ՁԵՐ ՀԱՇԻՎԸ</Text></View>
+      <Text style={styles.title}>Անձնական էջ</Text><Text style={styles.subtitle}>Ձեր տվյալներն ու ընտրված տունը։</Text>
+      <View style={styles.identityCard}><View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{user?.name || 'ImTun-ի օգտատեր'}</Text><Text style={styles.email}>{user?.email || 'Էլեկտրոնային փոստը նշված չէ'}</Text></View><Feather name="check-circle" size={19} color={palette.success} /></View>
+      <Text style={styles.section}>ՏՈՒՆ ԵՎ ԲՆԱԿԱՐԱՆ</Text>
       <Pressable accessibilityRole="button" testID="profile-change-context" disabled={contexts.length < 2} onPress={() => setContextSheet(true)} style={[styles.listCard, contexts.length < 2 && styles.notInteractive]}>
-        <View style={styles.listIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{active?.building_name || active?.organization_name || 'Жилой дом'}</Text><Text style={styles.itemDescription}>{active?.unit_number ? `Квартира ${active.unit_number}` : 'Активный контекст жителя'}{active?.organization_name && active.building_name ? ` · ${active.organization_name}` : ''}</Text></View>{contexts.length > 1 ? <Feather name="chevron-right" size={19} color={palette.mutedForeground} /> : <Feather name="check" size={18} color={palette.success} />}
+        <View style={styles.listIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{active?.building_name || active?.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.itemDescription}>{active?.unit_number ? `Բնակարան ${active.unit_number}` : 'Բնակչի մուտք'}{active?.organization_name && active.building_name ? ` · ${active.organization_name}` : ''}</Text></View>{contexts.length > 1 ? <Feather name="chevron-right" size={19} color={palette.mutedForeground} /> : <Feather name="check" size={18} color={palette.success} />}
       </Pressable>
-      <Text style={styles.section}>АККАУНТ</Text>
+      <Text style={styles.section}>ՀԱՇԻՎ</Text>
       <View style={styles.listCard}>
-        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="mail" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Электронная почта</Text><Text style={styles.itemDescription}>{user?.email || 'Не указана'}</Text></View>
+        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="mail" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Էլեկտրոնային փոստ</Text><Text style={styles.itemDescription}>{user?.email || 'Նշված չէ'}</Text></View>
       </View>
       <View style={styles.listCard}>
-        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="globe" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Язык и валюта</Text><Text style={styles.itemDescription}>{user?.locale || '—'}{user?.currency ? ` · ${user.currency}` : ''}</Text></View>
+        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="globe" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Լեզու և արժույթ</Text><Text style={styles.itemDescription}>Հայերեն · {armenianCurrency(user?.currency)}</Text></View>
       </View>
       {error ? <View style={styles.errorBox}><Feather name="alert-circle" size={16} color={palette.destructive} /><Text style={styles.errorText}>{error}</Text></View> : null}
-      <View style={styles.security}><View style={styles.securityIcon}><Feather name="shield" size={17} color={palette.success} /></View><View style={{ flex: 1 }}><Text style={styles.securityTitle}>Защищённый сеанс</Text><Text style={styles.securityText}>Доступ к дому определяется сервером и выбранным контекстом.</Text></View></View>
-      <Pressable accessibilityRole="button" testID="profile-logout" disabled={logout.isPending} onPress={signOut} style={styles.logout}><Feather name="log-out" size={17} color={palette.dangerText} /><Text style={styles.logoutText}>{logout.isPending ? 'Завершаем сеанс…' : 'Выйти из аккаунта'}</Text></Pressable>
-      <Text style={styles.version}>IMTUN · BY VERNATUN</Text>
+      <View style={styles.security}><View style={styles.securityIcon}><Feather name="shield" size={17} color={palette.success} /></View><View style={{ flex: 1 }}><Text style={styles.securityTitle}>Պաշտպանված սեսիա</Text><Text style={styles.securityText}>Տան հասանելիությունը որոշվում է սերվերի և ընտրված միջավայրի կողմից։</Text></View></View>
+      <Pressable accessibilityRole="button" testID="profile-logout" disabled={logout.isPending} onPress={signOut} style={styles.logout}><Feather name="log-out" size={17} color={palette.dangerText} /><Text style={styles.logoutText}>{logout.isPending ? 'Ավարտում ենք սեսիան…' : 'Դուրս գալ հաշվից'}</Text></Pressable>
+      <Text style={styles.version}>IMTUN · VERNATUN-Ի ԿՈՂՄԻՑ</Text>
     </ScrollView>
     <Modal visible={contextSheet} transparent animationType="slide" onRequestClose={() => setContextSheet(false)}>
-      <View style={styles.sheetBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="Закрыть выбор дома" testID="context-sheet-backdrop" onPress={() => setContextSheet(false)} style={StyleSheet.absoluteFill} /><View style={styles.sheet}>
-        <View style={styles.sheetHandle} /><View style={styles.sheetTitleRow}><View><Text style={styles.kicker}>ВАШ ДОСТУП</Text><Text style={styles.sheetTitle}>Выберите дом</Text></View><Pressable accessibilityRole="button" testID="context-sheet-close" onPress={() => setContextSheet(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
-        <Text style={styles.sheetDescription}>Переключение меняет только активный контекст. Права доступа проверяются сервером.</Text>
+      <View style={styles.sheetBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="Փակել տների ընտրությունը" testID="context-sheet-backdrop" onPress={() => setContextSheet(false)} style={StyleSheet.absoluteFill} /><View style={styles.sheet}>
+        <View style={styles.sheetHandle} /><View style={styles.sheetTitleRow}><View><Text style={styles.kicker}>ՁԵՐ ՄՈՒՏՔԸ</Text><Text style={styles.sheetTitle}>Ընտրեք տունը</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Փակել" testID="context-sheet-close" onPress={() => setContextSheet(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
+        <Text style={styles.sheetDescription}>Փոխվում է միայն ակտիվ միջավայրը։ Մուտքի իրավունքը ստուգում է սերվերը։</Text>
         {contexts.map((context) => {
           const selected = context.id === session.data?.contextId;
           return <Pressable accessibilityRole="button" testID={`profile-context-${context.id}`} key={context.id} disabled={selected || switchContext.isPending} onPress={() => changeContext(context)} style={[styles.contextOption, selected && styles.contextSelected]}>
-            <View style={[styles.listIcon, selected && { backgroundColor: palette.accent }]}><Feather name="home" size={18} color={selected ? palette.accentForeground : palette.mutedForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{context.building_name || context.organization_name || 'Жилой дом'}</Text><Text style={styles.itemDescription}>{context.unit_number ? `Квартира ${context.unit_number}` : 'Контекст жителя'}</Text></View>{selected ? <Feather name="check-circle" size={19} color={palette.success} /> : <Feather name="arrow-right" size={17} color={palette.subdued} />}
+            <View style={[styles.listIcon, selected && { backgroundColor: palette.accent }]}><Feather name="home" size={18} color={selected ? palette.accentForeground : palette.mutedForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{context.building_name || context.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.itemDescription}>{context.unit_number ? `Բնակարան ${context.unit_number}` : 'Բնակչի մուտք'}</Text></View>{selected ? <Feather name="check-circle" size={19} color={palette.success} /> : <Feather name="arrow-right" size={17} color={palette.subdued} />}
           </Pressable>;
         })}
-        {switchContext.isPending ? <Text style={styles.muted}>Переключаем дом…</Text> : null}
+        {switchContext.isPending ? <Text style={styles.muted}>Փոխում ենք տունը…</Text> : null}
       </View></View>
     </Modal>
   </>;

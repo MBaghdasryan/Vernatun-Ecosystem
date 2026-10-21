@@ -19,15 +19,15 @@ function NativeTabLayout() {
         <NativeTabs.Trigger.Icon
           sf={{ default: 'house', selected: 'house.fill' }}
         />
-        <NativeTabs.Trigger.Label>Дом</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Տուն</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="requests">
         <NativeTabs.Trigger.Icon sf={{ default: 'wrench.and.screwdriver', selected: 'wrench.and.screwdriver.fill' }} />
-        <NativeTabs.Trigger.Label>Заявки</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Հայտեր</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
-        <NativeTabs.Trigger.Label>Профиль</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Անձնական էջ</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -74,7 +74,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Дом',
+          title: 'Տուն',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="house" tintColor={color} size={24} />
@@ -86,14 +86,14 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="requests"
         options={{
-          title: 'Заявки',
+          title: 'Հայտեր',
           tabBarIcon: ({ color }) => <Feather name="tool" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Профиль',
+          title: 'Անձնական էջ',
           tabBarIcon: ({ color }) => <Feather name="user" size={21} color={color} />,
         }}
       />

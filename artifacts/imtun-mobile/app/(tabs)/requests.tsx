@@ -6,8 +6,9 @@ import { useCreateOperationalRequest, useGetMobileAuthSession, useGetOperational
 import { palette } from '@/constants/colors';
 import { csrfSessionRef } from '../_layout';
 import { useColors } from '@/hooks/useColors';
+import { formatArmenianDate, friendlyError, isCompletedRequestStatus, localizeRequestStatus } from '@/constants/armenian';
 
-type RequestCard = { id: string; subject: string; description: string; status: string; date: string };
+type RequestCard = { id: string; subject: string; description: string; status: string; statusCode: string; date: string };
 function normalizeRequests(rows: unknown): RequestCard[] {
   if (!Array.isArray(rows)) return [];
   return rows.flatMap((row, index) => {
@@ -16,8 +17,9 @@ function normalizeRequests(rows: unknown): RequestCard[] {
     const safeText = (value: unknown, fallback: string) => typeof value === 'string' && value.trim() ? value.trim() : fallback;
     const id = safeText(raw.id, `request-${index}`);
     const created = raw.created_at ?? raw.createdAt;
-    const date = typeof created === 'string' && !Number.isNaN(Date.parse(created)) ? new Date(created).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Дата не указана';
-    return [{ id, subject: safeText(raw.subject, 'Обращение без названия'), description: safeText(raw.description, ''), status: safeText(raw.status, 'Статус уточняется'), date }];
+    const date = formatArmenianDate(created, true);
+    const statusCode = safeText(raw.status, '');
+    return [{ id, subject: safeText(raw.subject, 'Հայտ՝ առանց վերնագրի'), description: safeText(raw.description, ''), status: localizeRequestStatus(statusCode), statusCode, date }];
   });
 }
 
@@ -38,16 +40,16 @@ export default function RequestsScreen() {
 
   const submit = () => {
     const cleanSubject = subject.trim();
-    if (!unitId) { setFormError('Для выбранного контекста не указана квартира. Выберите доступную квартиру в профиле.'); return; }
-    if (cleanSubject.length < 3) { setFormError('Добавьте тему обращения — не менее 3 символов.'); return; }
-    if (cleanSubject.length > 160 || description.trim().length > 4000) { setFormError('Тема должна быть до 160, описание — до 4000 символов.'); return; }
+    if (!unitId) { setFormError('Ընտրված միջավայրի համար բնակարան նշված չէ։ Անձնական էջում ընտրեք հասանելի բնակարանը։'); return; }
+    if (cleanSubject.length < 3) { setFormError('Նշեք հայտի թեման՝ առնվազն 3 նիշ։'); return; }
+    if (cleanSubject.length > 160 || description.trim().length > 4000) { setFormError('Թեման կարող է ունենալ մինչև 160, իսկ նկարագրությունը՝ մինչև 4000 նիշ։'); return; }
     setFormError('');
     createRequest.mutate({ data: { unitId, subject: cleanSubject, description: description.trim() } }, {
       onSuccess: () => {
         client.invalidateQueries({ queryKey: requests.queryKey });
         setComposerOpen(false); setSubject(''); setDescription('');
       },
-      onError: (error) => setFormError(error instanceof Error ? error.message : 'Не удалось отправить обращение. Попробуйте ещё раз.'),
+      onError: (error) => setFormError(friendlyError(error, 'Չհաջողվեց ուղարկել հայտը։ Կրկին փորձեք։')),
     });
   };
 
@@ -60,26 +62,26 @@ export default function RequestsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={requests.isRefetching} onRefresh={() => requests.refetch()} tintColor={colors.primary} />}
         ListHeaderComponent={<View>
-          <Text style={styles.kicker}>IMTUN · СЕРВИС ДОМА</Text><Text style={styles.title}>Заявки</Text><Text style={styles.subtitle}>Обращения, отправленные в управляющую компанию.</Text>
-          <View style={styles.summary}><View style={styles.summaryMark}><Feather name="clipboard" size={20} color={palette.primary} /></View><View style={{ flex: 1 }}><Text style={styles.summaryTitle}>Ваши обращения</Text><Text style={styles.summarySub}>{requests.isLoading ? 'Загружаем данные' : `${records.length} ${pluralize(records.length, ['заявка', 'заявки', 'заявок'])} в списке`}</Text></View><Feather name="arrow-down-right" size={18} color={palette.heroMuted} /></View>
-          <View style={styles.listHeading}><Text style={styles.sectionTitle}>История</Text><Text style={styles.countLabel}>{records.length ? `ВСЕГО ${records.length}` : 'АКТУАЛЬНЫЙ СПИСОК'}</Text></View>
+          <Text style={styles.kicker}>IMTUN · ՏԱՆ ԾԱՌԱՅՈՒԹՅՈՒՆՆԵՐ</Text><Text style={styles.title}>Հայտեր</Text><Text style={styles.subtitle}>Կառավարման ընկերությանն ուղարկված դիմումները։</Text>
+          <View style={styles.summary}><View style={styles.summaryMark}><Feather name="clipboard" size={20} color={palette.primary} /></View><View style={{ flex: 1 }}><Text style={styles.summaryTitle}>Ձեր դիմումները</Text><Text style={styles.summarySub}>{requests.isLoading ? 'Բեռնում ենք տվյալները…' : `${records.length} դիմում ցանկում`}</Text></View><Feather name="arrow-down-right" size={18} color={palette.heroMuted} /></View>
+          <View style={styles.listHeading}><Text style={styles.sectionTitle}>Պատմություն</Text><Text style={styles.countLabel}>{records.length ? `ԸՆԴԱՄԵՆԸ՝ ${records.length}` : 'ԸՆԹԱՑԻԿ ՑԱՆԿԸ'}</Text></View>
         </View>}
-        ListEmptyComponent={requests.isLoading ? <View style={styles.loadingCard}><View style={styles.shimmer} /><View style={[styles.shimmer, { width: '65%' }]} /><View style={[styles.shimmer, { height: 70 }]} /></View> : requests.isError ? <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="wifi-off" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Список не загрузился</Text><Text style={styles.emptyBody}>Попробуйте снова — сервер остаётся источником актуальных данных.</Text><Pressable accessibilityRole="button" testID="requests-retry" onPress={() => requests.refetch()} style={styles.retry}><Text style={styles.retryText}>Повторить загрузку</Text></Pressable></View> : <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="inbox" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Пока нет заявок</Text><Text style={styles.emptyBody}>Создайте обращение, если в доме что-то требует внимания.</Text></View>}
+        ListEmptyComponent={requests.isLoading ? <View style={styles.loadingCard}><View style={styles.shimmer} /><View style={[styles.shimmer, { width: '65%' }]} /><View style={[styles.shimmer, { height: 70 }]} /></View> : requests.isError ? <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="wifi-off" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Չհաջողվեց բեռնել ցանկը</Text><Text style={styles.emptyBody}>Կրկին փորձեք։ Ճշտված տվյալների աղբյուրը սերվերն է։</Text><Pressable accessibilityRole="button" testID="requests-retry" onPress={() => requests.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին բեռնել</Text></Pressable></View> : <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="inbox" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Դեռ հայտեր չկան</Text><Text style={styles.emptyBody}>Ստեղծեք հայտ, եթե տան որևէ հարց ուշադրության կարիք ունի։</Text></View>}
         renderItem={({ item }) => <RequestRow item={item} />}
         ListFooterComponent={<View style={{ height: 100 }} />}
       />
-      <Pressable accessibilityRole="button" testID="create-request-open" disabled={!unitId} onPress={() => { setFormError(''); setComposerOpen(true); }} style={[styles.fab, !unitId && styles.fabDisabled]}><Feather name="plus" size={20} color={palette.foreground} /><Text style={styles.fabText}>Новая заявка</Text></Pressable>
+      <Pressable accessibilityRole="button" testID="create-request-open" disabled={!unitId} onPress={() => { setFormError(''); setComposerOpen(true); }} style={[styles.fab, !unitId && styles.fabDisabled]}><Feather name="plus" size={20} color={palette.foreground} /><Text style={styles.fabText}>Նոր հայտ</Text></Pressable>
       <Modal visible={isComposerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setComposerOpen(false)}>
         <KeyboardAvoidingView style={styles.modalRoot} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalHead}><View><Text style={styles.kicker}>ОБРАЩЕНИЕ В ДОМ</Text><Text style={styles.modalTitle}>Новая заявка</Text></View><Pressable accessibilityRole="button" testID="create-request-close" onPress={() => setComposerOpen(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
-            <View style={styles.unitNotice}><Feather name="home" size={17} color={palette.accentForeground} /><Text style={styles.unitNoticeText}>{active?.building_name || active?.organization_name || 'Ваш дом'}{active?.unit_number ? ` · кв. ${active.unit_number}` : ''}</Text></View>
-            <Text style={styles.fieldLabel}>О чём заявка?</Text><TextInput testID="request-subject" accessibilityLabel="Тема заявки" value={subject} onChangeText={setSubject} placeholder="Например, не горит свет в подъезде" placeholderTextColor={palette.placeholder} maxLength={160} style={styles.input} />
-            <Text style={styles.fieldLabel}>Подробности</Text><TextInput testID="request-description" accessibilityLabel="Подробности заявки" value={description} onChangeText={setDescription} placeholder="Опишите, что произошло и где" placeholderTextColor={palette.placeholder} multiline textAlignVertical="top" maxLength={4000} style={[styles.input, styles.textarea]} />
+            <View style={styles.modalHead}><View><Text style={styles.kicker}>ՀԱՅՏ ՁԵՐ ՏԱՆ ՀԱՄԱՐ</Text><Text style={styles.modalTitle}>Նոր հայտ</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Փակել" testID="create-request-close" onPress={() => setComposerOpen(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
+            <View style={styles.unitNotice}><Feather name="home" size={17} color={palette.accentForeground} /><Text style={styles.unitNoticeText}>{active?.building_name || active?.organization_name || 'Ձեր տունը'}{active?.unit_number ? ` · բն. ${active.unit_number}` : ''}</Text></View>
+            <Text style={styles.fieldLabel}>Հայտի թեման</Text><TextInput testID="request-subject" accessibilityLabel="Հայտի թեման" value={subject} onChangeText={setSubject} placeholder="Օրինակ՝ մուտքի լույսը չի աշխատում" placeholderTextColor={palette.placeholder} maxLength={160} style={styles.input} />
+            <Text style={styles.fieldLabel}>Մանրամասներ</Text><TextInput testID="request-description" accessibilityLabel="Հայտի մանրամասներ" value={description} onChangeText={setDescription} placeholder="Նկարագրեք՝ ինչ է տեղի ունեցել և որտեղ" placeholderTextColor={palette.placeholder} multiline textAlignVertical="top" maxLength={4000} style={[styles.input, styles.textarea]} />
             <Text style={styles.counter}>{subject.length}/160 · {description.length}/4000</Text>
             {formError ? <View style={styles.formError}><Feather name="alert-circle" size={16} color={palette.destructive} /><Text style={styles.formErrorText}>{formError}</Text></View> : null}
-            <View style={styles.privacy}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.privacyText}>Заявка будет отправлена от имени выбранного жителя.</Text></View>
-            <Pressable accessibilityRole="button" testID="request-submit" disabled={createRequest.isPending || !subject.trim()} onPress={submit} style={[styles.submit, (createRequest.isPending || !subject.trim()) && styles.fabDisabled]}>{createRequest.isPending ? <ActivityIndicator color={palette.foreground} /> : <><Text style={styles.submitText}>Отправить заявку</Text><Feather name="arrow-right" size={18} color={palette.foreground} /></>}</Pressable>
+            <View style={styles.privacy}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.privacyText}>Հայտը կուղարկվի ընտրված բնակչի անունից։</Text></View>
+            <Pressable accessibilityRole="button" testID="request-submit" disabled={createRequest.isPending || !subject.trim()} onPress={submit} style={[styles.submit, (createRequest.isPending || !subject.trim()) && styles.fabDisabled]}>{createRequest.isPending ? <ActivityIndicator color={palette.foreground} /> : <><Text style={styles.submitText}>Ուղարկել հայտը</Text><Feather name="arrow-right" size={18} color={palette.foreground} /></>}</Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
@@ -88,22 +90,12 @@ export default function RequestsScreen() {
 }
 
 function RequestRow({ item }: { item: RequestCard }) {
-  const status = item.status.toLowerCase();
-  const isDone = /done|closed|complete|решен|выполн|заверш/.test(status);
+  const isDone = isCompletedRequestStatus(item.statusCode);
   return <View style={styles.rowCard}>
     <View style={styles.rowTop}><View style={[styles.statusDot, isDone && { backgroundColor: palette.success }]} /><Text style={[styles.status, isDone && { color: palette.successStrong }]} numberOfLines={1}>{item.status}</Text><Text style={styles.date}>{item.date}</Text></View>
     <Text style={styles.rowTitle}>{item.subject}</Text>{item.description ? <Text style={styles.rowDescription} numberOfLines={3}>{item.description}</Text> : null}
-    <View style={styles.rowBottom}><Text style={styles.recordRef}>IMTUN · ОБРАЩЕНИЕ</Text><Feather name="arrow-up-right" size={15} color={palette.accentForeground} /></View>
+    <View style={styles.rowBottom}><Text style={styles.recordRef}>IMTUN · ՀԱՅՏ</Text><Feather name="arrow-up-right" size={15} color={palette.accentForeground} /></View>
   </View>;
-}
-
-function pluralize(count: number, forms: [string, string, string]) {
-  const n = Math.abs(count) % 100;
-  const last = n % 10;
-  if (n > 10 && n < 20) return forms[2];
-  if (last > 1 && last < 5) return forms[1];
-  if (last === 1) return forms[0];
-  return forms[2];
 }
 
 const styles = StyleSheet.create({

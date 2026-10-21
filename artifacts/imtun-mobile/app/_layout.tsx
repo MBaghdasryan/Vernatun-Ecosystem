@@ -37,7 +37,7 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Назад', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
+    <Stack screenOptions={{ headerBackTitle: 'Հետ', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );

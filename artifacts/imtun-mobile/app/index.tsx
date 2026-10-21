@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMobileAuthSession, useLoginMobileAuth, useSwitchMobileAuthContext, type MobileAuthContext } from '@workspace/api-client-react';
 import { palette } from '@/constants/colors';
+import { friendlyError } from '@/constants/armenian';
 import { csrfSessionRef } from './_layout';
 
 function isImTunResident(context: MobileAuthContext) {
@@ -40,7 +41,7 @@ export default function EntryScreen() {
         client.invalidateQueries({ queryKey: session.queryKey });
       },
       onError: (error) => {
-        setMessage(error instanceof Error ? error.message : 'Не удалось войти. Проверьте данные и попробуйте снова.');
+        setMessage(friendlyError(error, 'Մուտքը չհաջողվեց։ Ստուգեք տվյալները և կրկին փորձեք։'));
       },
     });
   };
@@ -49,40 +50,40 @@ export default function EntryScreen() {
     setMessage('');
     switchContext.mutate({ data: { id: context.id } }, {
       onSuccess: () => client.invalidateQueries({ queryKey: session.queryKey }),
-      onError: (error) => setMessage(error instanceof Error ? error.message : 'Не удалось выбрать квартиру. Попробуйте ещё раз.'),
+      onError: (error) => setMessage(friendlyError(error, 'Չհաջողվեց ընտրել բնակարանը։ Կրկին փորձեք։')),
     });
   };
 
   if (session.isLoading) return <View style={styles.loading}><View style={styles.skeleton} /><View style={[styles.skeleton, { width: '70%' }]} /><View style={[styles.skeleton, { height: 180 }]} /></View>;
   if (session.isError && !session.data?.user) {
-    return <View style={styles.center}><Feather name="wifi-off" size={30} color={palette.mutedForeground} /><Text style={styles.heading}>Нет связи с ImTun</Text><Text style={styles.body}>Не удалось проверить сессию. Проверьте интернет и повторите попытку.</Text><Pressable accessibilityRole="button" testID="session-retry" onPress={() => session.refetch()} style={styles.primaryButton}><Text style={styles.primaryText}>Повторить</Text></Pressable></View>;
+    return <View style={styles.center}><Feather name="wifi-off" size={30} color={palette.mutedForeground} /><Text style={styles.heading}>ImTun-ի հետ կապ չկա</Text><Text style={styles.body}>Չհաջողվեց ստուգել մուտքը։ Ստուգեք ինտերնետային կապը և կրկին փորձեք։</Text><Pressable accessibilityRole="button" testID="session-retry" onPress={() => session.refetch()} style={styles.primaryButton}><Text style={styles.primaryText}>Կրկին փորձել</Text></Pressable></View>;
   }
 
   if (session.data?.user && !contexts.length) {
-    return <View style={styles.center}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><View style={styles.lockIcon}><Feather name="home" size={23} color={palette.primary} /></View><Text style={styles.heading}>Нет доступного дома</Text><Text style={styles.body}>Для этого аккаунта не найден ImTun-контекст жителя. Обратитесь к управляющей компании, чтобы проверить доступ.</Text><Pressable accessibilityRole="button" testID="no-context-refresh" onPress={() => session.refetch()} style={styles.secondaryButton}><Text style={styles.secondaryText}>Проверить снова</Text></Pressable></View>;
+    return <View style={styles.center}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><View style={styles.lockIcon}><Feather name="home" size={23} color={palette.primary} /></View><Text style={styles.heading}>Հասանելի տուն չկա</Text><Text style={styles.body}>Այս հաշվի համար բնակչի ImTun միջավայր չի գտնվել։ Դիմեք կառավարման ընկերությանը՝ մուտքի իրավունքը ստուգելու համար։</Text><Pressable accessibilityRole="button" testID="no-context-refresh" onPress={() => session.refetch()} style={styles.secondaryButton}><Text style={styles.secondaryText}>Կրկին ստուգել</Text></Pressable></View>;
   }
 
   if (session.data?.user && contexts.length) {
-    return <View style={styles.screen}><View style={styles.brandTop}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ВАШ ДОМ. ВАШ IMTUN.</Text></View><Text style={styles.heading}>Выберите дом</Text><Text style={styles.body}>Продолжая, вы входите в контекст жителя. Доступы проверяет сервер.</Text>
+    return <View style={styles.screen}><View style={styles.brandTop}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ՁԵՐ ՏՈՒՆԸ։ ՁԵՐ IMTUN-Ը։</Text></View><Text style={styles.heading}>Ընտրեք տունը</Text><Text style={styles.body}>Շարունակելով՝ կմտնեք որպես բնակիչ։ Մուտքի իրավունքը ստուգում է սերվերը։</Text>
       {message ? <View style={styles.errorBox}><Feather name="alert-circle" size={17} color={palette.destructive} /><Text style={styles.errorText}>{message}</Text></View> : null}
       <ScrollView contentContainerStyle={styles.contextList}>
         {contexts.map((context) => <Pressable accessibilityRole="button" key={context.id} testID={`context-${context.id}`} disabled={switchContext.isPending} onPress={() => chooseContext(context)} style={styles.contextCard}>
-          <View style={styles.contextIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.contextTitle}>{context.building_name || context.organization_name || 'Жилой дом'}</Text><Text style={styles.contextSub}>{context.unit_number ? `Квартира ${context.unit_number}` : 'Контекст жителя'}{context.organization_name && context.building_name ? ` · ${context.organization_name}` : ''}</Text></View><Feather name={switchContext.isPending ? 'loader' : 'arrow-right'} size={19} color={palette.mutedForeground} /></Pressable>)}
+          <View style={styles.contextIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.contextTitle}>{context.building_name || context.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.contextSub}>{context.unit_number ? `Բնակարան ${context.unit_number}` : 'Բնակչի մուտք'}{context.organization_name && context.building_name ? ` · ${context.organization_name}` : ''}</Text></View><Feather name={switchContext.isPending ? 'loader' : 'arrow-right'} size={19} color={palette.mutedForeground} /></Pressable>)}
       </ScrollView>
-      {switchContext.isPending ? <Text style={styles.muted}>Открываем выбранный дом…</Text> : null}
+      {switchContext.isPending ? <Text style={styles.muted}>Բացում ենք ընտրված տունը…</Text> : null}
     </View>;
   }
 
   return <ScrollView style={styles.screen} contentContainerStyle={styles.loginContent} keyboardShouldPersistTaps="handled">
-    <View style={styles.brandTop}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ПОРЯДОК В ДОМЕ НАЧИНАЕТСЯ ЗДЕСЬ</Text></View>
-    <View style={styles.welcome}><View style={styles.welcomeIcon}><Feather name="key" size={19} color={palette.primary} /></View><Text style={styles.heading}>Войти в ImTun</Text><Text style={styles.body}>Управляйте обращениями и делами вашего дома в одном месте.</Text></View>
+    <View style={styles.brandTop}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ՁԵՐ ՏԱՆ ԿԱՐԳՈՒԿԱՆՈՆԸ ՍԿՍՎՈՒՄ Է ԱՅՍՏԵՂԻՑ</Text></View>
+    <View style={styles.welcome}><View style={styles.welcomeIcon}><Feather name="key" size={19} color={palette.primary} /></View><Text style={styles.heading}>Մուտք գործել ImTun</Text><Text style={styles.body}>Կառավարեք ձեր տան դիմումներն ու առօրյա հարցերը մեկ վայրից։</Text></View>
     <View style={styles.form}>
-      <Text style={styles.label}>Электронная почта</Text><TextInput testID="login-email" accessibilityLabel="Электронная почта" autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="name@example.com" placeholderTextColor={palette.placeholder} style={styles.input} />
-      <Text style={styles.label}>Пароль</Text><TextInput testID="login-password" accessibilityLabel="Пароль" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="Введите пароль" placeholderTextColor={palette.placeholder} style={styles.input} />
-      {showCode ? <><Text style={styles.label}>Код подтверждения</Text><TextInput testID="login-code" accessibilityLabel="Код подтверждения" keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Код MFA, если требуется" placeholderTextColor={palette.placeholder} style={styles.input} /></> : <Pressable accessibilityRole="button" testID="show-code" onPress={() => setShowCode(true)} style={styles.codeToggle}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.codeToggleText}>Нужен код подтверждения?</Text></Pressable>}
+      <Text style={styles.label}>Էլեկտրոնային փոստ</Text><TextInput testID="login-email" accessibilityLabel="Էլեկտրոնային փոստ" autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="name@example.com" placeholderTextColor={palette.placeholder} style={styles.input} />
+      <Text style={styles.label}>Գաղտնաբառ</Text><TextInput testID="login-password" accessibilityLabel="Գաղտնաբառ" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="Մուտքագրեք գաղտնաբառը" placeholderTextColor={palette.placeholder} style={styles.input} />
+      {showCode ? <><Text style={styles.label}>Հաստատման կոդ</Text><TextInput testID="login-code" accessibilityLabel="Հաստատման կոդ" keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Մուտքագրեք անվտանգության կոդը" placeholderTextColor={palette.placeholder} style={styles.input} /></> : <Pressable accessibilityRole="button" testID="show-code" onPress={() => setShowCode(true)} style={styles.codeToggle}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.codeToggleText}>Մուտքագրե՞լ հաստատման կոդը</Text></Pressable>}
       {message ? <View style={styles.errorBox}><Feather name="alert-circle" size={17} color={palette.destructive} /><Text style={styles.errorText}>{message}</Text></View> : null}
-      <Pressable accessibilityRole="button" testID="login-submit" disabled={!email.trim() || !password || login.isPending} onPress={submitLogin} style={[styles.primaryButton, (!email.trim() || !password || login.isPending) && styles.disabled]}><Text style={styles.primaryText}>{login.isPending ? 'Входим…' : 'Войти'}</Text>{!login.isPending ? <Feather name="arrow-right" size={17} color={palette.foreground} /> : null}</Pressable>
-      <Text style={styles.secureNote}><Feather name="lock" size={12} color={palette.subdued} /> Вход защищён сессионной авторизацией</Text>
+      <Pressable accessibilityRole="button" testID="login-submit" disabled={!email.trim() || !password || login.isPending} onPress={submitLogin} style={[styles.primaryButton, (!email.trim() || !password || login.isPending) && styles.disabled]}><Text style={styles.primaryText}>{login.isPending ? 'Մուտք ենք գործում…' : 'Մուտք գործել'}</Text>{!login.isPending ? <Feather name="arrow-right" size={17} color={palette.foreground} /> : null}</Pressable>
+      <Text style={styles.secureNote}><Feather name="lock" size={12} color={palette.subdued} /> Մուտքը պաշտպանված է սեսիայի միջոցով</Text>
     </View>
   </ScrollView>;
 }

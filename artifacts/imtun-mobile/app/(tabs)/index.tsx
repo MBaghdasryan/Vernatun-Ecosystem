@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { palette } from '@/constants/colors';
+import { formatArmenianDate, localizeRequestStatus, requestCount } from '@/constants/armenian';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -12,51 +13,51 @@ export default function HomeScreen() {
   const session = useGetMobileAuthSession();
   const requests = useGetOperationalRequests();
   const active = session.data?.contexts.find((item) => item.id === session.data?.contextId);
-  const unitLabel = active?.unit_number ? `Квартира ${active.unit_number}` : 'Дом';
+  const unitLabel = active?.unit_number ? `Բնակարան ${active.unit_number}` : 'Տուն';
 
   if (session.isLoading) return <View style={styles.center}><View style={styles.skeleton} /><View style={[styles.skeleton, { width: '72%' }]} /><View style={[styles.skeleton, { height: 130 }]} /></View>;
-  if (session.isError) return <View style={styles.center}><Feather name="wifi-off" size={28} color={colors.mutedForeground} /><Text style={styles.errorTitle}>Не удалось загрузить дом</Text><Text style={styles.muted}>Проверьте соединение и попробуйте ещё раз.</Text><Pressable accessibilityRole="button" testID="home-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Повторить</Text></Pressable></View>;
+  if (session.isError) return <View style={styles.center}><Feather name="wifi-off" size={28} color={colors.mutedForeground} /><Text style={styles.errorTitle}>Չհաջողվեց բեռնել տան տվյալները</Text><Text style={styles.muted}>Ստուգեք ինտերնետային կապը և կրկին փորձեք։</Text><Pressable accessibilityRole="button" testID="home-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին փորձել</Text></Pressable></View>;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={session.isRefetching || requests.isRefetching} onRefresh={() => { session.refetch(); requests.refetch(); }} tintColor={colors.primary} />}>
       <View style={styles.topline}>
         <Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} accessibilityLabel="ImTun" />
-        <Pressable accessibilityRole="button" accessibilityLabel="Изменить дом и квартиру" testID="home-context-button" onPress={() => router.push('/(tabs)/profile')} style={styles.unit}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Փոխել տունն ու բնակարանը" testID="home-context-button" onPress={() => router.push('/(tabs)/profile')} style={styles.unit}>
           <Feather name="home" size={15} color={colors.primary} />
-          <View><Text style={styles.unitName}>{active?.building_name || active?.organization_name || 'Мой дом'}</Text><Text style={styles.unitCaption}>{unitLabel}</Text></View>
+          <View><Text style={styles.unitName}>{active?.building_name || active?.organization_name || 'Իմ տունը'}</Text><Text style={styles.unitCaption}>{unitLabel}</Text></View>
           <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
         </Pressable>
       </View>
       <View style={styles.greeting}>
-        <Text style={styles.kicker}>IMTUN · ДОМ И СЕРВИС</Text>
-        <Text style={styles.title}>Здравствуйте, {session.data?.user?.name?.split(' ')[0] || 'сосед'}.</Text>
-        <Text style={styles.subtitle}>Ваш дом — в порядке вещей.</Text>
+        <Text style={styles.kicker}>IMTUN · ՏՈՒՆ ԵՎ ԾԱՌԱՅՈՒԹՅՈՒՆՆԵՐ</Text>
+        <Text style={styles.title}>Ողջո՛ւյն, {session.data?.user?.name?.split(' ')[0] || 'հարևան'}։</Text>
+        <Text style={styles.subtitle}>Ձեր տան հոգսերը՝ մեկ տեղում։</Text>
       </View>
       <View style={styles.hero}>
         <View style={styles.heroIcon}><Feather name="sun" size={18} color={colors.primary} /></View>
-        <Text style={styles.heroEyebrow}>ВАШ ДОМ СЕГОДНЯ</Text>
-        <Text style={styles.heroTitle}>{requests.data?.length ? `${requests.data.length} обращений` : 'Всё важное — рядом'}</Text>
-        <Text style={styles.heroText}>Создавайте заявки и следите за тем, как решаются вопросы дома.</Text>
+        <Text style={styles.heroEyebrow}>ՁԵՐ ՏԱՆ ԱՅՍՕՐՎԱ ՊԱՏԿԵՐԸ</Text>
+        <Text style={styles.heroTitle}>{requests.data?.length ? requestCount(requests.data.length) : 'Կարևորը՝ միշտ հասանելի'}</Text>
+        <Text style={styles.heroText}>Ստեղծեք հայտեր և հետևեք, թե ինչպես են լուծվում տան հարցերը։</Text>
         <Pressable accessibilityRole="button" testID="home-create-request" onPress={() => router.push('/(tabs)/requests')} style={styles.heroAction}>
-          <Text style={styles.heroActionText}>Создать заявку</Text><Feather name="arrow-up-right" size={18} color={colors.foreground} />
+          <Text style={styles.heroActionText}>Ստեղծել հայտ</Text><Feather name="arrow-up-right" size={18} color={colors.foreground} />
         </Pressable>
         <View pointerEvents="none" style={styles.heroMark}><Feather name="home" size={148} color={palette.heroDecoration} /></View>
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Что нужно сделать?</Text><Text style={styles.sectionHint}>БЫСТРЫЙ ДОСТУП</Text></View>
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Ի՞նչ է պետք անել</Text><Text style={styles.sectionHint}>ԱՐԱԳ ՄՈՒՏՔ</Text></View>
       <View style={styles.quickGrid}>
         <Pressable accessibilityRole="button" testID="quick-request" onPress={() => router.push('/(tabs)/requests')} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: palette.accent }]}><Feather name="tool" size={20} color={colors.primary} /></View><Text style={styles.quickTitle}>Заявки</Text><Text style={styles.quickSub}>Обращения по дому</Text>
+          <View style={[styles.quickIcon, { backgroundColor: palette.accent }]}><Feather name="tool" size={20} color={colors.primary} /></View><Text style={styles.quickTitle}>Հայտեր</Text><Text style={styles.quickSub}>Տան հետ կապված հարցեր</Text>
         </Pressable>
         <Pressable accessibilityRole="button" testID="quick-profile" onPress={() => router.push('/(tabs)/profile')} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="user" size={20} color={colors.foreground} /></View><Text style={styles.quickTitle}>Профиль</Text><Text style={styles.quickSub}>Аккаунт и квартира</Text>
+          <View style={[styles.quickIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="user" size={20} color={colors.foreground} /></View><Text style={styles.quickTitle}>Անձնական էջ</Text><Text style={styles.quickSub}>Հաշիվ և բնակարան</Text>
         </Pressable>
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Последние заявки</Text><Pressable accessibilityRole="button" testID="home-all-requests" onPress={() => router.push('/(tabs)/requests')}><Text style={styles.link}>Все <Feather name="arrow-right" size={13} color={colors.accentForeground} /></Text></Pressable></View>
-      {requests.isLoading ? <View style={styles.loadingCard}><View style={styles.line} /><View style={[styles.line, { width: '62%' }]} /></View> : requests.isError ? <View style={styles.inlineError}><Text style={styles.muted}>Список временно недоступен.</Text><Pressable onPress={() => requests.refetch()} testID="home-requests-retry"><Text style={styles.link}>Повторить</Text></Pressable></View> : requests.data?.length ? requests.data.slice(0, 2).map((row, index) => {
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Վերջին հայտերը</Text><Pressable accessibilityRole="button" testID="home-all-requests" onPress={() => router.push('/(tabs)/requests')}><Text style={styles.link}>Բոլորը <Feather name="arrow-right" size={13} color={colors.accentForeground} /></Text></Pressable></View>
+      {requests.isLoading ? <View style={styles.loadingCard}><View style={styles.line} /><View style={[styles.line, { width: '62%' }]} /></View> : requests.isError ? <View style={styles.inlineError}><Text style={styles.muted}>Ցանկը ժամանակավորապես անհասանելի է։</Text><Pressable onPress={() => requests.refetch()} testID="home-requests-retry"><Text style={styles.link}>Կրկին փորձել</Text></Pressable></View> : requests.data?.length ? requests.data.slice(0, 2).map((row, index) => {
         const record = normalizeRow(row, index);
         return <View key={record.key} style={styles.requestCard}><View style={styles.requestIcon}><Feather name="clipboard" size={18} color={colors.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.requestTitle} numberOfLines={1}>{record.subject}</Text><Text style={styles.requestMeta}>{record.status} · {record.date}</Text></View><Feather name="chevron-right" size={18} color={colors.mutedForeground} /></View>;
-      }) : <View style={styles.empty}><Feather name="inbox" size={23} color={colors.mutedForeground} /><Text style={styles.emptyTitle}>Заявок пока нет</Text><Text style={styles.muted}>Если что-то понадобится — мы рядом.</Text></View>}
-      <Text style={styles.footer}>ImTun <Text style={styles.footerNote}>· забота о вашем доме</Text></Text>
+      }) : <View style={styles.empty}><Feather name="inbox" size={23} color={colors.mutedForeground} /><Text style={styles.emptyTitle}>Դեռ հայտեր չկան</Text><Text style={styles.muted}>Եթե օգնություն պետք լինի, մենք պատրաստ ենք օգնել։</Text></View>}
+      <Text style={styles.footer}>ImTun <Text style={styles.footerNote}>· հոգատարություն ձեր տան մասին</Text></Text>
     </ScrollView>
   );
 }
@@ -65,8 +66,8 @@ function normalizeRow(row: unknown, index: number) {
   const value = row && typeof row === 'object' ? row as Record<string, unknown> : {};
   const text = (input: unknown, fallback: string) => typeof input === 'string' && input.trim() ? input.trim() : fallback;
   const dateRaw = value.created_at ?? value.createdAt;
-  const date = typeof dateRaw === 'string' && !Number.isNaN(Date.parse(dateRaw)) ? new Date(dateRaw).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : 'Дата не указана';
-  return { key: text(value.id, `request-${index}`), subject: text(value.subject, 'Обращение без названия'), status: text(value.status, 'Статус уточняется'), date };
+  const date = formatArmenianDate(dateRaw);
+  return { key: text(value.id, `request-${index}`), subject: text(value.subject, 'Հայտ՝ առանց վերնագրի'), status: localizeRequestStatus(text(value.status, '')), date };
 }
 
 const styles = StyleSheet.create({
