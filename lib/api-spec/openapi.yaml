@@ -55,6 +55,26 @@ paths:
       operationId: logoutMobileAuth
       responses:
         "204": { description: Session ended and cookie cleared }
+  /health:
+    get:
+      operationId: getApiHealth
+      tags: [health]
+      summary: Check API and database availability
+      description: Checks the API process and its PostgreSQL connection.
+      responses:
+        "200":
+          description: API and database are available.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, stage]
+                additionalProperties: false
+                properties:
+                  status: { type: string, enum: [ok] }
+                  stage: { type: integer, minimum: 1 }
+        "503":
+          description: API database health check failed.
   /hayat/queue:
     get:
       operationId: getHayatQueue

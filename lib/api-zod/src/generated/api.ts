@@ -100,6 +100,19 @@ export const LogoutMobileAuthResponse = zod.void()
 
 
 /**
+ * Checks the API process and its PostgreSQL connection.
+ * @summary Check API and database availability
+ */
+
+
+
+export const GetApiHealthResponse = zod.object({
+  "status": zod.enum(['ok']),
+  "stage": zod.number().int().min(1)
+})
+
+
+/**
  * Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
  */
 export const getHayatQueueQuerySearchMax = 200;

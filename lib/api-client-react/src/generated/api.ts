@@ -70,6 +70,7 @@ import type {
   FinanceRecord,
   GetApiCenter200,
   GetApiCenterParams,
+  GetApiHealth200,
   GetContractorScorecard200Item,
   GetContractorScorecardParams,
   GetDefectCollaborationParams,
@@ -554,6 +555,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getLogoutMobileAuthMutationOptions(options));
     }
+
+export const getGetApiHealthUrl = () => {
+
+
+
+
+  return `/api/health`
+}
+
+/**
+ * Checks the API process and its PostgreSQL connection.
+ * @summary Check API and database availability
+ */
+export const getApiHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetApiHealth200> => {
+
+  return customFetch<GetApiHealth200>(getGetApiHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetApiHealthQueryKey = () => {
+    return [
+    `/api/health`
+    ] as const;
+    }
+
+
+export const getGetApiHealthQueryOptions = <TData = Awaited<ReturnType<typeof getApiHealth>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApiHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApiHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiHealth>>> = ({ signal }) => getApiHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApiHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetApiHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getApiHealth>>>
+export type GetApiHealthQueryError = ErrorType<void>
+
+
+/**
+ * @summary Check API and database availability
+ */
+
+export function useGetApiHealth<TData = Awaited<ReturnType<typeof getApiHealth>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApiHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetApiHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHayatQueueUrl = (params?: GetHayatQueueParams,) => {
   const normalizedParams = new URLSearchParams();

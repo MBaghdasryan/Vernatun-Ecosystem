@@ -43,7 +43,18 @@ MFA activation, явно обозначенная как UTC, не меняла�
 Это уточнение инструмента подсчёта, не увеличение числа ошибок приложения.
 Сопоставление method/path **не доказывает** правильность request/response schemas,
 авторизации, middleware и динамически подключаемых внешних маршрутов.
-112 контрактов не были заменены заглушками и остаются незавершённой работой.
+111 контрактов не были заменены заглушками и остаются незавершённой работой.
+
+#### Первый закрытый OpenAPI пробел: health check
+
+- Добавлен canonical `GET /health` (`getApiHealth`) с точной успешной формой:
+  `status: "ok"` и положительный `stage`; `503` описан для ошибки проверки БД.
+- Сгенерированы client/Zod контракты штатным Orval codegen.
+- Проверено непосредственно на работающем API: `GET /api/health` отвечает
+  HTTP 200 и `{"status":"ok","stage":1}`.
+- Инвентаризация после изменения: **246 найденных, 135 документированных,
+  111 ещё без контракта; 0 неразрешённых**. Это один реальный закрытый пробел,
+  не завершение OpenAPI части.
 
 ### Восстановление рабочей среды
 
@@ -63,7 +74,11 @@ MFA activation, явно обозначенная как UTC, не меняла�
 
 | Проверка | Результат |
 |---|---|
-| Общий workspace TypeScript, включая последние изменения | PASS |
+| API-codegen и TypeScript generated libs | PASS |
+| API server, ImTun mobile, slides и scripts typecheck | PASS |
+| Full workspace typecheck | **BLOCKED**: Vernatun и HAYAT имеют `TS2322`; независимые от этой правки ошибки refs/submit handlers в Vernatun/Canvas и nullable `MobileAuthSession.user` в HAYAT |
+| Frozen workspace install по существующему lockfile | PASS; версии/lockfile не менялись |
+| OpenAPI inventory и runtime `GET /api/health` | **135/246 documented**, 111 gaps; HTTP 200 с ожидаемым телом |
 | Phase 8 API: leads, paging/scope, 14 dashboards, MFA rollout/recovery | **6/6 PASS**, отдельная тестовая схема |
 | Delivery/invitations после объединения исправления audit-immutability | **36/36 PASS**: 8 adapters + 16 webhook/evidence + 12 access/invitation/audit |
 | Новые тесты календарной даты + существующие тесты календаря визитов | **5/5 PASS** |

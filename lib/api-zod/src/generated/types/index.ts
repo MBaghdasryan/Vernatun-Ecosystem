@@ -92,6 +92,8 @@ export * from './examineDueNotifications200Email';
 export * from './financeRecord';
 export * from './getApiCenter200';
 export * from './getApiCenterParams';
+export * from './getApiHealth200';
+export * from './getApiHealth200Status';
 export * from './getContractorScorecard200Item';
 export * from './getContractorScorecardParams';
 export * from './getDefectCollaborationParams';
