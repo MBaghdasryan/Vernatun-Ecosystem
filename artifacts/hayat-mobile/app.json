@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "HAYAT Contractor",
+    "slug": "hayat-contractor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "hayatcontractor",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.vernatun.hayat.contractor",
+      "buildNumber": "1",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.vernatun.hayat.contractor",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#f7f5f0"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "imageWidth": 210,
+          "resizeMode": "contain",
+          "backgroundColor": "#f7f5f0"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

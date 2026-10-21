@@ -1,0 +1,27 @@
+const colors = {
+  background: "#F7F5F0",
+  surface: "#FFFEFA",
+  surfaceMuted: "#ECEDE7",
+  foreground: "#102B3A",
+  mutedForeground: "#68777D",
+  primary: "#F76A0A",
+  primaryPressed: "#B84900",
+  primarySurface: "#FFF0E0",
+  surfacePressed: "#FBF8F1",
+  neutralStatus: "#E9EEF0",
+  mutedOnDark: "#B8C6C8",
+  divider: "#EBEEEA",
+  loading: "#E6E8E2",
+  loadingCard: "#EFEEE8",
+  accent: "#EAF0ED",
+  border: "#DDE2DE",
+  danger: "#A63C32",
+  dangerBackground: "#F9EAE6",
+  success: "#397651",
+  successBackground: "#E8F1E9",
+  warning: "#8B5B17",
+  warningBackground: "#F8EFD9",
+  radius: 12,
+};
+
+export default colors;
