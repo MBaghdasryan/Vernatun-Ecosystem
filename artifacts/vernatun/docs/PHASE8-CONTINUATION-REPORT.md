@@ -114,73 +114,73 @@ Vite-конфигурация mockup требует `PORT`. Повторный �
 
 ## Быстрый пересмотр Phase 8 — 22 октября 2026 года
 
-Этот пересмотр проверяет статус предыдущего списка, но не заменяет полную
+Этот пересмотр обновляет технические проверки. Он не заменяет полную
 роль-устройство и production-приёмку.
 
 | Пункт | Текущий результат |
 |---|---|
 | Phase 8 API suite | **PASS: 6/6**, запущена 22 октября в изолированном тестовом окружении |
-| API server production bundle | **PASS** |
-| Vernatun Web production bundle | **PASS** с `PORT=5000 BASE_PATH=/`; остаётся предупреждение о Portal chunk >500 kB |
-| Local API health | **PASS: HTTP 200** на `GET /api/health`; production endpoint этим не проверялся |
+| Полный workspace typecheck | **PASS**: HAYAT, ImTun, Vernatun, Mockup, API, slides и scripts |
+| Полный workspace build | **PASS** с `PORT=5000 BASE_PATH=/`; API, Vernatun, Mockup, slides и ImTun production static bundles собраны |
+| Production API health | **PASS: HTTP 200**, `GET https://api.vernatun.io/api/health`, `{"status":"ok","stage":1}`; это только health smoke, не авторизационная приёмка |
+| ImTun static server | **PASS**: landing, Android manifest и bundle — HTTP 200; encoded traversal не открыл файл (HTTP 404) |
 | OpenAPI static inventory | **PARTIAL: 246 операций, 135 documented, 111 gaps, 0 unresolved** |
-| Полный workspace typecheck | **FAIL**: `TS2322` в HAYAT mobile, Vernatun и Mockup; см. ниже |
-| Security scan | **BLOCKED**: после совместимых обновлений остаются 3 high и 1 moderate dependency findings; SAST вернул 2 high alerts в ImTun static server; HoundDog — 0 findings |
-| Сквозные A–H / 14 ролей × viewport / MFA browser policy | **НЕ ЗАВЕРШЕНО**: эти прогоны не были частью данного короткого пересмотра |
-| Production acceptance | **НЕ ВЫПОЛНЕНА**; production-база, DNS и реальные письма не затрагивались |
+| Dependency / SAST / HoundDog | **PARTIAL**: 2 high + 1 moderate dependency findings; SAST 0; HoundDog 0 |
+| Browser MFA / полная 14-role matrix / A–H | **НЕ ЗАВЕРШЕНО**: backend Phase 8 tests прошли, но это не подтверждает браузерную и сквозную приёмку |
+| Production acceptance | **НЕ ЗАВЕРШЕНА**: production health проверен; вход, сессии, полный workflow, private storage, backup/restore и scheduler не принимались |
 
-Свежие TypeScript-ошибки:
+Исправления для общего typecheck/build:
 
-- HAYAT mobile: nullable `MobileAuthSession.user` не сужен перед передачей в
-  компонент.
-- Vernatun: типы polymorphic button-group `onSubmit` и несовпадающие версии
-  React ref types в календаре.
-- Mockup sandbox: несовпадающие React ref types в календаре и spinner.
-- Отдельные API server, ImTun mobile и Vernatun Web production builds прошли
-  (для Vernatun Web — с указанными build-параметрами); общий `pnpm run build`
-  не прошёл, поскольку он останавливается на workspace typecheck.
+- HAYAT теперь передаёт экрану очереди только сессию с подтверждённым
+  `user`, сохраняя прежнее поведение авторизации.
+- Vernatun `ButtonGroupText` разделяет нативные `div` props и Radix `Slot`
+  props вместо несовместимого объединения типов.
+- React type packages выровнены на совместимую версию; календарь и spinner
+  больше не конфликтуют из-за разных React ref types.
+- Vite-плагины Mockup используют один совместимый peer context; общий typecheck
+  и build проходят.
+- Сборщик ImTun использует отдельный configurable Metro-порт (`8082` по
+  умолчанию), чтобы не перехватывать занятый порт предпросмотра `8081`.
+- ImTun static server создаёт allowlist файлов при старте, отдаёт только
+  проиндексированные статические bytes и не строит путь чтения файла из URL.
 
-Первичный dependency audit дал 7 high / 4 moderate / 2 low. Исправлены
-совместимые версии `markdown-it` → `14.3.3`, `prosemirror-view` → `1.42.3`,
-совместимый `prosemirror-model` выровнен на `1.25.12`, Vite обновлён
-`7.3.6` → `7.3.7`. После них повторный audit показывает **3 high /
-1 moderate / 0 low**: `braces@3.0.3`, `node-forge@1.4.0`, `uuid@7.0.3`
-и `decode-uri-component@0.2.2`. Для `braces` и `node-forge` сканер не
-предложил исправленную версию; перевод `uuid` на указанную версию исправления
-требует major-перехода. Это отчёт scanner по workspace-графу, а не
-подтверждение достижимости каждой проблемы через production endpoint.
+Свежий audit после обновлений: **2 high / 1 moderate / 0 low / 0 critical**.
+`uuid@7.0.3` заменён на `11.1.1` для Expo `xcode`; проверены CommonJS `v4()`
+и рабочая замена. Остались `braces@3.0.3` и `node-forge@1.4.0` (реестр
+пока не предлагает исправленные версии), а также `decode-uri-component@0.2.2`.
+Для последнего исправление `0.5.0` есть, но это ESM-only пакет, тогда как
+текущий `query-string@7` загружает его через CommonJS `require`; форсированное
+переопределение нарушило бы Expo tooling. Эти findings нельзя объявить
+устранёнными без совместимого обновления родителей.
 
-После обновлений прошли frozen install, typecheck и build коммерческой
-презентации, production build Vernatun Web и API. Большой JS chunk презентации
-и portal bundle остаются предупреждениями по размеру.
-
-SAST alerts указывают на конструирование путей в ImTun static server. При
-поверхностной проверке ветка manifest ограничивает платформы значениями
-`ios`/`android`, а static path проходит нормализацию и containment check;
-эксплуатация этих сигналов не доказана, поэтому они остаются на ручной проверке,
-а не объявляются ни подтверждёнными уязвимостями, ни закрытыми false positive.
+Общий build успешен; остались предупреждения о JS chunks свыше 500 kB в
+Vernatun и коммерческой презентации. В сборке Expo также был диагностический
+лог об отсутствующей системной библиотеке для React Native DevTools, но
+production bundles обеих платформ ImTun собраны.
 
 ## Что остаётся для закрытия Phase 8
 
-1. Описать и проверить **111 OpenAPI gaps**, точные schemas и served legacy contract,
-   затем выполнить codegen и проверку совместимости клиентов.
-2. Закрыть server paging/search остальных растущих operational, financial и
+1. Описать и проверить **111 OpenAPI gaps** реальными schemas, permissions и
+   legacy response shapes, затем выполнить codegen и проверить клиентов.
+2. Закрыть server paging/search/sort для оставшихся operational, financial,
    document lists и больших справочников.
-3. Завершить передачу timezone организации/пользователя и аудит hy/ru/en
-   во всех business-date формах. Три исправленных default не закрывают весь аудит.
-4. Принять MFA policy save/enforcement в полном разрешённом контексте,
-   record-table search/sort/paging, keyboard/dialog/focus/contrast и responsive matrix.
-5. Выполнить последовательные browser journeys A–H: заявка → закрытие;
-   phone intake/SLA; maintenance → history; billing → bank → resident;
-   onboarding/invite; support expiry; delegation revoke; voting → protocol.
-6. Устранить конфликт Metro при общей mobile-сборке и подтвердить чистый общий build.
-7. Актуализировать security/dependency/performance проверки. Исторические результаты
-   scans от 7 октября не считаются новым сканированием.
-8. Пройти production checklist: schema/backup + private bytes/storage,
-   scheduler, credentials/CORS/session, мониторинг и production smoke acceptance.
-   DNS и production-база этим продолжением не изменялись.
-9. Live email/invite/reset — только после готовности домена и явного разрешения
-    пользователя. Отправка тестового письма не выполнялась.
+3. Завершить hy/ru/en и locale/timezone audit для organization/user business
+   dates, а также проверить поведение при переходе летнего времени.
+4. Принять MFA policy save/enforcement в полном разрешённом контексте и
+   browser-acceptance для MFA, поиска/сортировки/пагинации, клавиатуры,
+   диалогов/focus/contrast и responsive matrix.
+5. Завершить browser acceptance 14 ролей по релевантным маршрутам и viewport;
+   автоматические role-card tests не заменяют проверку UI и запретных действий.
+6. Пройти сквозные journeys A–H: resident request→closure; phone intake/SLA;
+   maintenance→history; billing→bank→resident; onboarding/invite; support expiry;
+   delegation revoke; voting→protocol.
+7. Закрыть оставшиеся dependency findings после выхода совместимых upstream
+   исправлений либо безопасного обновления Expo/Metro родителей.
+8. Пройти полный production checklist: auth/session/CORS, схемы и matched
+   backups, private bytes/storage, scheduler, monitoring, error recovery и
+   ролевые smoke tests. Health endpoint сам по себе не является приёмкой.
+9. Live email/invite/reset — только после готовности домена и отдельного
+   разрешения пользователя. Тестовые письма в этой проверке не отправлялись.
 
-**Следующий незакрытый технический блок:** реальные OpenAPI-контракты и
-масштабируемые списки. Этот отчёт не является основанием считать всю Phase 8 DONE.
+**Итог:** конкретные typecheck/build и ImTun path-handling блокеры закрыты,
+одна dependency уязвимость устранена; Phase 8 остаётся **PARTIAL**, а не DONE.

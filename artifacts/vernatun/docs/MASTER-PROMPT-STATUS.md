@@ -24,7 +24,7 @@
 | PHASE 5 — Console | Базовые организации, subscriptions/modules, audit, ограниченная поддержка, units CSV/XLSX preview/confirm, Email Console | Organization lifecycle/card, support conversation/attachments/SLA queue, onboarding dependencies/start/reopen/notes, другие typed imports, весь dashboard |
 | PHASE 6 — ownership/meetings/docs/analytics | Базовые ownership rows, agenda/votes, private documents, portfolio aggregates | Ownership history/share totals, weighted voting/quorum/results/protocol, document version chains, полный portfolio KPI и contractor scorecard |
 | PHASE 7 — storage/notifications/branding/PWA | Private storage/authorization/sanitization, notifications/mark-read, tenant color/locale/currency, HAYAT offline shell | Полный notification event catalog/preferences/actions, white-label API/UI, весь limited PWA; iPhone/Safari/Android acceptance |
-| PHASE 8 — QA/security/deployment | Базовые guards/CSRF/RBAC/scopes, TOTP/recovery, tests/types, отдельные browser checks, health/errors/backup tooling | Required MFA rollout, полный security/dependency audit, A–H end-to-end, все роли/5 ширин/a11y/i18n/timezone checks, весь OpenAPI, production readiness |
+| PHASE 8 — QA/security/deployment | Workspace typecheck и build прошли; Phase 8 API suite 6/6; SAST/HoundDog 0; ImTun static path smoke пройден | 111 OpenAPI gaps, общие paging/search, locale/timezone audit, MFA и 14-role browser acceptance, A–H end-to-end, 2 high + 1 moderate dependency findings, полный production readiness |
 
 ## Что реально добавлено в почте
 

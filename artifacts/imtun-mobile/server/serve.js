@@ -63,10 +63,29 @@ function toScriptString(value) {
     .replaceAll('&', '\\u0026');
 }
 
-function serveManifest(platform, res) {
-  const manifestPath = path.join(STATIC_ROOT, platform, 'manifest.json');
+function indexStaticFiles(directory = STATIC_ROOT, index = new Map()) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      indexStaticFiles(entryPath, index);
+    } else if (entry.isFile()) {
+      const relativePath = path.relative(STATIC_ROOT, entryPath).split(path.sep).join('/');
+      index.set(`/${relativePath}`, fs.readFileSync(entryPath));
+    }
+  }
+  return index;
+}
 
-  if (!fs.existsSync(manifestPath)) {
+const STATIC_FILES = indexStaticFiles();
+const MANIFESTS = Object.freeze({
+  ios: STATIC_FILES.get('/ios/manifest.json')?.toString('utf-8') ?? null,
+  android: STATIC_FILES.get('/android/manifest.json')?.toString('utf-8') ?? null,
+});
+
+function serveManifest(platform, res) {
+  const manifest = MANIFESTS[platform];
+
+  if (!manifest) {
     res.writeHead(404, { 'content-type': 'application/json' });
     res.end(
       JSON.stringify({ error: `Manifest not found for platform: ${platform}` }),
@@ -74,7 +93,6 @@ function serveManifest(platform, res) {
     return;
   }
 
-  const manifest = fs.readFileSync(manifestPath, 'utf-8');
   res.writeHead(200, {
     'content-type': 'application/json',
     'expo-protocol-version': '1',
@@ -100,25 +118,39 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   res.end(html);
 }
 
-function serveStaticFile(urlPath, res) {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '');
-  const filePath = path.join(STATIC_ROOT, safePath);
+function getStaticFileKey(urlPath) {
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(urlPath);
+  } catch {
+    return null;
+  }
 
-  if (!filePath.startsWith(STATIC_ROOT)) {
+  if (decodedPath.includes('\0')) return null;
+
+  const segments = decodedPath.replaceAll('\\', '/').split('/').filter(Boolean);
+  if (segments.some((segment) => segment === '.' || segment === '..')) return null;
+
+  return `/${segments.join('/')}`;
+}
+
+function serveStaticFile(urlPath, res) {
+  const fileKey = getStaticFileKey(urlPath);
+  if (!fileKey) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
   }
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  const content = STATIC_FILES.get(fileKey);
+  if (!content) {
     res.writeHead(404);
     res.end('Not Found');
     return;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(fileKey).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-  const content = fs.readFileSync(filePath);
   res.writeHead(200, { 'content-type': contentType });
   res.end(content);
 }

@@ -6,3 +6,4 @@
 
 # EAS-ready ZIP exports and other generated bundles.
 /generated-artifacts/
+/artifacts/imtun-mobile/static-build/

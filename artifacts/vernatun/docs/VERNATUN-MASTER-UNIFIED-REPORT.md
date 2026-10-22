@@ -44,7 +44,7 @@ HAYAT и ImTun восстановлены как адаптивные Web-мод
 | **5 — Console operations** | COMPLETE implementation и COMPLETE targeted browser acceptance | Полная role/device matrix, production private-byte delivery и email остаются вне подтверждённой приёмки |
 | **6 — ownership/meetings/documents/analytics** | COMPLETE implementation в указанной модели; grouping добавлен позднее в Phase 7 | PARTIAL browser acceptance голосования, протокола, document versions/download ACL и полного CRUD |
 | **7 — storage/notifications/branding/limited PWA** | Основная реализация COMPLETE; portfolio grouping функционально закрыт | PARTIAL: реальные mobile/offline сценарии, object edit/assignment UI, production scheduler; EXTERNAL: email/live S3/production storage selection |
-| **8 — QA/security/readiness** | PARTIAL: leads, MFA policy, часть paging, role metrics и security remediation реализованы | Остались OpenAPI, масштабируемые списки, timezone/i18n, MFA/UI/14-role matrix, A–H и production checklist |
+| **8 — QA/security/readiness** | PARTIAL: workspace typecheck/build PASS, Phase 8 API suite 6/6, SAST/HoundDog 0, ImTun static-path checks PASS | Остались 111 OpenAPI gaps, масштабируемые списки, timezone/i18n, MFA/UI/14-role matrix, A–H, 2 high + 1 moderate dependency findings и полный production checklist |
 
 **Вывод:** реализация большинства основных бизнес-блоков готова для дальнейшей приёмки. Это не утверждение, что все фазы полностью приняты или проект можно безопасно публиковать без оставшихся проверок.
 
