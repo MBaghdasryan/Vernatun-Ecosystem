@@ -1,6 +1,6 @@
 # Vernatun — продолжение Phase 8
 
-Дата проверки: **21 октября 2026 года**.
+Дата проверки: **22 октября 2026 года**.
 
 **Статус: PARTIAL. Phase 8 и весь мастер-промпт не объявлены завершёнными.**
 Этот документ обновляет сведения из отчётов от 7 октября. Platform Operations
@@ -112,9 +112,52 @@ Vite-конфигурация mockup требует `PORT`. Повторный �
 Обязательная MFA основной базы не активировалась. Тестовый сервер остановлен,
 его случайно созданная схема удалена runner-ом. Письма не отправлялись.
 
+## Быстрый пересмотр Phase 8 — 22 октября 2026 года
+
+Этот пересмотр проверяет статус предыдущего списка, но не заменяет полную
+роль-устройство и production-приёмку.
+
+| Пункт | Текущий результат |
+|---|---|
+| Phase 8 API suite | **PASS: 6/6**, запущена 22 октября в изолированном тестовом окружении |
+| API server production bundle | **PASS** |
+| Vernatun Web production bundle | **PASS** с `PORT=5000 BASE_PATH=/`; остаётся предупреждение о Portal chunk >500 kB |
+| Local API health | **PASS: HTTP 200** на `GET /api/health`; production endpoint этим не проверялся |
+| OpenAPI static inventory | **PARTIAL: 246 операций, 135 documented, 111 gaps, 0 unresolved** |
+| Полный workspace typecheck | **FAIL**: `TS2322` в HAYAT mobile, Vernatun и Mockup; см. ниже |
+| Security scan | **BLOCKED**: 7 high, 4 moderate, 2 low dependency findings; SAST вернул 2 high alerts в ImTun static server; HoundDog — 0 findings |
+| Сквозные A–H / 14 ролей × viewport / MFA browser policy | **НЕ ЗАВЕРШЕНО**: эти прогоны не были частью данного короткого пересмотра |
+| Production acceptance | **НЕ ВЫПОЛНЕНА**; production-база, DNS и реальные письма не затрагивались |
+
+Свежие TypeScript-ошибки:
+
+- HAYAT mobile: nullable `MobileAuthSession.user` не сужен перед передачей в
+  компонент.
+- Vernatun: типы polymorphic button-group `onSubmit` и несовпадающие версии
+  React ref types в календаре.
+- Mockup sandbox: несовпадающие React ref types в календаре и spinner.
+- Отдельные API server, ImTun mobile и Vernatun Web production builds прошли
+  (для Vernatun Web — с указанными build-параметрами); общий `pnpm run build`
+  не прошёл, поскольку он останавливается на workspace typecheck.
+
+Сканеры сообщили следующие наиболее существенные зависимости: `braces@3.0.3`,
+`markdown-it@14.3.1`, `node-forge@1.4.0`, `prosemirror-view@1.41.6`,
+`uuid@7.0.3` и `vite@7.3.6`. Это отчёт сканера по workspace-графу, а не
+подтверждение, что каждая уязвимость достижима через production endpoint.
+Для `markdown-it`, `prosemirror-view` и Vite сканер указывает доступные
+исправленные версии; `braces` и `node-forge` в полученном результате не имеют
+предложенной версии исправления. Изменения зависимостей не выполнялись в рамках
+этого быстрого пересмотра.
+
+SAST alerts указывают на конструирование путей в ImTun static server. При
+поверхностной проверке ветка manifest ограничивает платформы значениями
+`ios`/`android`, а static path проходит нормализацию и containment check;
+эксплуатация этих сигналов не доказана, поэтому они остаются на ручной проверке,
+а не объявляются ни подтверждёнными уязвимостями, ни закрытыми false positive.
+
 ## Что остаётся для закрытия Phase 8
 
-1. Описать и проверить **112 OpenAPI gaps**, точные schemas и served legacy contract,
+1. Описать и проверить **111 OpenAPI gaps**, точные schemas и served legacy contract,
    затем выполнить codegen и проверку совместимости клиентов.
 2. Закрыть server paging/search остальных растущих operational, financial и
    document lists и больших справочников.

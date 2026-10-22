@@ -80,6 +80,7 @@ overrides:
   fast-uri@3: 3.1.8
   source-map-js: 1.2.2
   postcss-selector-parser@6: 7.1.6
+  markdown-it@14: 14.3.3
   uuid@8: 11.1.1
   uuid@9: 11.1.1
   # replit uses linux-x64 only, we can exclude all other platforms

@@ -27,7 +27,7 @@
     "prosemirror-model": "1.25.4",
     "prosemirror-state": "1.4.4",
     "prosemirror-transform": "1.11.0",
-    "prosemirror-view": "1.41.6",
+    "prosemirror-view": "1.42.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "recharts": "^2.15.4",
