@@ -33,6 +33,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/defect-collaboration.test.ts']]
  : process.argv.includes('--role-dashboards-only')
  ? [['--test','server/tests/role-dashboards.test.ts']]
+ : process.argv.includes('--platform-support-meetings-only')
+ ? [['--test','server/tests/platform-support-meetings.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
  : process.argv.includes('--phase8-only')

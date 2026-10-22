@@ -3,20 +3,71 @@ import {z} from 'zod';
 import {pool} from './db.js';
 import {context,requireAuth} from './access.js';
 import {moduleForPermission} from './roles.js';
-import {invoiceAmounts} from './operations.js';
+import {KPI_QUERIES,KPI_REGISTRY,type KpiKey} from './kpi-registry.js';
 export const insights=Router();insights.use(requireAuth);
-insights.get('/role-insights',async(req,res)=>{const c=await context(req);const currency=z.enum(['AMD','RUB','USD']).parse(req.query.currency??req.user!.currency);const period=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional().parse(req.query.period);const mods=new Set(c.modules??[]);const can=(p:string)=>{const mod=moduleForPermission(p);return c.permissions.includes(p)&&(!mod||mods.has(mod))};const cards:{key:string;value:string;currency?:string}[]=[];const count=async(key:string,sql:string,args:unknown[]=[])=>{cards.push({key,value:String((await pool.query(sql,args)).rows[0].value)})};const scope=[c.organization_id,c.building_id,c.unit_id];
-if(can('organizations.read')){await count('organizations','SELECT count(*) AS value FROM organizations');await count('buildings','SELECT count(*) AS value FROM buildings');await count('activeSubscriptions',"SELECT count(*) AS value FROM subscriptions WHERE status='active' AND starts_on<=current_date AND ends_on>=current_date");await count('openSupport',"SELECT count(*) AS value FROM support_cases WHERE status<>'resolved'")}
-if(can('people.read')){await count('team',"SELECT count(DISTINCT a.user_id) AS value FROM role_assignments a JOIN users person ON person.id=a.user_id JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id WHERE a.organization_id=$1 AND a.active AND m.active AND NOT person.blocked AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) AND ($2::uuid IS NULL OR a.building_id=$2) AND ($3::uuid IS NULL OR a.unit_id=$3)",scope)}
-if(can('properties.read')||can('properties.own'))await count('units','SELECT count(*) AS value FROM units WHERE organization_id=$1 AND ($2::uuid IS NULL OR building_id=$2) AND ($3::uuid IS NULL OR id=$3)',scope);
-if(can('support.cases')&&!can('organizations.read'))await count('openSupport',"SELECT count(*) AS value FROM support_cases WHERE assigned_to=$1 AND status<>'resolved'",[req.user!.id]);
-if(can('support.access.request'))await count('activeGrants','SELECT count(*) AS value FROM support_access_grants WHERE support_user_id=$1 AND approved_at IS NOT NULL AND revoked_at IS NULL AND expires_at>now()',[req.user!.id]);
-if(can('onboarding.manage'))await count('onboardingRemaining','SELECT count(*) AS value FROM onboarding_steps WHERE ($1::boolean OR assigned_to=$2) AND completed_at IS NULL',[can('organizations.read'),req.user!.id]);
-if(can('people.invite'))await count('pendingInvites','SELECT count(*) AS value FROM invitations WHERE organization_id=$1 AND ($2::uuid IS NULL OR building_id=$2) AND ($3::uuid IS NULL OR unit_id=$3) AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>now()',scope);
-if(can('requests.read')||can('requests.own'))await count('openRequests',`SELECT count(*) AS value FROM resident_requests r JOIN units u ON u.id=r.unit_id WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND r.status<>'closed' AND ($4::boolean OR r.author_user_id=$5)`,[...scope,can('requests.read'),req.user!.id]);
-if(can('workorders.assigned')){await count('assignedWork',`SELECT count(*) AS value FROM work_orders w JOIN resident_requests r ON r.id=w.request_id JOIN units u ON u.id=r.unit_id WHERE r.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND w.technician_id=$4 AND w.status IN ('assigned','in_progress')`,[...scope,req.user!.id])}
-if(can('defects.read')||can('defects.assigned')){for(const [key,status] of [['openDefects','accepted'],['reviewDefects','review']])await count(key,`SELECT count(*) AS value FROM defects d JOIN units u ON u.id=d.unit_id WHERE d.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND ($4::boolean OR d.contractor_id=$5) AND d.status${key==='openDefects'?'<>':'='}$6`,[...scope,can('defects.read'),req.user!.id,status])}
-if(can('handover.read'))await count('handoverReady',"SELECT count(*) AS value FROM handover_cases h JOIN units u ON u.id=h.unit_id WHERE h.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND h.status='ready'",scope);
-if(can('access.validate')||can('access.create'))await count('validPasses',"SELECT count(*) AS value FROM visitor_passes p JOIN units u ON u.id=p.unit_id WHERE p.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND ($4::boolean OR p.created_by=$5) AND p.revoked_at IS NULL AND p.valid_until>now() AND p.state<>'exited'",[...scope,can('access.validate'),req.user!.id]);
-if(can('billing.read')||can('billing.own')){const r=(await pool.query(`SELECT COALESCE(sum(amount_minor::bigint),0)::text AS charged,COALESCE(sum(paid_minor::bigint),0)::text AS paid,COALESCE(sum(balance_minor::bigint),0)::text AS balance FROM (SELECT ${invoiceAmounts} FROM invoices i JOIN units u ON u.id=i.unit_id WHERE i.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2) AND ($3::uuid IS NULL OR u.id=$3) AND ($4::boolean OR i.payer_user_id=$5) AND i.currency=$6 AND i.status='published' AND ($7::date IS NULL OR (i.period >= $7::date AND i.period < $7::date + interval '1 month'))) x`,[...scope,can('billing.read'),req.user!.id,currency,period?period+'-01':null])).rows[0];for(const key of ['charged','paid','balance'])cards.push({key,value:r[key],currency})}
-res.json({cards})});
+
+insights.get('/role-insights',async(req,res)=>{
+ const c=await context(req);
+ const currency=z.enum(['AMD','RUB','USD']).parse(req.query.currency??req.user!.currency);
+ const period=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional().parse(req.query.period);
+ const mods=new Set(c.modules??[]);
+ const can=(p:string)=>p.split(' OR ').some(permission=>{
+  const mod=moduleForPermission(permission);
+  return c.permissions.includes(permission)&&(!mod||mods.has(mod));
+ });
+ const cards:any[]=[];
+ const scope=[c.organization_id,c.building_id,c.unit_id];
+ const add=async(key:KpiKey,args:unknown[]=[],options:{queryId?:keyof typeof KPI_QUERIES;permission?:string;scope?:string;column?:string;invoiceCount?:number}={})=>{
+  const definition=KPI_REGISTRY[key];
+  const queryId=options.queryId??definition.queryId;
+  const row=(await pool.query(KPI_QUERIES[queryId],args)).rows[0];
+  const dataState=options.invoiceCount===0?'no_data':'measured';
+  cards.push({
+   key,value:String(row[options.column??'value']??'0'),
+   ...(key==='charged'||key==='paid'||key==='balance'?{currency}:{}),
+   definition:definition.definition,queryId,permission:options.permission??definition.permission,
+   module:definition.module,scope:options.scope??definition.scope,dataState,
+   noDataBehavior:definition.noDataBehavior
+  });
+ };
+ if(can('organizations.read')){
+  await add('organizations');await add('buildings');await add('activeSubscriptions');
+  await add('openSupport',[],{queryId:'platform.open_support',scope:'platform',permission:'organizations.read'});
+ }else if(can('support.cases')){
+  await add('openSupport',[req.user!.id],{queryId:'support.assigned_open',scope:'authenticated_operator',permission:'support.cases'});
+ }
+ if(can('people.read'))await add('team',scope);
+ if(can('properties.read')||can('properties.own'))await add('units',scope,{permission:c.permissions.includes('properties.read')?'properties.read':'properties.own'});
+ if(can('support.access.request'))await add('activeGrants',[req.user!.id]);
+ if(can('onboarding.manage'))await add('onboardingRemaining',[can('organizations.read'),req.user!.id],{
+  scope:can('organizations.read')?'platform':'assigned_to_authenticated_operator'
+ });
+ if(can('people.invite'))await add('pendingInvites',scope);
+ if(can('requests.read')||can('requests.own'))await add('openRequests',[...scope,can('requests.read'),req.user!.id],{
+  permission:can('requests.read')?'requests.read':'requests.own'
+ });
+ if(can('workorders.assigned'))await add('assignedWork',[...scope,req.user!.id]);
+ if(can('defects.read')||can('defects.assigned')){
+  const args=[...scope,can('defects.read'),req.user!.id];
+  const permission=can('defects.read')?'defects.read':'defects.assigned';
+  await add('openDefects',args,{permission});await add('reviewDefects',args,{permission});
+ }
+ if(can('handover.read'))await add('handoverReady',scope);
+ if(can('access.validate')||can('access.create'))await add('validPasses',[...scope,can('access.validate'),req.user!.id],{
+  permission:can('access.validate')?'access.validate':'access.create'
+ });
+ if(can('billing.read')||can('billing.own')){
+  const permission=can('billing.read')?'billing.read':'billing.own';
+  const financeScope=can('billing.read')?'organization_building_unit':'organization_building_unit_and_authenticated_payer';
+  const args=[...scope,can('billing.read'),req.user!.id,currency,period?period+'-01':null];
+  const query=(await pool.query(KPI_QUERIES['finance.published_invoice_totals'],args)).rows[0];
+  const invoiceCount=Number(query.invoice_count);
+  for(const key of ['charged','paid','balance'] as const){
+   const definition=KPI_REGISTRY[key];
+   cards.push({key,value:String(query[key]),currency,definition:definition.definition,
+    queryId:definition.queryId,permission,module:definition.module,scope:financeScope,
+    dataState:invoiceCount===0?'no_data':'measured',noDataBehavior:definition.noDataBehavior});
+  }
+ }
+ res.json({cards});
+});

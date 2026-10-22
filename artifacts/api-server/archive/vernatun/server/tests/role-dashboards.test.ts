@@ -5,6 +5,7 @@ import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
 import {roleKeys} from '../roles.js';
+import {KPI_REGISTRY} from '../kpi-registry.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated test DB required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');
@@ -33,7 +34,17 @@ test('all 14 roles receive real scoped cards without widening financial permissi
  for(const role of roleKeys){
   const c=await new Client().login(role),r=await c.call('/role-insights?currency=AMD');
   assert.equal(r.status,200,role);assert.ok(Array.isArray(r.data.cards),role);
-  for(const card of r.data.cards)assert.match(card.value,/^-?\d+$/,role+':'+card.key);
+  for(const card of r.data.cards){
+   assert.match(card.value,/^-?\d+$/,role+':'+card.key);
+   const definition=KPI_REGISTRY[card.key as keyof typeof KPI_REGISTRY];
+   assert.ok(definition,role+': registry entry '+card.key);
+   assert.equal(card.definition,definition.definition,role+': definition '+card.key);
+   assert.equal(card.module,definition.module,role+': module '+card.key);
+   assert.equal(card.noDataBehavior,definition.noDataBehavior,role+': empty-state rule '+card.key);
+   assert.ok(card.permission.split(' OR ').some((p:string)=>c.context.permissions.includes(p)),role+': permission '+card.key);
+   assert.ok(typeof card.queryId==='string'&&typeof card.scope==='string',role+': query/scope '+card.key);
+   assert.equal(card.dataState,'measured',role+': count data state '+card.key);
+  }
   if(!c.context.permissions.some((p:string)=>p==='billing.read'||p==='billing.own'))assert.ok(!r.data.cards.some((x:any)=>x.currency),role+' has no financial cards');
   if(role!=='platform_admin')assert.ok(!r.data.cards.some((x:any)=>x.key==='organizations'),role+' has no platform totals');
  }
@@ -127,9 +138,12 @@ test('financial cards filter by month, currency, payer and tenant; no invented z
  const value=(r:any,key:string)=>r.data.cards.find((c:any)=>c.key===key)?.value;
  const own=await owner.call('/role-insights?period=1999-01&currency=AMD');
  assert.equal(own.status,200);assert.equal(value(own,'charged'),'11000');
+ assert.equal(own.data.cards.find((c:any)=>c.key==='charged').dataState,'measured');
  assert.equal(value(await manager.call('/role-insights?period=1999-01&currency=AMD'),'charged'),'33000');
  assert.equal(value(await owner.call('/role-insights?period=1999-01&currency=USD'),'charged'),'7000');
- assert.equal(value(await owner.call('/role-insights?period=1999-03&currency=AMD'),'charged'),'0');
+ const emptyPeriod=await owner.call('/role-insights?period=1999-03&currency=AMD');
+ assert.equal(value(emptyPeriod,'charged'),'0');
+ assert.equal(emptyPeriod.data.cards.find((c:any)=>c.key==='charged').dataState,'no_data');
  assert.ok(!(await other.call('/role-insights?period=1999-01&currency=AMD')).data.cards.some((c:any)=>c.currency));
  assert.equal((await owner.call('/role-insights?period=1999-13')).status,400);
  assert.equal((await owner.call('/role-insights?currency=INVALID')).status,400);

@@ -1095,13 +1095,13 @@ paths:
   /role-insights:
     get:
       operationId: getRoleInsights
-      description: Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
+      description: Live permission/module-scoped role totals. Each card includes its server-side metric definition, canonical query id, permission, module, data scope and empty-state rule. Optional period filters financial cards only.
       parameters:
         - { in: query, name: currency, schema: { type: string, enum: [AMD, RUB, USD] } }
         - { in: query, name: period, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' } }
       responses:
         '200':
-          description: Scoped metrics; no inferred trends or external payment revenue
+          description: Scoped metrics and KPI registry metadata; no inferred trends or external payment revenue
           content:
             application/json:
               schema:
@@ -1113,6 +1113,41 @@ paths:
                     items: { $ref: '#/components/schemas/RoleInsightCard' }
         '401': { description: Authentication required }
         '403': { description: Inactive or unavailable role context }
+  /platform/implementation-meetings:
+    get:
+      operationId: listPlatformImplementationMeetings
+      description: Internal support planning records. Does not send invitations, email or create tenant governance meetings. Requires global onboarding.manage; operators see their own records and platform leads may see the global queue.
+      parameters:
+        - { in: query, name: from, schema: { type: string, format: date-time } }
+        - { in: query, name: to, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: Scoped internal support calendar, content: { application/json: { schema: { $ref: '#/components/schemas/PlatformSupportMeetingList' } } } }
+        '403': { description: Tenant contexts are not allowed to access the platform support calendar }
+    post:
+      operationId: createPlatformImplementationMeeting
+      description: Create an idempotent internal planning entry; validates IANA time zone, future time, duration and organizer availability. No invitations are sent.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PlatformSupportMeetingInput' } } }
+      responses:
+        '201': { description: Created internal support meeting, content: { application/json: { schema: { $ref: '#/components/schemas/PlatformSupportMeeting' } } } }
+        '400': { description: "Invalid meeting fields, time zone or time range" }
+        '403': { description: Global support calendar permission required }
+        '409': { description: "Organizer has an overlapping active meeting or operation conflicts" }
+  /platform/implementation-meetings/{id}/change:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: changePlatformImplementationMeeting
+      description: Versioned idempotent edit, confirm, cancel or completion. Completed and cancelled records are terminal; changes are appended to an immutable history.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PlatformSupportMeetingChangeInput' } } }
+      responses:
+        '200': { description: Updated meeting, content: { application/json: { schema: { $ref: '#/components/schemas/PlatformSupportMeeting' } } } }
+        '403': { description: Not authorized for this meeting }
+        '404': { description: Meeting not found in the current operator scope }
+        '409': { description: "Stale version, invalid transition or scheduling conflict" }
   /roles/{id}/options:
     parameters:
       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -4222,11 +4257,65 @@ components:
           items: { $ref: '#/components/schemas/DefectEvidenceReport' }
     RoleInsightCard:
       type: object
-      required: [key, value]
+      required: [key, value, definition, queryId, permission, module, scope, dataState, noDataBehavior]
       properties:
         key: { type: string }
         value: { type: string }
         currency: { type: string, enum: [AMD, RUB, USD] }
+        definition: { type: string }
+        queryId: { type: string }
+        permission: { type: string, description: Permission or OR-separated permission alternatives actually accepted by the server }
+        module: { type: [string, 'null'] }
+        scope: { type: string }
+        dataState: { type: string, enum: [measured, no_data] }
+        noDataBehavior: { type: string, enum: [zero_is_a_measured_count, no_matching_published_invoices] }
+    PlatformSupportMeeting:
+      type: object
+      required: [id, title, starts_at, ends_at, timezone, location, notes, status, version, created_by, updated_by, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        organization_id: { type: [string, 'null'], format: uuid }
+        organization_name: { type: [string, 'null'] }
+        organizer_name: { type: string }
+        title: { type: string }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        timezone: { type: string }
+        location: { type: string }
+        notes: { type: string }
+        status: { type: string, enum: [scheduled, confirmed, completed, cancelled] }
+        version: { type: integer }
+        created_by: { type: string, format: uuid }
+        updated_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlatformSupportMeetingInput:
+      type: object
+      required: [key, title, startsAt, endsAt, timezone]
+      additionalProperties: false
+      properties:
+        key: { type: string, format: uuid }
+        organizationId: { type: [string, 'null'], format: uuid }
+        title: { type: string, minLength: 2, maxLength: 200 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        timezone: { type: string, minLength: 1, maxLength: 100 }
+        location: { type: string, maxLength: 500 }
+        notes: { type: string, maxLength: 8000 }
+    PlatformSupportMeetingChangeInput:
+      oneOf:
+        - { type: object, required: [key, version, action], additionalProperties: false, properties: { key: { type: string, format: uuid }, version: { type: integer, minimum: 1 }, action: { const: edit }, title: { type: string, minLength: 2, maxLength: 200 }, organizationId: { type: [string, 'null'], format: uuid }, startsAt: { type: string, format: date-time }, endsAt: { type: string, format: date-time }, timezone: { type: string, minLength: 1, maxLength: 100 }, location: { type: string, maxLength: 500 }, notes: { type: string, maxLength: 8000 } } }
+        - { type: object, required: [key, version, action], additionalProperties: false, properties: { key: { type: string, format: uuid }, version: { type: integer, minimum: 1 }, action: { const: confirm } } }
+        - { type: object, required: [key, version, action], additionalProperties: false, properties: { key: { type: string, format: uuid }, version: { type: integer, minimum: 1 }, action: { const: cancel } } }
+        - { type: object, required: [key, version, action], additionalProperties: false, properties: { key: { type: string, format: uuid }, version: { type: integer, minimum: 1 }, action: { const: complete } } }
+    PlatformSupportMeetingList:
+      type: object
+      required: [meetings, hasMore]
+      properties:
+        meetings:
+          type: array
+          items: { $ref: '#/components/schemas/PlatformSupportMeeting' }
+        hasMore: { type: boolean }
     WorkspaceSearchItem:
       type: object
       required: [id, title, description]

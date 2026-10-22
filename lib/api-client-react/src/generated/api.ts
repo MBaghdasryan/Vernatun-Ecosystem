@@ -146,6 +146,7 @@ import type {
   ListOwnerships200Item,
   ListOwnershipsParams,
   ListPlatformCasesParams,
+  ListPlatformImplementationMeetingsParams,
   LogRetentionInput,
   LookupEquipmentParams,
   MaintenanceConfigurationInput,
@@ -179,6 +180,10 @@ import type {
   PlatformRecordsResponseResponse,
   PlatformStepChange,
   PlatformStepInput,
+  PlatformSupportMeeting,
+  PlatformSupportMeetingChangeInput,
+  PlatformSupportMeetingInput,
+  PlatformSupportMeetingList,
   PlatformVersionIntent,
   PortfolioObject,
   PortfolioObjectInput,
@@ -5833,7 +5838,7 @@ export const getGetRoleInsightsUrl = (params?: GetRoleInsightsParams,) => {
 }
 
 /**
- * Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
+ * Live permission/module-scoped role totals. Each card includes its server-side metric definition, canonical query id, permission, module, data scope and empty-state rule. Optional period filters financial cards only.
  */
 export const getRoleInsights = async (params?: GetRoleInsightsParams, options?: Parameters<typeof customFetch>[1]): Promise<GetRoleInsights200> => {
 
@@ -5897,6 +5902,258 @@ export function useGetRoleInsights<TData = Awaited<ReturnType<typeof getRoleInsi
 
 
 
+
+export const getListPlatformImplementationMeetingsUrl = (params?: ListPlatformImplementationMeetingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/implementation-meetings?${stringifiedParams}` : `/api/platform/implementation-meetings`
+}
+
+/**
+ * Internal support planning records. Does not send invitations, email or create tenant governance meetings. Requires global onboarding.manage; operators see their own records and platform leads may see the global queue.
+ */
+export const listPlatformImplementationMeetings = async (params?: ListPlatformImplementationMeetingsParams, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSupportMeetingList> => {
+
+  return customFetch<PlatformSupportMeetingList>(getListPlatformImplementationMeetingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformImplementationMeetingsQueryKey = (params?: ListPlatformImplementationMeetingsParams,) => {
+    return [
+    `/api/platform/implementation-meetings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlatformImplementationMeetingsQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformImplementationMeetings>>, TError = ErrorType<void>>(params?: ListPlatformImplementationMeetingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformImplementationMeetings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformImplementationMeetingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformImplementationMeetings>>> = ({ signal }) => listPlatformImplementationMeetings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformImplementationMeetings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformImplementationMeetingsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformImplementationMeetings>>>
+export type ListPlatformImplementationMeetingsQueryError = ErrorType<void>
+
+
+
+export function useListPlatformImplementationMeetings<TData = Awaited<ReturnType<typeof listPlatformImplementationMeetings>>, TError = ErrorType<void>>(
+ params?: ListPlatformImplementationMeetingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformImplementationMeetings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformImplementationMeetingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePlatformImplementationMeetingUrl = () => {
+
+
+
+
+  return `/api/platform/implementation-meetings`
+}
+
+/**
+ * Create an idempotent internal planning entry; validates IANA time zone, future time, duration and organizer availability. No invitations are sent.
+ */
+export const createPlatformImplementationMeeting = async (platformSupportMeetingInput: PlatformSupportMeetingInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSupportMeeting> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformSupportMeeting>(getCreatePlatformImplementationMeetingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformSupportMeetingInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePlatformImplementationMeetingMutationKey = () => ['createPlatformImplementationMeeting'] as const;
+
+export const getCreatePlatformImplementationMeetingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformImplementationMeeting>>, TError,CreatePlatformImplementationMeetingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlatformImplementationMeeting>>, TError,CreatePlatformImplementationMeetingMutationVariables, TContext> => {
+
+const mutationKey = getCreatePlatformImplementationMeetingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlatformImplementationMeeting>>, CreatePlatformImplementationMeetingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlatformImplementationMeeting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlatformImplementationMeetingMutationResult = NonNullable<Awaited<ReturnType<typeof createPlatformImplementationMeeting>>>
+    export type CreatePlatformImplementationMeetingMutationBody = BodyType<PlatformSupportMeetingInput>
+    export type CreatePlatformImplementationMeetingMutationError = ErrorType<void>
+    export type CreatePlatformImplementationMeetingMutationVariables = {data: BodyType<PlatformSupportMeetingInput>}
+
+    export const useCreatePlatformImplementationMeeting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformImplementationMeeting>>, TError,CreatePlatformImplementationMeetingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlatformImplementationMeeting>>,
+        TError,
+        CreatePlatformImplementationMeetingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePlatformImplementationMeetingMutationOptions(options));
+    }
+
+export const getChangePlatformImplementationMeetingUrl = (id: string,) => {
+
+
+
+
+  return `/api/platform/implementation-meetings/${id}/change`
+}
+
+/**
+ * Versioned idempotent edit, confirm, cancel or completion. Completed and cancelled records are terminal; changes are appended to an immutable history.
+ */
+export const changePlatformImplementationMeeting = async (id: string,
+    platformSupportMeetingChangeInput: PlatformSupportMeetingChangeInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSupportMeeting> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformSupportMeeting>(getChangePlatformImplementationMeetingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformSupportMeetingChangeInput)
+  }
+);}
+
+
+
+
+
+export const getChangePlatformImplementationMeetingMutationKey = () => ['changePlatformImplementationMeeting'] as const;
+
+export const getChangePlatformImplementationMeetingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformImplementationMeeting>>, TError,ChangePlatformImplementationMeetingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePlatformImplementationMeeting>>, TError,ChangePlatformImplementationMeetingMutationVariables, TContext> => {
+
+const mutationKey = getChangePlatformImplementationMeetingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePlatformImplementationMeeting>>, ChangePlatformImplementationMeetingMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changePlatformImplementationMeeting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePlatformImplementationMeetingMutationResult = NonNullable<Awaited<ReturnType<typeof changePlatformImplementationMeeting>>>
+    export type ChangePlatformImplementationMeetingMutationBody = BodyType<PlatformSupportMeetingChangeInput>
+    export type ChangePlatformImplementationMeetingMutationError = ErrorType<void>
+    export type ChangePlatformImplementationMeetingMutationVariables = {id: string;data: BodyType<PlatformSupportMeetingChangeInput>}
+
+    export const useChangePlatformImplementationMeeting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePlatformImplementationMeeting>>, TError,ChangePlatformImplementationMeetingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changePlatformImplementationMeeting>>,
+        TError,
+        ChangePlatformImplementationMeetingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangePlatformImplementationMeetingMutationOptions(options));
+    }
 
 export const getGetAssignmentScopeOptionsUrl = (id: string,) => {
 

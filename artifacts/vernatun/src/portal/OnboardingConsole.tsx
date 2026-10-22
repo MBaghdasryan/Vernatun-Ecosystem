@@ -3,9 +3,10 @@ import {request} from './client';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import ImplementationTools from './ImplementationTools';
+import PlatformSupportMeetings from './PlatformSupportMeetings';
 import {p5,Fail,Frozen,Badge,useFrozen,useMounted,useMe,fmt,day10,type Row} from './phase5-ui';
 export default function OnboardingConsole(props:{c:RoleContext;language:Language}){
- return <><OnboardingStages {...props}/>{!props.c.organization_id&&<ImplementationTools key={props.c.id} language={props.language}/>}</>;
+ return <><OnboardingStages {...props}/>{!props.c.organization_id&&<><PlatformSupportMeetings key={'meetings-'+props.c.id} {...props}/><ImplementationTools key={'tools-'+props.c.id} language={props.language}/></>}</>;
 }
 function OnboardingStages({c,language:l}:{c:RoleContext;language:Language}){
  const tx=(k:string)=>p5(l,k);const me=useMe();const admin=!c.organization_id&&(c.permissions.includes('organizations.manage')||c.permissions.includes('support.assign'));const canCreate=!c.organization_id;const live=useMounted();

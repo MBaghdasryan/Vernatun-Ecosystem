@@ -1419,7 +1419,7 @@ export const PostDefectMessageResponse = zod.object({
 
 
 /**
- * Live permission/module-scoped role totals. Optional period filters financial cards only; other cards describe current operational state.
+ * Live permission/module-scoped role totals. Each card includes its server-side metric definition, canonical query id, permission, module, data scope and empty-state rule. Optional period filters financial cards only.
  */
 export const getRoleInsightsQueryPeriodRegExp = new RegExp('^\\d{4}-(0[1-9]|1[0-2])$');
 
@@ -1433,8 +1433,158 @@ export const GetRoleInsightsResponse = zod.object({
   "cards": zod.array(zod.object({
   "key": zod.string(),
   "value": zod.string(),
-  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional()
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "definition": zod.string(),
+  "queryId": zod.string(),
+  "permission": zod.string().describe('Permission or OR-separated permission alternatives actually accepted by the server'),
+  "module": zod.string().nullable(),
+  "scope": zod.string(),
+  "dataState": zod.enum(['measured', 'no_data']),
+  "noDataBehavior": zod.enum(['zero_is_a_measured_count', 'no_matching_published_invoices'])
 }))
+})
+
+
+/**
+ * Internal support planning records. Does not send invitations, email or create tenant governance meetings. Requires global onboarding.manage; operators see their own records and platform leads may see the global queue.
+ */
+export const ListPlatformImplementationMeetingsQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
+
+export const ListPlatformImplementationMeetingsResponse = zod.object({
+  "meetings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organization_id": zod.string().uuid().nullish(),
+  "organization_name": zod.string().nullish(),
+  "organizer_name": zod.string().optional(),
+  "title": zod.string(),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "timezone": zod.string(),
+  "location": zod.string(),
+  "notes": zod.string(),
+  "status": zod.enum(['scheduled', 'confirmed', 'completed', 'cancelled']),
+  "version": zod.number().int(),
+  "created_by": zod.string().uuid(),
+  "updated_by": zod.string().uuid(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})),
+  "hasMore": zod.boolean()
+})
+
+
+/**
+ * Create an idempotent internal planning entry; validates IANA time zone, future time, duration and organizer availability. No invitations are sent.
+ */
+export const createPlatformImplementationMeetingBodyTitleMin = 2;
+export const createPlatformImplementationMeetingBodyTitleMax = 200;
+
+export const createPlatformImplementationMeetingBodyTimezoneMax = 100;
+
+export const createPlatformImplementationMeetingBodyLocationMax = 500;
+
+export const createPlatformImplementationMeetingBodyNotesMax = 8000;
+
+
+
+export const CreatePlatformImplementationMeetingBody = zod.object({
+  "key": zod.string().uuid(),
+  "organizationId": zod.string().uuid().nullish(),
+  "title": zod.string().min(createPlatformImplementationMeetingBodyTitleMin).max(createPlatformImplementationMeetingBodyTitleMax),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "timezone": zod.string().min(1).max(createPlatformImplementationMeetingBodyTimezoneMax),
+  "location": zod.string().max(createPlatformImplementationMeetingBodyLocationMax).optional(),
+  "notes": zod.string().max(createPlatformImplementationMeetingBodyNotesMax).optional()
+})
+
+export const CreatePlatformImplementationMeetingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organization_id": zod.string().uuid().nullish(),
+  "organization_name": zod.string().nullish(),
+  "organizer_name": zod.string().optional(),
+  "title": zod.string(),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "timezone": zod.string(),
+  "location": zod.string(),
+  "notes": zod.string(),
+  "status": zod.enum(['scheduled', 'confirmed', 'completed', 'cancelled']),
+  "version": zod.number().int(),
+  "created_by": zod.string().uuid(),
+  "updated_by": zod.string().uuid(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})
+
+
+/**
+ * Versioned idempotent edit, confirm, cancel or completion. Completed and cancelled records are terminal; changes are appended to an immutable history.
+ */
+export const ChangePlatformImplementationMeetingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const changePlatformImplementationMeetingBodyOneTitleMin = 2;
+export const changePlatformImplementationMeetingBodyOneTitleMax = 200;
+
+export const changePlatformImplementationMeetingBodyOneTimezoneMax = 100;
+
+export const changePlatformImplementationMeetingBodyOneLocationMax = 500;
+
+export const changePlatformImplementationMeetingBodyOneNotesMax = 8000;
+
+
+
+
+
+
+export const ChangePlatformImplementationMeetingBody = zod.union([zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.literal("edit"),
+  "title": zod.string().min(changePlatformImplementationMeetingBodyOneTitleMin).max(changePlatformImplementationMeetingBodyOneTitleMax).optional(),
+  "organizationId": zod.string().uuid().nullish(),
+  "startsAt": zod.coerce.date().optional(),
+  "endsAt": zod.coerce.date().optional(),
+  "timezone": zod.string().min(1).max(changePlatformImplementationMeetingBodyOneTimezoneMax).optional(),
+  "location": zod.string().max(changePlatformImplementationMeetingBodyOneLocationMax).optional(),
+  "notes": zod.string().max(changePlatformImplementationMeetingBodyOneNotesMax).optional()
+}),zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.literal("confirm")
+}),zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.literal("cancel")
+}),zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.literal("complete")
+})])
+
+export const ChangePlatformImplementationMeetingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organization_id": zod.string().uuid().nullish(),
+  "organization_name": zod.string().nullish(),
+  "organizer_name": zod.string().optional(),
+  "title": zod.string(),
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "timezone": zod.string(),
+  "location": zod.string(),
+  "notes": zod.string(),
+  "status": zod.enum(['scheduled', 'confirmed', 'completed', 'cancelled']),
+  "version": zod.number().int(),
+  "created_by": zod.string().uuid(),
+  "updated_by": zod.string().uuid(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
 })
 
 

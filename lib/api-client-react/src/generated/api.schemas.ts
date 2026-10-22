@@ -2403,10 +2403,133 @@ export const RoleInsightCardCurrency = {
   USD: 'USD',
 } as const;
 
+export type RoleInsightCardDataState = typeof RoleInsightCardDataState[keyof typeof RoleInsightCardDataState];
+
+
+export const RoleInsightCardDataState = {
+  measured: 'measured',
+  no_data: 'no_data',
+} as const;
+
+export type RoleInsightCardNoDataBehavior = typeof RoleInsightCardNoDataBehavior[keyof typeof RoleInsightCardNoDataBehavior];
+
+
+export const RoleInsightCardNoDataBehavior = {
+  zero_is_a_measured_count: 'zero_is_a_measured_count',
+  no_matching_published_invoices: 'no_matching_published_invoices',
+} as const;
+
 export interface RoleInsightCard {
   key: string;
   value: string;
   currency?: RoleInsightCardCurrency;
+  definition: string;
+  queryId: string;
+  /** Permission or OR-separated permission alternatives actually accepted by the server */
+  permission: string;
+  /** @nullable */
+  module: string | null;
+  scope: string;
+  dataState: RoleInsightCardDataState;
+  noDataBehavior: RoleInsightCardNoDataBehavior;
+}
+
+export type PlatformSupportMeetingStatus = typeof PlatformSupportMeetingStatus[keyof typeof PlatformSupportMeetingStatus];
+
+
+export const PlatformSupportMeetingStatus = {
+  scheduled: 'scheduled',
+  confirmed: 'confirmed',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface PlatformSupportMeeting {
+  id: string;
+  /** @nullable */
+  organization_id?: string | null;
+  /** @nullable */
+  organization_name?: string | null;
+  organizer_name?: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  location: string;
+  notes: string;
+  status: PlatformSupportMeetingStatus;
+  version: number;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformSupportMeetingInput {
+  key: string;
+  /** @nullable */
+  organizationId?: string | null;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  timezone: string;
+  /** @maxLength 500 */
+  location?: string;
+  /** @maxLength 8000 */
+  notes?: string;
+}
+
+export type PlatformSupportMeetingChangeInput = {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: 'edit';
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  title?: string;
+  /** @nullable */
+  organizationId?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  timezone?: string;
+  /** @maxLength 500 */
+  location?: string;
+  /** @maxLength 8000 */
+  notes?: string;
+} | {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: 'confirm';
+} | {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: 'cancel';
+} | {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: 'complete';
+};
+
+export interface PlatformSupportMeetingList {
+  meetings: PlatformSupportMeeting[];
+  hasMore: boolean;
 }
 
 export interface WorkspaceSearchItem {
@@ -2871,6 +2994,11 @@ export const GetRoleInsightsCurrency = {
 
 export type GetRoleInsights200 = {
   cards: RoleInsightCard[];
+};
+
+export type ListPlatformImplementationMeetingsParams = {
+from?: string;
+to?: string;
 };
 
 export type ListIamUsersParams = {

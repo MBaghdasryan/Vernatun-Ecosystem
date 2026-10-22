@@ -6,9 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RoleInsightCardCurrency } from './roleInsightCardCurrency';
+import type { RoleInsightCardDataState } from './roleInsightCardDataState';
+import type { RoleInsightCardNoDataBehavior } from './roleInsightCardNoDataBehavior';
 
 export interface RoleInsightCard {
   key: string;
   value: string;
   currency?: RoleInsightCardCurrency;
+  definition: string;
+  queryId: string;
+  /** Permission or OR-separated permission alternatives actually accepted by the server */
+  permission: string;
+  /** @nullable */
+  module: string | null;
+  scope: string;
+  dataState: RoleInsightCardDataState;
+  noDataBehavior: RoleInsightCardNoDataBehavior;
 }
