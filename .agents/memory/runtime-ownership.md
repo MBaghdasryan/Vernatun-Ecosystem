@@ -43,3 +43,16 @@ repeated afterward.
 
 **How to apply:** Do not regenerate a missing baseline from current data and
 claim it proves before/after preservation. Record the evidence gap explicitly.
+
+Published application files are not a durable in-place update target. Keep
+uploaded release packages in private App Storage and send installation through
+the configured deployment pipeline; never extract or execute a package inside
+the running service.
+
+**Why:** Replit's published runtime filesystem is discarded across restart,
+redeploy, and republish, so a successful local file replacement could disappear
+or diverge from the next deployment.
+
+**How to apply:** Separate package upload/validation/staging from installation.
+Require a verified backup before staging, and report installation as unsupported
+until a deployment-native, reversible release mechanism exists.

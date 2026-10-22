@@ -11,13 +11,17 @@ import SystemErrors from './SystemErrors';
 import SystemBackups,{backupsLabel} from './SystemBackups';
 import ApiCenter,{apiLabel} from './ApiCenter';
 import {CachePanel,SessionsPanel,EnvironmentPanel,RetentionPanel,ADMIN_S,ENV_LABELS,canEnterSystem} from './SystemAdmin';
+import {IntegrationsPanel,WebhooksPanel} from './SystemConnections';
+import SystemModules from './SystemModules';
+import SystemUpdates from './SystemUpdates';
 
-type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups'|'api';
+type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups'|'api'|'integrations'|'webhooks'|'modules'|'updates';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
  read_access_verified:['Հաստատված','Подтверждено','Verified'],probe_failed:['Ստուգումը ձախողվեց','Проверка не удалась','Probe failed'],probe_timeout:['Ժամանակը սպառվեց','Тайм-аут','Timed out'],
  emailEvidence:['Էլփոստի ցուցանիշները բոլոր մատակարարների պահպանված տվյալներն են, ոչ կենդանի ստուգում։ Ընդունումը առաքում չէ։ 24 ժամվա հաշվիչները հաշվում են եզակի նամակները՝ ըստ իրադարձության տեսակի․ մեկ նամակը կարող է լինել մի քանի հաշվիչում։ Անհայտ արդյունքը հաստատված ձախողում չէ։','Почтовые показатели — сохранённые данные всех провайдеров, не проверка соединения. Принятие не означает доставку. За 24 часа считаются уникальные письма по каждому типу события; одно письмо может попасть в несколько счётчиков. Неизвестный результат — не подтверждённый сбой.','Email metrics use retained evidence across all providers, not a live probe. Acceptance is not delivery. Each 24-hour event counter counts distinct messages; one message may appear in multiple counters. An unknown result is not a confirmed failure.'],
- system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
+  system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
+  modules:['Մոդուլներ','Модули','Modules'],updates:['Թարմացումներ','Обновления','Updates'],
  healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
  warning:['Զգուշացում','Предупреждение','Warning'],critical:['Կրիտիկական','Критично','Critical'],
  running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],interrupted:['Ընդհատված','Прервано','Interrupted'],
@@ -69,8 +73,8 @@ const MAX:Record<string,number>={endpoint:240,errorCode:60,job:60,q:100,requestI
 export const systemLabel=(l:Language)=>S.system[L(l)];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
-type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read'|'api.read';
-const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'},{key:'api',perm:'api.read'}];
+type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read'|'api.read'|'integrations.read'|'plugins.read'|'updates.read';
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'},{key:'api',perm:'api.read'},{key:'integrations',perm:'integrations.read'},{key:'webhooks',perm:'api.read'},{key:'modules',perm:'plugins.read'},{key:'updates',perm:'updates.read'}];
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
 
 // Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
@@ -169,12 +173,12 @@ function Jobs({ck,l}:{ck:string;l:Language}){
   </section>}</div>;
 }
 
-export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'||s==='api'?s:'overview'}
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'||s==='api'||s==='integrations'||s==='webhooks'||s==='modules'||s==='updates'?s:'overview'}
 export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
- const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):k==='api'?apiLabel(l):(S[k]??ADMIN_S[k])[L(l)];
+  const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):k==='api'?apiLabel(l):k==='integrations'?['Ինտեգրումներ','Интеграции','Integrations'][L(l)]:k==='webhooks'?['Ելքային webhook-ներ','Исходящие webhooks','Outgoing webhooks'][L(l)]:k==='modules'?['Մոդուլներ և ընդլայնումներ','Модули и расширения','Modules & Extensions'][L(l)]:k==='updates'?['Թարմացումներ','Обновления','Updates'][L(l)]:(S[k]??ADMIN_S[k])[L(l)];
  const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
  useEffect(()=>{const pop=()=>setTab(systemTab(location.pathname));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop)},[]);
- const visible=TABS.filter(x=>c.permissions.includes(x.perm));
+ const visible=TABS.filter(x=>c.permissions.includes(x.perm)&&(x.key!=='webhooks'||c.permissions.includes('api.clients.manage')));
  const current=visible.some(x=>x.key===tab)?tab:(visible[0]?.key??'overview');
  const denied=current!==tab;
  useEffect(()=>{if(denied&&location.pathname.startsWith('/console/system/'))history.replaceState(null,'','/console/system/'+current)},[denied,current]);
@@ -192,9 +196,13 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
     {current==='retention'&&<RetentionPanel key={ck+':r'} ck={ck} l={l} canManage={c.permissions.includes('logs.manage')}/>}
     {current==='backups'&&<SystemBackups key={ck+':b'} ck={ck} l={l} perms={{create:c.permissions.includes('backups.create'),download:c.permissions.includes('backups.download'),delete:c.permissions.includes('backups.delete'),policies:c.permissions.includes('backups.policies.manage'),restore:c.permissions.includes('backups.restore')}}/>}
     {current==='api'&&<ApiCenter key={ck+':a'} ck={ck} l={l} perms={{clients:c.permissions.includes('api.clients.manage'),keys:c.permissions.includes('api.keys.manage')}}/>}
+    {current==='integrations'&&<IntegrationsPanel key={ck+':i'} ck={ck} l={l} perms={{integrationRead:c.permissions.includes('integrations.read'),integrationManage:c.permissions.includes('integrations.manage'),integrationTest:c.permissions.includes('integrations.test'),webhookRead:false,webhookManage:false,deliveryManage:false}}/>}
+    {current==='webhooks'&&<WebhooksPanel key={ck+':w'} ck={ck} l={l} perms={{integrationRead:false,integrationManage:false,integrationTest:false,webhookRead:c.permissions.includes('api.read')&&c.permissions.includes('api.clients.manage'),webhookManage:c.permissions.includes('api.clients.manage'),deliveryManage:c.permissions.includes('jobs.manage')}}/>}
     {current==='cache'&&<CachePanel key={ck+':c'} ck={ck} l={l} canClear={c.permissions.includes('cache.clear')}/>}
     {current==='sessions'&&<SessionsPanel key={ck+':s'} ck={ck} l={l} canRevoke={c.permissions.includes('sessions.revoke')}/>}
     {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}
+     {current==='modules'&&<SystemModules key={ck+':m'} language={l} canRead={c.permissions.includes('plugins.read')}/>}
+     {current==='updates'&&<SystemUpdates key={ck+':u'} language={l} canRead={c.permissions.includes('updates.read')} canUpload={c.permissions.includes('updates.upload')} canStage={c.permissions.includes('updates.upload')} canBackups={c.permissions.includes('backups.read')}/>}
   </div>
  </div>;
 }

@@ -2488,6 +2488,56 @@ page?: number;
 
 export type GetSystemApiDocumentation200 = { [key: string]: unknown };
 
+export type GetSystemModuleRegistry200 = { [key: string]: unknown };
+
+export type GetSystemUpdates200 = { [key: string]: unknown };
+
+export type UploadSystemUpdate201 = { [key: string]: unknown };
+
+export type GetSystemUpdate200 = { [key: string]: unknown };
+
+export type ValidateSystemUpdate200 = { [key: string]: unknown };
+
+export type StageSystemUpdateBodyConfirmation = typeof StageSystemUpdateBodyConfirmation[keyof typeof StageSystemUpdateBodyConfirmation];
+
+
+export const StageSystemUpdateBodyConfirmation = {
+  STAGE_UPDATE: 'STAGE UPDATE',
+} as const;
+
+export type StageSystemUpdateBody = {
+  backupId: string;
+  confirmation: StageSystemUpdateBodyConfirmation;
+};
+
+export type StageSystemUpdate200 = { [key: string]: unknown };
+
+export type InstallSystemUpdateBodyConfirmation = typeof InstallSystemUpdateBodyConfirmation[keyof typeof InstallSystemUpdateBodyConfirmation];
+
+
+export const InstallSystemUpdateBodyConfirmation = {
+  INSTALL_UPDATE: 'INSTALL UPDATE',
+} as const;
+
+export type InstallSystemUpdateBody = {
+  confirmation: InstallSystemUpdateBodyConfirmation;
+};
+
+export type InstallSystemUpdate409 = { [key: string]: unknown };
+
+export type RollbackSystemUpdateBodyConfirmation = typeof RollbackSystemUpdateBodyConfirmation[keyof typeof RollbackSystemUpdateBodyConfirmation];
+
+
+export const RollbackSystemUpdateBodyConfirmation = {
+  ROLLBACK_UPDATE: 'ROLLBACK UPDATE',
+} as const;
+
+export type RollbackSystemUpdateBody = {
+  confirmation: RollbackSystemUpdateBodyConfirmation;
+};
+
+export type RollbackSystemUpdate409 = { [key: string]: unknown };
+
 export type GetApiCenterParams = {
 /**
  * @minimum 1

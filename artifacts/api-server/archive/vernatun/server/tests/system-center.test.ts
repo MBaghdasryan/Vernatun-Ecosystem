@@ -20,8 +20,39 @@ import {scheduleBackups,pruneScheduledBackups} from '../system-backup-policies.j
 import {backupStorage} from '../operations-backup-storage.js';
 import {drillEncryptedBackup,recoverySummary} from '../operations-restore.js';
 import {savePrivateFile,deletePrivateFile} from '../private-files.js';
+import {validateUpdateArchive} from '../update-packages.js';
+import {updatePackageStorage} from '../update-storage.js';
+import {PostgresRateStore} from '../rate-limit.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
+function zipCrc(bytes:Buffer){let crc=0xffffffff;for(const b of bytes){crc^=b;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}return (crc^0xffffffff)>>>0}
+function makeZip(entries:{name:string;bytes:Buffer;mode?:number}[]){
+ const local:Buffer[]=[],central:Buffer[]=[];let offset=0;
+ for(const entry of entries){
+  const name=Buffer.from(entry.name),checksum=zipCrc(entry.bytes),localHeader=Buffer.alloc(30);
+  localHeader.writeUInt32LE(0x04034b50,0);localHeader.writeUInt16LE(20,4);localHeader.writeUInt16LE(0,6);localHeader.writeUInt16LE(0,8);
+  localHeader.writeUInt32LE(checksum,14);localHeader.writeUInt32LE(entry.bytes.length,18);localHeader.writeUInt32LE(entry.bytes.length,22);
+  localHeader.writeUInt16LE(name.length,26);localHeader.writeUInt16LE(0,28);
+  local.push(localHeader,name,entry.bytes);
+  const record=Buffer.alloc(46);record.writeUInt32LE(0x02014b50,0);record.writeUInt16LE(0x0314,4);record.writeUInt16LE(20,6);
+  record.writeUInt16LE(0,8);record.writeUInt16LE(0,10);record.writeUInt32LE(checksum,16);
+  record.writeUInt32LE(entry.bytes.length,20);record.writeUInt32LE(entry.bytes.length,24);
+  record.writeUInt16LE(name.length,28);record.writeUInt16LE(0,30);record.writeUInt16LE(0,32);record.writeUInt16LE(0,34);
+  record.writeUInt32LE(((entry.mode??0o100644)<<16)>>>0,38);record.writeUInt32LE(offset,42);
+  central.push(record,name);offset+=localHeader.length+name.length+entry.bytes.length;
+ }
+ const directory=Buffer.concat(central),eocd=Buffer.alloc(22);eocd.writeUInt32LE(0x06054b50,0);eocd.writeUInt16LE(entries.length,8);
+ eocd.writeUInt16LE(entries.length,10);eocd.writeUInt32LE(directory.length,12);eocd.writeUInt32LE(offset,16);
+ return Buffer.concat([...local,directory,eocd]);
+}
+function updateZip(payloadPaths=['artifacts/api-server/dist/index.mjs','artifacts/vernatun/dist/index.html']){
+ const files=payloadPaths.map((path,i)=>({path,bytes:Buffer.from(i?'<!doctype html><title>Vernatun</title>':'export default 1;')}));
+ const declared=files.map(f=>({path:f.path,sha256:createHash('sha256').update(f.bytes).digest('hex'),sizeBytes:f.bytes.length}));
+ const checksum=createHash('sha256').update([...declared].sort((a,b)=>a.path.localeCompare(b.path)).map(f=>`${f.path}\0${f.sha256}\n`).join('')).digest('hex');
+ const manifest={packageFormatVersion:1,product:'vernatun',version:'1.0.1',fromVersions:['1.0.0'],createdAt:new Date().toISOString(),
+  checksum,databaseMigrationRequired:false,restartRequired:true,minimumNodeVersion:'0.0.0',files:declared,releaseNotes:'Isolated QA package'};
+ return makeZip([...files.map(f=>({name:f.path,bytes:f.bytes})),{name:'vernatun-update.json',bytes:Buffer.from(JSON.stringify(manifest))}]);
+}
 const server=app.listen(0,'127.0.0.1');let base='',admin:Client,support:Client,org:Client;
 test('database diagnostics expose only safe missing-object identifiers',()=>{
  const pgError=(code:string,message:string)=>Object.assign(new Error(message),{code});
@@ -62,6 +93,12 @@ class Client{
   if(r.headers.getSetCookie().length)this.cookie=r.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
   const data=await r.json();if(data?.csrf)this.csrf=data.csrf;return {status:r.status,data,id:r.headers.get('X-Request-ID')};
  }
+  async upload(path:string,bytes:Buffer,fileName:string,confirmation='UPDATE PACKAGE'){
+   const r=await fetch(base+'/api'+path,{method:'POST',headers:{'Content-Type':'application/zip',Cookie:this.cookie,'X-CSRF-Token':this.csrf,
+    'X-Update-Filename':fileName,'X-Confirmation':confirmation},body:bytes});
+   if(r.headers.getSetCookie().length)this.cookie=r.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
+   return {status:r.status,data:await r.json()};
+  }
  async login(role:string){
   const a=Object.values(seeded.accounts).find((x:any)=>x.role===role) as any;
   await this.call('/auth/session');const r=await this.call('/auth/login','POST',{email:a.email,password:a.password});assert.equal(r.status,200);
@@ -76,9 +113,10 @@ before(async()=>{
 });
 after(async()=>{server.close();server.closeAllConnections();await new Promise(r=>setTimeout(r,100));await pool.end();
  const scope=process.env.PRIVATE_FILES_TEST_RUN;if(scope&&/^qa_[a-f0-9]{20}$/.test(scope))await rm('.local/operations-backups/'+scope,{recursive:true,force:true});
+ if(scope&&/^qa_[a-f0-9]{20}$/.test(scope))await rm('.local/operations-updates/'+scope,{recursive:true,force:true});
 });
 test('platform-only granular rights; tenants, support and anonymous denied',async()=>{
-  for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs','/system/errors','/system/cache','/system/environment','/system/sessions','/system/backups']){
+   for(const route of ['/system/overview','/system/health','/system/logs','/system/jobs','/system/errors','/system/cache','/system/environment','/system/sessions','/system/backups','/system/api/docs','/system/api','/system/integrations','/system/webhooks','/system/modules','/system/updates']){
   assert.equal((await new Client().call(route)).status,401);
   assert.equal((await support.call(route)).status,403);
   assert.equal((await org.call(route)).status,403);
@@ -88,6 +126,137 @@ test('platform-only granular rights; tenants, support and anonymous denied',asyn
  assert.equal((await admin.call('/system/logs')).status,403);
  assert.equal((await admin.call('/system/overview')).status,200);
  await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND permission_key='logs.read'",[admin.assignment]);
+});
+test('module registry reports bundled modules, real permission coverage, plan inclusion, and no executable extensions',async()=>{
+ const r=await admin.call('/system/modules');assert.equal(r.status,200);
+ assert.equal(r.data.modules.length,8);assert.ok(r.data.modules.every((m:any)=>m.type==='core'&&m.status==='installed'&&Array.isArray(m.capabilities)));
+ assert.deepEqual(r.data.extensions,[]);assert.equal(r.data.extensionPolicy.arbitraryPackagesAllowed,false);
+ assert.equal(r.data.extensionPolicy.installationSupported,false);
+ assert.ok(r.data.modules.some((m:any)=>m.moduleId==='requests'&&m.capabilities.includes('requests.read')));
+});
+test('update package validation rejects unsafe paths and executable archive members',()=>{
+ const traversal=validateUpdateArchive(updateZip(['../escape']),'1.0.0');
+ assert.equal(traversal.valid,false);assert.ok(traversal.issues.includes('unsafe_archive_path'));
+ const executable=validateUpdateArchive(makeZip([{name:'run.sh',bytes:Buffer.from('echo unsafe'),mode:0o100755}]),'1.0.0');
+ assert.equal(executable.valid,false);assert.ok(executable.issues.includes('unexpected_executable'));
+ const result=validateUpdateArchive(updateZip(),'1.0.0');
+ assert.equal(result.valid,true);assert.equal(result.compatible,true);assert.equal(result.manifest?.version,'1.0.1');
+});
+test('update packages are private, validated, permission-gated, staged only with verified backup, and never installed by runtime',async()=>{
+ const previous=process.env.VERNATUN_APP_VERSION;process.env.VERNATUN_APP_VERSION='1.0.0';let id:string|undefined;
+ try{
+  const denied=await support.call('/system/updates');assert.equal(denied.status,403);
+  const password=(Object.values(seeded.accounts) as any[]).find(x=>x.role==='platform_admin').password;
+  assert.equal((await admin.call('/auth/reauthenticate','POST',{password})).status,200);
+  const uploaded=await admin.upload('/system/updates/upload',updateZip(),'vernatun-1.0.1.zip');
+  assert.equal(uploaded.status,201);id=uploaded.data.id;assert.equal(uploaded.data.status,'validated');
+  assert.equal(uploaded.data.validation.compatible,true);
+  const detail=await admin.call(`/system/updates/${id}`);
+  assert.equal(detail.status,200);assert.equal(detail.data.version,'1.0.1');assert.equal('bytes' in detail.data,false);
+  const checked=await admin.call(`/system/updates/${id}/validate`,'POST',{});
+  assert.equal(checked.status,200);assert.equal(checked.data.status,'validated');
+  const stage=await admin.call(`/system/updates/${id}/stage`,'POST',{backupId:randomUUID(),confirmation:'STAGE UPDATE'});
+  assert.equal(stage.status,409);assert.equal(stage.data.error,'verified_database_backup_required');
+  const install=await admin.call(`/system/updates/${id}/install`,'POST',{confirmation:'INSTALL UPDATE'});
+  assert.equal(install.status,409);assert.equal(install.data.status,'manual_deployment_required');
+  assert.equal((await admin.call(`/system/updates/${id}`)).data.status,'validated');
+ }finally{
+  if(previous===undefined)delete process.env.VERNATUN_APP_VERSION;else process.env.VERNATUN_APP_VERSION=previous;
+  if(id){await updatePackageStorage().remove(id).catch(()=>{});await pool.query('DELETE FROM platform_updates WHERE id=$1',[id])}
+ }
+});
+test('API documentation and credentials are permission-gated, hashed, one-time, and organization-scoped',async()=>{
+ const docs=await admin.call('/system/api/docs');
+ assert.equal(docs.status,200);assert.ok(docs.data.openapi);assert.ok(docs.data.info?.title);
+ assert.ok(Object.keys(docs.data.paths??{}).length>0);
+ assert.ok(Object.values(docs.data.paths).some((path:any)=>Object.values(path).some((op:any)=>op.operationId)));
+ const forbidden=await pool.query('SELECT id FROM organizations ORDER BY id LIMIT 1');
+ const orgId=forbidden.rows[0].id;
+ const password=(Object.values(seeded.accounts) as any[]).find(x=>x.role==='platform_admin').password;
+ assert.equal((await admin.call('/auth/reauthenticate','POST',{password})).status,200);
+ const created=await admin.call('/system/api/clients','POST',{
+  name:'System API QA',description:'isolated authorization test',organizationId:orgId,
+  clientType:'organization',allowedScopes:['properties.read'],allowedIps:[],confirmation:'API CLIENT',
+ });
+ assert.equal(created.status,201);
+ const key=await admin.call(`/system/api/clients/${created.data.id}/keys`,'POST',{
+  name:'QA key',scopes:['properties.read'],expiresAt:new Date(Date.now()+86400000).toISOString(),
+  requestsPerMinute:30,confirmation:'API KEY',
+ });
+ assert.equal(key.status,201);assert.match(key.data.secret,/^vnt_/);
+ const digest=createHash('sha256').update(key.data.secret).digest('hex');
+ const stored=(await pool.query('SELECT key_hash FROM api_keys WHERE id=$1',[key.data.id])).rows[0].key_hash;
+ assert.equal(stored,digest);
+ const listed=await admin.call('/system/api');
+ assert.equal(listed.status,200);assert.ok(!JSON.stringify(listed.data).includes(key.data.secret));
+ assert.ok(!JSON.stringify(listed.data).includes(digest));
+ const external=await fetch(base+'/api/v1/properties',{headers:{Authorization:'Bearer '+key.data.secret}});
+ assert.equal(external.status,200,await external.clone().text());
+ assert.ok(!JSON.stringify(await external.json()).includes(password));
+ assert.equal((await admin.call(`/system/api/keys/${key.data.id}/revoke`,'POST',{confirmation:'API KEY'})).status,200);
+ assert.equal((await fetch(base+'/api/v1/properties',{headers:{Authorization:'Bearer '+key.data.secret}})).status,401);
+});
+test('integration credentials stay encrypted and activation requires a fresh successful test',async()=>{
+ const password=(Object.values(seeded.accounts) as any[]).find(x=>x.role==='platform_admin').password;
+ assert.equal((await admin.call('/auth/reauthenticate','POST',{password})).status,200);
+ const organizationId=(await pool.query('SELECT id FROM organizations ORDER BY id LIMIT 1')).rows[0].id;
+ const created=await admin.call('/system/integrations','POST',{
+  provider:'smtp',organizationId,displayName:'QA SMTP',environment:'sandbox',
+  config:{host:'127.0.0.1',port:587},credentials:{username:'qa-user',password:'QA_ONLY_SECRET'},
+  confirmation:'INTEGRATION',
+ });
+ assert.equal(created.status,201);
+ const instanceId=created.data.id;
+ const catalog=await admin.call('/system/integrations');
+ assert.equal(catalog.status,200);
+ assert.equal(catalog.data.providers.find((p:any)=>p.id==='smtp').adapterInstalled,true);
+ assert.ok(catalog.data.providers.filter((p:any)=>p.id!=='smtp').every((p:any)=>!p.adapterInstalled));
+ assert.ok(!JSON.stringify(catalog.data).includes('QA_ONLY_SECRET'));
+ assert.ok(!JSON.stringify(catalog.data).includes('encrypted_credentials'));
+ const encrypted=(await pool.query('SELECT encrypted_credentials FROM integration_instances WHERE id=$1',[instanceId])).rows[0].encrypted_credentials;
+ assert.ok(encrypted && JSON.stringify(encrypted).includes('ciphertext'));
+ assert.ok(!JSON.stringify(encrypted).includes('QA_ONLY_SECRET'));
+ assert.equal((await admin.call(`/system/integrations/${instanceId}/activate`,'POST',{revision:1,confirmation:'INTEGRATION'})).status,409);
+ const testResult=await admin.call(`/system/integrations/${instanceId}/test`,'POST',{revision:1,confirmation:'INTEGRATION'});
+ assert.equal(testResult.status,200);
+ assert.notEqual(testResult.data.status,'connected','private loopback addresses must not be probed');
+ assert.equal((await admin.call(`/system/integrations/${instanceId}/activate`,'POST',{revision:1,confirmation:'INTEGRATION'})).status,409);
+ assert.equal((await admin.call(`/system/integrations/${instanceId}`,'PUT',{
+  displayName:'QA SMTP updated',config:{host:'mail.invalid',port:587},revision:1,confirmation:'INTEGRATION',
+ })).status,200);
+ const updated=await admin.call('/system/integrations');
+ const row=updated.data.instances.find((i:any)=>i.id===instanceId);
+ assert.equal(row.revision,2);assert.equal(row.enabled,false);assert.equal(row.status,'not_configured');
+ assert.equal((await admin.call(`/system/integrations/${instanceId}/delete`,'POST',{revision:2,confirmation:'INTEGRATION'})).status,200);
+ assert.ok(!(await admin.call('/system/integrations')).data.instances.some((i:any)=>i.id===instanceId));
+});
+test('outgoing webhook secret is one-time, URLs are constrained, and delivery actions are auditable',async()=>{
+ const password=(Object.values(seeded.accounts) as any[]).find(x=>x.role==='platform_admin').password;
+ assert.equal((await admin.call('/auth/reauthenticate','POST',{password})).status,200);
+ const organizationId=(await pool.query('SELECT id FROM organizations ORDER BY id LIMIT 1')).rows[0].id;
+ const unsafe=await admin.call('/system/webhooks','POST',{
+  name:'Unsafe webhook',organizationId,endpoint:'http://127.0.0.1/admin',events:['request.created'],confirmation:'WEBHOOK',
+ });
+ assert.equal(unsafe.status,400);
+ const created=await admin.call('/system/webhooks','POST',{
+  name:'QA delivery',organizationId,endpoint:'https://qa.invalid/webhook',events:['request.created'],confirmation:'WEBHOOK',
+ });
+ assert.equal(created.status,201);assert.ok(created.data.secret);const secret=created.data.secret;
+ assert.equal((await admin.call(`/system/webhooks/${created.data.id}/state`,'POST',{enabled:true,confirmation:'WEBHOOK'})).status,200);
+ await pool.query(`INSERT INTO audit_events(organization_id,actor_user_id,action,entity_type,entity_id,details)
+  VALUES($1,$2,'request.create','resident_request',$3,'{}'::jsonb)`,[organizationId,admin.user,randomUUID()]);
+ const center=await admin.call('/system/webhooks');
+ assert.equal(center.status,200);assert.ok(center.data.events.includes('request.created'));
+ assert.ok(center.data.deliveries.some((d:any)=>d.eventName==='request.created'&&d.status==='pending'));
+ assert.ok(!JSON.stringify(center.data).includes(secret));
+ const delivery=center.data.deliveries.find((d:any)=>d.eventName==='request.created');
+ await pool.query("UPDATE outgoing_webhook_deliveries SET status='dead_letter' WHERE id=$1",[delivery.id]);
+ assert.equal((await admin.call(`/system/webhooks/deliveries/${delivery.id}/retry`,'POST',{confirmation:'WEBHOOK'})).status,200);
+ assert.equal((await admin.call(`/system/webhooks/deliveries/${delivery.id}/cancel`,'POST',{confirmation:'WEBHOOK'})).status,200);
+ const final=await admin.call('/system/webhooks');
+ assert.equal(final.data.deliveries.find((d:any)=>d.id===delivery.id).status,'cancelled');
+ assert.equal((await admin.call(`/system/webhooks/${created.data.id}/state`,'POST',{enabled:false,confirmation:'WEBHOOK'})).status,200);
+ assert.ok((await pool.query("SELECT 1 FROM audit_events WHERE action='system.webhook.created' AND entity_id=$1",[created.data.id])).rowCount);
 });
 test('actual cache administration never revokes sessions and environment is allowlisted',async()=>{
  const env=await admin.call('/system/environment');assert.equal(env.status,200);
@@ -464,6 +633,7 @@ test('bounded JSON/CSV exports require both permissions, preserve filters and ar
  assert.equal(logCsvCell('a,b\n"c"'),'"a,b\n""c"""');
  assert.equal((await admin.call('/system/log-exports','POST',{...body,from:body.to,to:body.from})).status,400);
  assert.equal((await admin.call('/system/log-exports','POST',{...body,from:'2000-01-01T00:00:00Z'})).status,400);
+  await pool.query('DELETE FROM auth_rate_limits WHERE key=$1',[new PostgresRateStore('system-read').key(admin.user)]);
  await pool.query("INSERT INTO system_log_events(category,level,event) SELECT 'system','info','qa_export_limit' FROM generate_series(1,5001)");
  assert.equal((await admin.call('/system/log-exports','POST',{...body,to:new Date(Date.now()+1000).toISOString(),q:'qa_export_limit'})).status,413);
  assert.equal((await admin.call('/system/log-exports','POST',body)).status,429);

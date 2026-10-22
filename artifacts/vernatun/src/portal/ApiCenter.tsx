@@ -4,6 +4,7 @@ import {fmtDate} from './console-util';
 import {getCsrfHeaders} from './client';
 import {ReauthPrompt,needsReauth,reauthDone} from './Reauth';
 import type {Language} from './i18n';
+import {SystemApiDocs} from './SystemConnections';
 
 type T3=[string,string,string];
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
@@ -15,7 +16,7 @@ const S:Record<string,T3>={
  b1:['/api/v1-ը միայն կարդալու համար է՝ առողջություն, գույքեր, միավորներ և հայտեր։ Գրելու endpoint-ներ չկան։','/api/v1 только для чтения: состояние, объекты, помещения и заявки. Эндпоинтов записи нет.','/api/v1 is read-only: health, properties, units and requests. There are no write endpoints.'],
  b2:['API scope-երը առանձին են վահանակի թույլտվություններից․ բանալին երբեք չի ստանում օգտատիրոջ դեր կամ UI հասանելիություն։','API-скоупы отделены от прав консоли: ключ никогда не получает роль пользователя или доступ к UI.','API scopes are separate from console permissions: a key never receives a user role or UI access.'],
  b3:['Scope-երը միտումնավոր ներառում են միայն իրականացված endpoint-ները։ Վճարումներ կամ բանկեր միացված չեն։','Скоупы намеренно покрывают только реализованные эндпоинты. Платежи и банки не подключены.','Scopes intentionally cover only implemented endpoints. No payments or banks are connected.'],
- b4:['Այս վահանակը արտաքին հարցումներ չի կատարում և հարցումների փորձարկիչ չունի։ API փաստաթղթերը կավելացվեն առանձին։','Консоль не выполняет внешних запросов и не содержит тестера запросов. Документация API будет добавлена отдельно.','This console makes no external calls and has no request tester. API documentation will be added separately.'],
+  b4:['Այս փաստաթուղթը միայն դիտման համար է․ այստեղ հարցումներ կատարելու հնարավորություն չկա։','Документация доступна только для просмотра; отправлять запросы отсюда нельзя.','Documentation is read-only; requests cannot be issued here.'],
  scopes:['Հասանելի scope-եր','Доступные скоупы','Available scopes'],
  clients:['Կլիենտներ','Клиенты','Clients'],total:['Ընդամենը՝ {n}','Всего: {n}','Total: {n}'],empty:['API կլիենտներ դեռ չկան։','API-клиентов пока нет.','No API clients yet.'],
  newClient:['Նոր կլիենտ','Новый клиент','New client'],name:['Անուն','Название','Name'],description:['Նկարագրություն','Описание','Description'],org:['Կազմակերպության UUID','UUID организации','Organization UUID'],orgHint:['Բիզնես scope-երը պահանջում են կազմակերպություն։ Միայն platform.health.read-ը կարող է լինել գլոբալ։','Бизнес-скоупы требуют организацию. Глобальным может быть только platform.health.read.','Business scopes require an organization. Only platform.health.read alone may be global.'],
@@ -93,6 +94,7 @@ export default function ApiCenter({ck,l,perms}:{ck:string;l:Language;perms:Perms
     <div className="ac-chips" data-testid="list-api-scopes">{d.scopes.map(s=><code key={s} className={'ac-chip sc-mono'+(s===GLOBAL_OK?' g':'')}>{s}</code>)}</div>
     <p className="sc-note">{t('orgHint')}</p>
    </section>
+    <SystemApiDocs l={l}/>
    {secret&&<SecretPanel s={secret} t={t} onHide={()=>setSecret(undefined)}/>}
    {reauth&&<ReauthPrompt language={l} onDone={()=>{setReauth(false);setMsg({t:reauthDone(l)})}} onCancel={()=>setReauth(false)}/>}
    {msg&&<p className={msg.bad?'p-error':'p-info'} role="status" data-testid="status-api-action">{msg.t}</p>}

@@ -373,6 +373,72 @@ export const ActWebhookDeliveryResponse = zod.object({
 export const GetSystemApiDocumentationResponse = zod.record(zod.string(), zod.unknown())
 
 
+export const GetSystemModuleRegistryResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetSystemUpdatesResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const uploadSystemUpdateHeaderXUpdateFilenameMax = 84;
+
+
+
+export const UploadSystemUpdateHeader = zod.object({
+  "X-Update-Filename": zod.string().max(uploadSystemUpdateHeaderXUpdateFilenameMax),
+  "X-Confirmation": zod.enum(['UPDATE PACKAGE'])
+})
+
+export const UploadSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const GetSystemUpdateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ValidateSystemUpdateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ValidateSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const StageSystemUpdateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const StageSystemUpdateBody = zod.object({
+  "backupId": zod.string().uuid(),
+  "confirmation": zod.enum(['STAGE UPDATE'])
+})
+
+export const StageSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const InstallSystemUpdateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const InstallSystemUpdateBody = zod.object({
+  "confirmation": zod.enum(['INSTALL UPDATE'])
+})
+
+export const InstallSystemUpdateResponse = zod.void()
+
+
+export const RollbackSystemUpdateParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RollbackSystemUpdateBody = zod.object({
+  "confirmation": zod.enum(['ROLLBACK UPDATE'])
+})
+
+export const RollbackSystemUpdateResponse = zod.void()
+
+
 
 
 

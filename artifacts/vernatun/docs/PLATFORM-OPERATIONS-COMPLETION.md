@@ -18,18 +18,19 @@ Current implementation status. The eight-phase prompt is
 | Restore | PARTIAL | Encrypted-package preflight and real isolated SQL drill | Contents/version inspection and disposable database recovery with fingerprints; production/working restore and application authorization rehearsal remain unavailable |
 | Cache | COMPLETE | Real + isolated tests | Actual storage-health cache only; process-scoped Memory provider, audited clearing, Redis adapter boundary tested but not connected; no imaginary org/user caches |
 | Sessions | COMPLETE | Real + isolated tests | Platform-only list/count/filter/paging, timestamps, coarse device, single/user revocation with confirmation and recent auth; late-save resurrection prevented |
-| OpenAPI | PARTIAL | Real generated contract | New endpoints included; interactive API Center not built |
-| API Clients | NOT IMPLEMENTED | — | Phase 4 |
-| API Keys | NOT IMPLEMENTED | — | Phase 4 |
-| Webhooks | PARTIAL | Existing Resend real implementation | No generic outbound webhook framework |
-| Integration Registry | NOT IMPLEMENTED | — | Existing provider boundaries preserved |
-| Secret Storage | PARTIAL | Runtime secrets + tested cryptographic foundation | AES-256-GCM purpose-bound envelope with independent key; development encryption validated; no integration vault CRUD/UI or managed rotation yet |
-| Modules | PARTIAL | Existing entitlements | Registry/dependency UI not yet extended |
-| Extensions | NOT IMPLEMENTED | — | No arbitrary plugin execution |
-| Update Upload | NOT IMPLEMENTED | — | Phase 7 |
-| Update Validation | NOT IMPLEMENTED | — | Phase 7 |
-| Update Installation | NOT SUPPORTED BY CURRENT DEPLOYMENT | — | No safe runtime replacement; later staging → manual publish |
-| Rollback | PARTIAL | Existing platform/checkpoint and isolated recovery tools | No new paired application/database rollback workflow |
+| OpenAPI | PARTIAL | Generated contract + codegen | New operations are in the source spec and generated clients; full contract-to-route audit remains |
+| API Clients | COMPLETE | Real + isolated tests | Scoped clients, permissions and status management |
+| API Keys | COMPLETE | Real + isolated tests | One-time raw value, hashed storage, scopes, revocation and expiry |
+| Webhooks | PARTIAL | Real + isolated tests | Outgoing endpoint/delivery controls exist; broader event coverage and signed-in browser acceptance remain |
+| Integration Registry | PARTIAL | Real + isolated tests | Provider-neutral UI/API; SMTP is the only installed adapter; no external provider connected by this prompt |
+| Secret Storage | PARTIAL | Real + isolated tests | Purpose-bound AES-256-GCM for integration credentials; no managed key rotation or full provider vault |
+| Modules | PARTIAL | Real registry + existing entitlements | Core modules, capabilities, plans and entitlement counts are visible; version/dependency metadata and organization-admin controls remain incomplete |
+| Extensions | NOT IMPLEMENTED | Policy enforced | No extension package registry or executable plugin support; arbitrary archive/script execution is disabled |
+| Update Upload | COMPLETE | Private App Storage + isolated tests | ZIP package upload is bounded, rate-limited, private and recorded in update history |
+| Update Validation | COMPLETE | Isolated tests | Manifest, checksums, paths, file types, size, compression ratio, expected app structure and compatibility are checked; package is never extracted or executed |
+| Update Staging | PARTIAL | Real + isolated tests | Requires a compatible package and verified database backup; no automatic update-triggered backup creation |
+| Update Installation | NOT SUPPORTED BY CURRENT DEPLOYMENT | Runtime boundary | Current deployment filesystem is not a safe persistent installation target; deploy through the configured pipeline |
+| Rollback | NOT SUPPORTED BY CURRENT DEPLOYMENT | Runtime boundary | Runtime rollback is blocked; use deployment history and verified recovery procedures |
 | Environment | COMPLETE | Real + isolated tests | Fixed allowlist of runtime/provider modes and secret configured/not-configured flags, no arbitrary environment enumeration |
 | Payments integration framework | PARTIAL | Existing business ledger only | General provider-capability framework still to build |
 | Concrete payment provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
@@ -37,9 +38,34 @@ Current implementation status. The eight-phase prompt is
 | Concrete bank provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Manual bank statement import | COMPLETE | Existing implementation, unchanged | Not re-tested or modified in this increment |
 
-Next scope: application-level recovery acceptance, remaining Phase 1 source
-coverage/health evidence and large exports, then outstanding API/integration/update work.
-Do not equate existing CLI support with a completed administrative workflow.
+Next scope: complete the deployment-native update/rollback path, register real
+core-module dependency/version metadata and organization-admin controls, and finish
+authenticated browser/production acceptance. Do not equate staging with installation.
+
+## Update Center and module-registry increment — 2026-10-22
+
+- Added protected, documented API operations and a role-gated Vernatun UI for the
+  module registry, update history, ZIP upload, repeat validation and staging.
+- Uploads are limited to 32 MiB and three per user per hour. Archives reject unsafe
+  paths, duplicate entries, encrypted/unsupported compression, ZIP64, symlinks and
+  executable/special files, size/ratio overruns, CRC failures, invalid manifests and
+  incomplete app structure. Accepted packages are stored in private App Storage.
+- Staging requires current-version compatibility and a completed, verified database
+  or full-data backup. Install and rollback return `manual_deployment_required`;
+  no package code or application files are changed by the runtime.
+- Added additive migration `037_platform_updates.sql`. It passed the isolated
+  `vernatun_test` migration and system test run. The live Coolify database was not
+  queried or changed; production migration planning/application remains separate.
+- OpenAPI client/Zod generation and the workspace typecheck passed. The system API
+  suite passed 24/24 tests. The full workspace build passed when supplied the
+  required Mockup `BASE_PATH` and a free Expo `EXPO_BUILD_METRO_PORT`; Vite reported
+  existing large-chunk advisories.
+- Production, real external integration connectivity, and authenticated responsive
+  browser acceptance remain unverified. The app preview cannot sign in; the
+  protected Operations Center was not visually verified.
+- `VERNATUN_APP_VERSION` is not known to this build. Upload validation can inspect
+  package structure and checksums, but compatibility remains unknown until the
+  deployment records its current release version.
 
 ## Storage, cache, sessions, retention and encryption increment
 

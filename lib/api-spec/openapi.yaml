@@ -253,6 +253,145 @@ paths:
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
+  /system/modules:
+    get:
+      operationId: getSystemModuleRegistry
+      responses:
+        '200':
+          description: Source-registered core modules, entitlement counts, and the disabled extension-package policy
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates:
+    get:
+      operationId: getSystemUpdates
+      responses:
+        '200':
+          description: Update package history and deployment-provider capability
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/upload:
+    post:
+      operationId: uploadSystemUpdate
+      parameters:
+        - in: header
+          name: X-Update-Filename
+          required: true
+          schema: {type: string, maxLength: 84}
+        - in: header
+          name: X-Confirmation
+          required: true
+          schema: {type: string, enum: ["UPDATE PACKAGE"]}
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema: {type: string, format: binary}
+      responses:
+        '201':
+          description: Uploaded package with validation result; never executed
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      operationId: getSystemUpdate
+      responses:
+        '200':
+          description: Safe update metadata without package bytes
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/{id}/validate:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: validateSystemUpdate
+      responses:
+        '200':
+          description: Revalidated stored package manifest, checksum, compatibility, and archive contents
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/{id}/stage:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: stageSystemUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [backupId, confirmation]
+              properties:
+                backupId: {type: string, format: uuid}
+                confirmation: {type: string, enum: ["STAGE UPDATE"]}
+      responses:
+        '200':
+          description: Validated update staged with a verified database backup; deployment still requires the configured deployment pipeline
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/{id}/install:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: installSystemUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation: {type: string, enum: ["INSTALL UPDATE"]}
+      responses:
+        '409':
+          description: Runtime file replacement is not supported; manual deployment is required
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /system/updates/{id}/rollback:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: rollbackSystemUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation: {type: string, enum: ["ROLLBACK UPDATE"]}
+      responses:
+        '409':
+          description: Runtime rollback is not supported; use deployment history and verified backup recovery
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
   /system/api:
     get:
       operationId: getApiCenter

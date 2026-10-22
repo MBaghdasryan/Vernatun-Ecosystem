@@ -23,6 +23,8 @@ import {registerBackupPolicies} from './system-backup-policies.js';
 import {registerApiCenter} from './system-api.js';
 import {registerIntegrations} from './system-integrations.js';
 import {registerWebhooks} from './system-webhooks.js';
+import {registerSystemUpdates} from './system-updates.js';
+import {registerSystemModules} from './system-modules.js';
 
 export const systemCenter=Router();
 systemCenter.use('/system',requireAuth,rateLimit({windowMs:60000,limit:120,store:new PostgresRateStore('system-read'),keyGenerator:req=>req.user!.id,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}}));
@@ -82,6 +84,8 @@ registerBackupPolicies(systemCenter,permit);
 registerApiCenter(systemCenter,permit);
 registerIntegrations(systemCenter,permit);
 registerWebhooks(systemCenter,permit);
+registerSystemUpdates(systemCenter,permit);
+registerSystemModules(systemCenter,permit);
 const query=z.object({
  page:z.coerce.number().int().min(1).max(10000).default(1),from:z.string().datetime().optional(),to:z.string().datetime().optional(),
  level:z.enum(['info','warning','error','fatal']).optional(),

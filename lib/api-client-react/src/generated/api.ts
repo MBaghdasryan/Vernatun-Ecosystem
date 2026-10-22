@@ -99,7 +99,10 @@ import type {
   GetSystemJobsParams,
   GetSystemLogRetention200,
   GetSystemLogsParams,
+  GetSystemModuleRegistry200,
   GetSystemSessionsParams,
+  GetSystemUpdate200,
+  GetSystemUpdates200,
   GetWebhookCenterParams,
   HandoverFloorAssignment,
   HandoverFloorInput,
@@ -116,6 +119,8 @@ import type {
   IamSessionRevocationInput,
   IncidentInput,
   IncidentTransitionInput,
+  InstallSystemUpdate409,
+  InstallSystemUpdateBody,
   IntegrationCenter,
   IntegrationCreateInput,
   IntegrationInstanceActionInput,
@@ -182,6 +187,8 @@ import type {
   ResidentDelegationInput,
   ResolveNotificationDestinationParams,
   RevokeSystemSessions200,
+  RollbackSystemUpdate409,
+  RollbackSystemUpdateBody,
   SaveOperatingBudget200,
   SaveOperatingBudgetBody,
   SaveSystemLogRetention200,
@@ -189,6 +196,8 @@ import type {
   SetApiClientStatusBody,
   SlaPolicyInput,
   StaffAvailability,
+  StageSystemUpdate200,
+  StageSystemUpdateBody,
   SuggestBankMatchesParams,
   SystemBackupCreateInput,
   SystemBackupDeleteInput,
@@ -216,7 +225,9 @@ import type {
   UploadDocumentVersionParams,
   UploadOperationalPhotoParams,
   UploadOrganizationLogoParams,
+  UploadSystemUpdate201,
   UploadUnitPlanParams,
+  ValidateSystemUpdate200,
   VerifySystemBackup200,
   VisitProposalInput,
   VisitResponseInput,
@@ -1527,6 +1538,618 @@ export function useGetSystemApiDocumentation<TData = Awaited<ReturnType<typeof g
 
 
 
+
+export const getGetSystemModuleRegistryUrl = () => {
+
+
+
+
+  return `/api/system/modules`
+}
+
+export const getSystemModuleRegistry = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetSystemModuleRegistry200> => {
+
+  return customFetch<GetSystemModuleRegistry200>(getGetSystemModuleRegistryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemModuleRegistryQueryKey = () => {
+    return [
+    `/api/system/modules`
+    ] as const;
+    }
+
+
+export const getGetSystemModuleRegistryQueryOptions = <TData = Awaited<ReturnType<typeof getSystemModuleRegistry>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemModuleRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemModuleRegistryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemModuleRegistry>>> = ({ signal }) => getSystemModuleRegistry({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemModuleRegistry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemModuleRegistryQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemModuleRegistry>>>
+export type GetSystemModuleRegistryQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemModuleRegistry<TData = Awaited<ReturnType<typeof getSystemModuleRegistry>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemModuleRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemModuleRegistryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemUpdatesUrl = () => {
+
+
+
+
+  return `/api/system/updates`
+}
+
+export const getSystemUpdates = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetSystemUpdates200> => {
+
+  return customFetch<GetSystemUpdates200>(getGetSystemUpdatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemUpdatesQueryKey = () => {
+    return [
+    `/api/system/updates`
+    ] as const;
+    }
+
+
+export const getGetSystemUpdatesQueryOptions = <TData = Awaited<ReturnType<typeof getSystemUpdates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemUpdatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemUpdates>>> = ({ signal }) => getSystemUpdates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemUpdatesQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemUpdates>>>
+export type GetSystemUpdatesQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemUpdates<TData = Awaited<ReturnType<typeof getSystemUpdates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemUpdatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUploadSystemUpdateUrl = () => {
+
+
+
+
+  return `/api/system/updates/upload`
+}
+
+export const uploadSystemUpdate = async (uploadSystemUpdateBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<UploadSystemUpdate201> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UploadSystemUpdate201>(getUploadSystemUpdateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/zip', ...getHeaders(options?.headers) },
+    body: uploadSystemUpdateBody
+  }
+);}
+
+
+
+
+
+export const getUploadSystemUpdateMutationKey = () => ['uploadSystemUpdate'] as const;
+
+export const getUploadSystemUpdateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadSystemUpdate>>, TError,UploadSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadSystemUpdate>>, TError,UploadSystemUpdateMutationVariables, TContext> => {
+
+const mutationKey = getUploadSystemUpdateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadSystemUpdate>>, UploadSystemUpdateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadSystemUpdate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof uploadSystemUpdate>>>
+    export type UploadSystemUpdateMutationBody = BodyType<Blob>
+    export type UploadSystemUpdateMutationError = ErrorType<unknown>
+    export type UploadSystemUpdateMutationVariables = {data: BodyType<Blob>}
+
+    export const useUploadSystemUpdate = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadSystemUpdate>>, TError,UploadSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadSystemUpdate>>,
+        TError,
+        UploadSystemUpdateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadSystemUpdateMutationOptions(options));
+    }
+
+export const getGetSystemUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}`
+}
+
+export const getSystemUpdate = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GetSystemUpdate200> => {
+
+  return customFetch<GetSystemUpdate200>(getGetSystemUpdateUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemUpdateQueryKey = (id: string,) => {
+    return [
+    `/api/system/updates/${id}`
+    ] as const;
+    }
+
+
+export const getGetSystemUpdateQueryOptions = <TData = Awaited<ReturnType<typeof getSystemUpdate>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemUpdateQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemUpdate>>> = ({ signal }) => getSystemUpdate(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemUpdate>>>
+export type GetSystemUpdateQueryError = ErrorType<unknown>
+
+
+
+export function useGetSystemUpdate<TData = Awaited<ReturnType<typeof getSystemUpdate>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystemUpdate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemUpdateQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getValidateSystemUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}/validate`
+}
+
+export const validateSystemUpdate = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ValidateSystemUpdate200> => {
+
+  return customFetch<ValidateSystemUpdate200>(getValidateSystemUpdateUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getValidateSystemUpdateMutationKey = () => ['validateSystemUpdate'] as const;
+
+export const getValidateSystemUpdateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateSystemUpdate>>, TError,ValidateSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateSystemUpdate>>, TError,ValidateSystemUpdateMutationVariables, TContext> => {
+
+const mutationKey = getValidateSystemUpdateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateSystemUpdate>>, ValidateSystemUpdateMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  validateSystemUpdate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof validateSystemUpdate>>>
+
+    export type ValidateSystemUpdateMutationError = ErrorType<unknown>
+    export type ValidateSystemUpdateMutationVariables = {id: string}
+
+    export const useValidateSystemUpdate = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateSystemUpdate>>, TError,ValidateSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof validateSystemUpdate>>,
+        TError,
+        ValidateSystemUpdateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getValidateSystemUpdateMutationOptions(options));
+    }
+
+export const getStageSystemUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}/stage`
+}
+
+export const stageSystemUpdate = async (id: string,
+    stageSystemUpdateBody: StageSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<StageSystemUpdate200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<StageSystemUpdate200>(getStageSystemUpdateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(stageSystemUpdateBody)
+  }
+);}
+
+
+
+
+
+export const getStageSystemUpdateMutationKey = () => ['stageSystemUpdate'] as const;
+
+export const getStageSystemUpdateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stageSystemUpdate>>, TError,StageSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stageSystemUpdate>>, TError,StageSystemUpdateMutationVariables, TContext> => {
+
+const mutationKey = getStageSystemUpdateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stageSystemUpdate>>, StageSystemUpdateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  stageSystemUpdate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StageSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof stageSystemUpdate>>>
+    export type StageSystemUpdateMutationBody = BodyType<StageSystemUpdateBody>
+    export type StageSystemUpdateMutationError = ErrorType<unknown>
+    export type StageSystemUpdateMutationVariables = {id: string;data: BodyType<StageSystemUpdateBody>}
+
+    export const useStageSystemUpdate = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stageSystemUpdate>>, TError,StageSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stageSystemUpdate>>,
+        TError,
+        StageSystemUpdateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStageSystemUpdateMutationOptions(options));
+    }
+
+export const getInstallSystemUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}/install`
+}
+
+export const installSystemUpdate = async (id: string,
+    installSystemUpdateBody: InstallSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<unknown>(getInstallSystemUpdateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(installSystemUpdateBody)
+  }
+);}
+
+
+
+
+
+export const getInstallSystemUpdateMutationKey = () => ['installSystemUpdate'] as const;
+
+export const getInstallSystemUpdateMutationOptions = <TError = ErrorType<InstallSystemUpdate409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext> => {
+
+const mutationKey = getInstallSystemUpdateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof installSystemUpdate>>, InstallSystemUpdateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  installSystemUpdate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InstallSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof installSystemUpdate>>>
+    export type InstallSystemUpdateMutationBody = BodyType<InstallSystemUpdateBody>
+    export type InstallSystemUpdateMutationError = ErrorType<InstallSystemUpdate409>
+    export type InstallSystemUpdateMutationVariables = {id: string;data: BodyType<InstallSystemUpdateBody>}
+
+    export const useInstallSystemUpdate = <TError = ErrorType<InstallSystemUpdate409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof installSystemUpdate>>,
+        TError,
+        InstallSystemUpdateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getInstallSystemUpdateMutationOptions(options));
+    }
+
+export const getRollbackSystemUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}/rollback`
+}
+
+export const rollbackSystemUpdate = async (id: string,
+    rollbackSystemUpdateBody: RollbackSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<unknown>(getRollbackSystemUpdateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rollbackSystemUpdateBody)
+  }
+);}
+
+
+
+
+
+export const getRollbackSystemUpdateMutationKey = () => ['rollbackSystemUpdate'] as const;
+
+export const getRollbackSystemUpdateMutationOptions = <TError = ErrorType<RollbackSystemUpdate409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext> => {
+
+const mutationKey = getRollbackSystemUpdateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rollbackSystemUpdate>>, RollbackSystemUpdateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rollbackSystemUpdate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RollbackSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof rollbackSystemUpdate>>>
+    export type RollbackSystemUpdateMutationBody = BodyType<RollbackSystemUpdateBody>
+    export type RollbackSystemUpdateMutationError = ErrorType<RollbackSystemUpdate409>
+    export type RollbackSystemUpdateMutationVariables = {id: string;data: BodyType<RollbackSystemUpdateBody>}
+
+    export const useRollbackSystemUpdate = <TError = ErrorType<RollbackSystemUpdate409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rollbackSystemUpdate>>,
+        TError,
+        RollbackSystemUpdateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRollbackSystemUpdateMutationOptions(options));
+    }
 
 export const getGetApiCenterUrl = (params?: GetApiCenterParams,) => {
   const normalizedParams = new URLSearchParams();

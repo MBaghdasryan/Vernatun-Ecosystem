@@ -37,3 +37,8 @@ export type { DeleteEmptyPortfolioObjectParams } from "./generated/types/deleteE
 export type { ReplacePortfolioBuildingsBody } from "./generated/types/replacePortfolioBuildingsBody";
 export type { UpdateOrganizationBrandingBody } from "./generated/types/updateOrganizationBrandingBody";
 export type { UpdatePortfolioObjectBody } from "./generated/types/updatePortfolioObjectBody";
+// Keep request types and their generated Zod schema values under the same
+// public names when Orval emits both modules.
+export type { StageSystemUpdateBody } from "./generated/types/stageSystemUpdateBody";
+export type { InstallSystemUpdateBody } from "./generated/types/installSystemUpdateBody";
+export type { RollbackSystemUpdateBody } from "./generated/types/rollbackSystemUpdateBody";

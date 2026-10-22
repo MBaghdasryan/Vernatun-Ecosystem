@@ -19,6 +19,7 @@ const expectedObjects=[
  {migration:'033_operations_backups.sql',name:'operations_backups',kind:'relation' as const,idempotent:false},
  {migration:'034_backup_policies.sql',name:'operations_backup_policies',kind:'relation' as const,idempotent:false},
  {migration:'036_operations_integrations.sql',name:'outgoing_webhook_deliveries',kind:'relation' as const,idempotent:false},
+ {migration:'037_platform_updates.sql',name:'platform_updates',kind:'relation' as const,idempotent:false},
 ];
 
 async function migrationFiles(through?:string):Promise<Migration[]>{
