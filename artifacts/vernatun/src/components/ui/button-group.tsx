@@ -36,24 +36,23 @@ function ButtonGroup({
   );
 }
 
-function ButtonGroupText({
-  className,
-  asChild = false,
-  ...props
-}: React.ComponentProps<'div'> & {
-  asChild?: boolean;
-}) {
-  const Comp = asChild ? Slot : 'div';
+type ButtonGroupTextProps =
+  | (React.ComponentProps<'div'> & { asChild?: false })
+  | (React.ComponentProps<typeof Slot> & { asChild: true });
 
-  return (
-    <Comp
-      className={cn(
-        "bg-muted shadow-xs flex items-center gap-2 rounded-md border px-4 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none",
-        className,
-      )}
-      {...props}
-    />
+function ButtonGroupText(props: ButtonGroupTextProps) {
+  const className = cn(
+    "bg-muted shadow-xs flex items-center gap-2 rounded-md border px-4 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none",
+    props.className,
   );
+
+  if (props.asChild) {
+    const { asChild: _asChild, ...slotProps } = props;
+    return <Slot {...slotProps} className={className} />;
+  }
+
+  const { asChild: _asChild, ...divProps } = props;
+  return <div {...divProps} className={className} />;
 }
 
 function ButtonGroupSeparator({

@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.3.0",
     "create-launch": "0.4.1",
     "typescript": "~6.0.3"
   }

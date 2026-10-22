@@ -688,6 +688,9 @@ export default function Index() {
   });
   const [localSession, setLocalSession] = useState<MobileAuthSession | null>(null);
   const session = localSession ?? sessionQuery.data ?? null;
+  const queueSession = session?.user
+    ? { ...session, user: session.user }
+    : null;
   const contractorContexts = useMemo(
     () => (session?.contexts ?? []).filter(
       (context) => context.role_key === "contractor" && context.permissions.includes("defects.assigned"),
@@ -731,8 +734,8 @@ export default function Index() {
           </View>
         </View>
       ) : session ? (
-        activeContractorContext && session.user ? (
-          <QueueScreen session={session} onLogout={onLogout} />
+        activeContractorContext && queueSession ? (
+          <QueueScreen session={queueSession} onLogout={onLogout} />
         ) : (
           <ContextPicker contexts={contractorContexts} onSelected={onAuthenticated} />
         )
