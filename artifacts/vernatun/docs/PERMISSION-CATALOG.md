@@ -1,6 +1,17 @@
 # Vernatun — каталог действующих разрешений
 
-Дата: 2026-10-07. Источник: server/roles.ts. Это текущий системный каталог, не реализованный Custom Role Builder.
+Дата базового каталога: 2026-10-07. Источник: server/roles.ts.
+Custom Role Builder, матрица, персональные правила и debugger уже реализованы;
+см. IAM-ARCHITECTURE.md и IAM-IMPLEMENTATION-PROGRESS.md.
+
+Обновление 2026-10-22: поиск использует разрешение каждого домена отдельно
+(properties.read/own, people.read, requests.read/own, workorders.assigned,
+defects.read/assigned, billing.read/own, documents.read, support.cases/create,
+organizations.read), сохраняя соответствующие scope/module restrictions.
+Счётчик уведомлений привязан к аутентифицированному аккаунту.
+База знаний и ограниченная диагностика требуют глобального onboarding.manage;
+утверждённый tenant support context сам по себе эту authority не создаёт.
+Новых permission keys не добавлено.
 
 Проверено 14 системных ролей и 73 уникальных permission keys.
 

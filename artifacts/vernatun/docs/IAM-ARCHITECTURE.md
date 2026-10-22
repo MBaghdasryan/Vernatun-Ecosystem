@@ -1,5 +1,10 @@
 # Vernatun IAM — архитектура завершения интерфейсов
 
+Обновление 2026-10-22: 7 изолированных IAM-проверок снова PASS. Поиск и новые
+главные таблицы используют действующие разрешения/области, не добавляют новый
+механизм ролей и не предоставляют platform administrator доступ к tenant business data.
+Новые read-only инструменты внедрения требуют глобального `onboarding.manage`.
+
 Дата: 2026-10-07. Статус: **COMPLETE — IAM реализован и прошёл целевую изолированную API/browser-приёмку**.
 
 Спецификация: `attached_assets/Pasted-Continue-development-of-the-existing-Vernatun-project-T_1791356633425.txt`.

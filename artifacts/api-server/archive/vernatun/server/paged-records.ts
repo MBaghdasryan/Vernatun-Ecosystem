@@ -4,7 +4,7 @@ import {pool} from './db.js';
 import {context,requirePermission,ApiError,type Context} from './access.js';
 type Definition={sql:string;args:unknown[];sorts:string[];initial:string};
 const scope=(c:Context)=>[c.organization_id,c.building_id,c.unit_id];
-async function definition(req:Parameters<typeof context>[0],resource:string):Promise<Definition>{
+export async function recordDefinition(req:Parameters<typeof context>[0],resource:string):Promise<Definition>{
  const c=await context(req);
  if(resource==='organizations'){
   await requirePermission(req,'organizations.read');
@@ -23,7 +23,14 @@ async function definition(req:Parameters<typeof context>[0],resource:string):Pro
  }
  if(resource==='people'){
   await requirePermission(req,'people.read');
-  return {sql:'SELECT a.id,u.name,u.email,a.role_key,a.building_id,a.unit_id,a.active,a.expires_at FROM role_assignments a JOIN users u ON u.id=a.user_id WHERE a.organization_id=$1 AND ($2::uuid IS NULL OR a.building_id=$2) AND ($3::uuid IS NULL OR a.unit_id=$3)',args:scope(c),sorts:['name','email','role_key','active'],initial:'name'};
+   return {sql:`SELECT a.id,u.name,u.email,a.role_key,a.building_id,a.unit_id,a.active,a.starts_at,a.expires_at,
+    CASE WHEN u.blocked THEN 'account_blocked' WHEN NOT COALESCE(m.active,false) THEN 'membership_suspended'
+     WHEN NOT a.active THEN 'revoked' WHEN a.starts_at>now() THEN 'pending'
+     WHEN a.expires_at<=now() THEN 'expired' ELSE 'active' END AS assignment_state
+    FROM role_assignments a JOIN users u ON u.id=a.user_id
+    LEFT JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id
+    WHERE a.organization_id=$1 AND ($2::uuid IS NULL OR a.building_id=$2) AND ($3::uuid IS NULL OR a.unit_id=$3)`,
+    args:scope(c),sorts:['name','email','role_key','active'],initial:'name'};
  }
  if(!['properties','units'].includes(resource))throw new ApiError(404,'not_found');
  await requirePermission(req,c.permissions.includes('properties.read')?'properties.read':'properties.own');
@@ -37,7 +44,7 @@ const paging=z.object({page:z.coerce.number().int().min(1).max(10000).default(1)
  q:z.string().trim().max(160).default(''),sort:z.string().max(40).optional(),direction:z.enum(['asc','desc']).default('asc'),filter:z.enum(['all','true','false']).default('all')}).strict();
 export const pagedRecords=Router();
 pagedRecords.get('/paged/:resource',async(req,res)=>{
- const d=await definition(req,req.params.resource),b=paging.parse(req.query),sort=b.sort??d.initial;
+ const d=await recordDefinition(req,req.params.resource),b=paging.parse(req.query),sort=b.sort??d.initial;
  if(!d.sorts.includes(sort))throw new ApiError(400,'invalid_sort');
  const n=d.args.length,pattern='%'+b.q.replace(/[\\%_]/g,'\\$&')+'%';
  const where=`($${n+1}='' OR to_jsonb(t)::text ILIKE $${n+2}) AND ($${n+3}='all' OR to_jsonb(t)->>'active'=$${n+3})`;
@@ -49,7 +56,7 @@ pagedRecords.get('/paged/:resource',async(req,res)=>{
 // Legacy lookup callers retain array shape, but no unlimited SQL result.
 for(const resource of ['organizations','properties','units','people']){
  pagedRecords.get('/'+resource,async(req,res)=>{
-  const d=await definition(req,resource);
+   const d=await recordDefinition(req,resource);
   res.json((await pool.query(`SELECT * FROM (${d.sql}) t ORDER BY "${d.initial}",id LIMIT 1000`,d.args)).rows);
  });
 }

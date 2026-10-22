@@ -6,6 +6,7 @@ import {money,type Currency,type Language} from './i18n';
 import {insightStrings} from './Insights';
 import {viewModules,viewRoute,type Product} from '../../shared/products';
 import type {RoleContext} from './types';
+import RoleOverviewPanels from './RoleOverviewPanels';
 import './rolehome.css';
 
 // Role-specific home composition. Every number and row comes from an existing
@@ -51,10 +52,9 @@ const Q={
 
 const U:Record<string,L3[]>={
  platform_admin:[['SaaS բիլինգը միացված չէ. եկամտի գրաֆիկ չի ցուցադրվում','Платформенный биллинг не подключён — график выручки SaaS не показывается','Platform billing is not configured — no SaaS revenue chart is shown']],
- support:[['Ավտոմատ ախտորոշումը հասանելի չէ','Автоматическая диагностика недоступна','Automated diagnostics are not available'],['Հանդիպումների պլանավորում և գիտելիքների բազա չկան','Планирование встреч и база знаний не настроены','Meeting scheduling and knowledge base are not configured']],
+ support:[['Հանդիպումների պլանավորումը դեռ հասանելի չէ','Планирование встреч пока недоступно','Meeting scheduling is not yet available']],
  org_admin:[['Բանկ, SMS և հեռախոսակապ միացված չեն','Банк, SMS и телефония не подключены','Bank, SMS and telephony providers are not connected']],
  accountant:[['Բանկային ինտեգրացիա չկա. քաղվածքները ներմուծվում են ձեռքով','Банковская интеграция не подключена — выписки импортируются вручную','No bank integration — statements are imported manually']],
- developer:[['Հարկի հատակագծեր և թերությունների նշիչներ դեռ հասանելի չեն','Планы этажей и маркеры дефектов пока недоступны','Floor plans and defect markers are not available yet']],
  dispatcher:[['Քարտեզը հասանելի չէ. աշխատանքների գեոտվյալներ չկան','Карта недоступна — нет геоданных работ','Map is unavailable — no work geodata']],
  portfolio_owner:[['Սպասարկման և ընդհանուր փաստաթղթերի մուտքը այս դերում տրված չէ','Общее обслуживание и документы этой роли не выданы','General service and documents are not granted to this role']],
  unit_owner:[['Առցանց վճարման դարպաս միացված չէ','Онлайн-оплата не подключена','Online payment gateway is not connected']],
@@ -148,5 +148,6 @@ export default function RoleHome({c,language,currency,product,kpis=true}:{c:Role
    {feeds.some(f=>f.calendar)&&<div className="rh-panel"><h2><CalendarDays size={19}/>{tr(S.calendar)}</h2>{calFailed&&<p className="rh-state">{tr(S.calError)} <button className="rh-link" onClick={()=>setRev(v=>v+1)}><RefreshCw size={14}/>{tr(S.retry)}</button></p>}{!dated.length?(calLoading?<div className="rh-row rh-skel"/>:!calFailed&&<p className="rh-state">{tr(S.empty)}</p>):<ol className="rh-cal">{dated.map(x=><li key={x.group+x.id}><button onClick={()=>goTo(x.path)}><time>{fmt(x.when)}</time><span><strong>{x.title}</strong><small>{x.group}{x.meta?' · '+x.meta:''}</small></span></button></li>)}</ol>}</div>}
    {(shortcuts.length>0||notes.length>0)&&<div className="rh-panel">{shortcuts.length>0&&<><h2><ArrowRight size={19}/>{tr(S.quick)}</h2><div className="rh-quick">{shortcuts.map(s=><button key={s.path} onClick={()=>goTo(s.path)}>{tr(s.label)}<ArrowRight size={15}/></button>)}</div></>}{notes.length>0&&<div className="rh-unavailable"><h3><CircleSlash size={16}/>{tr(S.unavailable)}</h3>{notes.map(n=><p key={n[2]}>{tr(n)}</p>)}</div>}</div>}
   </div>
+  <RoleOverviewPanels c={c} language={language} currency={currency} product={product}/>
  </section>;
 }

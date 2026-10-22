@@ -4,9 +4,9 @@ import {roleName,index,type Language} from './i18n';
 import EmployeeAssignment from './EmployeeAssignment';
 import './iam.css';
 
-type Props={language:Language;platform:boolean;view:string;brand:ReactNode;onSwitch:()=>void;onLogout:()=>void;
+type Props={language:Language;platform:boolean;view:string;brand:ReactNode;headerTools?:ReactNode;onSwitch:()=>void;onLogout:()=>void;
  Modal:ComponentType<{title:string;onClose:()=>void;children:ReactNode}>;ErrorNotice:ComponentType<{error:unknown}>};
-export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLogout,Modal,ErrorNotice}:Props){
+export default function IAMWorkspace({language,platform,view,brand,headerTools,onSwitch,onLogout,Modal,ErrorNotice}:Props){
  const L=index(language),tr=(hy:string,ru:string,en:string)=>[hy,ru,en][L],base=platform?'/console':'/os';
  const [catalog,setCatalog]=useState<any>(),[profiles,setProfiles]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]),[total,setTotal]=useState(0);
  const [q,setQ]=useState(''),[search,setSearch]=useState(''),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0);
@@ -39,7 +39,7 @@ export default function IAMWorkspace({language,platform,view,brand,onSwitch,onLo
  const statusLabel=(v:string)=>({active:tr('Ակտիվ','Активен','Active'),locked:tr('Արգելափակված','Заблокирован','Locked'),disabled:tr('Անջատված','Отключён','Disabled'),suspended:tr('Կասեցված','Приостановлен','Suspended'),revoked:tr('Հետ կանչված','Отозван','Revoked')}[v]??v);
  const errorBox=error?<div><ErrorNotice error={error}/>{error instanceof ApiClientError&&error.code==='concurrent_change'&&<p>{tr('Տվյալները փոխվել են։ Բացեք քարտը նորից։','Данные изменились. Откройте карточку заново, прежде чем сохранять.','Data changed. Reopen the card before saving.')}</p>}{button(reload,refresh)}</div>:null;
  return <div className="iam-workspace">
-  <header className="iam-header">{brand}<nav aria-label="IAM"><a href={base+'/'+(platform?'overview':'organization')}>{tr('Վերադառնալ','К обзору','Overview')}</a><a href={base+'/'+(platform?'users':'people')}>{users}</a><a href={base+'/roles'}>{roles}</a><a href={base+'/'+(platform?'permissions':'roles')+'?matrix=1'}>{permissions}</a><a href={base+'/invitations'}>{tr('Հրավերներ','Приглашения','Invitations')}</a></nav>{button(tr('Փոխել համատեքստը','Сменить контекст','Switch context'),onSwitch)}{button(tr('Ելք','Выйти','Sign out'),onLogout)}</header>
+  <header className="iam-header">{brand}<nav aria-label="IAM"><a href={base+'/'+(platform?'overview':'organization')}>{tr('Վերադառնալ','К обзору','Overview')}</a><a href={base+'/'+(platform?'users':'people')}>{users}</a><a href={base+'/roles'}>{roles}</a><a href={base+'/'+(platform?'permissions':'roles')+'?matrix=1'}>{permissions}</a><a href={base+'/invitations'}>{tr('Հրավերներ','Приглашения','Invitations')}</a></nav>{headerTools}{button(tr('Փոխել համատեքստը','Сменить контекст','Switch context'),onSwitch)}{button(tr('Ելք','Выйти','Sign out'),onLogout)}</header>
   <main className="iam-main"><h1>{view==='roles'?roles:view==='permissions'?permissions:users}</h1><p>{platform?tr('Հարթակի հասանելիություն․ առանց կազմակերպության բիզնես տվյալների','Доступ платформы — без доступа к бизнес-данным организаций','Platform access — no tenant business-data access'):tr('Կազմակերպության աշխատակիցներ և հասանելիություն','Сотрудники и доступ организации','Organization employees and access')}</p>
    {errorBox}{loading?<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>:catalog&&<>
    {(view==='users'||view==='people')&&<section className="p-card">

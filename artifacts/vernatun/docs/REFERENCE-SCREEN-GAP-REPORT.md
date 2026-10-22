@@ -1,5 +1,12 @@
 # Vernatun Product & Interface Completion — исходная матрица разрывов
 
+> Актуализация 2026-10-22: это историческая baseline-матрица, а не список всего
+> отсутствующего в текущем коде. IAM, availability, private unit plans и floor readiness
+> уже реализованы. Сейчас добавлены role directory panels, header search/notifications,
+> read-only база знаний и ограниченная диагностика внедрения.
+> Точное разграничение сделанного и оставшегося:
+> [PRODUCT-INTERFACE-COMPLETION-STATUS.md](PRODUCT-INTERFACE-COMPLETION-STATUS.md).
+
 Дата: 2026-10-07. **PARTIAL — аудит исходников и референсов, не финальный DONE.**
 
 Аудит проведён до изменений реализации нового этапа. Все 15 изображений просмотрены:

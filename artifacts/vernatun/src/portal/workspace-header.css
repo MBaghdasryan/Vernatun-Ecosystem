@@ -1,0 +1,20 @@
+.p-workspace-tools{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.p-workspace-tools .p-icon{min-width:40px;min-height:40px}
+.p-workspace-search-trigger{display:flex;align-items:center;gap:6px}
+.p-workspace-search-trigger span{font-size:12px}
+.p-notification-trigger{position:relative}
+.p-unread-count{position:absolute;right:-1px;top:-2px;background:#e75d16;color:white;border-radius:20px;min-width:17px;line-height:17px;padding:0 3px;font-size:10px;font-weight:700}
+.p-global-dialog{width:min(680px,calc(100vw - 24px));max-height:85dvh;overflow:auto;border:1px solid #e1e6ea;border-radius:14px;padding:20px;color:#102b3a;background:#fff;box-shadow:0 20px 70px #102b3a44}
+.p-global-dialog::backdrop{background:#0e293a88}
+.p-global-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.p-global-dialog h2{margin:0;font-size:21px}.p-global-dialog h3{font-size:14px}
+.p-global-dialog input[type=search]{box-sizing:border-box;min-height:44px;width:100%;padding:10px;border:1px solid #b8c5cc;border-radius:8px;margin:12px 0}
+.p-global-dialog input:focus-visible,.p-global-dialog a:focus-visible,.p-global-dialog button:focus-visible{outline:3px solid #f47936;outline-offset:2px}
+.p-context-caption,.p-global-search-group small{color:#647581;font-size:12px}
+.p-global-search-group ul{padding:0;list-style:none;margin:0}
+.p-global-search-group li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid #e7ecf0}
+.p-global-search-group strong{overflow-wrap:anywhere;font-size:14px}.p-global-search-group small{grid-column:1}
+.p-global-search-group a{grid-column:2;grid-row:1/3;align-self:center;font-size:12px;min-height:40px;display:flex;align-items:center;color:#006b9a}
+.p-global-search-group p{font-size:12px}
+@media(max-width:1100px){.p-workspace-search-trigger span{display:none}}
+@media(max-width:600px){.p-global-dialog{padding:16px}.p-global-search-group li{grid-template-columns:minmax(0,1fr)}.p-global-search-group a{grid-column:1;grid-row:auto}.p-workspace-tools .p-icon{min-width:36px}}

@@ -420,3 +420,10 @@ mtime_ms = 1792593841062
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/7760e272-50ea-4a83-b717-a07179fa7e4b/674ee3f1-6a99-4fb8-a1fd-4931edc8617c"
 storage_version_token = "1792593861770150"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Dr2UXIgaR6PTW6eXL6o91"
+uri = "file://artifacts/vernatun/docs/PRODUCT-INTERFACE-COMPLETION-STATUS.md"
+type = "text"
+title = "Vernatun — отчёт по интерфейсам и ролям"
+description = "Реализованные изменения, результаты API/browser-проверок, матрицы 14 ролей и 15 референсов, оставшиеся требования."

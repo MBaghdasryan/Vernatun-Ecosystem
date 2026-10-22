@@ -25,7 +25,7 @@ export default function Notifications({c,language}:{c:RoleContext;language:Langu
  const resolve=(n:Row,target:Row)=>request<Row>('/notifications/'+n.id+'/destination?contextId='+encodeURIComponent(target.id));
  const openTarget=(n:Row,target:Row)=>void guard(async live=>{const r=await resolve(n,target);if(!live())return;if(r.requiresSwitch){setPending({n,target:{...target,targetContextId:r.targetContextId},to:r.destination});return}location.assign(r.destination)});
  const confirmSwitch=()=>{if(!pending)return;const p=pending;void guard(async live=>{if(!live())return;await request('/auth/context','POST',{id:p.target.targetContextId??p.target.id});const r=await resolve(p.n,p.target);if(!live())return;location.assign(r.destination)})};
- const mark=(n:Row)=>void guard(async live=>{await request('/notifications/'+n.id+'/read','POST',{});if(live())await load()});
+ const mark=(n:Row)=>void guard(async live=>{await request('/notifications/'+n.id+'/read','POST',{});if(live()){window.dispatchEvent(new Event('vernatun-notifications-changed'));await load()}});
  const label=(x:Row)=>[x.role_key,x.organization_name,x.building_name,x.unit_number?t('unit')+' '+x.unit_number:null].filter(Boolean).join(' · ');
  return <section className="p-card" aria-busy={busy}><header><h2>{t('title')}</h2><button className="p-button" disabled={busy} onClick={()=>void load()}>{t('refresh')}</button></header>
   {error&&<p className="p-error" role="alert">{error} <button className="p-button" onClick={()=>void load()}>{t('retry')}</button></p>}

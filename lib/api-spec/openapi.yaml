@@ -11,6 +11,57 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /platform/implementation-diagnostics:
+    get:
+      operationId: getImplementationDiagnostics
+      responses:
+        "200":
+          description: Read-only implementation diagnostics available to global support operators; not tenant access or a backup certification.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImplementationDiagnostics" }
+        "403": { description: Global implementation authority required }
+  /platform/knowledge-base:
+    get:
+      operationId: getSupportKnowledgeBase
+      parameters:
+        - name: language
+          in: query
+          schema: { type: string, enum: [hy, ru, en], default: hy }
+      responses:
+        "200":
+          description: Maintained operational instructions, not customer records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SupportKnowledgeArticle" }
+        "403": { description: Global implementation authority required }
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      responses:
+        "200":
+          description: Exact unread in-app count for the authenticated account, without exposing notification contents.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnreadNotificationCount" }
+  /workspace-search:
+    get:
+      operationId: searchWorkspace
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 100 }
+      responses:
+        "200":
+          description: Grouped results restricted to the current authorized context; each group is capped and reports truncation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceSearchResult" }
+        "401": { description: Authentication required }
+        "403": { description: No active authorized context }
   /auth/session:
     get:
       operationId: getMobileAuthSession
@@ -4176,4 +4227,50 @@ components:
         key: { type: string }
         value: { type: string }
         currency: { type: string, enum: [AMD, RUB, USD] }
+    WorkspaceSearchItem:
+      type: object
+      required: [id, title, description]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+    UnreadNotificationCount:
+      type: object
+      required: [unread]
+      properties:
+        unread: { type: integer, minimum: 0 }
+    ImplementationDiagnostics:
+      type: object
+      required: [checkedAt, database, schema, pendingStages, overdueStages, scope]
+      properties:
+        checkedAt: { type: string, format: date-time }
+        database: { type: string, enum: [reachable] }
+        schema: { type: string, enum: [ready, incomplete] }
+        pendingStages: { type: integer, minimum: 0 }
+        overdueStages: { type: integer, minimum: 0 }
+        scope: { type: string, enum: [assigned, platform] }
+    SupportKnowledgeArticle:
+      type: object
+      required: [slug, title, body]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        body: { type: string }
+    WorkspaceSearchGroup:
+      type: object
+      required: [kind, items, hasMore]
+      properties:
+        kind: { type: string, enum: [organizations, properties, units, people, requests, workorders, defects, invoices, documents, support] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceSearchItem" }
+        hasMore: { type: boolean }
+    WorkspaceSearchResult:
+      type: object
+      required: [contextId, groups]
+      properties:
+        contextId: { type: string, format: uuid }
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceSearchGroup" }
 

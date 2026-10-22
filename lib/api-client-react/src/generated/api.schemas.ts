@@ -2409,6 +2409,84 @@ export interface RoleInsightCard {
   currency?: RoleInsightCardCurrency;
 }
 
+export interface WorkspaceSearchItem {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface UnreadNotificationCount {
+  /** @minimum 0 */
+  unread: number;
+}
+
+export type ImplementationDiagnosticsDatabase = typeof ImplementationDiagnosticsDatabase[keyof typeof ImplementationDiagnosticsDatabase];
+
+
+export const ImplementationDiagnosticsDatabase = {
+  reachable: 'reachable',
+} as const;
+
+export type ImplementationDiagnosticsSchema = typeof ImplementationDiagnosticsSchema[keyof typeof ImplementationDiagnosticsSchema];
+
+
+export const ImplementationDiagnosticsSchema = {
+  ready: 'ready',
+  incomplete: 'incomplete',
+} as const;
+
+export type ImplementationDiagnosticsScope = typeof ImplementationDiagnosticsScope[keyof typeof ImplementationDiagnosticsScope];
+
+
+export const ImplementationDiagnosticsScope = {
+  assigned: 'assigned',
+  platform: 'platform',
+} as const;
+
+export interface ImplementationDiagnostics {
+  checkedAt: string;
+  database: ImplementationDiagnosticsDatabase;
+  schema: ImplementationDiagnosticsSchema;
+  /** @minimum 0 */
+  pendingStages: number;
+  /** @minimum 0 */
+  overdueStages: number;
+  scope: ImplementationDiagnosticsScope;
+}
+
+export interface SupportKnowledgeArticle {
+  slug: string;
+  title: string;
+  body: string;
+}
+
+export type WorkspaceSearchGroupKind = typeof WorkspaceSearchGroupKind[keyof typeof WorkspaceSearchGroupKind];
+
+
+export const WorkspaceSearchGroupKind = {
+  organizations: 'organizations',
+  properties: 'properties',
+  units: 'units',
+  people: 'people',
+  requests: 'requests',
+  workorders: 'workorders',
+  defects: 'defects',
+  invoices: 'invoices',
+  documents: 'documents',
+  support: 'support',
+} as const;
+
+export interface WorkspaceSearchGroup {
+  kind: WorkspaceSearchGroupKind;
+  items: WorkspaceSearchItem[];
+  hasMore: boolean;
+}
+
+export interface WorkspaceSearchResult {
+  contextId: string;
+  groups: WorkspaceSearchGroup[];
+}
+
 /**
  * Authorized platform record; sensitive nested records remain permission-filtered.
  */
@@ -2418,6 +2496,27 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetSupportKnowledgeBaseParams = {
+language?: GetSupportKnowledgeBaseLanguage;
+};
+
+export type GetSupportKnowledgeBaseLanguage = typeof GetSupportKnowledgeBaseLanguage[keyof typeof GetSupportKnowledgeBaseLanguage];
+
+
+export const GetSupportKnowledgeBaseLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export type SearchWorkspaceParams = {
+/**
+ * @minLength 2
+ * @maxLength 100
+ */
+q: string;
+};
 
 export type GetApiHealth200Status = typeof GetApiHealth200Status[keyof typeof GetApiHealth200Status];
 

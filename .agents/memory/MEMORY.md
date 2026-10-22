@@ -22,3 +22,4 @@
 - [Operations safety](operations-safety.md) — revocation must survive late session saves; encryption keys need an independent recovery lifecycle.
 - [Corepack version pinning](pnpm-corepack-pinning.md) — use Corepack to exercise the repository's packageManager pin instead of relying on a conflicting global pnpm.
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
+- [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.

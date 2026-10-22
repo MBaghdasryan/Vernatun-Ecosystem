@@ -8,6 +8,68 @@
 import * as zod from 'zod';
 
 
+export const getImplementationDiagnosticsResponsePendingStagesMin = 0;
+
+export const getImplementationDiagnosticsResponseOverdueStagesMin = 0;
+
+
+
+export const GetImplementationDiagnosticsResponse = zod.object({
+  "checkedAt": zod.coerce.date(),
+  "database": zod.enum(['reachable']),
+  "schema": zod.enum(['ready', 'incomplete']),
+  "pendingStages": zod.number().int().min(getImplementationDiagnosticsResponsePendingStagesMin),
+  "overdueStages": zod.number().int().min(getImplementationDiagnosticsResponseOverdueStagesMin),
+  "scope": zod.enum(['assigned', 'platform'])
+})
+
+
+export const getSupportKnowledgeBaseQueryLanguageDefault = `hy`;
+
+export const GetSupportKnowledgeBaseQueryParams = zod.object({
+  "language": zod.enum(['hy', 'ru', 'en']).default(getSupportKnowledgeBaseQueryLanguageDefault)
+})
+
+export const GetSupportKnowledgeBaseResponseItem = zod.object({
+  "slug": zod.string(),
+  "title": zod.string(),
+  "body": zod.string()
+})
+export const GetSupportKnowledgeBaseResponse = zod.array(GetSupportKnowledgeBaseResponseItem)
+
+
+export const getUnreadNotificationCountResponseUnreadMin = 0;
+
+
+
+export const GetUnreadNotificationCountResponse = zod.object({
+  "unread": zod.number().int().min(getUnreadNotificationCountResponseUnreadMin)
+})
+
+
+export const searchWorkspaceQueryQMin = 2;
+export const searchWorkspaceQueryQMax = 100;
+
+
+
+export const SearchWorkspaceQueryParams = zod.object({
+  "q": zod.coerce.string().min(searchWorkspaceQueryQMin).max(searchWorkspaceQueryQMax)
+})
+
+export const SearchWorkspaceResponse = zod.object({
+  "contextId": zod.string().uuid(),
+  "groups": zod.array(zod.object({
+  "kind": zod.enum(['organizations', 'properties', 'units', 'people', 'requests', 'workorders', 'defects', 'invoices', 'documents', 'support']),
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string()
+})),
+  "hasMore": zod.boolean()
+}))
+})
+
+
 export const GetMobileAuthSessionResponse = zod.object({
   "user": zod.union([zod.object({
   "id": zod.string().uuid(),

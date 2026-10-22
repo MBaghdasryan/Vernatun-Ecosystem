@@ -93,6 +93,7 @@ import type {
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
   GetStaffAvailabilityParams,
+  GetSupportKnowledgeBaseParams,
   GetSystemApiDocumentation200,
   GetSystemBackupsParams,
   GetSystemErrorsParams,
@@ -117,6 +118,7 @@ import type {
   IamProfileInput,
   IamRecord,
   IamSessionRevocationInput,
+  ImplementationDiagnostics,
   IncidentInput,
   IncidentTransitionInput,
   InstallSystemUpdate409,
@@ -193,12 +195,14 @@ import type {
   SaveOperatingBudgetBody,
   SaveSystemLogRetention200,
   ScopedRecordPage,
+  SearchWorkspaceParams,
   SetApiClientStatusBody,
   SlaPolicyInput,
   StaffAvailability,
   StageSystemUpdate200,
   StageSystemUpdateBody,
   SuggestBankMatchesParams,
+  SupportKnowledgeArticle,
   SystemBackupCreateInput,
   SystemBackupDeleteInput,
   SystemBackups,
@@ -218,6 +222,7 @@ import type {
   UnitPlanChange,
   UnitPlanReceipt,
   UnitPlanView,
+  UnreadNotificationCount,
   UpdateEmployeeAssignment200,
   UpdateOrganizationBrandingBody,
   UpdatePortfolioObjectBody,
@@ -234,7 +239,8 @@ import type {
   WebhookCenter,
   WebhookCreateInput,
   WebhookDeliveryActionInput,
-  WorkTransitionInput
+  WorkTransitionInput,
+  WorkspaceSearchResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -263,6 +269,304 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetImplementationDiagnosticsUrl = () => {
+
+
+
+
+  return `/api/platform/implementation-diagnostics`
+}
+
+export const getImplementationDiagnostics = async ( options?: Parameters<typeof customFetch>[1]): Promise<ImplementationDiagnostics> => {
+
+  return customFetch<ImplementationDiagnostics>(getGetImplementationDiagnosticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetImplementationDiagnosticsQueryKey = () => {
+    return [
+    `/api/platform/implementation-diagnostics`
+    ] as const;
+    }
+
+
+export const getGetImplementationDiagnosticsQueryOptions = <TData = Awaited<ReturnType<typeof getImplementationDiagnostics>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImplementationDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetImplementationDiagnosticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getImplementationDiagnostics>>> = ({ signal }) => getImplementationDiagnostics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getImplementationDiagnostics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetImplementationDiagnosticsQueryResult = NonNullable<Awaited<ReturnType<typeof getImplementationDiagnostics>>>
+export type GetImplementationDiagnosticsQueryError = ErrorType<void>
+
+
+
+export function useGetImplementationDiagnostics<TData = Awaited<ReturnType<typeof getImplementationDiagnostics>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImplementationDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetImplementationDiagnosticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSupportKnowledgeBaseUrl = (params?: GetSupportKnowledgeBaseParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/knowledge-base?${stringifiedParams}` : `/api/platform/knowledge-base`
+}
+
+export const getSupportKnowledgeBase = async (params?: GetSupportKnowledgeBaseParams, options?: Parameters<typeof customFetch>[1]): Promise<SupportKnowledgeArticle[]> => {
+
+  return customFetch<SupportKnowledgeArticle[]>(getGetSupportKnowledgeBaseUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSupportKnowledgeBaseQueryKey = (params?: GetSupportKnowledgeBaseParams,) => {
+    return [
+    `/api/platform/knowledge-base`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSupportKnowledgeBaseQueryOptions = <TData = Awaited<ReturnType<typeof getSupportKnowledgeBase>>, TError = ErrorType<void>>(params?: GetSupportKnowledgeBaseParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupportKnowledgeBase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupportKnowledgeBaseQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupportKnowledgeBase>>> = ({ signal }) => getSupportKnowledgeBase(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupportKnowledgeBase>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSupportKnowledgeBaseQueryResult = NonNullable<Awaited<ReturnType<typeof getSupportKnowledgeBase>>>
+export type GetSupportKnowledgeBaseQueryError = ErrorType<void>
+
+
+
+export function useGetSupportKnowledgeBase<TData = Awaited<ReturnType<typeof getSupportKnowledgeBase>>, TError = ErrorType<void>>(
+ params?: GetSupportKnowledgeBaseParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupportKnowledgeBase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSupportKnowledgeBaseQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetUnreadNotificationCountUrl = () => {
+
+
+
+
+  return `/api/notifications/unread-count`
+}
+
+export const getUnreadNotificationCount = async ( options?: Parameters<typeof customFetch>[1]): Promise<UnreadNotificationCount> => {
+
+  return customFetch<UnreadNotificationCount>(getGetUnreadNotificationCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnreadNotificationCountQueryKey = () => {
+    return [
+    `/api/notifications/unread-count`
+    ] as const;
+    }
+
+
+export const getGetUnreadNotificationCountQueryOptions = <TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnreadNotificationCountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnreadNotificationCount>>> = ({ signal }) => getUnreadNotificationCount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnreadNotificationCountQueryResult = NonNullable<Awaited<ReturnType<typeof getUnreadNotificationCount>>>
+export type GetUnreadNotificationCountQueryError = ErrorType<unknown>
+
+
+
+export function useGetUnreadNotificationCount<TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnreadNotificationCountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchWorkspaceUrl = (params: SearchWorkspaceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/workspace-search?${stringifiedParams}` : `/api/workspace-search`
+}
+
+export const searchWorkspace = async (params: SearchWorkspaceParams, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceSearchResult> => {
+
+  return customFetch<WorkspaceSearchResult>(getSearchWorkspaceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchWorkspaceQueryKey = (params?: SearchWorkspaceParams,) => {
+    return [
+    `/api/workspace-search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof searchWorkspace>>, TError = ErrorType<void>>(params: SearchWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchWorkspaceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchWorkspace>>> = ({ signal }) => searchWorkspace(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchWorkspace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof searchWorkspace>>>
+export type SearchWorkspaceQueryError = ErrorType<void>
+
+
+
+export function useSearchWorkspace<TData = Awaited<ReturnType<typeof searchWorkspace>>, TError = ErrorType<void>>(
+ params: SearchWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchWorkspaceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetMobileAuthSessionUrl = () => {
 
