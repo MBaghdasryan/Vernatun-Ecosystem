@@ -38,7 +38,7 @@
 | User/profile/logout | Есть | auth/session, logout, sessions | Собственная сессия | A | Logout очищает UI/cache, Back не возвращает данные |
 | Organization/building/unit selector | Context picker есть | auth/context; contexts | Активные назначения | B | Нужные dashboard filters; clear/ignore late responses |
 | Period/month selector | В финансовых формах | Финансовые агрегаты | Finance + scope | B | Общий период для KPI/таблицы/графика, без смешения валют |
-| KPI card/drill-down | Частичные role-insights | role-insights + domain APIs | Permission + module | B | Definition, null/zero/error, переход с соответствующим фильтром |
+| KPI card/drill-down | Role-insights с реестром: определение, query ID, effective permission, module, scope и no-data metadata; карточки показывают отсутствие финансовых данных | `server/kpi-registry.ts` + role-insights | Permission + module | B | Метаданные прошли API-тест для 14 ролей; полный визуальный parity, drill-down и браузерная проверка остаются |
 | Table search/filter/paging/row action | Есть в части таблиц | records paging; доменные списки | По ресурсу | B | Все видимые actions реальны; полнота не ограничена первой страницей |
 | Chart/history | Отдельные analytics | Только сохранённые данные | Finance/operations | B | Если нет истории — «Недостаточно данных для графика» |
 | Status chips | Есть | Настоящие статусы домена | Read | A | Статус не только цветом, не подменять lifecycle |
@@ -96,7 +96,7 @@ audit, email, settings. Новые целевые: users, roles, permissions, in
 | Check import / preview errors / confirm | Есть | imports/:id, confirm | То же | A | Preview не меняет данные; confirm отдельно |
 | Support queue/open case/priority/assignee | Есть SupportConsole | platform/support-cases | support.cases | A | Роль, SLA, вложения, refresh |
 | Diagnostics/run check | Нет полного workspace | Частично health metadata | Explicit support authority | B | Реальные безопасные проверки; не green placeholder |
-| Upcoming meetings/all meetings | Нет полного scheduling | Onboarding tasks не равны встречам | onboarding.manage | B | Нужен источник и CRUD либо честная недоступность |
+| Upcoming meetings/all meetings | Внутренний календарь поддержки в `/console/onboarding`; отдельный источник, создание, изменение времени, confirm/cancel/complete | `platform_support_meetings`, immutable event history, versioned API | `onboarding.manage`; записи оператора ограничены владельцем | B | Изолированные API-сценарии прошли; визуальная browser-приёмка и расширенный периодный календарь остаются |
 | Knowledge base | Не подтверждён полноценный UI | Нет подтверждённой модели | Scoped support | B | Не оставлять пустой пункт меню |
 | Access journal | Есть общий audit/access flow | grants, audit | В пределах разрешённого grant | B | Собрать scoped destination |
 
