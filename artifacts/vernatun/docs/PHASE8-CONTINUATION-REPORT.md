@@ -125,7 +125,7 @@ Vite-конфигурация mockup требует `PORT`. Повторный �
 | Local API health | **PASS: HTTP 200** на `GET /api/health`; production endpoint этим не проверялся |
 | OpenAPI static inventory | **PARTIAL: 246 операций, 135 documented, 111 gaps, 0 unresolved** |
 | Полный workspace typecheck | **FAIL**: `TS2322` в HAYAT mobile, Vernatun и Mockup; см. ниже |
-| Security scan | **BLOCKED**: 7 high, 4 moderate, 2 low dependency findings; SAST вернул 2 high alerts в ImTun static server; HoundDog — 0 findings |
+| Security scan | **BLOCKED**: после совместимых обновлений остаются 3 high и 1 moderate dependency findings; SAST вернул 2 high alerts в ImTun static server; HoundDog — 0 findings |
 | Сквозные A–H / 14 ролей × viewport / MFA browser policy | **НЕ ЗАВЕРШЕНО**: эти прогоны не были частью данного короткого пересмотра |
 | Production acceptance | **НЕ ВЫПОЛНЕНА**; production-база, DNS и реальные письма не затрагивались |
 
@@ -140,14 +140,19 @@ Vite-конфигурация mockup требует `PORT`. Повторный �
   (для Vernatun Web — с указанными build-параметрами); общий `pnpm run build`
   не прошёл, поскольку он останавливается на workspace typecheck.
 
-Сканеры сообщили следующие наиболее существенные зависимости: `braces@3.0.3`,
-`markdown-it@14.3.1`, `node-forge@1.4.0`, `prosemirror-view@1.41.6`,
-`uuid@7.0.3` и `vite@7.3.6`. Это отчёт сканера по workspace-графу, а не
-подтверждение, что каждая уязвимость достижима через production endpoint.
-Для `markdown-it`, `prosemirror-view` и Vite сканер указывает доступные
-исправленные версии; `braces` и `node-forge` в полученном результате не имеют
-предложенной версии исправления. Изменения зависимостей не выполнялись в рамках
-этого быстрого пересмотра.
+Первичный dependency audit дал 7 high / 4 moderate / 2 low. Исправлены
+совместимые версии `markdown-it` → `14.3.3`, `prosemirror-view` → `1.42.3`,
+совместимый `prosemirror-model` выровнен на `1.25.12`, Vite обновлён
+`7.3.6` → `7.3.7`. После них повторный audit показывает **3 high /
+1 moderate / 0 low**: `braces@3.0.3`, `node-forge@1.4.0`, `uuid@7.0.3`
+и `decode-uri-component@0.2.2`. Для `braces` и `node-forge` сканер не
+предложил исправленную версию; перевод `uuid` на указанную версию исправления
+требует major-перехода. Это отчёт scanner по workspace-графу, а не
+подтверждение достижимости каждой проблемы через production endpoint.
+
+После обновлений прошли frozen install, typecheck и build коммерческой
+презентации, production build Vernatun Web и API. Большой JS chunk презентации
+и portal bundle остаются предупреждениями по размеру.
 
 SAST alerts указывают на конструирование путей в ImTun static server. При
 поверхностной проверке ветка manifest ограничивает платформы значениями
