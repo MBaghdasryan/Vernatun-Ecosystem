@@ -96,7 +96,7 @@ audit, email, settings. Новые целевые: users, roles, permissions, in
 | Check import / preview errors / confirm | Есть | imports/:id, confirm | То же | A | Preview не меняет данные; confirm отдельно |
 | Support queue/open case/priority/assignee | Есть SupportConsole | platform/support-cases | support.cases | A | Роль, SLA, вложения, refresh |
 | Diagnostics/run check | Нет полного workspace | Частично health metadata | Explicit support authority | B | Реальные безопасные проверки; не green placeholder |
-| Upcoming meetings/all meetings | Внутренний календарь поддержки в `/console/onboarding`; отдельный источник, создание, изменение времени, confirm/cancel/complete | `platform_support_meetings`, immutable event history, versioned API | `onboarding.manage`; записи оператора ограничены владельцем | B | Изолированные API-сценарии прошли; визуальная browser-приёмка и расширенный периодный календарь остаются |
+| Upcoming meetings/all meetings | Внутренний календарь поддержки в `/console/onboarding`; ближайшие встречи также добавлены в overview поддержки из отдельного источника | `platform_support_meetings`, immutable event history, versioned API | `onboarding.manage`; записи оператора ограничены владельцем | B | Изолированные API-сценарии прошли; overview-календарь требует browser-приёмки; внешний календарь не подключён |
 | Knowledge base | Не подтверждён полноценный UI | Нет подтверждённой модели | Scoped support | B | Не оставлять пустой пункт меню |
 | Access journal | Есть общий audit/access flow | grants, audit | В пределах разрешённого grant | B | Собрать scoped destination |
 
