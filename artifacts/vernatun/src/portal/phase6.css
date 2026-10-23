@@ -1,5 +1,8 @@
 .portal-root .p6-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 14px}
 .portal-root .p6-kpi{border:1px solid var(--p-border);border-radius:11px;background:#fff;padding:12px 14px;display:grid;gap:3px;min-width:0}
+.portal-root button.p6-kpi-link{color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.portal-root button.p6-kpi-link:hover{border-color:#f28a35;box-shadow:0 2px 10px #102b3b12}
+.portal-root button.p6-kpi-link:focus-visible{outline:3px solid #ff8b38;outline-offset:2px}
 .portal-root .p6-kpi small{color:var(--p-muted);font-size:12px}
 .portal-root .p6-kpi strong{font-size:18px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .portal-root .p6-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}

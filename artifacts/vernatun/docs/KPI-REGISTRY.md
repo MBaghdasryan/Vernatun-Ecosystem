@@ -47,3 +47,9 @@ entitlement.
   the active context. Tenant scope is not inferred from the requested period.
 - This registry covers current dashboard KPI cards; it does not certify
   reference-chart parity or add SaaS platform billing revenue.
+- The broader mapping from each of the 15 product screenshots to these cards,
+  their real-data sources, no-data semantics, and current drill-down status is
+  in [`KPI-REFERENCE-CROSSWALK.md`](KPI-REFERENCE-CROSSWALK.md). That crosswalk
+  distinguishes implemented sources from reference-only metrics that still
+  have no approved data source; it is not a claim of complete browser or
+  pixel-parity acceptance.

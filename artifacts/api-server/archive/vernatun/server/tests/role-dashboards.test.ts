@@ -171,3 +171,14 @@ test('unit-scoped team totals exclude other units and locked people; module gate
   await pool.query('UPDATE role_assignments SET building_id=$2,unit_id=$3 WHERE id=$1',[a.id,a.building_id,a.unit_id]);
  }
 });
+test('organization dashboard mirrors effective module policy and role-insight team scope',async()=>{
+ const manager=await new Client().login('org_admin');
+ const [dashboard,modules,insights]=await Promise.all([
+  manager.call('/dashboard'),manager.call('/modules'),manager.call('/role-insights'),
+ ]);
+ assert.equal(dashboard.status,200);
+ assert.equal(modules.status,200);
+ assert.equal(insights.status,200);
+ assert.equal(dashboard.data.metrics.modules,modules.data.filter((x:any)=>x.enabled).length);
+ assert.equal(dashboard.data.metrics.team,Number(insights.data.cards.find((x:any)=>x.key==='team').value));
+});
