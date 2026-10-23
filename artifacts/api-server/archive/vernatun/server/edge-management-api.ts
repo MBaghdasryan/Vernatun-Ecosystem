@@ -9,7 +9,6 @@ import {closeEdgeConnection} from './edge-sockets.js';
 import {requestEdgeCommand} from './edge-command-service.js';
 
 const router=Router();
-router.use(requireAuth);
 const uuid=z.string().uuid();
 const edgeId=z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/);
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
@@ -207,36 +206,37 @@ router.post('/edge-console/nodes/:id/credentials/revoke',async(req,res)=>{
 router.put('/edge-console/devices/:deviceId/access',async(req,res)=>{
  const c=await requirePermission(req,'edge.manage');
  const input=z.object({unitId:uuid,allowedCapabilities:capabilitySchema.default(['BARRIER.OPEN'])}).strict().parse(req.body);
- if(!c.organization_id)throw new ApiError(403,'organization_scope_required');
+ if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const deviceId=uuid.parse(req.params.deviceId);
  const result=await transaction(async db=>{
   const target=await db.query(`SELECT id,organization_id,building_id FROM edge_device_inventory
-   WHERE id=$1 AND organization_id=$2 AND ($3::uuid IS NULL OR building_id=$3) FOR UPDATE`,
+   WHERE id=$1 AND ($2::uuid IS NULL OR organization_id=$2) AND ($3::uuid IS NULL OR building_id=$3) FOR UPDATE`,
    [deviceId,c.organization_id,c.building_id]);
   if(!target.rowCount)throw new ApiError(404,'device_not_found');
   const unit=await db.query(`SELECT id FROM units WHERE id=$1 AND organization_id=$2 AND building_id=$3`,
-   [input.unitId,c.organization_id,target.rows[0].building_id]);
+   [input.unitId,target.rows[0].organization_id,target.rows[0].building_id]);
   if(!unit.rowCount)throw new ApiError(400,'unit_building_mismatch');
   await db.query(`INSERT INTO edge_device_access(device_id,organization_id,building_id,unit_id,allowed_capabilities,created_by_user_id)
    VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(device_id,unit_id) DO UPDATE
    SET allowed_capabilities=EXCLUDED.allowed_capabilities,created_by_user_id=EXCLUDED.created_by_user_id,created_at=now()`,
-   [deviceId,c.organization_id,target.rows[0].building_id,input.unitId,input.allowedCapabilities,req.user!.id]);
-  await record(db,req,c,'edge.device.access.assign','edge_device',deviceId,{unitId:input.unitId,capabilities:input.allowedCapabilities});
+   [deviceId,target.rows[0].organization_id,target.rows[0].building_id,input.unitId,input.allowedCapabilities,req.user!.id]);
+  await record(db,req,{...c,organization_id:target.rows[0].organization_id},'edge.device.access.assign','edge_device',deviceId,{unitId:input.unitId,capabilities:input.allowedCapabilities});
   return {deviceId,unitId:input.unitId,allowedCapabilities:input.allowedCapabilities};
  });
  res.json(result);
 });
 router.delete('/edge-console/devices/:deviceId/access/:unitId',async(req,res)=>{
  const c=await requirePermission(req,'edge.manage');
- if(!c.organization_id)throw new ApiError(403,'organization_scope_required');
+ if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const deviceId=uuid.parse(req.params.deviceId),unitId=uuid.parse(req.params.unitId);
  const result=await transaction(async db=>{
   const row=await db.query(`DELETE FROM edge_device_access a USING edge_device_inventory d
-   WHERE a.device_id=d.id AND a.device_id=$1 AND a.unit_id=$2 AND a.organization_id=$3
-    AND ($4::uuid IS NULL OR a.building_id=$4) RETURNING a.device_id`,
+   WHERE a.device_id=d.id AND a.device_id=$1 AND a.unit_id=$2
+    AND ($3::uuid IS NULL OR a.organization_id=$3) AND ($4::uuid IS NULL OR a.building_id=$4)
+    RETURNING a.device_id,a.organization_id`,
    [deviceId,unitId,c.organization_id,c.building_id]);
   if(!row.rowCount)throw new ApiError(404,'device_access_not_found');
-  await record(db,req,c,'edge.device.access.revoke','edge_device',deviceId,{unitId});
+  await record(db,req,{...c,organization_id:row.rows[0].organization_id},'edge.device.access.revoke','edge_device',deviceId,{unitId});
   return row.rows[0];
  });
  res.json({status:'REVOKED',...result});

@@ -16,6 +16,7 @@ type Device = {
   id: string; edge_device_id: string; thingsboard_id: string | null; name: string; profile: string | null;
   device_type: string | null; label: string | null; unit_id: string | null; capabilities: string[];
   reported_online: boolean | null; last_seen_at: string | null; last_telemetry_at: string | null;
+  access_units?: { unitId: string; allowedCapabilities: string[] }[];
 };
 type Alarm = { id?: string; command_id?: string; [key: string]: unknown };
 type Fleet = { summary: { total: number; online: number; degraded: number; offline: number; activeAlarms: number }; nodes: EdgeNode[] };
@@ -64,6 +65,12 @@ const styles = `
 
 export default function EdgeWorkspace({ c, language }: { c: RoleContext; language: Language }) {
   const tx = (key: keyof typeof COPY) => COPY[key][idx(language)];
+  const canBootstrap = c.permissions.includes('edge.bootstrap.create');
+  const canManage = c.permissions.includes('edge.manage');
+  const canRotate = c.permissions.includes('edge.credentials.rotate');
+  const canRevoke = c.permissions.includes('edge.credentials.revoke');
+  const canReadAlarms = c.permissions.includes('edge.read') || c.permissions.includes('edge.alarms.read');
+  const canReadCommands = c.permissions.includes('edge.read') || c.permissions.includes('edge.commands.read');
   const [fleet, setFleet] = useState<Fleet>();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [alarms, setAlarms] = useState<Alarm[]>([]);
@@ -85,8 +92,10 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
     setLoading(true); setError(undefined);
     try {
       const [f, b, a, cmd] = await Promise.all([
-        request<Fleet>('/edge-console/fleet'), request<Building[]>('/edge-console/buildings'),
-        request<Alarm[]>('/edge-console/alarms'), request<Alarm[]>('/edge-console/commands'),
+        request<Fleet>('/edge-console/fleet'),
+        canBootstrap ? request<Building[]>('/edge-console/buildings') : Promise.resolve([] as Building[]),
+        canReadAlarms ? request<Alarm[]>('/edge-console/alarms') : Promise.resolve([] as Alarm[]),
+        canReadCommands ? request<Alarm[]>('/edge-console/commands') : Promise.resolve([] as Alarm[]),
       ]);
       setFleet(f); setBuildings(b); setAlarms(a); setCommands(cmd);
       const current = selectedRef.current;
@@ -94,7 +103,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
       setSelected(nextId);
       if (nextId) setDetail(await request<Detail>(`/edge-console/nodes/${encodeURIComponent(nextId)}`)); else setDetail(undefined);
     } catch (e) { setError(e); } finally { setLoading(false); }
-  }, []);
+  }, [canBootstrap, canReadAlarms, canReadCommands]);
   useEffect(() => { void load(); }, [c.id, load]);
   const choose = async (id: string) => {
     setSelected(id); setDetail(undefined); setError(undefined);
@@ -144,7 +153,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
     {!!error && <div className="ew-error" role="alert" data-testid="status-edge-error">{errorMessage}<button className="ew-button" onClick={() => void load()} data-testid="button-retry-edge">{tx('retry')}</button></div>}
     {loading && !fleet ? <div className="ew-loading" role="status" aria-busy="true" data-testid="status-edge-loading">{tx('loading')}</div> : fleet && <>
       <div className="ew-grid" aria-label={tx('fleet')} data-testid="edge-fleet-summary">
-        {(['total','online','degraded','offline','activeAlarms'] as const).map((k,i)=><div className="ew-metric" key={k} data-testid={'metric-edge-'+k}><span>{[tx('total'),tx('online'),tx('degraded'),tx('offline'),tx('alarms')][i]}</span><strong>{fleet.summary[k]}</strong></div>)}
+        {(['total','online','degraded','offline',...(canReadAlarms?['activeAlarms' as const]:[])] as const).map(k=><div className="ew-metric" key={k} data-testid={'metric-edge-'+k}><span>{tx(k==='activeAlarms'?'alarms':k)}</span><strong>{fleet.summary[k]}</strong></div>)}
       </div>
       <div className="ew-columns">
         <section className="ew-panel"><header><h2><Radio size={18}/> {tx('nodes')}</h2><span className="ew-eyebrow">{fleet.nodes.length}</span></header>
@@ -154,7 +163,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
             </button><span className={'ew-tag '+statusClass(n.status)} data-testid={'status-edge-node-'+n.id}>{onlineLabel(n.status)}</span>
           </div>)}</div> : <p className="ew-empty" data-testid="text-edge-empty">{tx('empty')}</p>}
         </section>
-        <section className="ew-panel"><header><h2><KeyRound size={18}/> {tx('bootstrap')}</h2></header>
+        {canBootstrap && <section className="ew-panel"><header><h2><KeyRound size={18}/> {tx('bootstrap')}</h2></header>
           {token ? <div data-testid="panel-one-time-token"><p className="ew-note" role="alert">{tx('oneTime')}</p><div className="ew-token" data-testid="text-one-time-token">{token.bootstrapToken}</div>
             <div className="ew-token-actions"><button className="ew-button primary" onClick={() => void copyToken()} data-testid="button-copy-token"><Copy size={15}/>{tx('copy')}</button><button className="ew-button" onClick={() => {setToken(undefined);setNotice('')}} data-testid="button-dismiss-token"><X size={15}/>{tx('dismiss')}</button></div>
             {typeof token.version === 'number' && <p>{tx('tokenVersion')}: {token.version} · {tx('tokenExpires')}: {String(token.expiresAt ?? '—')}</p>}
@@ -164,28 +173,28 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
             <label>{tx('edgeId')}<input required maxLength={120} value={form.edgeId} onChange={e=>setForm({...form,edgeId:e.target.value})} data-testid="input-bootstrap-edge-id"/></label>
             <label>{tx('name')}<input required maxLength={120} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} data-testid="input-bootstrap-name"/></label>
             <label>{tx('siteCode')}<input required maxLength={80} value={form.siteCode} onChange={e=>setForm({...form,siteCode:e.target.value})} data-testid="input-bootstrap-site-code"/></label>
-            <label>{tx('expires')}<input type="number" required min="1" max="10080" value={form.expiresInMinutes} onChange={e=>setForm({...form,expiresInMinutes:e.target.value})} data-testid="input-bootstrap-expiry"/></label>
+            <label>{tx('expires')}<input type="number" required min="5" max="120" value={form.expiresInMinutes} onChange={e=>setForm({...form,expiresInMinutes:e.target.value})} data-testid="input-bootstrap-expiry"/></label>
             <button className="ew-button primary" disabled={busy==='bootstrap'} data-testid="button-create-bootstrap">{busy==='bootstrap'?tx('loading'):tx('create')}<ChevronRight size={16}/></button>
           </form>}
-        </section>
+        </section>}
       </div>
       {node && <section className="ew-panel ew-details" data-testid={'panel-edge-detail-'+node.id}>
         <header><h2><Building2 size={18}/> {tx('nodeDetails')} · {node.name}</h2><span className={'ew-tag '+statusClass(node.status)}>{onlineLabel(node.status)}</span></header>
         <div className="ew-facts">
           {[[tx('registration'),node.registration_state],[tx('authorization'),node.local_authorization_status],[tx('queue'),node.queue_depth],[tx('agent'),node.agent_version??'—'],[tx('lastSeen'),when(node.last_seen_at,language)],['Edge ID',node.edge_id]].map(([label,value])=><div className="ew-fact" key={label}><small>{label}</small><strong>{value}</strong></div>)}
         </div>
-        <div className="ew-actions"><button className="ew-button" disabled={!!busy} onClick={()=>void rotate()} data-testid="button-rotate-edge-credentials"><KeyRound size={15}/>{tx('rotate')}</button><button className="ew-button danger" disabled={!!busy} onClick={()=>setConfirmRevoke(true)} data-testid="button-revoke-edge-credentials"><ShieldAlert size={15}/>{tx('revoke')}</button></div>
-        <p className="ew-note">{tx('rotateNote')}</p>
-        <h2><Terminal size={17}/> {tx('inventory')} · {detail.devices.length}</h2>
+        {(canRotate || canRevoke) && <div className="ew-actions">{canRotate && <button className="ew-button" disabled={!!busy} onClick={()=>void rotate()} data-testid="button-rotate-edge-credentials"><KeyRound size={15}/>{tx('rotate')}</button>}{canRevoke && <button className="ew-button danger" disabled={!!busy} onClick={()=>setConfirmRevoke(true)} data-testid="button-revoke-edge-credentials"><ShieldAlert size={15}/>{tx('revoke')}</button>}</div>}
+        {canRotate && <p className="ew-note">{tx('rotateNote')}</p>}
+        {(c.permissions.includes('edge.inventory.read') || c.permissions.includes('edge.read')) && <><h2><Terminal size={17}/> {tx('inventory')} · {detail.devices.length}</h2>
         {detail.devices.length ? <div className="ew-scroll"><table className="ew-table"><thead><tr><th>{tx('device')}</th><th>{tx('status')}</th><th>{tx('capabilities')}</th><th>{tx('access')}</th></tr></thead><tbody>{detail.devices.map(d=><tr key={d.id} data-testid={'row-edge-device-'+d.id}>
           <td><strong>{d.label||d.name}</strong><br/><small>{d.device_type||d.profile||d.edge_device_id}</small></td><td><span className={'ew-tag '+(d.reported_online?'online':'offline')}>{d.reported_online?tx('online'):tx('offline')}</span></td><td>{d.capabilities?.join(', ')||'—'}</td>
-          <td>{d.unit_id ? <div className="ew-actions"><span>{d.unit_id}</span><button className="ew-button danger" disabled={!!busy} onClick={()=>void removeDeviceAccess(d.id,d.unit_id!)} data-testid={'button-remove-device-access-'+d.id}>{tx('removeAccess')}</button></div> :
-            <form className="ew-actions" onSubmit={e=>{e.preventDefault();void setDeviceAccess(d.id)}}><input aria-label={tx('unitId')} placeholder={tx('unitId')} value={access[d.id]??''} onChange={e=>setAccess({...access,[d.id]:e.target.value})} data-testid={'input-device-unit-'+d.id}/><button className="ew-button" disabled={!!busy||!access[d.id]?.trim()} data-testid={'button-allow-device-'+d.id}>{tx('allow')}</button></form>}</td>
+          <td>{(d.access_units?.length ? d.access_units : d.unit_id ? [{unitId:d.unit_id,allowedCapabilities:[]}] : []).map(accessUnit=><div className="ew-actions" key={accessUnit.unitId}><span>{accessUnit.unitId} · {accessUnit.allowedCapabilities.join(', ')}</span>{canManage && <button className="ew-button danger" disabled={!!busy} onClick={()=>void removeDeviceAccess(d.id,accessUnit.unitId)} data-testid={'button-remove-device-access-'+d.id+'-'+accessUnit.unitId}>{tx('removeAccess')}</button>}</div>)}{canManage && <form className="ew-actions" onSubmit={e=>{e.preventDefault();void setDeviceAccess(d.id)}}><input aria-label={tx('unitId')} placeholder={tx('unitId')} value={access[d.id]??''} onChange={e=>setAccess({...access,[d.id]:e.target.value})} data-testid={'input-device-unit-'+d.id}/><button className="ew-button" disabled={!!busy||!access[d.id]?.trim()} data-testid={'button-allow-device-'+d.id}>{tx('allow')}</button></form>}</td>
         </tr>)}</tbody></table></div> : <p className="ew-empty" data-testid="text-edge-devices-empty">{tx('empty')}</p>}
+        </>}
       </section>}
       <div className="ew-columns">
-        <section className="ew-panel"><header><h2><AlertTriangle size={18}/> {tx('alarmsTitle')}</h2></header>{alarms.length ? <div className="ew-list">{alarms.map((a,i)=><article className="ew-fact" key={a.id??i} data-testid={'row-edge-alarm-'+(a.id??i)}><strong>{String(a.alarm_type??a.title??a.name??a.code??a.type??a.id)}</strong><small>{String(a.severity??'')} · {String(a.status??'')} · {String(a.received_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-alarms-empty">{tx('empty')}</p>}</section>
-        <section className="ew-panel"><header><h2><Activity size={18}/> {tx('commands')}</h2></header>{commands.length ? <div className="ew-list">{commands.map((a,i)=><article className="ew-fact" key={a.command_id??a.id??i} data-testid={'row-edge-command-'+(a.command_id??a.id??i)}><strong>{String(a.capability??a.command??a.type??a.command_id??a.id)}</strong><small>{String(a.status??'')} · {String(a.requested_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-commands-empty">{tx('empty')}</p>}</section>
+        {canReadAlarms && <section className="ew-panel"><header><h2><AlertTriangle size={18}/> {tx('alarmsTitle')}</h2></header>{alarms.length ? <div className="ew-list">{alarms.map((a,i)=><article className="ew-fact" key={a.id??i} data-testid={'row-edge-alarm-'+(a.id??i)}><strong>{String(a.alarm_type??a.title??a.name??a.code??a.type??a.id)}</strong><small>{String(a.severity??'')} · {String(a.status??'')} · {String(a.received_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-alarms-empty">{tx('empty')}</p>}</section>}
+        {canReadCommands && <section className="ew-panel"><header><h2><Activity size={18}/> {tx('commands')}</h2></header>{commands.length ? <div className="ew-list">{commands.map((a,i)=><article className="ew-fact" key={a.command_id??a.id??i} data-testid={'row-edge-command-'+(a.command_id??a.id??i)}><strong>{String(a.capability??a.command??a.type??a.command_id??a.id)}</strong><small>{String(a.status??'')} · {String(a.requested_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-commands-empty">{tx('empty')}</p>}</section>}
       </div>
     </>}
     {notice && <p role="status" className="ew-note" data-testid="status-edge-action">{notice}</p>}

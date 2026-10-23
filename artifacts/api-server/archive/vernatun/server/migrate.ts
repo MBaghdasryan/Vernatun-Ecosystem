@@ -24,6 +24,9 @@ const expectedObjects=[
  {migration:'038_platform_support_meetings.sql',name:'platform_support_meeting_events',kind:'relation' as const,idempotent:false},
  {migration:'039_payment_foundation.sql',name:'payment_intents',kind:'relation' as const,idempotent:false},
  {migration:'039_payment_foundation.sql',name:'payment_transactions',kind:'relation' as const,idempotent:false},
+ {migration:'040_edge_management.sql',name:'edge_nodes',kind:'relation' as const,idempotent:false},
+ {migration:'040_edge_management.sql',name:'edge_device_access',kind:'relation' as const,idempotent:false},
+ {migration:'040_edge_management.sql',name:'edge_commands',kind:'relation' as const,idempotent:false},
 ];
 
 async function migrationFiles(through?:string):Promise<Migration[]>{

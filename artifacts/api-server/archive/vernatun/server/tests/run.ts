@@ -18,7 +18,7 @@ const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin
 const createdSchemas:string[]=[];
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:urlForSchema(schema),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
 // Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
-if(process.argv.includes('--system-only')||process.argv.includes('--payments-only')||process.argv.includes('--browser-only')||process.argv.includes('--seven-chains-only'))Object.assign(env,{
+if(process.argv.includes('--system-only')||process.argv.includes('--payments-only')||process.argv.includes('--browser-only')||process.argv.includes('--seven-chains-only')||process.argv.includes('--edge-only'))Object.assign(env,{
  VERNATUN_OPERATIONS_ENCRYPTION_KEY:randomBytes(32).toString('hex'),BACKUP_STORAGE_MODE:'local',
 });
 let status=0;
@@ -54,6 +54,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/platform-support-meetings.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
+ : process.argv.includes('--edge-only')
+ ? [['--test','server/tests/edge.test.ts']]
  : process.argv.includes('--phase8-only')
  ? [['--test','server/tests/phase8.test.ts']]
  : process.argv.includes('--offline-only')

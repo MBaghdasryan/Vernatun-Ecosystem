@@ -268,7 +268,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/EdgeResidentCommandInput' }
+            schema: { $ref: '#/components/schemas/EdgeStaffCommandInput' }
       responses:
         '202': { description: Building-scoped command accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
         '403': { description: Role, building scope, capability, or hard safety policy denied the command }
@@ -3288,6 +3288,13 @@ components:
       required: [capability, reason]
       properties:
         capability: { type: string, enum: [BARRIER.OPEN] }
+        reason: { type: string, minLength: 3, maxLength: 300 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
+    EdgeStaffCommandInput:
+      type: object
+      required: [capability, reason]
+      properties:
+        capability: { type: string, enum: [BARRIER.OPEN, BARRIER.CLOSE] }
         reason: { type: string, minLength: 3, maxLength: 300 }
         idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
     EdgeResidentCommand:

@@ -88,6 +88,7 @@ CREATE TABLE edge_device_inventory (
  updated_at timestamptz NOT NULL DEFAULT now(),
  FOREIGN KEY(edge_node_id,organization_id,building_id) REFERENCES edge_nodes(id,organization_id,building_id),
  FOREIGN KEY(unit_id,building_id,organization_id) REFERENCES units(id,building_id,organization_id),
+ UNIQUE(id,organization_id,building_id),
  UNIQUE(edge_node_id,edge_device_id),
  UNIQUE(id,edge_node_id,organization_id,building_id)
 );
@@ -199,7 +200,7 @@ INSERT INTO permissions(key) VALUES
  ('device.barrier.open.building'),('device.barrier.close.building')
 ON CONFLICT DO NOTHING;
 INSERT INTO role_permissions(role_key,permission_key)
-SELECT r.role_key,p.permission_key FROM (VALUES
+SELECT r.role_key,r.permission_key FROM (VALUES
  ('platform_admin','edge.fleet.read'),('platform_admin','edge.read'),('platform_admin','edge.manage'),('platform_admin','edge.bootstrap.create'),
  ('platform_admin','edge.credentials.rotate'),('platform_admin','edge.credentials.revoke'),('platform_admin','edge.commands.read'),('platform_admin','edge.commands.audit'),
   ('support','edge.read'),('support','edge.alarms.read'),('support','edge.events.read'),
