@@ -21,6 +21,7 @@
     "db:migrate": "tsx archive/vernatun/server/migrate.ts",
     "db:seed": "tsx archive/vernatun/server/seed.ts && tsx archive/vernatun/server/seed-modules.ts",
     "test:api": "cd archive/vernatun && tsx server/tests/run.ts",
+    "test:seven-chains": "cd archive/vernatun && tsx server/tests/run.ts --seven-chains-only",
     "test:payments": "cd archive/vernatun && tsx server/tests/run.ts --payments-only",
     "test:storage": "cd archive/vernatun && tsx server/tests/run.ts --storage-only",
     "test:offline": "cd archive/vernatun && node --import tsx server/tests/run.ts --offline-only",
