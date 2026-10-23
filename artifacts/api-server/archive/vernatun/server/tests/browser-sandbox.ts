@@ -10,6 +10,10 @@ const meta=resolve('../../../../.local/qa/phase8-browser.json');
 let finish:()=>void;
 const done=new Promise<void>(r=>{finish=r});
 const server=createServer((req,res)=>{
+  if(req.method==='POST'&&req.url==='/__qa_reset_auth'){
+   if(req.headers['x-qa-schema']!==schema){res.writeHead(403,{'Content-Type':'application/json'});res.end('{"error":"forbidden"}');return}
+   pool.query('DELETE FROM auth_rate_limits').then(()=>{res.writeHead(204);res.end()}).catch(()=>{res.writeHead(500);res.end()});return;
+  }
  if(req.method==='POST'&&req.url==='/__qa_stop'){
   res.writeHead(200,{'Content-Type':'application/json'});res.end('{"stopped":true}');
   setTimeout(()=>server.close(()=>finish()),50);return;
