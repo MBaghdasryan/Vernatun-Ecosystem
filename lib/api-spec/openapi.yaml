@@ -11,6 +11,30 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /payments/callbacks/ameriabank:
+    $ref: './payments.yaml#/paths/~1payments~1callbacks~1ameriabank'
+  /payments/callbacks/arca:
+    $ref: './payments.yaml#/paths/~1payments~1callbacks~1arca'
+  /utilities/callbacks/telcell:
+    $ref: './payments.yaml#/paths/~1utilities~1callbacks~1telcell'
+  /payments/workspace:
+    $ref: './payments.yaml#/paths/~1payments~1workspace'
+  /payments/provider-instances:
+    $ref: './payments.yaml#/paths/~1payments~1provider-instances'
+  /payments/provider-instances/{id}/disable:
+    $ref: './payments.yaml#/paths/~1payments~1provider-instances~1{id}~1disable'
+  /payments/provider-instances/{id}/test:
+    $ref: './payments.yaml#/paths/~1payments~1provider-instances~1{id}~1test'
+  /payments/platform-invoices:
+    $ref: './payments.yaml#/paths/~1payments~1platform-invoices'
+  /payments/intents:
+    $ref: './payments.yaml#/paths/~1payments~1intents'
+  /payments/intents/{id}:
+    $ref: './payments.yaml#/paths/~1payments~1intents~1{id}'
+  /payments/intents/{id}/verify:
+    $ref: './payments.yaml#/paths/~1payments~1intents~1{id}~1verify'
+  /utilities/workspace:
+    $ref: './payments.yaml#/paths/~1utilities~1workspace'
   /platform/implementation-diagnostics:
     get:
       operationId: getImplementationDiagnostics

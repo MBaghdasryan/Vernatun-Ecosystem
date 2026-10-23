@@ -22,6 +22,8 @@ const expectedObjects=[
  {migration:'037_platform_updates.sql',name:'platform_updates',kind:'relation' as const,idempotent:false},
  {migration:'038_platform_support_meetings.sql',name:'platform_support_meetings',kind:'relation' as const,idempotent:false},
  {migration:'038_platform_support_meetings.sql',name:'platform_support_meeting_events',kind:'relation' as const,idempotent:false},
+ {migration:'039_payment_foundation.sql',name:'payment_intents',kind:'relation' as const,idempotent:false},
+ {migration:'039_payment_foundation.sql',name:'payment_transactions',kind:'relation' as const,idempotent:false},
 ];
 
 async function migrationFiles(through?:string):Promise<Migration[]>{

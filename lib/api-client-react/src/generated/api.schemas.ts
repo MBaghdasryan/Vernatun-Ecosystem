@@ -2610,6 +2610,234 @@ export interface WorkspaceSearchResult {
   groups: WorkspaceSearchGroup[];
 }
 
+export interface PaymentReadiness {
+  status: string;
+  onlineAvailable: boolean;
+  reason: string;
+}
+
+export type PaymentProviderDefinitionDomain = typeof PaymentProviderDefinitionDomain[keyof typeof PaymentProviderDefinitionDomain];
+
+
+export const PaymentProviderDefinitionDomain = {
+  platform: 'platform',
+  property: 'property',
+  utility: 'utility',
+} as const;
+
+export interface PaymentProviderDefinition {
+  code: string;
+  name: string;
+  domain: PaymentProviderDefinitionDomain;
+  providerType: string;
+  scope: string;
+  status: string;
+  credentialFields: string[];
+  capabilities: string[];
+}
+
+export interface PaymentProviderInstance {
+  id: string;
+  provider_code: string;
+  payment_domain: string;
+  scope_type: string;
+  /** @nullable */
+  organization_id?: string | null;
+  environment: string;
+  status: string;
+  enabled: boolean;
+  credentials_configured: boolean;
+  revision: number;
+  updated_at?: string;
+  /** @nullable */
+  last_health_check?: string | null;
+  /** @nullable */
+  last_success_at?: string | null;
+  /** @nullable */
+  last_error?: string | null;
+}
+
+export type PaymentProviderSetupInputProviderCode = typeof PaymentProviderSetupInputProviderCode[keyof typeof PaymentProviderSetupInputProviderCode];
+
+
+export const PaymentProviderSetupInputProviderCode = {
+  ameriabank: 'ameriabank',
+  arca: 'arca',
+  telcell: 'telcell',
+} as const;
+
+export type PaymentProviderSetupInputEnvironment = typeof PaymentProviderSetupInputEnvironment[keyof typeof PaymentProviderSetupInputEnvironment];
+
+
+export const PaymentProviderSetupInputEnvironment = {
+  sandbox: 'sandbox',
+  production: 'production',
+} as const;
+
+export type PaymentProviderSetupInputCredentials = {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  clientId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  username: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  password: string;
+};
+
+export interface PaymentProviderSetupInput {
+  providerCode: PaymentProviderSetupInputProviderCode;
+  environment: PaymentProviderSetupInputEnvironment;
+  /** @minimum 1 */
+  revision?: number;
+  credentials?: PaymentProviderSetupInputCredentials;
+}
+
+export interface PlatformBillingInvoiceInput {
+  subscriptionId: string;
+  /** @pattern ^\d{4}-\d{2}$ */
+  period: string;
+  dueOn: string;
+  key: string;
+}
+
+export interface PlatformBillingInvoice {
+  id: string;
+  organization_id: string;
+  subscription_id: string;
+  billing_period: string;
+  amount_minor: string;
+  paid_minor?: string;
+  currency: string;
+  status: string;
+  due_at?: string;
+}
+
+export type OnlinePaymentIntentInputDomain = typeof OnlinePaymentIntentInputDomain[keyof typeof OnlinePaymentIntentInputDomain];
+
+
+export const OnlinePaymentIntentInputDomain = {
+  platform: 'platform',
+  property: 'property',
+} as const;
+
+export type OnlinePaymentIntentInputAllocationStrategy = typeof OnlinePaymentIntentInputAllocationStrategy[keyof typeof OnlinePaymentIntentInputAllocationStrategy];
+
+
+export const OnlinePaymentIntentInputAllocationStrategy = {
+  oldest_first: 'oldest_first',
+  selected_invoices: 'selected_invoices',
+  current_period_first: 'current_period_first',
+} as const;
+
+export interface OnlinePaymentIntentInput {
+  domain: OnlinePaymentIntentInputDomain;
+  key: string;
+  platformInvoiceId?: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  invoiceIds?: string[];
+  allocationStrategy?: OnlinePaymentIntentInputAllocationStrategy;
+}
+
+export interface OnlinePaymentIntent {
+  id: string;
+  public_reference: string;
+  payment_domain: string;
+  amount_minor: string;
+  currency: string;
+  status: string;
+  organization_id?: string;
+  beneficiary?: string;
+  provider_code?: string;
+  /** @nullable */
+  provider_payment_id?: string | null;
+  /** @nullable */
+  redirect_url?: string | null;
+  created_at?: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  transaction_type: string;
+  amount_minor: string;
+  currency: string;
+  status: string;
+  external_transaction_id: string;
+  confirmed_at?: string;
+}
+
+export interface PaymentAllocationView {
+  invoice_id: string;
+  amount_minor: string;
+}
+
+export interface PaymentIntentDetails {
+  intent: OnlinePaymentIntent;
+  transactions: PaymentTransaction[];
+  allocations: PaymentAllocationView[];
+}
+
+export interface PaymentSubscriptionOption {
+  id: string;
+  organization_name: string;
+  name: string;
+  amount_minor: string;
+  currency: string;
+  starts_on: string;
+  ends_on: string;
+}
+
+export interface PropertyPayableInvoice {
+  id: string;
+  period: string;
+  balance_minor: string;
+  currency: string;
+}
+
+export interface PaymentsWorkspace {
+  providers: PaymentProviderDefinition[];
+  instances: PaymentProviderInstance[];
+  intents: OnlinePaymentIntent[];
+  platformInvoices: PlatformBillingInvoice[];
+  payableInvoices: PropertyPayableInvoice[];
+  subscriptions: PaymentSubscriptionOption[];
+  readiness: PaymentReadiness;
+  canConfigure: boolean;
+  canIssuePlatformInvoice: boolean;
+  hasMore: boolean;
+}
+
+export interface UtilityCatalogEntry {
+  id: string;
+  name: string;
+  utility_type: string;
+}
+
+export interface UtilityAccountView {
+  id: string;
+  display_name: string;
+  subscriber_number_masked: string;
+  status: string;
+}
+
+export interface UtilityBillingWorkspace {
+  status: string;
+  capabilities: string[];
+  catalog: UtilityCatalogEntry[];
+  accounts: UtilityAccountView[];
+  balanceState: string;
+}
+
 /**
  * Authorized platform record; sensitive nested records remain permission-filtered.
  */

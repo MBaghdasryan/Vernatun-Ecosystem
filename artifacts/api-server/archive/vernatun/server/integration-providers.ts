@@ -2,7 +2,7 @@ import {z} from 'zod';
 import nodemailer from 'nodemailer';
 import {publicHost} from './operations-network.js';
 
-export const integrationCategories=['payments','banks','sms','email','access_control','intercom','cameras','metering','ai','chatbots','crm_erp','government'] as const;
+export const integrationCategories=['payments','utility_aggregators','banks','sms','email','access_control','intercom','cameras','metering','ai','chatbots','crm_erp','government'] as const;
 export type ConnectionResult='connected'|'authentication_failed'|'timeout'|'invalid_configuration'|'provider_error';
 export interface IntegrationProvider {
  id:string;name:string;category:typeof integrationCategories[number];version:string;capabilities:string[];
@@ -36,16 +36,7 @@ export function providerCatalog(){return integrationCategories.map(category=>cat
  configurationFields:['host','port'],credentialFields:['username','password']}:
  {id:category+'.provider_required',name:category,category,version:null,adapterInstalled:false,capabilities:[],configurationFields:[],credentialFields:[]});}
 
-// Provider-neutral contracts only. No payment/bank adapter is installed.
-export interface PaymentProvider {
- initializePayment(input:{reference:string;amountMinor:string;currency:string}):Promise<{providerReference:string;redirectUrl?:string}>;
- getPaymentStatus(reference:string):Promise<'pending'|'paid'|'failed'|'unknown'>;
- verifyPayment(reference:string):Promise<boolean>;
- handleCallback(raw:Buffer,headers:Record<string,string>):Promise<{reference:string;verified:boolean}>;
- refundPayment?(reference:string,amountMinor:string):Promise<string>;
- cancelPayment?(reference:string):Promise<void>;
- healthCheck():Promise<ConnectionResult>;
-}
+export type {PaymentProvider,UtilityAggregatorProvider} from './payments/providers.js';
 export interface BankingProvider {
  importStatement(bytes:Buffer):Promise<unknown[]>;
  normalizeTransactions(rows:unknown[]):Promise<{reference:string;amountMinor:string;currency:string;date:string}[]>;

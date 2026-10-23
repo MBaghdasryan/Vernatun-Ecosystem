@@ -15,12 +15,14 @@ await testAdmin.query(`CREATE SCHEMA "${schema}"`);
 url.searchParams.set('options',`-c search_path=${schema},public`);
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:url.toString(),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
 // Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
-if(process.argv.includes('--system-only'))Object.assign(env,{
+if(process.argv.includes('--system-only')||process.argv.includes('--payments-only')||process.argv.includes('--browser-only'))Object.assign(env,{
  VERNATUN_OPERATIONS_ENCRYPTION_KEY:randomBytes(32).toString('hex'),BACKUP_STORAGE_MODE:'local',
 });
 let status=0;
 const checks=process.argv.includes('--browser-only')
- ? [['server/tests/browser-sandbox.ts']]
+ ? [['server/tests/browser-sandbox.ts',...(process.argv.includes('--payments-qa')?['--payments-qa']:[])]]
+  : process.argv.includes('--payments-only')
+  ? [['--test','server/tests/payments.test.ts']]
  : process.argv.includes('--system-only')
  ? [['--test','server/tests/system-center.test.ts']]
  : process.argv.includes('--readiness-only')
@@ -75,6 +77,7 @@ if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
  if(!checks.some(args=>args.includes('server/tests/email-delivery.test.ts')))checks.splice(2,0,['--test','server/tests/email-delivery.test.ts']);
 }
 if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
+  checks.push(['--test','server/tests/payments.test.ts']);
  checks.push(['--test','server/tests/system-center.test.ts']);
  checks.push(['--test','server/tests/handover-readiness.test.ts']);
  checks.push(['--test','server/tests/unit-plans.test.ts']);

@@ -1,0 +1,33 @@
+.pay{display:grid;gap:18px;max-width:1120px}
+.pay-hero{display:grid;gap:6px;padding:4px 2px}
+.pay-hero h2{font-size:22px}
+.pay-ready{display:flex;gap:14px;align-items:flex-start;border:1px solid #e6c9a3;background:#fff6ea;border-radius:10px;padding:16px 18px}
+.pay-ready.on{border-color:#a9d3bf;background:#eef8f2}
+.pay-ready svg{flex:none;margin-top:2px;color:#a85a00}
+.pay-ready.on svg{color:#1f7a4f}
+.pay-ready strong{display:block;font-size:15px}
+.pay-ready p{margin:4px 0 0}
+.pay-ready small{display:block;margin-top:8px;color:var(--p-muted,#637385);overflow-wrap:anywhere}
+.pay-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.pay-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.pay-row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border:1px solid #dce3e7;border-radius:8px;padding:12px 14px;background:#fdfcfa}
+.pay-row>div{min-width:0}
+.pay-row strong{overflow-wrap:anywhere}
+.pay-row small{display:block;color:#637385;margin-top:2px}
+.pay-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pay-tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:#e9eef1;color:#0b2230}
+.pay-tag.warn{background:#fde9cc;color:#7a4300}
+.pay-tag.ok{background:#d8f0e3;color:#16603d}
+.pay-form{display:grid;gap:12px}
+.pay-form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pay-note{font-size:12px}
+.pay-ok{color:#16603d;font-weight:600}
+.pay-msg{font-size:13px;border-radius:8px;padding:10px 12px;background:#f0f4f6;overflow-wrap:anywhere}
+.pay-skel{height:72px;border-radius:10px;background:linear-gradient(90deg,#ece8e0,#f7f5f0,#ece8e0);background-size:200% 100%;animation:pay-sh 1.4s linear infinite}
+@keyframes pay-sh{to{background-position:-200% 0}}
+.pay-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.pay-dl dt{color:#637385;font-size:12px}
+.pay-dl dd{margin:0;overflow-wrap:anywhere;font-weight:600}
+.pay-compact{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+@media(max-width:800px){.pay-grid,.pay-form .two{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.pay-skel{animation:none}}

@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info: {title: Payments, version: 1.0.0}
+paths:
+  /payments/callbacks/ameriabank:
+    post:
+      operationId: rejectUncontractedAmeriaCallback
+      description: Fail-closed placeholder. No body is trusted or posted until the merchant callback contract is implemented.
+      security: []
+      responses:
+        "409": {description: provider_contract_required; no financial mutation}
+  /payments/callbacks/arca:
+    post:
+      operationId: rejectUncontractedArcaCallback
+      description: Fail-closed placeholder, not an accepted bank webhook.
+      security: []
+      responses:
+        "409": {description: provider_contract_required; no financial mutation}
+  /utilities/callbacks/telcell:
+    post:
+      operationId: rejectUncontractedTelcellCallback
+      description: Fail-closed placeholder, not an accepted aggregator webhook.
+      security: []
+      responses:
+        "409": {description: provider_contract_required; no financial mutation}
+  /payments/workspace:
+    get:
+      operationId: getPaymentsWorkspace
+      responses:
+        "200":
+          description: Context-scoped payment data; no credentials, card data or fabricated balances.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PaymentsWorkspace"}
+  /payments/provider-instances:
+    post:
+      operationId: savePaymentProviderInstance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PaymentProviderSetupInput"}
+      responses:
+        "201":
+          description: Draft provider configuration, never proof of connectivity.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PaymentProviderInstance"}
+  /payments/provider-instances/{id}/disable:
+    post:
+      operationId: disablePaymentProviderInstance
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200":
+          description: Disabled configuration.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PaymentProviderInstance"}
+  /payments/provider-instances/{id}/test:
+    post:
+      description: Ameriabank performs a read-only authenticated GetBindings request using encrypted saved credentials. Connected confirms API access only; it never enables checkout. Other providers remain contract-required. Throttled per instance for 30 seconds.
+      operationId: testPaymentProviderInstance
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200":
+          description: Truthful readiness check; never initiates a charge.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PaymentReadiness"}
+  /payments/platform-invoices:
+    post:
+      operationId: issuePlatformBillingInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PlatformBillingInvoiceInput"}
+      responses:
+        "201":
+          description: Invoice based on the subscription's current plan price; no arbitrary frontend amount.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PlatformBillingInvoice"}
+  /payments/intents:
+    post:
+      operationId: createOnlinePaymentIntent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/OnlinePaymentIntentInput"}
+      responses:
+        "201":
+          description: Server-derived obligation and server-selected merchant.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OnlinePaymentIntent"}
+        "409": {description: Provider contract or credentials required; no fallback merchant}
+  /payments/intents/{id}:
+    get:
+      operationId: getOnlinePaymentIntent
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200":
+          description: Authorized intent and receipt details.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PaymentIntentDetails"}
+  /payments/intents/{id}/verify:
+    post:
+      operationId: verifyOnlinePaymentIntent
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200":
+          description: Server verification; browser return values never mark a payment successful.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OnlinePaymentIntent"}
+        "409": {description: Provider contract required}
+  /utilities/workspace:
+    get:
+      operationId: getUtilityBillingWorkspace
+      responses:
+        "200":
+          description: Capability-driven utility state, not a zero balance.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UtilityBillingWorkspace"}
+components:
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+  schemas:
+    PaymentReadiness:
+      type: object
+      required: [status, onlineAvailable, reason]
+      properties:
+        status: {type: string}
+        onlineAvailable: {type: boolean}
+        reason: {type: string}
+    PaymentProviderDefinition:
+      type: object
+      required: [code, name, domain, providerType, scope, status, credentialFields, capabilities]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        domain: {type: string, enum: [platform, property, utility]}
+        providerType: {type: string}
+        scope: {type: string}
+        status: {type: string}
+        credentialFields: {type: array, items: {type: string}}
+        capabilities: {type: array, items: {type: string}}
+    PaymentProviderInstance:
+      type: object
+      required: [id, provider_code, payment_domain, scope_type, environment, status, enabled, credentials_configured, revision]
+      properties:
+        id: {type: string}
+        provider_code: {type: string}
+        payment_domain: {type: string}
+        scope_type: {type: string}
+        organization_id: {type: [string, "null"]}
+        environment: {type: string}
+        status: {type: string}
+        enabled: {type: boolean}
+        credentials_configured: {type: boolean}
+        revision: {type: integer}
+        updated_at: {type: string}
+        last_health_check: {type: [string, "null"]}
+        last_success_at: {type: [string, "null"]}
+        last_error: {type: [string, "null"]}
+    PaymentProviderSetupInput:
+      type: object
+      additionalProperties: false
+      required: [providerCode, environment]
+      properties:
+        providerCode: {type: string, enum: [ameriabank, arca, telcell]}
+        environment: {type: string, enum: [sandbox, production]}
+        revision: {type: integer, minimum: 1}
+        credentials:
+          type: object
+          additionalProperties: false
+          required: [clientId, username, password]
+          properties:
+            clientId: {type: string, minLength: 1, maxLength: 200}
+            username: {type: string, minLength: 1, maxLength: 200}
+            password: {type: string, minLength: 1, maxLength: 2000}
+    PlatformBillingInvoiceInput:
+      type: object
+      additionalProperties: false
+      required: [subscriptionId, period, dueOn, key]
+      properties:
+        subscriptionId: {type: string, format: uuid}
+        period: {type: string, pattern: '^\d{4}-\d{2}$'}
+        dueOn: {type: string, format: date}
+        key: {type: string, format: uuid}
+    PlatformBillingInvoice:
+      type: object
+      required: [id, organization_id, subscription_id, billing_period, amount_minor, currency, status]
+      properties:
+        id: {type: string}
+        organization_id: {type: string}
+        subscription_id: {type: string}
+        billing_period: {type: string}
+        amount_minor: {type: string}
+        paid_minor: {type: string}
+        currency: {type: string}
+        status: {type: string}
+        due_at: {type: string}
+    OnlinePaymentIntentInput:
+      type: object
+      additionalProperties: false
+      required: [domain, key]
+      properties:
+        domain: {type: string, enum: [platform, property]}
+        key: {type: string, format: uuid}
+        platformInvoiceId: {type: string, format: uuid}
+        invoiceIds: {type: array, minItems: 1, maxItems: 100, items: {type: string, format: uuid}}
+        allocationStrategy: {type: string, enum: [oldest_first, selected_invoices, current_period_first]}
+    OnlinePaymentIntent:
+      type: object
+      required: [id, public_reference, payment_domain, amount_minor, currency, status]
+      properties:
+        id: {type: string}
+        public_reference: {type: string}
+        payment_domain: {type: string}
+        amount_minor: {type: string}
+        currency: {type: string}
+        status: {type: string}
+        organization_id: {type: string}
+        beneficiary: {type: string}
+        provider_code: {type: string}
+        provider_payment_id: {type: [string, "null"]}
+        redirect_url: {type: [string, "null"]}
+        created_at: {type: string}
+    PaymentTransaction:
+      type: object
+      required: [id, transaction_type, amount_minor, currency, status, external_transaction_id]
+      properties:
+        id: {type: string}
+        transaction_type: {type: string}
+        amount_minor: {type: string}
+        currency: {type: string}
+        status: {type: string}
+        external_transaction_id: {type: string}
+        confirmed_at: {type: string}
+    PaymentAllocationView:
+      type: object
+      required: [invoice_id, amount_minor]
+      properties:
+        invoice_id: {type: string}
+        amount_minor: {type: string}
+    PaymentIntentDetails:
+      type: object
+      required: [intent, transactions, allocations]
+      properties:
+        intent: {$ref: "#/components/schemas/OnlinePaymentIntent"}
+        transactions: {type: array, items: {$ref: "#/components/schemas/PaymentTransaction"}}
+        allocations: {type: array, items: {$ref: "#/components/schemas/PaymentAllocationView"}}
+    PaymentSubscriptionOption:
+      type: object
+      required: [id, organization_name, name, amount_minor, currency, starts_on, ends_on]
+      properties:
+        id: {type: string}
+        organization_name: {type: string}
+        name: {type: string}
+        amount_minor: {type: string}
+        currency: {type: string}
+        starts_on: {type: string}
+        ends_on: {type: string}
+    PaymentsWorkspace:
+      type: object
+      required: [providers, instances, intents, platformInvoices, payableInvoices, subscriptions, readiness, canConfigure, canIssuePlatformInvoice, hasMore]
+      properties:
+        providers: {type: array, items: {$ref: "#/components/schemas/PaymentProviderDefinition"}}
+        instances: {type: array, items: {$ref: "#/components/schemas/PaymentProviderInstance"}}
+        intents: {type: array, items: {$ref: "#/components/schemas/OnlinePaymentIntent"}}
+        platformInvoices: {type: array, items: {$ref: "#/components/schemas/PlatformBillingInvoice"}}
+        payableInvoices: {type: array, items: {$ref: "#/components/schemas/PropertyPayableInvoice"}}
+        subscriptions: {type: array, items: {$ref: "#/components/schemas/PaymentSubscriptionOption"}}
+        readiness: {$ref: "#/components/schemas/PaymentReadiness"}
+        canConfigure: {type: boolean}
+        canIssuePlatformInvoice: {type: boolean}
+        hasMore: {type: boolean}
+    PropertyPayableInvoice:
+      type: object
+      required: [id, period, balance_minor, currency]
+      properties:
+        id: {type: string}
+        period: {type: string}
+        balance_minor: {type: string}
+        currency: {type: string}
+    UtilityBillingWorkspace:
+      type: object
+      required: [status, capabilities, catalog, accounts, balanceState]
+      properties:
+        status: {type: string}
+        capabilities: {type: array, items: {type: string}}
+        catalog: {type: array, items: {$ref: "#/components/schemas/UtilityCatalogEntry"}}
+        accounts: {type: array, items: {$ref: "#/components/schemas/UtilityAccountView"}}
+        balanceState: {type: string}
+    UtilityCatalogEntry:
+      type: object
+      required: [id, name, utility_type]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        utility_type: {type: string}
+    UtilityAccountView:
+      type: object
+      required: [id, display_name, subscriber_number_masked, status]
+      properties:
+        id: {type: string}
+        display_name: {type: string}
+        subscriber_number_masked: {type: string}
+        status: {type: string}

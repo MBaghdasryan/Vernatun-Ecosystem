@@ -12,6 +12,7 @@
 - [Browser QA transport](binary-upload-qa.md) — response-first upload guards; prefer a streaming QA bridge when driver interception contradicts direct API checks.
 - [Resident lifecycle policy](resident-lifecycle-policy.md) — lease enforcement activates with recorded periods; common-area maintenance needs system provenance and manager acceptance.
 - [Financial ledger locking](finance-ledger-locking.md) — lock immutable parents before re-reading balances; same-invoice tests can hide credit races.
+- [Payment domain policy](payment-domain-policy.md) — Ameriabank SaaS, per-organization ArCa property payments, Telcell utilities; no cross-domain merchant fallback.
 - [Rate-limit namespaces](rate-limit-namespaces.md) — independent persistent limiters must not share request budgets.
 - [Transaction connection budget](transaction-connection-budget.md) — authorization must not wait for a second pooled connection while all slots are held by transactions.
 - [Staff availability](staff-availability-policy.md) — scoped shifts and absences cannot prove company-wide free time; missing planning means unknown.

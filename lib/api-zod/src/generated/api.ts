@@ -8,6 +8,300 @@
 import * as zod from 'zod';
 
 
+/**
+ * Fail-closed placeholder. No body is trusted or posted until the merchant callback contract is implemented.
+ */
+export const RejectUncontractedAmeriaCallbackResponse = zod.void()
+
+
+/**
+ * Fail-closed placeholder, not an accepted bank webhook.
+ */
+export const RejectUncontractedArcaCallbackResponse = zod.void()
+
+
+/**
+ * Fail-closed placeholder, not an accepted aggregator webhook.
+ */
+export const RejectUncontractedTelcellCallbackResponse = zod.void()
+
+
+export const GetPaymentsWorkspaceResponse = zod.object({
+  "providers": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "domain": zod.enum(['platform', 'property', 'utility']),
+  "providerType": zod.string(),
+  "scope": zod.string(),
+  "status": zod.string(),
+  "credentialFields": zod.array(zod.string()),
+  "capabilities": zod.array(zod.string())
+})),
+  "instances": zod.array(zod.object({
+  "id": zod.string(),
+  "provider_code": zod.string(),
+  "payment_domain": zod.string(),
+  "scope_type": zod.string(),
+  "organization_id": zod.string().nullish(),
+  "environment": zod.string(),
+  "status": zod.string(),
+  "enabled": zod.boolean(),
+  "credentials_configured": zod.boolean(),
+  "revision": zod.number().int(),
+  "updated_at": zod.string().optional(),
+  "last_health_check": zod.string().nullish(),
+  "last_success_at": zod.string().nullish(),
+  "last_error": zod.string().nullish()
+})),
+  "intents": zod.array(zod.object({
+  "id": zod.string(),
+  "public_reference": zod.string(),
+  "payment_domain": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "organization_id": zod.string().optional(),
+  "beneficiary": zod.string().optional(),
+  "provider_code": zod.string().optional(),
+  "provider_payment_id": zod.string().nullish(),
+  "redirect_url": zod.string().nullish(),
+  "created_at": zod.string().optional()
+})),
+  "platformInvoices": zod.array(zod.object({
+  "id": zod.string(),
+  "organization_id": zod.string(),
+  "subscription_id": zod.string(),
+  "billing_period": zod.string(),
+  "amount_minor": zod.string(),
+  "paid_minor": zod.string().optional(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "due_at": zod.string().optional()
+})),
+  "payableInvoices": zod.array(zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "balance_minor": zod.string(),
+  "currency": zod.string()
+})),
+  "subscriptions": zod.array(zod.object({
+  "id": zod.string(),
+  "organization_name": zod.string(),
+  "name": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "starts_on": zod.string(),
+  "ends_on": zod.string()
+})),
+  "readiness": zod.object({
+  "status": zod.string(),
+  "onlineAvailable": zod.boolean(),
+  "reason": zod.string()
+}),
+  "canConfigure": zod.boolean(),
+  "canIssuePlatformInvoice": zod.boolean(),
+  "hasMore": zod.boolean()
+})
+
+
+
+export const savePaymentProviderInstanceBodyCredentialsClientIdMax = 200;
+
+export const savePaymentProviderInstanceBodyCredentialsUsernameMax = 200;
+
+export const savePaymentProviderInstanceBodyCredentialsPasswordMax = 2000;
+
+
+
+export const SavePaymentProviderInstanceBody = zod.object({
+  "providerCode": zod.enum(['ameriabank', 'arca', 'telcell']),
+  "environment": zod.enum(['sandbox', 'production']),
+  "revision": zod.number().int().min(1).optional(),
+  "credentials": zod.object({
+  "clientId": zod.string().min(1).max(savePaymentProviderInstanceBodyCredentialsClientIdMax),
+  "username": zod.string().min(1).max(savePaymentProviderInstanceBodyCredentialsUsernameMax),
+  "password": zod.string().min(1).max(savePaymentProviderInstanceBodyCredentialsPasswordMax)
+}).optional()
+})
+
+export const SavePaymentProviderInstanceResponse = zod.object({
+  "id": zod.string(),
+  "provider_code": zod.string(),
+  "payment_domain": zod.string(),
+  "scope_type": zod.string(),
+  "organization_id": zod.string().nullish(),
+  "environment": zod.string(),
+  "status": zod.string(),
+  "enabled": zod.boolean(),
+  "credentials_configured": zod.boolean(),
+  "revision": zod.number().int(),
+  "updated_at": zod.string().optional(),
+  "last_health_check": zod.string().nullish(),
+  "last_success_at": zod.string().nullish(),
+  "last_error": zod.string().nullish()
+})
+
+
+export const DisablePaymentProviderInstanceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DisablePaymentProviderInstanceResponse = zod.object({
+  "id": zod.string(),
+  "provider_code": zod.string(),
+  "payment_domain": zod.string(),
+  "scope_type": zod.string(),
+  "organization_id": zod.string().nullish(),
+  "environment": zod.string(),
+  "status": zod.string(),
+  "enabled": zod.boolean(),
+  "credentials_configured": zod.boolean(),
+  "revision": zod.number().int(),
+  "updated_at": zod.string().optional(),
+  "last_health_check": zod.string().nullish(),
+  "last_success_at": zod.string().nullish(),
+  "last_error": zod.string().nullish()
+})
+
+
+/**
+ * Ameriabank performs a read-only authenticated GetBindings request using encrypted saved credentials. Connected confirms API access only; it never enables checkout. Other providers remain contract-required. Throttled per instance for 30 seconds.
+ */
+export const TestPaymentProviderInstanceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const TestPaymentProviderInstanceResponse = zod.object({
+  "status": zod.string(),
+  "onlineAvailable": zod.boolean(),
+  "reason": zod.string()
+})
+
+
+export const issuePlatformBillingInvoiceBodyPeriodRegExp = new RegExp('^\\d{4}-\\d{2}$');
+
+
+export const IssuePlatformBillingInvoiceBody = zod.object({
+  "subscriptionId": zod.string().uuid(),
+  "period": zod.string().regex(issuePlatformBillingInvoiceBodyPeriodRegExp),
+  "dueOn": zod.coerce.date(),
+  "key": zod.string().uuid()
+})
+
+export const IssuePlatformBillingInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "organization_id": zod.string(),
+  "subscription_id": zod.string(),
+  "billing_period": zod.string(),
+  "amount_minor": zod.string(),
+  "paid_minor": zod.string().optional(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "due_at": zod.string().optional()
+})
+
+
+export const createOnlinePaymentIntentBodyInvoiceIdsMax = 100;
+
+
+
+export const CreateOnlinePaymentIntentBody = zod.object({
+  "domain": zod.enum(['platform', 'property']),
+  "key": zod.string().uuid(),
+  "platformInvoiceId": zod.string().uuid().optional(),
+  "invoiceIds": zod.array(zod.string().uuid()).min(1).max(createOnlinePaymentIntentBodyInvoiceIdsMax).optional(),
+  "allocationStrategy": zod.enum(['oldest_first', 'selected_invoices', 'current_period_first']).optional()
+})
+
+export const CreateOnlinePaymentIntentResponse = zod.object({
+  "id": zod.string(),
+  "public_reference": zod.string(),
+  "payment_domain": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "organization_id": zod.string().optional(),
+  "beneficiary": zod.string().optional(),
+  "provider_code": zod.string().optional(),
+  "provider_payment_id": zod.string().nullish(),
+  "redirect_url": zod.string().nullish(),
+  "created_at": zod.string().optional()
+})
+
+
+export const GetOnlinePaymentIntentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetOnlinePaymentIntentResponse = zod.object({
+  "intent": zod.object({
+  "id": zod.string(),
+  "public_reference": zod.string(),
+  "payment_domain": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "organization_id": zod.string().optional(),
+  "beneficiary": zod.string().optional(),
+  "provider_code": zod.string().optional(),
+  "provider_payment_id": zod.string().nullish(),
+  "redirect_url": zod.string().nullish(),
+  "created_at": zod.string().optional()
+}),
+  "transactions": zod.array(zod.object({
+  "id": zod.string(),
+  "transaction_type": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "external_transaction_id": zod.string(),
+  "confirmed_at": zod.string().optional()
+})),
+  "allocations": zod.array(zod.object({
+  "invoice_id": zod.string(),
+  "amount_minor": zod.string()
+}))
+})
+
+
+export const VerifyOnlinePaymentIntentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const VerifyOnlinePaymentIntentResponse = zod.object({
+  "id": zod.string(),
+  "public_reference": zod.string(),
+  "payment_domain": zod.string(),
+  "amount_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string(),
+  "organization_id": zod.string().optional(),
+  "beneficiary": zod.string().optional(),
+  "provider_code": zod.string().optional(),
+  "provider_payment_id": zod.string().nullish(),
+  "redirect_url": zod.string().nullish(),
+  "created_at": zod.string().optional()
+})
+
+
+export const GetUtilityBillingWorkspaceResponse = zod.object({
+  "status": zod.string(),
+  "capabilities": zod.array(zod.string()),
+  "catalog": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "utility_type": zod.string()
+})),
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "display_name": zod.string(),
+  "subscriber_number_masked": zod.string(),
+  "status": zod.string()
+})),
+  "balanceState": zod.string()
+})
+
+
 export const getImplementationDiagnosticsResponsePendingStagesMin = 0;
 
 export const getImplementationDiagnosticsResponseOverdueStagesMin = 0;

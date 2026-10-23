@@ -28,7 +28,8 @@ const S:Record<string,T3>={
  budgets:['Գործառնական բյուջեներ','Операционные бюджеты','Operating budgets'],amount:['Գումար','Сумма','Amount'],month:['Ամիս','Месяц','Month'],budgetNote:['Պլանային արժեքները չեն ստեղծում հաշվեգրում, ծախս կամ վճարում։','Плановые значения не создают проводок, расходов или платежей.','Planning values never post ledger entries, expenses or payments.'],edit:['Խմբագրել','Изменить','Edit'],newBudget:['Սահմանել բյուջե','Задать бюджет','Set budget'],amountHint:['Գումար (0.00 թույլատրելի է, առավելագույնը 12 թվանշան + 2 տասնորդական)','Сумма (допустим 0.00; до 12 цифр и 2 знаков)','Amount (0.00 allowed; up to 12 digits + 2 decimals)'],
 };
 export const p6=(l:Language,k:string)=>S[k]?.[l==='hy'?0:l==='ru'?1:2]??k;
-export const viewLabel=(l:Language,k:string,fallback:()=>string)=>['ownership','analytics','scorecard'].includes(k)?p6(l,k):fallback();
+import {pt} from './payments-i18n';
+export const viewLabel=(l:Language,k:string,fallback:()=>string)=>k==='payments'||k==='utilities'?pt(l,k):['ownership','analytics','scorecard'].includes(k)?p6(l,k):fallback();
 const loc=(l:Language)=>l==='hy'?'hy-AM':l==='ru'?'ru-RU':'en-GB';
 export const DEFAULT_TZ='Asia/Yerevan';
 /** basis points (integer) -> "12.34%". */

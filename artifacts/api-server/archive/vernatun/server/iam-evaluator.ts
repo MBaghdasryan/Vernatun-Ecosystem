@@ -25,7 +25,7 @@ export async function permissionDecision(c:{permissions:string[];organization_id
  if(c.organization_id){
   const policy=await subscriptionPolicy(c.organization_id),module=moduleForPermission(permission);
   if(module&&!policy.modules.includes(module))return {allowed:false,reason:'module_disabled'};
-  if(policy.readOnly&&!['GET','HEAD','OPTIONS'].includes(method)&&!['support.cases.create','support.access.approve'].includes(permission))
+  if(policy.readOnly&&!['GET','HEAD','OPTIONS'].includes(method)&&!['support.cases.create','support.access.approve','platform_billing.pay'].includes(permission))
    return {allowed:false,reason:'subscription_restricted'};
  }
  return {allowed:true,reason:'permission_allowed'};

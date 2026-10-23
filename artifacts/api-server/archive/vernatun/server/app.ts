@@ -28,6 +28,7 @@ import {notificationLinks} from './notification-links.js';
 import {imports} from './imports.js';
 import {mfa} from './mfa.js';
 import {finance} from './finance.js';
+import {payments} from './payments/routes.js';
 import {billingBatches} from './billing-batches.js';
 import {bankReconciliation} from './bank-reconciliation.js';
 import {organizationConsole} from './organization-console.js';
@@ -66,6 +67,10 @@ app.use('/api',cors({
  credentials:true,
 }));
 app.use('/api',systemRequestLog);
+// No provider callback is accepted without its contracted verification scheme.
+// These fail-closed endpoints are intentionally before session/CSRF middleware.
+app.post(['/api/payments/callbacks/ameriabank','/api/payments/callbacks/arca','/api/utilities/callbacks/telcell'],
+ (_req,res)=>{res.status(409).json({error:'provider_contract_required'})});
 // Only this signed, raw-body endpoint bypasses session CSRF.
 app.use('/api/webhooks',emailWebhooks);
 // Backward-compatible route for already registered legacy hooks. The canonical
@@ -88,6 +93,7 @@ app.use('/api',leads);
 // /api/v1/* requests before externalApi validates its bearer key.
 app.use('/api/v1',externalApi);
 app.use('/api',staffAvailability);
+app.use('/api',payments);
 app.use('/api',unitPlans);
 app.use('/api',handoverReadiness);
 app.use('/api',systemCenter);
