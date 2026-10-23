@@ -27,6 +27,9 @@ const expectedObjects=[
  {migration:'040_edge_management.sql',name:'edge_nodes',kind:'relation' as const,idempotent:false},
  {migration:'040_edge_management.sql',name:'edge_device_access',kind:'relation' as const,idempotent:false},
  {migration:'040_edge_management.sql',name:'edge_commands',kind:'relation' as const,idempotent:false},
+ {migration:'041_edge_block_scope.sql',name:'edge_blocks',kind:'relation' as const,idempotent:false},
+ {migration:'041_edge_block_scope.sql',name:'edge_block_buildings',kind:'relation' as const,idempotent:false},
+ {migration:'041_edge_block_scope.sql',name:'edge_node_buildings',kind:'relation' as const,idempotent:false},
 ];
 
 async function migrationFiles(through?:string):Promise<Migration[]>{

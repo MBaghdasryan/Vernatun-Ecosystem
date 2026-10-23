@@ -1,0 +1,23 @@
+services:
+  vernatun-cloud-edge-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vernatun-cloud-edge-agent
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8092:8092"
+    env_file:
+      - .env
+    environment:
+      VERNATUN_EDGE_CONFIG: "/app/config/vernatun_edge_cloud_v1.yaml"
+      VERNATUN_EDGE_DATA_DIR: "/app/data"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
+      - vernatun-cloud-edge-agent-data:/app/data
+
+volumes:
+  vernatun-cloud-edge-agent-data:
+    name: vernatun-cloud-edge-agent-data

@@ -134,7 +134,7 @@ router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
     (edge_node_id,organization_id,building_id,edge_device_id,thingsboard_id,name,profile,device_type,label,
      capabilities,reported_online,last_seen_at,metadata,updated_at)
     VALUES($1,$2,$3,$4,$5,$4,$6,$7,$8,$9,$10,now(),'{}',now())
-    ON CONFLICT(edge_node_id,edge_device_id) DO UPDATE SET
+     ON CONFLICT(edge_node_id,building_id,edge_device_id) DO UPDATE SET
      thingsboard_id=EXCLUDED.thingsboard_id,name=EXCLUDED.name,profile=EXCLUDED.profile,
      device_type=EXCLUDED.device_type,label=EXCLUDED.label,capabilities=EXCLUDED.capabilities,
      reported_online=EXCLUDED.reported_online,last_seen_at=now(),updated_at=now()`,
