@@ -7,7 +7,7 @@ const KEYS=['name','legalName','taxId','address','contactEmail','contactPhone','
 const COL:Record<string,string>={name:'name',legalName:'legal_name',taxId:'tax_id',address:'address',contactEmail:'contact_email',contactPhone:'contact_phone',timezone:'timezone',currency:'currency',defaultLanguage:'default_language'};
 const draftOf=(o:Row)=>Object.fromEntries(KEYS.map(k=>[k,String(o[COL[k]]??'')])) as Record<string,string>;
 const zones=(()=>{try{return (Intl as any).supportedValuesOf('timeZone') as string[]}catch{return ['Asia/Yerevan','Europe/Moscow','UTC']}})();
-export default function OrgConsole({c,language:l,records}:{c:RoleContext;language:Language;records:ReactNode}){
+export default function OrgConsole({c,language:l,records}:{c:RoleContext;language:Language;records:ReactNode;view?:string}){
  const tx=(k:string)=>p5(l,k);const admin=!c.organization_id&&c.permissions.includes('organizations.manage');const live=useMounted();
  const [list,setList]=useState<Row[]>(),[listErr,setListErr]=useState<unknown>(),[sel,setSel]=useState(''),[card,setCard]=useState<Row>(),[cardErr,setCardErr]=useState<unknown>(),[draft,setDraft]=useState<Record<string,string>>({}),[err,setErr]=useState<unknown>(),[dlg,setDlg]=useState(false),[status,setStatus]=useState(''),[reason,setReason]=useState(''),[ack,setAck]=useState(false),[dir,setDir]=useState(false);
  const initFor=useRef(''),seq=useRef(0),selRef=useRef('');selRef.current=sel;const prof=useFrozen(),st=useFrozen();

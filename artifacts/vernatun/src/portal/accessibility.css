@@ -1,0 +1,69 @@
+.portal-root .p-skip,
+.portal-root .h-skip {
+  position: fixed;
+  z-index: 200;
+  top: 8px;
+  left: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  transform: translateY(-160%);
+  border: 2px solid #0b2230;
+  border-radius: 6px;
+  background: #fff;
+  color: #0b2230;
+  font-weight: 700;
+}
+
+.portal-root .p-skip:focus,
+.portal-root .h-skip:focus {
+  transform: translateY(0);
+}
+
+.portal-root .p-shell :focus-visible,
+.portal-root .h-app :focus-visible {
+  outline: 3px solid #146b8b;
+  outline-offset: 3px;
+}
+
+@media (pointer: coarse) {
+  .portal-root .p-shell button,
+  .portal-root .p-shell a,
+  .portal-root .p-shell select,
+  .portal-root .p-shell input:not([type="checkbox"]):not([type="radio"]),
+  .portal-root .h-app button,
+  .portal-root .h-app a,
+  .portal-root .h-app select,
+  .portal-root .h-app input:not([type="checkbox"]):not([type="radio"]),
+  .portal-root .im-app button,
+  .portal-root .im-app a,
+  .portal-root .im-app select,
+  .portal-root .im-app input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+
+  .portal-root .p-shell input[type="checkbox"],
+  .portal-root .p-shell input[type="radio"],
+  .portal-root .h-app input[type="checkbox"],
+  .portal-root .h-app input[type="radio"],
+  .portal-root .im-app input[type="checkbox"],
+  .portal-root .im-app input[type="radio"] {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    flex: 0 0 24px;
+  }
+
+  .portal-root .p-shell input[type="checkbox"]:not(:disabled),
+  .portal-root .p-shell input[type="radio"]:not(:disabled),
+  .portal-root .h-app input[type="checkbox"]:not(:disabled),
+  .portal-root .h-app input[type="radio"]:not(:disabled),
+  .portal-root .im-app input[type="checkbox"]:not(:disabled),
+  .portal-root .im-app input[type="radio"]:not(:disabled) {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    flex: 0 0 24px;
+  }
+}

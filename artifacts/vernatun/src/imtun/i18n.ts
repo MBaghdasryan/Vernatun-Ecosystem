@@ -1,6 +1,6 @@
 import type {Language} from '../portal/i18n';
 const strings = {
- home:['Իմ տունը','Мой дом','My home'], payments:['Վճարումներ','Платежи','Payments'], requests:['Իմ հայտերը','Мои заявки','My requests'], profile:['Պրոֆիլ','Профиль','Profile'],
+  home:['Իմ տունը','Мой дом','My home'], skipMain:['Անցնել հիմնական բովանդակությանը','Перейти к основному содержимому','Skip to main content'], payments:['Վճարումներ','Платежи','Payments'], requests:['Իմ հայտերը','Мои заявки','My requests'], profile:['Պրոֆիլ','Профиль','Profile'],
  hello:['Բարի օր','Добрый день','Hello'], subtitle:['Ամենակարևորը՝ մեկ տեղում։','Всё важное в одном месте.','Everything that matters, in one place.'],
  due:['Վճարման ենթակա','К оплате','Amount due'], assigned:['Իմ հաշվեգրումները','Мои начисления','My charges'], assignedHint:['Ձեզ նշանակված ծառայությունները','Услуги, закреплённые за вами','Services assigned to you'], pay:['Վճարման տարբերակներ','Способы оплаты','Payment options'], charges:['Դիտել հաշվեգրումները','Посмотреть начисления','View charges'],
  meters:['Ցուցմունքներ','Показания','Meter readings'], create:['Նոր հայտ','Заявка','New request'], passes:['Անցագիր','Пропуск','Guest pass'], guests:['Հյուրեր','Гости','Guests'], documents:['Փաստաթղթեր','Документы','Documents'], meetings:['Ժողովներ','Собрания','Meetings'], family:['Ընտանիք','Семья','Family'],
