@@ -61,6 +61,8 @@ import {operationIncidents} from './operation-incidents.js';
 import {mfaPolicy} from './mfa-policy.js';
 import {leads} from './leads.js';
 import {pagedRecords} from './paged-records.js';
+import {edgeMachineApi} from './edge-machine-api.js';
+import {edgeManagementApi} from './edge-management-api.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 app.use('/api',cors({
  origin(origin,callback){callback(null,origin===config.APP_ORIGIN?origin:false)},
@@ -80,11 +82,14 @@ app.use('/api/email-webhooks',emailWebhooks);
 // bounded parser confined to statement preview/import, with the same auth/CSRF.
 app.use('/api/finance/bank/imports',express.json({limit:'1mb'}));
 app.use('/api/platform/imports',express.json({limit:'1mb'}));
+app.use('/api/edge/v1',express.json({limit:'2mb'}));
 app.use(express.json({limit:'32kb'}));
+app.use('/api/edge/v1',edgeMachineApi);
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(sessionRevocationGuard);
 app.use(passport.initialize());app.use(passport.session());
 app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['GET','HEAD','OPTIONS'].includes(req.method))return next();const origin=req.headers.origin;if(origin&&origin!==config.APP_ORIGIN)return next(new ApiError(403,'csrf_invalid'));const expected=req.session.csrf;const actual=req.get('X-CSRF-Token');if(!expected||!actual||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return next(new ApiError(403,'csrf_invalid'));next()});
+app.use('/api',edgeManagementApi);
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});
 app.use('/api/auth',auth);app.use('/api/mfa',mfaPolicy);app.use('/api/mfa',mfa);
 app.use('/api',leads);

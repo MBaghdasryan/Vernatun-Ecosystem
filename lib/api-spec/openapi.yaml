@@ -10,7 +10,338 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: edge
+    description: Machine-to-machine integration for an outbound Vernatun Edge Agent.
+  - name: edge-console
+    description: Tenant- and role-scoped Edge fleet administration.
+  - name: edge-resident
+    description: Devices explicitly mapped to the current resident unit.
 paths:
+  /edge/v1/register:
+    post:
+      tags: [edge]
+      operationId: registerEdgeV1
+      summary: Register one Edge Agent using a single-use building-bound bootstrap token
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeRegisterInput' }
+      responses:
+        '201':
+          description: Registered. accessToken is returned once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EdgeRegisterResponse' }
+        '401': { description: Bootstrap token is invalid, expired, revoked, or already used }
+        '403': { description: Header or token tenant/building binding mismatch }
+        '409': { description: Edge node or building already has a registration }
+  /edge/v1/heartbeat:
+    post:
+      tags: [edge]
+      operationId: reportEdgeHeartbeat
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeHeartbeatInput' }
+      responses:
+        '200': { description: Heartbeat accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeAccepted' } } } }
+        '401': { description: Machine credential rejected }
+        '403': { description: Tenant/building identity mismatch }
+  /edge/v1/inventory:
+    post:
+      tags: [edge]
+      operationId: syncEdgeInventory
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeInventoryInput' }
+      responses:
+        '200': { description: Inventory synchronized, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeInventoryAccepted' } } } }
+        '401': { description: Machine credential rejected }
+        '403': { description: Tenant/building identity mismatch }
+  /edge/v1/telemetry/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeTelemetryBatch
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBatchInput' }
+      responses:
+        '200': { description: Latest telemetry values accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBatchAccepted' } } } }
+        '401': { description: Machine credential rejected }
+  /edge/v1/events/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeEventsBatch
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBatchInput' }
+      responses:
+        '200': { description: Idempotent event batch accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBatchAccepted' } } } }
+        '401': { description: Machine credential rejected }
+  /edge/v1/alarms/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeAlarmsBatch
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBatchInput' }
+      responses:
+        '200': { description: Idempotent alarms batch accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBatchAccepted' } } } }
+        '401': { description: Machine credential rejected }
+  /edge/v1/config:
+    get:
+      tags: [edge]
+      operationId: getEdgeConfiguration
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      parameters:
+        - { name: edgeId, in: query, required: true, schema: { type: string, minLength: 3, maxLength: 80 } }
+      responses:
+        '200': { description: Tenant-bound, non-secret agent configuration, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeConfiguration' } } } }
+        '401': { description: Machine credential rejected }
+  /edge/v1/commands/{commandId}/result:
+    post:
+      tags: [edge]
+      operationId: reportEdgeCommandResult
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBuildingHeader: []
+      parameters:
+        - { name: commandId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeCommandResult' }
+      responses:
+        '200': { description: Command result recorded, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeCommandResultResponse' } } } }
+        '401': { description: Machine credential rejected }
+        '409': { description: Conflicting result or invalid command state }
+  /edge-console/buildings:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeBuildings
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Buildings available for Edge onboarding, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/EdgeBuilding' } } } } }
+        '403': { description: Edge provisioning permission required }
+  /edge-console/fleet:
+    get:
+      tags: [edge-console]
+      operationId: getEdgeFleet
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Role- and tenant-scoped Edge fleet summary, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeFleet' } } } }
+        '403': { description: Edge fleet permission or organization context required }
+  /edge-console/bootstrap-tokens:
+    post:
+      tags: [edge-console]
+      operationId: createEdgeBootstrapToken
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBootstrapInput' }
+      responses:
+        '201': { description: Short-lived single-use token, shown once, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBootstrapResponse' } } } }
+        '403': { description: Provisioning permission, module entitlement, or recent authentication required }
+        '409': { description: Edge registration or unexpired bootstrap token already exists }
+  /edge-console/bootstrap-tokens/{id}/revoke:
+    post:
+      tags: [edge-console]
+      operationId: revokeEdgeBootstrapToken
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Unused bootstrap token revoked }
+        '404': { description: Token not found or already consumed }
+  /edge-console/nodes/{id}:
+    get:
+      tags: [edge-console]
+      operationId: getEdgeNode
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Scoped node, devices, and recent alarms, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeNodeDetail' } } } }
+        '404': { description: Node is outside the current scope }
+  /edge-console/nodes/{id}/devices:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeNodeDevices
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Scoped device inventory, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/EdgeDevice' } } } } }
+  /edge-console/nodes/{id}/credentials/rotate:
+    post:
+      tags: [edge-console]
+      operationId: stageEdgeCredentialRotation
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '201': { description: One-time staged credential; current credential remains until the new one is used or expires, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeRotatedCredential' } } } }
+        '403': { description: Credential rotation permission or recent authentication required }
+  /edge-console/nodes/{id}/credentials/revoke:
+    post:
+      tags: [edge-console]
+      operationId: revokeEdgeCredentials
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: All active and staged credentials revoked }
+        '403': { description: Credential revocation permission or recent authentication required }
+  /edge-console/devices/{deviceId}/access:
+    put:
+      tags: [edge-console]
+      operationId: assignEdgeDeviceUnitAccess
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeDeviceAccessInput' }
+      responses:
+        '200': { description: Unit-level device permission saved }
+        '403': { description: Tenant scope or edge management permission required }
+  /buildings/{buildingId}/devices/{deviceId}/commands:
+    post:
+      tags: [edge-console]
+      operationId: requestBuildingEdgeCommand
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: buildingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeResidentCommandInput' }
+      responses:
+        '202': { description: Building-scoped command accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
+        '403': { description: Role, building scope, capability, or hard safety policy denied the command }
+        '409': { description: Edge is offline or command could not be delivered }
+  /edge-console/devices/{deviceId}/access/{unitId}:
+    delete:
+      tags: [edge-console]
+      operationId: revokeEdgeDeviceUnitAccess
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: unitId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Unit-level device permission revoked }
+        '404': { description: Device access not found }
+  /edge-console/alarms:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeAlarms
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Scoped alarms, content: { application/json: { schema: { type: array, items: { type: object } } } } }
+  /edge-console/events:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeEvents
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Scoped events, content: { application/json: { schema: { type: array, items: { type: object } } } } }
+  /edge-console/commands:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeCommands
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Scoped command audit, content: { application/json: { schema: { type: array, items: { type: object } } } } }
+  /me/buildings/{buildingId}/devices:
+    get:
+      tags: [edge-resident]
+      operationId: listMyBuildingDevices
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: buildingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Devices explicitly assigned to the current resident unit, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/EdgeResidentDevice' } } } } }
+        '403': { description: Resident unit scope or smart-building module unavailable }
+  /me/buildings/{buildingId}/devices/{deviceId}/commands:
+    post:
+      tags: [edge-resident]
+      operationId: requestMyBuildingDeviceCommand
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: buildingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeResidentCommandInput' }
+      responses:
+        '202': { description: Authorized command sent to the connected Edge Agent, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
+        '403': { description: Role, unit mapping, capability, module, or hard safety policy denied the command }
+        '409': { description: Edge is offline or command could not be delivered }
+  /me/edge-commands/{commandId}:
+    get:
+      tags: [edge-resident]
+      operationId: getMyEdgeCommand
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: commandId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Status for a command created by this user, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
+        '404': { description: Command is not visible in the current context }
   /payments/callbacks/ameriabank:
     $ref: './payments.yaml#/paths/~1payments~1callbacks~1ameriabank'
   /payments/callbacks/arca:
@@ -2700,6 +3031,30 @@ components:
     ApiKeyBearer:
       type: http
       scheme: bearer
+    EdgeBearer:
+      type: http
+      scheme: bearer
+      description: Single-use bootstrap exchange produces a machine credential. Store only its hash in Vernatun Cloud.
+    EdgeIdHeader:
+      type: apiKey
+      in: header
+      name: X-Vernatun-Edge-Id
+    EdgeTenantHeader:
+      type: apiKey
+      in: header
+      name: X-Vernatun-Tenant-Id
+    EdgeBuildingHeader:
+      type: apiKey
+      in: header
+      name: X-Vernatun-Building-Id
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
   parameters:
     PlatformId:
       name: id
@@ -2724,6 +3079,225 @@ components:
       properties:
         id: {type: string}
         status: {type: string}
+    EdgeRegisterInput:
+      type: object
+      required: [edgeId, edgeName, tenantId, buildingId, siteCode, agentVersion, platform, connectionMode, transports, capabilities]
+      properties:
+        edgeId: { type: string, minLength: 3, maxLength: 80 }
+        edgeName: { type: string, minLength: 2, maxLength: 120 }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+        agentVersion: { type: string, maxLength: 80 }
+        platform: { type: string, maxLength: 60, example: Vernatun Edge }
+        connectionMode: { type: string, enum: [OUTBOUND] }
+        transports: { type: array, items: { type: string, enum: [WEBSOCKET, HTTPS] } }
+        capabilities: { type: object, additionalProperties: { type: boolean } }
+    EdgeRegisterResponse:
+      type: object
+      required: [status, edgeId, tenantId, buildingId, accessToken, oneTime]
+      properties:
+        status: { type: string, enum: [REGISTERED] }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        accessToken: { type: string, description: Returned only to the registering Edge Agent. Never log or persist this value outside the Agent. }
+        oneTime: { type: boolean, const: true }
+    EdgeHeartbeatInput:
+      type: object
+      required: [edgeId, tenantId, buildingId, timestamp, local]
+      properties:
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        local: { type: object, additionalProperties: true }
+    EdgeInventoryInput:
+      type: object
+      required: [edgeId, tenantId, buildingId, timestamp, devices]
+      properties:
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        devices: { type: array, items: { type: object, additionalProperties: true } }
+    EdgeBatchInput:
+      type: object
+      required: [edgeId, tenantId, buildingId, timestamp, items]
+      properties:
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        items: { type: array, maxItems: 2000, items: { type: object, additionalProperties: true } }
+    EdgeAccepted:
+      type: object
+      required: [accepted]
+      properties:
+        accepted: { type: boolean, const: true }
+    EdgeInventoryAccepted:
+      allOf:
+        - { $ref: '#/components/schemas/EdgeAccepted' }
+        - type: object
+          required: [devices]
+          properties:
+            devices: { type: integer, minimum: 0 }
+    EdgeBatchAccepted:
+      allOf:
+        - { $ref: '#/components/schemas/EdgeAccepted' }
+        - type: object
+          required: [acceptedCount]
+          properties:
+            acceptedCount: { type: integer, minimum: 0 }
+    EdgeConfiguration:
+      type: object
+      required: [edgeId, tenantId, buildingId, heartbeatIntervalSeconds, commandTimeoutSeconds]
+      properties:
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        heartbeatIntervalSeconds: { type: integer, minimum: 1 }
+        commandTimeoutSeconds: { type: integer, minimum: 1 }
+        commandCapabilities: { type: array, items: { type: string } }
+    EdgeCommandResult:
+      type: object
+      required: [edgeId, tenantId, buildingId, status]
+      properties:
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        status: { type: string, enum: [SUCCESS, REJECTED, FAILED, EXPIRED] }
+        result: { type: object, additionalProperties: true }
+    EdgeCommandResultResponse:
+      type: object
+      required: [accepted]
+      properties:
+        accepted: { type: boolean, const: true }
+    EdgeBuilding:
+      type: object
+      required: [id, name, organization_id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        organization_id: { type: string, format: uuid }
+        organization_name: { type: string, nullable: true }
+    EdgeFleet:
+      type: object
+      required: [summary, nodes]
+      properties:
+        summary:
+          type: object
+          required: [total, online, degraded, offline, activeAlarms]
+          properties:
+            total: { type: integer, minimum: 0 }
+            online: { type: integer, minimum: 0 }
+            degraded: { type: integer, minimum: 0 }
+            offline: { type: integer, minimum: 0 }
+            activeAlarms: { type: integer, minimum: 0 }
+        nodes: { type: array, items: { $ref: '#/components/schemas/EdgeNode' } }
+    EdgeNode:
+      type: object
+      required: [id, edge_id, organization_id, building_id, name, site_code, status, registration_state, queue_depth, device_count, active_alarms]
+      properties:
+        id: { type: string, format: uuid }
+        edge_id: { type: string }
+        organization_id: { type: string, format: uuid }
+        building_id: { type: string, format: uuid }
+        name: { type: string }
+        site_code: { type: string }
+        status: { type: string }
+        registration_state: { type: string }
+        agent_version: { type: string, nullable: true }
+        local_authorization_status: { type: string }
+        queue_depth: { type: integer, minimum: 0 }
+        registered_at: { type: string, format: date-time, nullable: true }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+        last_connected_at: { type: string, format: date-time, nullable: true }
+        credential_version: { type: integer, nullable: true }
+        organization_name: { type: string, nullable: true }
+        building_name: { type: string, nullable: true }
+        device_count: { type: integer, minimum: 0 }
+        active_alarms: { type: integer, minimum: 0 }
+    EdgeDevice:
+      type: object
+      required: [id, edge_device_id, name]
+      properties:
+        id: { type: string, format: uuid }
+        edge_device_id: { type: string }
+        thingsboard_id: { type: string, nullable: true }
+        name: { type: string }
+        profile: { type: string, nullable: true }
+        device_type: { type: string, nullable: true }
+        label: { type: string, nullable: true }
+        unit_id: { type: string, format: uuid, nullable: true }
+        capabilities: { type: array, items: { type: string } }
+        reported_online: { type: boolean, nullable: true }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+        last_telemetry_at: { type: string, format: date-time, nullable: true }
+    EdgeNodeDetail:
+      type: object
+      required: [node, devices, alarms]
+      properties:
+        node: { $ref: '#/components/schemas/EdgeNode' }
+        devices: { type: array, items: { $ref: '#/components/schemas/EdgeDevice' } }
+        alarms: { type: array, items: { type: object, additionalProperties: true } }
+    EdgeBootstrapInput:
+      type: object
+      required: [buildingId, edgeId, name, siteCode, expiresInMinutes]
+      properties:
+        organizationId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        edgeId: { type: string, minLength: 3, maxLength: 80 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+        expiresInMinutes: { type: integer, minimum: 5, maximum: 120 }
+    EdgeBootstrapResponse:
+      type: object
+      required: [id, edgeId, bootstrapToken, oneTime, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        edgeId: { type: string }
+        bootstrapToken: { type: string, description: One-time bootstrap secret. Shown once in the authenticated UI. }
+        oneTime: { type: boolean, const: true }
+        expiresAt: { type: string, format: date-time }
+    EdgeRotatedCredential:
+      type: object
+      required: [accessToken, version, expiresAt, oneTime]
+      properties:
+        accessToken: { type: string, description: Staged credential displayed once to an authorized operator. }
+        version: { type: integer, minimum: 1 }
+        expiresAt: { type: string, format: date-time }
+        oneTime: { type: boolean, const: true }
+        instruction: { type: string }
+    EdgeDeviceAccessInput:
+      type: object
+      required: [unitId, allowedCapabilities]
+      properties:
+        unitId: { type: string, format: uuid }
+        allowedCapabilities: { type: array, minItems: 1, items: { type: string, enum: [BARRIER.OPEN] } }
+    EdgeResidentDevice:
+      allOf:
+        - { $ref: '#/components/schemas/EdgeDevice' }
+        - type: object
+          required: [permittedCapabilities]
+          properties:
+            permittedCapabilities: { type: array, items: { type: string, enum: [BARRIER.OPEN] } }
+    EdgeResidentCommandInput:
+      type: object
+      required: [capability, reason]
+      properties:
+        capability: { type: string, enum: [BARRIER.OPEN] }
+        reason: { type: string, minLength: 3, maxLength: 300 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
+    EdgeResidentCommand:
+      type: object
+      required: [commandId, status, capability]
+      properties:
+        commandId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, sent, completed, failed, expired] }
+        capability: { type: string }
+        createdAt: { type: string, format: date-time }
     IntegrationInstanceActionInput:
       type: object
       required: [revision, confirmation]

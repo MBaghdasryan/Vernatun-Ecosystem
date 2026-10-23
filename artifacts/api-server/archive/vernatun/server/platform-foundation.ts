@@ -14,7 +14,7 @@ const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{
 });
 const planSchema=z.object({name:z.string().trim().min(2).max(120),amountMinor:z.string().regex(/^\d+$/).max(16),
  currency:z.enum(['AMD','RUB','USD']),buildingLimit:z.number().int().min(1).max(100000),
- allowedModules:z.array(z.enum(moduleKeys)).max(8).default([...moduleKeys]),graceDays:z.number().int().min(0).max(90).default(7)}).strict();
+ allowedModules:z.array(z.enum(moduleKeys)).max(moduleKeys.length).default([...moduleKeys]),graceDays:z.number().int().min(0).max(90).default(7)}).strict();
 const statuses=z.enum(['trial','active','past_due','suspended','cancelled','expired']);
 export const platformFoundation=Router();platformFoundation.use(requireAuth);
 

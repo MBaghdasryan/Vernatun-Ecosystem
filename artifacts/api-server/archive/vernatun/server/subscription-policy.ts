@@ -1,7 +1,7 @@
 import type {Pool,PoolClient} from 'pg';
 import {pool} from './db.js';
 
-export const moduleKeys=['requests','finance','handover','access','community','maintenance','meters','documents'] as const;
+export const moduleKeys=['requests','finance','handover','access','community','maintenance','meters','documents','smart_building'] as const;
 export type ModuleKey=typeof moduleKeys[number];
 export type SubscriptionPolicy={
  enforced:boolean;state:string;readOnly:boolean;grace:boolean;modules:string[];
