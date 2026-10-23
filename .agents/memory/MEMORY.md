@@ -24,3 +24,5 @@
 - [Corepack version pinning](pnpm-corepack-pinning.md) — use Corepack to exercise the repository's packageManager pin instead of relying on a conflicting global pnpm.
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.
+- [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.
+- [Edge integration contract](edge-integration-contract.md) — the supplied working Edge Agent is authoritative; each ЖКХ/УК needs its own API-linked Edge server.
