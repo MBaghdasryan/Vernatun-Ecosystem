@@ -54,6 +54,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/platform-support-meetings.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
+  : process.argv.includes('--global-account-provisioning-only')
+  ? [['--test','server/tests/global-account-provisioning.test.mjs']]
  : process.argv.includes('--edge-only')
  ? [['--test','server/tests/edge.test.ts']]
  : process.argv.includes('--phase8-only')
