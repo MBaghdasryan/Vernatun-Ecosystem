@@ -15,6 +15,12 @@ description: User-required provider-independent email architecture and initial c
 
 **How to apply:** Использовать API-хост для Resend webhook. Различать сообщение пользователя о настройках Coolify/Resend и независимо проверенные факты; не объявлять live delivery готовой без успешного production-события.
 
+Пользователь сообщил, что новый Resend API key работает в Coolify, `vernatun.io` отмечен Verified, `noreply@vernatun.io` отправляет, `info@vernatun.io` получает через Hostinger, а существующий webhook возвращает HTTP 204 и обрабатывает `email.sent`/`email.delivered`. Это пользовательский production-отчёт, а не независимая проверка агента.
+
+**Why:** Эти результаты подтверждают рабочий статус, сообщённый пользователем, и отделяют его от недействительного Replit Resend connector.
+
+**How to apply:** Считать Coolify email path работающим по пользовательскому отчёту; не использовать Replit connector error как доказательство неисправности Coolify и не считать `support@` или bounce-путь проверенными без отдельного подтверждения.
+
 Почтовая маршрутизация Vernatun: Resend API используется для исходящих писем от `noreply@vernatun.io`; Hostinger Email остаётся входящим провайдером для `info@vernatun.io` и `support@vernatun.io`. Не заменять MX-записи Hostinger. Существующие Resend webhooks нельзя удалять или дублировать; при необходимости обновлять существующую запись.
 
 **Why:** Пользователь подтвердил разделение исходящей и входящей почты, сохранение Hostinger для входящих сообщений и запрет на пересоздание существующих webhook.
