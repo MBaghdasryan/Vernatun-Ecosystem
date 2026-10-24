@@ -66,8 +66,8 @@ Production-аккаунты не создавались; существующи�
 VERNATUN_GLOBAL_ACCOUNT_CONFIRM=CREATE_GLOBAL_ACCOUNTS \
 NODE_ENV=production \
 corepack pnpm --filter @workspace/api-server run db:provision:global-accounts -- \
-  --platform-admin-email=info@vernatun.io \
-  --support-email=cubeappmaker@gmail.com \
+  --platform-admin-email=<адрес-администратора> \
+  --support-email=<адрес-поддержки> \
   --confirm-production-global-account-provision
 ```
 

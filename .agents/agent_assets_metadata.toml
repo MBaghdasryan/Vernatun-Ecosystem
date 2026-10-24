@@ -456,3 +456,17 @@ mtime_ms = 1792766948036
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/f7925578-1c34-49e4-ba67-a4b5c56ddfcb/7ad00d3d-a164-42b3-b181-80ca078e7991"
 storage_version_token = "1792766968912740"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Areb_7V8d09LfwEYbyR2Z"
+uri = "file://artifacts/api-server/VERNATUN-EMAIL-PRODUCTION-AUDIT-RU.md"
+type = "text"
+title = "Vernatun — аудит Resend и production-почты"
+description = "Статус интеграции, проверенные webhook-маршруты, требования к Coolify и оставшиеся production-проверки."
+logical_id = "b52f722e-21f0-4fe9-aadc-ca9a1b2342e2"
+content_hash = "sha256:cf80ca1bb7826048da910ec76421f56c08005b1518f4951ed564526a65dbc187"
+size = 9419
+mtime_ms = 1792874561342
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/b52f722e-21f0-4fe9-aadc-ca9a1b2342e2/bafafbeb-1d65-4cfc-b078-df62b814ae23"
+storage_version_token = "1792874677770524"
+content_type = "text/markdown"
