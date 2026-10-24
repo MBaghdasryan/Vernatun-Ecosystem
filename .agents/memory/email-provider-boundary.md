@@ -9,11 +9,11 @@ description: User-required provider-independent email architecture and initial c
 
 **How to apply:** Приглашения, сброс пароля и другие бизнес-процессы вызывают общий интерфейс; настройка выбирает адаптер. SDK, transport и особенности конкретного сервиса остаются внутри соответствующего адаптера.
 
-Пользователь указал `https://vernatun.io/api/webhooks/resend` как будущий webhook endpoint Vernatun.
+Пользователь сообщил, что обновил существующий Resend webhook на `https://api.vernatun.io/api/webhooks/resend` и настроил Resend в Coolify; это пока не подтверждено независимой production-проверкой.
 
-**Why:** Пользователь выбрал этот адрес, когда домен ещё не был готов.
+**Why:** Основной сайт и API размещены на разных хостах, а webhook должен достигать API-сервиса.
 
-**How to apply:** Считать его целевым адресом, а не доказательством активного deployment; не объявлять live readiness по одной конфигурации секрета.
+**How to apply:** Использовать API-хост для Resend webhook. Различать сообщение пользователя о настройках Coolify/Resend и независимо проверенные факты; не объявлять live delivery готовой без успешного production-события.
 
 Почтовая маршрутизация Vernatun: Resend API используется для исходящих писем от `noreply@vernatun.io`; Hostinger Email остаётся входящим провайдером для `info@vernatun.io` и `support@vernatun.io`. Не заменять MX-записи Hostinger. Существующие Resend webhooks нельзя удалять или дублировать; при необходимости обновлять существующую запись.
 

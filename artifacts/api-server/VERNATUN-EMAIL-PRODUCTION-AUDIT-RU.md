@@ -2,7 +2,7 @@
 
 ## Итог
 
-**Код и тесты готовы к конфигурации Resend API в Coolify, но production-доставка пока не подтверждена.** Прямого доступа к переменным и базе Coolify нет. Реальное письмо не отправлялось, Resend-конфигурация не изменялась, DNS и входящая почта Hostinger не трогались.
+**Код и локальные проверки готовы; доступность API подтверждена, но production-доставка пока не подтверждена.** Прямого доступа к переменным и базе Coolify нет. По сообщению пользователя, URL существующего webhook в Resend уже изменён на API-хост. Реальное письмо не отправлялось; DNS и входящая почта Hostinger не менялись.
 
 ## Что подтверждено
 
@@ -20,27 +20,27 @@
 - В коде сохраняются проверка Svix-подписи по исходному телу, ограничение времени подписи, идемпотентность событий, безопасное хранение результатов и retryable `503` при временной ошибке хранилища.
 - Поддержаны события `email.sent`, `email.delivery_delayed`, `email.delivered`, `email.bounced`, `email.complained`, `email.failed`.
 - Синтетические подписанные события, дубликаты, неверные подписи, bounce/complaint и повтор после временного сбоя проверены локальными тестами.
-- Производственный GET-проверочный запрос показал:
+- Повторная production GET-проверка показала:
   - `GET https://api.vernatun.io/api/webhooks/resend` → **405** (маршрут доступен на API-хосте и ожидает POST);
   - `GET https://vernatun.io/api/webhooks/resend` → **500**;
   - `GET https://api.vernatun.io/api/health` → **200**.
 
-**Вывод:** текущий адрес webhook на основном сайте не подходит для доставки в API. После восстановления доступа к Resend нужно изменить URL существующего webhook на `https://api.vernatun.io/api/webhooks/resend`. Не создавать новый webhook и не удалять существующий.
+**Вывод:** API-хост доступен, webhook-маршрут существует и принимает только POST. Пользователь сообщил, что обновил URL существующего webhook на `https://api.vernatun.io/api/webhooks/resend`; независимо подтвердить настройку в Resend сейчас нельзя, так как доступный Resend API-ключ недействителен. Ответ `500` на старом URL основного сайта сохраняется, но сам по себе не означает ошибку доставки, если существующий webhook теперь направлен на API-хост. Новый webhook не создавался и удалений не выполнялось.
 
 ## Что ещё не подтверждено в production
 
 | Проверка | Статус | Что требуется |
 |---|---|---|
-| `RESEND_API_KEY` в Coolify | Не могу проверить: доступ к окружению Coolify отсутствует | Убедиться, что ключ добавлен в server-side secrets Coolify. Если переменной нет или Resend отклоняет ключ — обновить её там, не отправляя значение в чат |
-| Resend-подключение Replit | Проверка API вернула `400`, ключ подключения отмечен Resend как недействительный | Обновить ключ в существующем подключении Resend Replit, если оно нужно для управления интеграцией. Это не доказывает состояние отдельного ключа в Coolify |
-| `MAIL_PROVIDER` и `EMAIL_FROM` в Coolify | Не проверены | Установить `MAIL_PROVIDER=resend`, `EMAIL_FROM=noreply@vernatun.io` |
-| `RESEND_WEBHOOK_SECRET` и scope в Coolify | Не проверены | Установить существующий signing secret в Coolify Secret; ожидаемый scope по умолчанию — `primary`, либо задать scope существующего webhook |
-| Отправляющий домен и sender в Resend | Не подтверждены | После восстановления API-доступа проверить в Resend домен `vernatun.io` и отправителя `noreply@vernatun.io` |
-| Существующий webhook в Resend | Не удалось прочитать через API из-за недействительного ключа | Проверить список, затем изменить только URL существующей записи на API-хост |
-| Входящий `support@` | Не проверен | Если требуется пересылка в Resend, настроить её в Hostinger на `b3b72580@fensiko.resend.app`; сохранить текущую MX-конфигурацию Hostinger |
+| `RESEND_API_KEY` в Coolify | По сообщению пользователя, Coolify настроен; проверить из этой среды нельзя | В Coolify убедиться, что ключ задан как server-side secret. Не отправлять его в чат |
+| Resend-подключение Replit | GET `/domains` вернул `400 API key is invalid`; reauthorization context определил тип credential как API key | При необходимости обновить ключ в существующем подключении Replit. Это подключение отдельно от Coolify и не подтверждает его состояние |
+| `MAIL_PROVIDER` и `EMAIL_FROM` в Coolify | По сообщению пользователя, Coolify настроен; из этой среды не проверено | Проверить `MAIL_PROVIDER=resend`, `EMAIL_FROM=noreply@vernatun.io` |
+| `RESEND_WEBHOOK_SECRET` и scope в Coolify | По сообщению пользователя, Coolify настроен; из этой среды не проверено | Убедиться, что существующий signing secret добавлен в Coolify Secret и его scope совпадает с существующим webhook (по умолчанию — `primary`) |
+| Отправляющий домен и sender в Resend | Не подтверждены: чтение доменов через доступное подключение не прошло из-за недействительного API-ключа | Проверить, что `vernatun.io` верифицирован для отправки и sender `noreply@vernatun.io` разрешён |
+| Существующий webhook в Resend | Пользователь сообщил, что изменил endpoint; API-проверить запись нельзя из-за недействительного ключа | Убедиться в панели Resend, что существующая запись указывает на `https://api.vernatun.io/api/webhooks/resend` и содержит необходимые события. Не создавать новую запись |
+| Входящий `support@` | Не проверен | Если нужна пересылка в Resend, настроить её в Hostinger на `b3b72580@fensiko.resend.app`; сохранить текущую MX-конфигурацию Hostinger |
 | Live send / delivery / bounce | Не выполнены | Сначала подтвердить ключ, домен, sender и endpoint; затем отправить согласованное тестовое письмо и дождаться событий Resend |
 
-Доступные переменные Replit показывали `MAIL_PROVIDER=resend` и `EMAIL_FROM=noreply@vernatun.io`. Это **не подтверждает** значения или секреты production в Coolify: у этих окружений отдельные настройки.
+В Replit видны `MAIL_PROVIDER=resend`, `EMAIL_FROM=noreply@vernatun.io` и наличие `RESEND_WEBHOOK_SECRET`; `RESEND_API_KEY` в Replit отсутствует. Это **не подтверждает и не опровергает** Coolify: у этих окружений отдельные настройки. Доступное Replit-подключение Resend вернуло `400 API key is invalid`; его состояние не используется как индикатор ключа Coolify.
 
 ## Что необходимо внести в Coolify
 
@@ -78,7 +78,9 @@ corepack pnpm --filter @workspace/api-server run db:provision:global-accounts --
 - `corepack pnpm run typecheck` — успешно.
 - `corepack pnpm --filter @workspace/api-server run build` — успешно.
 - `corepack pnpm --filter @workspace/api-server run test:delivery` — успешно: 37 тестов доставки/webhook в трёх наборах, ошибок нет.
+- Повторный `corepack pnpm --filter @workspace/api-server run test:delivery` — успешно: 37 тестов, ошибок нет.
+- Production `GET https://api.vernatun.io/api/health` — `200`; `GET https://api.vernatun.io/api/webhooks/resend` — `405` (ожидаемый ответ для POST-only endpoint); старый адрес на `vernatun.io` отвечает `500`.
 - `node --check .../provision-global-accounts.mjs` — успешно.
 - `git diff --check` — успешно.
 
-Все тесты доставки выполнялись на изолированной тестовой базе с синтетическими письмами и signing key. Live-письмо и production-запросы на изменение webhook не выполнялись.
+Все тесты доставки выполнялись на изолированной тестовой базе с синтетическими письмами и signing key. Live-письмо не отправлялось. Настройка webhook в Resend не изменялась из этой рабочей среды; обновление endpoint — действие, о котором сообщил пользователь.
