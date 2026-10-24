@@ -25,4 +25,4 @@
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.
 - [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.
-- [Edge integration contract](edge-integration-contract.md) — the supplied working Edge Agent is authoritative; each ЖКХ/УК needs its own API-linked Edge server.
+- [Edge integration contract](edge-integration-contract.md) — preserve v1; versioned v2 assigns each Edge node to a block with explicit building/device scope.

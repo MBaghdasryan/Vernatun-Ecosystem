@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      VERNATUN_EDGE_CONFIG: "/app/config/vernatun_edge_cloud_v1.yaml"
+      VERNATUN_EDGE_CONFIG: "/app/config/vernatun_edge_cloud_v2.yaml"
       VERNATUN_EDGE_DATA_DIR: "/app/data"
     extra_hosts:
       - "host.docker.internal:host-gateway"

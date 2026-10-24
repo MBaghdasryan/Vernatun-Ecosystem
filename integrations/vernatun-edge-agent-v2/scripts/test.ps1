@@ -13,11 +13,11 @@ if (-not (Test-Path $EnvFile)) {
 
 $AgentKey = $null
 $TenantId = $null
-$BuildingId = $null
+$BlockId = $null
 foreach ($line in Get-Content $EnvFile) {
     if ($line -match '^VERNATUN_AGENT_LOCAL_KEY=(.+)$') { $AgentKey = $Matches[1].Trim() }
     if ($line -match '^VERNATUN_TENANT_ID=(.+)$') { $TenantId = $Matches[1].Trim() }
-    if ($line -match '^VERNATUN_BUILDING_ID=(.+)$') { $BuildingId = $Matches[1].Trim() }
+    if ($line -match '^VERNATUN_BLOCK_ID=(.+)$') { $BlockId = $Matches[1].Trim() }
 }
 if (-not $AgentKey) { throw "VERNATUN_AGENT_LOCAL_KEY not found." }
 
@@ -64,7 +64,7 @@ if ($TestBarrierCommand) {
 }
 
 Write-Host "`n============================================================" -ForegroundColor Cyan
-Write-Host "Vernatun Cloud Edge Agent v1 local preparation test PASSED" -ForegroundColor Green
+Write-Host "Vernatun Cloud Edge Agent v2 local preparation test PASSED" -ForegroundColor Green
 Write-Host "Cloud health        : $($health.cloud.health)"
 Write-Host "Registration state  : $($health.cloud.registrationState)"
 Write-Host "Local authorization : PASS"

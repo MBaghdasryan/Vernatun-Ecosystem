@@ -4,7 +4,8 @@ import {pool} from './db.js';
 import {ApiError} from './access.js';
 import {authenticateEdgeToken} from './edge-auth.js';
 
-const SOCKET_PATH='/api/edge/v1/connect';
+const SOCKET_PATH_V1='/api/edge/v1/connect';
+const SOCKET_PATH_V2='/api/edge/v2/connect';
 const connected=new Map<string,WebSocket>();
 
 export function sendEdgeMessage(edgeNodeId:string,message:unknown){
@@ -64,10 +65,11 @@ export async function recordEdgeCommandResult(edgeNodeId:string,result:any){
 
 export function attachEdgeWebSocket(server:Server){
  const wss=new WebSocketServer({noServer:true,maxPayload:64*1024,perMessageDeflate:false});
- const upgradeNodes=new WeakMap<WebSocket,{id:string;edge_id:string;organization_id:string;building_id:string}>();
+ const upgradeNodes=new WeakMap<WebSocket,any>();
  server.on('upgrade',(request,socket,head)=>{
   const url=new URL(request.url??'/',`http://${request.headers.host??'localhost'}`);
-  if(url.pathname!==SOCKET_PATH)return;
+  if(url.pathname!==SOCKET_PATH_V1&&url.pathname!==SOCKET_PATH_V2)return;
+  const protocolVersion=url.pathname===SOCKET_PATH_V2?2:1;
   void (async()=>{
    try{
     const authorization=request.headers.authorization??'';
@@ -75,9 +77,13 @@ export function attachEdgeWebSocket(server:Server){
     if(token.length<20)throw new ApiError(401,'edge_unauthorized');
     const edgeId=url.searchParams.get('edgeId')??'';
     const node=await authenticateUpgrade(token,edgeId);
+    if(node.protocol_version!==protocolVersion||
+     (protocolVersion===1&&!node.building_id)||(protocolVersion===2&&!node.block_id))
+     throw new ApiError(401,'edge_protocol_mismatch');
     for(const [header,expected] of [
      ['x-vernatun-edge-id',node.edge_id],['x-vernatun-tenant-id',node.organization_id],
-     ['x-vernatun-building-id',node.building_id]
+     [protocolVersion===1?'x-vernatun-building-id':'x-vernatun-block-id',
+      protocolVersion===1?node.building_id:node.block_id]
     ] as const){
      const supplied=request.headers[header];
      if(typeof supplied!=='string'||supplied.toLowerCase()!==String(expected).toLowerCase())throw new ApiError(401,'edge_identity_mismatch');
@@ -103,7 +109,10 @@ export function attachEdgeWebSocket(server:Server){
      const message=JSON.parse(raw.toString());
      const type=String(message?.type??'').toUpperCase();
      if(type==='EDGE_HELLO'){
-      if(message.edgeId!==node.edge_id||message.tenantId!==node.organization_id||message.buildingId!==node.building_id){
+      const scopeMatches=node.protocol_version===2
+       ?message.protocolVersion===2&&message.blockId===node.block_id
+       :message.buildingId===node.building_id;
+      if(message.edgeId!==node.edge_id||message.tenantId!==node.organization_id||!scopeMatches){
        socket.close(4003,'edge_identity_mismatch');return;
       }
       await pool.query(`UPDATE edge_nodes SET agent_version=$2,last_seen_at=now(),status='ONLINE',updated_at=now()
@@ -113,7 +122,11 @@ export function attachEdgeWebSocket(server:Server){
      }else if(type==='PONG'){
       await pool.query("UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1",[node.id]);
      }else if(type==='CONFIG_REQUEST'){
-      const info=(await pool.query('SELECT edge_id,organization_id AS \"tenantId\",building_id AS \"buildingId\",config_version AS \"configVersion\" FROM edge_nodes WHERE id=$1',[node.id])).rows[0];
+      const info=(await pool.query(`SELECT edge_id,organization_id AS "tenantId",building_id AS "buildingId",
+       block_id AS "blockId",protocol_version AS "protocolVersion",config_version AS "configVersion"
+       FROM edge_nodes WHERE id=$1`,[node.id])).rows[0];
+      if(node.protocol_version===2)info.buildingIds=(await pool.query(
+       'SELECT building_id FROM edge_node_buildings WHERE edge_node_id=$1 ORDER BY building_id',[node.id])).rows.map(r=>r.building_id);
       socket.send(JSON.stringify({type:'CONFIG',...info}));
      }
     }catch{

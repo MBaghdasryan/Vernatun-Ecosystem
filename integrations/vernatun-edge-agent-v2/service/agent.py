@@ -13,9 +13,10 @@ from urllib.parse import quote, urlparse
 import requests
 import websocket
 import yaml
+from scope import command_scope_matches, mapped_building_id as resolve_mapped_building_id
 
-AGENT_VERSION = "1.0.0"
-CONFIG_PATH = Path(os.getenv("VERNATUN_EDGE_CONFIG", "/app/config/vernatun_edge_cloud_v1.yaml"))
+AGENT_VERSION = "2.0.0"
+CONFIG_PATH = Path(os.getenv("VERNATUN_EDGE_CONFIG", "/app/config/vernatun_edge_cloud_v2.yaml"))
 DATA_DIR = Path(os.getenv("VERNATUN_EDGE_DATA_DIR", "/app/data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -37,8 +38,9 @@ def env(name, default=None):
 EDGE_ID = env("VERNATUN_EDGE_ID", cfg("identity.edge_id"))
 EDGE_NAME = env("VERNATUN_EDGE_NAME", cfg("identity.edge_name"))
 TENANT_ID = env("VERNATUN_TENANT_ID", cfg("identity.tenant_id"))
-BUILDING_ID = env("VERNATUN_BUILDING_ID", cfg("identity.building_id"))
+BLOCK_ID = env("VERNATUN_BLOCK_ID", cfg("identity.block_id"))
 SITE_CODE = env("VERNATUN_SITE_CODE", cfg("identity.site_code"))
+DEVICE_BUILDING_MAP = cfg("identity.device_building_map", {})
 
 CLOUD_BASE = env("VERNATUN_CLOUD_API_BASE_URL", cfg("cloud.api_base_url")).rstrip("/")
 CLOUD_HEALTH = env("VERNATUN_CLOUD_HEALTH_URL", cfg("cloud.health_url"))
@@ -88,7 +90,7 @@ STATE = {
 TB_TOKEN = {"token": None, "at": 0}
 
 def now_iso():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 def log(msg):
     print(f"{now_iso()} {msg}", flush=True)
@@ -173,7 +175,7 @@ def cloud_headers(use_bootstrap=False):
         "Content-Type": "application/json",
         "X-Vernatun-Edge-Id": EDGE_ID,
         "X-Vernatun-Tenant-Id": TENANT_ID,
-        "X-Vernatun-Building-Id": BUILDING_ID,
+        "X-Vernatun-Block-Id": BLOCK_ID,
     }
     if token:
         h["Authorization"] = f"Bearer {token}"
@@ -182,8 +184,15 @@ def cloud_headers(use_bootstrap=False):
     return h
 
 def identity_ready():
-    values = [EDGE_ID, TENANT_ID, BUILDING_ID]
+    values = [EDGE_ID, TENANT_ID, BLOCK_ID]
     return all(values) and not any(str(v).startswith("REPLACE_") for v in values)
+
+def allowed_building_ids():
+    values = state_get("buildingIds", [])
+    return set(values if isinstance(values, list) else [])
+
+def mapped_building_id(*identifiers):
+    return resolve_mapped_building_id(DEVICE_BUILDING_MAP, allowed_building_ids(), *identifiers)
 
 def cloud_health_check():
     try:
@@ -213,15 +222,14 @@ def local_command_health_check():
 
 def registration_payload():
     return {
+        "protocolVersion": 2,
         "edgeId": EDGE_ID,
         "edgeName": EDGE_NAME,
         "tenantId": TENANT_ID,
-        "buildingId": BUILDING_ID,
+        "blockId": BLOCK_ID,
         "siteCode": SITE_CODE,
         "agentVersion": AGENT_VERSION,
         "platform": "Vernatun Edge",
-        "connectionMode": "OUTBOUND",
-        "transports": ["WEBSOCKET", "HTTPS"],
         "capabilities": {
             "commandAuthorization": True,
             "offlineQueue": True,
@@ -236,7 +244,7 @@ def register_edge():
     if not identity_ready():
         with LOCK:
             STATE["registrationState"] = "WAITING_IDENTITY"
-            STATE["registrationError"] = "edge_id/tenant_id/building_id must be configured"
+            STATE["registrationError"] = "edge_id/tenant_id/block_id must be configured"
         return False
 
     if not BOOTSTRAP_TOKEN:
@@ -264,9 +272,15 @@ def register_edge():
             return False
 
         body = r.json() if r.content else {}
+        if body.get("protocolVersion") != 2 or str(body.get("blockId", "")).lower() != str(BLOCK_ID).lower() or not body.get("buildingIds"):
+            with LOCK:
+                STATE["registrationState"] = "REGISTRATION_FAILED"
+                STATE["registrationError"] = "Cloud returned an invalid v2 block scope"
+            return False
         access_token = body.get("accessToken") or body.get("token") or body.get("edgeToken")
         if access_token:
             state_set("cloudAccessToken", access_token)
+        state_set("buildingIds", body["buildingIds"])
         if body.get("clientId"):
             state_set("cloudClientId", body["clientId"])
 
@@ -303,10 +317,10 @@ def cloud_post(path, payload):
 
 def heartbeat_payload():
     return {
+        "protocolVersion": 2,
         "edgeId": EDGE_ID,
         "tenantId": TENANT_ID,
-        "buildingId": BUILDING_ID,
-        "siteCode": SITE_CODE,
+        "blockId": BLOCK_ID,
         "status": "ONLINE",
         "agentVersion": AGENT_VERSION,
         "timestamp": now_iso(),
@@ -371,9 +385,15 @@ def collect_inventory():
         for d in rows:
             profile_name = d.get("deviceProfileName") or d.get("type")
             if profile_name in vern_profiles:
+                thingsboard_id = ((d.get("id") or {}).get("id"))
+                building_id = mapped_building_id(thingsboard_id, d.get("name"))
+                if not building_id:
+                    continue
                 items.append({
                     "deviceId": d.get("name"),
-                    "thingsboardId": ((d.get("id") or {}).get("id")),
+                    "name": d.get("name"),
+                    "buildingId": building_id,
+                    "thingsboardId": thingsboard_id,
                     "profile": profile_name,
                     "label": d.get("label"),
                     "active": d.get("active"),
@@ -385,9 +405,10 @@ def collect_inventory():
             break
 
     return {
+        "protocolVersion": 2,
         "edgeId": EDGE_ID,
         "tenantId": TENANT_ID,
-        "buildingId": BUILDING_ID,
+        "blockId": BLOCK_ID,
         "timestamp": now_iso(),
         "devices": items
     }
@@ -415,8 +436,14 @@ def local_command(command):
         raise ValueError("Cloud command must contain commandId and idempotencyKey")
     if command.get("tenantId") != TENANT_ID:
         raise PermissionError("TENANT_SCOPE_MISMATCH")
-    if command.get("buildingId") != BUILDING_ID:
-        raise PermissionError("BUILDING_SCOPE_MISMATCH")
+    if command.get("blockId") != BLOCK_ID:
+        raise PermissionError("BLOCK_SCOPE_MISMATCH")
+    building_id = command.get("buildingId")
+    if not command_scope_matches(
+        DEVICE_BUILDING_MAP, allowed_building_ids(), building_id,
+        command.get("edgeDeviceId"), command.get("deviceId")
+    ):
+        raise PermissionError("DEVICE_BUILDING_MAPPING_MISMATCH")
     if command.get("capability") in set(cfg("commands.hard_deny", [])):
         raise PermissionError("SAFETY_CRITICAL_HARD_DENY")
 
@@ -470,9 +497,11 @@ def process_cloud_command(command):
         save_command(command, "RECEIVED")
         http_status, local_result = local_command(command)
         result = {
+            "protocolVersion": 2,
             "edgeId": EDGE_ID,
             "tenantId": TENANT_ID,
-            "buildingId": BUILDING_ID,
+            "blockId": BLOCK_ID,
+            "buildingId": command.get("buildingId"),
             "commandId": command_id,
             "status": "SUCCESS" if 200 <= http_status < 300 else "REJECTED",
             "localHttpStatus": http_status,
@@ -484,9 +513,11 @@ def process_cloud_command(command):
             STATE["lastCommandStatus"] = result["status"]
     except Exception as exc:
         result = {
+            "protocolVersion": 2,
             "edgeId": EDGE_ID,
             "tenantId": TENANT_ID,
-            "buildingId": BUILDING_ID,
+            "blockId": BLOCK_ID,
+            "buildingId": command.get("buildingId"),
             "commandId": command_id,
             "status": "REJECTED",
             "error": str(exc),
@@ -525,7 +556,7 @@ def websocket_loop():
             headers = [
                 f"X-Vernatun-Edge-Id: {EDGE_ID}",
                 f"X-Vernatun-Tenant-Id: {TENANT_ID}",
-                f"X-Vernatun-Building-Id: {BUILDING_ID}",
+                f"X-Vernatun-Block-Id: {BLOCK_ID}",
             ]
             token = current_cloud_token()
             if token:
@@ -548,9 +579,10 @@ def websocket_loop():
 
             hello = {
                 "type": "EDGE_HELLO",
+                "protocolVersion": 2,
                 "edgeId": EDGE_ID,
                 "tenantId": TENANT_ID,
-                "buildingId": BUILDING_ID,
+                "blockId": BLOCK_ID,
                 "agentVersion": AGENT_VERSION,
                 "timestamp": now_iso()
             }
@@ -682,7 +714,8 @@ def status_payload():
             "edgeId": EDGE_ID,
             "edgeName": EDGE_NAME,
             "tenantId": TENANT_ID,
-            "buildingId": BUILDING_ID,
+            "blockId": BLOCK_ID,
+            "buildingIds": sorted(allowed_building_ids()),
             "siteCode": SITE_CODE,
         },
         "cloud": {
@@ -713,7 +746,7 @@ def status_payload():
     }
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "VernatunCloudEdgeAgent/1.0"
+    server_version = "VernatunCloudEdgeAgent/2.0"
 
     def log_message(self, fmt, *args):
         print(f"{self.client_address[0]} - {fmt % args}", flush=True)
@@ -794,12 +827,23 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/v1/queue/telemetry", "/v1/queue/events", "/v1/queue/alarms"):
             kind = path.rsplit("/", 1)[-1]
             body = self.read_json()
+            raw_items = body.get("items", []) if isinstance(body, dict) else body if isinstance(body, list) else [body]
+            items = []
+            for item in raw_items:
+                if isinstance(item, dict) and not item.get("buildingId"):
+                    building_id = mapped_building_id(
+                        item.get("edgeDeviceId"), item.get("deviceId"), item.get("thingsboardId")
+                    )
+                    if building_id:
+                        item = {**item, "buildingId": building_id}
+                items.append(item)
             envelope = {
+                "protocolVersion": 2,
                 "edgeId": EDGE_ID,
                 "tenantId": TENANT_ID,
-                "buildingId": BUILDING_ID,
+                "blockId": BLOCK_ID,
                 "timestamp": now_iso(),
-                "items": body.get("items", body if isinstance(body, list) else [body]),
+                "items": items,
             }
             item = queue_put(kind, envelope)
             self.send_json(202, {"status": "QUEUED", "queueId": item, "kind": kind})
@@ -813,7 +857,7 @@ def main():
         STATE["startedAt"] = now_iso()
 
     log(f"Vernatun Cloud Edge Agent v{AGENT_VERSION}")
-    log(f"Edge identity: edge={EDGE_ID}, tenant={TENANT_ID}, building={BUILDING_ID}")
+    log(f"Edge identity: edge={EDGE_ID}, tenant={TENANT_ID}, block={BLOCK_ID}")
     log(f"Cloud API: {CLOUD_BASE}")
     log(f"Local Command Layer: {LOCAL_COMMAND_URL}")
 

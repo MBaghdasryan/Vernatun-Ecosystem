@@ -62,6 +62,7 @@ import {mfaPolicy} from './mfa-policy.js';
 import {leads} from './leads.js';
 import {pagedRecords} from './paged-records.js';
 import {edgeMachineApi} from './edge-machine-api.js';
+import {edgeMachineApiV2} from './edge-machine-api-v2.js';
 import {edgeManagementApi} from './edge-management-api.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 app.use('/api',cors({
@@ -83,8 +84,10 @@ app.use('/api/email-webhooks',emailWebhooks);
 app.use('/api/finance/bank/imports',express.json({limit:'1mb'}));
 app.use('/api/platform/imports',express.json({limit:'1mb'}));
 app.use('/api/edge/v1',express.json({limit:'2mb'}));
+app.use('/api/edge/v2',express.json({limit:'2mb'}));
 app.use(express.json({limit:'32kb'}));
 app.use('/api/edge/v1',edgeMachineApi);
+app.use('/api/edge/v2',edgeMachineApiV2);
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(sessionRevocationGuard);
 app.use(passport.initialize());app.use(passport.session());

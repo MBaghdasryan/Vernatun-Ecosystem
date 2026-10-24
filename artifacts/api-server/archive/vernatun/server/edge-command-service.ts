@@ -37,9 +37,9 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
   }else{
    const target=await client.query(`SELECT d.id AS device_inventory_id,d.edge_node_id,d.edge_device_id,d.thingsboard_id,
     d.capabilities,d.device_type,d.unit_id,n.organization_id,n.building_id,n.status AS edge_status,
-    n.registration_state,n.name AS edge_name
+    n.registration_state,n.name AS edge_name,n.block_id,n.protocol_version
     FROM edge_device_inventory d JOIN edge_nodes n ON n.id=d.edge_node_id
-    WHERE d.id=$1 AND n.organization_id=$2 AND n.building_id=$3
+    WHERE d.id=$1 AND d.organization_id=$2 AND d.building_id=$3
      AND d.reported_online IS DISTINCT FROM false
     FOR SHARE OF d,n`,[input.deviceId,context.organization_id,input.buildingId]);
    if(!target.rowCount)throw new ApiError(404,'device_not_found');
@@ -104,7 +104,9 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
    await client.query('COMMIT');
    if(!denied&&!offline){
     const sent=sendEdgeMessage(device.edge_node_id,{type:'COMMAND',command:{
-     commandId,idempotencyKey:key,tenantId:context.organization_id,buildingId:input.buildingId,
+     commandId,idempotencyKey:key,tenantId:context.organization_id,
+     ...(device.protocol_version===2?{protocolVersion:2,blockId:device.block_id}:{}),
+     buildingId:input.buildingId,
      deviceId:device.thingsboard_id??device.edge_device_id,edgeDeviceId:device.edge_device_id,
      capability:input.capability,reason,source:sourceProduct,actor:actorClaim,expiresAt
     }});

@@ -1,9 +1,9 @@
 param(
-    [string]$EdgeId = "edge-building01",
-    [string]$EdgeName = "Vernatun Edge - Building 01",
-    [string]$TenantId = "uk_001",
-    [string]$BuildingId = "building01",
-    [string]$SiteCode = "building01",
+    [string]$EdgeId = "edge-nor-yerevan-block-a",
+    [string]$EdgeName = "Vernatun Edge - Nor Yerevan Block A",
+    [string]$TenantId = "REPLACE_WITH_ORGANIZATION_UUID",
+    [string]$BlockId = "REPLACE_WITH_BLOCK_UUID",
+    [string]$SiteCode = "nor-yerevan-block-a",
     [string]$BootstrapToken = "",
     [string]$TbUsername = "tenant@thingsboard.org",
     [string]$TbPassword = "tenant",
@@ -16,7 +16,7 @@ $ProgressPreference = "SilentlyContinue"
 $Root = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $Root ".env"
 
-Write-Host "`n==> Vernatun Cloud Edge Agent v1" -ForegroundColor Cyan
+Write-Host "`n==> Vernatun Cloud Edge Agent v2" -ForegroundColor Cyan
 Write-Host "Root: $Root"
 
 docker version | Out-Null
@@ -59,7 +59,7 @@ VERNATUN_EDGE_BOOTSTRAP_TOKEN=$BootstrapToken
 VERNATUN_EDGE_ID=$EdgeId
 VERNATUN_EDGE_NAME=$EdgeName
 VERNATUN_TENANT_ID=$TenantId
-VERNATUN_BUILDING_ID=$BuildingId
+VERNATUN_BLOCK_ID=$BlockId
 VERNATUN_SITE_CODE=$SiteCode
 
 VERNATUN_CLOUD_API_BASE_URL=https://api.vernatun.io
@@ -119,7 +119,7 @@ try {
     if ($health.cloud.registrationState -eq "WAITING_BOOTSTRAP_TOKEN") {
         Write-Host "Edge Agent is ready locally. Cloud registration needs a bootstrap token." -ForegroundColor Yellow
     } elseif ($health.cloud.registrationState -eq "CLOUD_EDGE_API_NOT_IMPLEMENTED") {
-        Write-Host "Edge Agent is ready. Vernatun Cloud still needs /api/edge/v1/* endpoints." -ForegroundColor Yellow
+        Write-Host "Edge Agent is ready. Vernatun Cloud registration still needs to be available." -ForegroundColor Yellow
     } elseif ($health.cloud.registrationState -eq "REGISTERED") {
         Write-Host "Edge is registered with Vernatun Cloud." -ForegroundColor Green
     }

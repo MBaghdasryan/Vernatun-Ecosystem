@@ -74,6 +74,8 @@ router.post('/register',async(req,res)=>{
    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,edge_id,organization_id,building_id,name,status`,
    [input.edgeId,token.organization_id,token.building_id,input.edgeName,token.site_code,
     input.agentVersion??null,input.platform??null,JSON.stringify(input.capabilities??{})])).rows[0];
+  await client.query(`INSERT INTO edge_node_buildings(edge_node_id,organization_id,building_id)
+   VALUES($1,$2,$3)`,[node.id,node.organization_id,node.building_id]);
   await client.query(`INSERT INTO edge_credentials(edge_node_id,credential_hash,version)
    VALUES($1,$2,1)`,[node.id,credentialHash]);
   await client.query(`UPDATE edge_bootstrap_tokens SET used_at=now(),used_by_edge_node_id=$2 WHERE id=$1`,
@@ -199,7 +201,7 @@ router.post('/events/batch',machineAuth,async(req:MachineRequest,res)=>{
    const result=await client.query(`INSERT INTO edge_events
     (edge_node_id,device_inventory_id,organization_id,building_id,external_event_id,event_type,severity,source_timestamp,payload)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-    ON CONFLICT(edge_node_id,external_event_id) WHERE external_event_id IS NOT NULL DO NOTHING`,
+    ON CONFLICT(edge_node_id,building_id,external_event_id) WHERE external_event_id IS NOT NULL DO NOTHING`,
    [node.id,device,node.organization_id,node.building_id,externalId,
     String(item.type??item.eventType??'edge.event').slice(0,100),
     ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
@@ -223,7 +225,8 @@ router.post('/alarms/batch',machineAuth,async(req:MachineRequest,res)=>{
    const device=await requireDevice(node,item.deviceId);
    const result=await client.query(`INSERT INTO edge_alarms
     (edge_node_id,device_inventory_id,organization_id,building_id,external_alarm_id,alarm_type,severity,source_timestamp,payload)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(edge_node_id,external_alarm_id) DO NOTHING`,
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    ON CONFLICT(edge_node_id,building_id,external_alarm_id) DO NOTHING`,
    [node.id,device,node.organization_id,node.building_id,item.alarmId.slice(0,200),
     String(item.type??'edge.alarm').slice(0,100),
     ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',

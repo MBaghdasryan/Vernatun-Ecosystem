@@ -16,6 +16,14 @@ const bootstrapSchema=z.object({
  organizationId:uuid.optional(),buildingId:uuid,edgeId,name:z.string().trim().min(2).max(120),
  siteCode:z.string().trim().min(1).max(100),expiresInMinutes:z.number().int().min(5).max(120).default(30)
 }).strict();
+const blockSchema=z.object({
+ organizationId:uuid.optional(),code:z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/),
+ name:z.string().trim().min(2).max(120),buildingIds:z.array(uuid).min(1).max(1000)
+}).strict();
+const blockBootstrapSchema=z.object({
+ edgeId,name:z.string().trim().min(2).max(120),siteCode:z.string().trim().min(1).max(100),
+ expiresInMinutes:z.number().int().min(5).max(120).default(30)
+}).strict();
 const capabilitySchema=z.array(z.enum(['BARRIER.OPEN'])).min(1).max(1);
 
 async function organizationScope(req:Request,permission:string){
@@ -29,7 +37,9 @@ async function nodeInScope(req:Request,id:string,permission:string){
  const params:any[]=[id];let where='n.id=$1';
  if(c.organization_id){params.push(c.organization_id);where+=' AND n.organization_id=$2'}
  else if(!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
- if(c.building_id){params.push(c.building_id);where+=` AND n.building_id=$${params.length}`}
+ if(c.building_id){params.push(c.building_id);where+=` AND EXISTS(
+  SELECT 1 FROM edge_node_buildings scope WHERE scope.edge_node_id=n.id
+   AND scope.organization_id=n.organization_id AND scope.building_id=$${params.length})`}
  const result=await pool.query(`SELECT n.* FROM edge_nodes n WHERE ${where}`,params);
  if(!result.rowCount)throw new ApiError(404,'edge_not_found');
  return {context:c,node:result.rows[0]};
@@ -54,19 +64,102 @@ router.get('/edge-console/buildings',async(req,res)=>{
  return res.json((await pool.query(`SELECT b.id,b.name,b.address,b.organization_id,o.name AS organization_name
   FROM buildings b JOIN organizations o ON o.id=b.organization_id ORDER BY o.name,b.name LIMIT 1000`)).rows);
 });
+router.get('/edge-console/blocks',async(req,res)=>{
+ const c=await requirePermission(req,'edge.bootstrap.create');
+ if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
+ const values:any[]=[];let where='TRUE';
+ if(c.organization_id){values.push(c.organization_id);where=`b.organization_id=$${values.length}`}
+ const result=await pool.query(`SELECT b.id,b.organization_id,b.code,b.name,b.created_at,
+  o.name AS organization_name,count(DISTINCT bb.building_id)::int AS building_count,
+  count(DISTINCT n.id)::int AS edge_node_count,
+  COALESCE(jsonb_agg(DISTINCT jsonb_build_object('id',bl.id,'name',bl.name)) FILTER(WHERE bl.id IS NOT NULL),'[]'::jsonb) AS buildings
+  FROM edge_blocks b JOIN organizations o ON o.id=b.organization_id
+  LEFT JOIN edge_block_buildings bb ON bb.block_id=b.id AND bb.organization_id=b.organization_id
+  LEFT JOIN buildings bl ON bl.id=bb.building_id
+  LEFT JOIN edge_nodes n ON n.block_id=b.id AND n.organization_id=b.organization_id
+  WHERE ${where} GROUP BY b.id,o.name ORDER BY o.name,b.name`,values);
+ res.json({blocks:result.rows});
+});
+router.post('/edge-console/blocks',async(req,res)=>{
+ const c=await requirePermission(req,'edge.bootstrap.create');requireRecentAuthentication(req);
+ const input=blockSchema.parse(req.body);
+ const organizationId=c.organization_id??input.organizationId;
+ if(!organizationId)throw new ApiError(400,'organization_required');
+ if(c.organization_id&&input.organizationId&&input.organizationId!==c.organization_id)throw new ApiError(403,'organization_scope_mismatch');
+ if(c.building_id&&input.buildingIds.some(id=>id!==c.building_id))throw new ApiError(403,'building_scope_mismatch');
+ const uniqueIds=[...new Set(input.buildingIds)];
+ if(uniqueIds.length!==input.buildingIds.length)throw new ApiError(400,'duplicate_building');
+ const result=await transaction(async db=>{
+  const codeExists=await db.query('SELECT 1 FROM edge_blocks WHERE organization_id=$1 AND code=$2',[organizationId,input.code]);
+  if(codeExists.rowCount)throw new ApiError(409,'edge_block_code_exists');
+  const buildings=await db.query(`SELECT id FROM buildings WHERE organization_id=$1 AND id=ANY($2::uuid[]) FOR UPDATE`,
+   [organizationId,uniqueIds]);
+  if(buildings.rowCount!==uniqueIds.length)throw new ApiError(400,'block_buildings_must_share_organization');
+  const assigned=await db.query(`SELECT building_id FROM edge_block_buildings
+   WHERE organization_id=$1 AND building_id=ANY($2::uuid[]) LIMIT 1`,[organizationId,uniqueIds]);
+  if(assigned.rowCount)throw new ApiError(409,'building_already_assigned_to_block');
+  const block=(await db.query(`INSERT INTO edge_blocks(organization_id,code,name,created_by_user_id)
+   VALUES($1,$2,$3,$4) RETURNING id,organization_id,code,name,created_at`,
+   [organizationId,input.code,input.name,req.user!.id])).rows[0];
+  for(const buildingId of uniqueIds)await db.query(`INSERT INTO edge_block_buildings(block_id,organization_id,building_id)
+   VALUES($1,$2,$3)`,[block.id,organizationId,buildingId]);
+  await record(db,req,{...c,organization_id:organizationId},'edge.block.create','edge_block',block.id,
+   {code:input.code,buildingCount:uniqueIds.length});
+  return {...block,buildingIds:uniqueIds};
+ });
+ res.status(201).json(result);
+});
+router.post('/edge-console/blocks/:id/bootstrap-tokens',async(req,res)=>{
+ const c=await requirePermission(req,'edge.bootstrap.create');requireRecentAuthentication(req);
+ const blockId=uuid.parse(req.params.id),input=blockBootstrapSchema.parse(req.body);
+ const params:any[]=[blockId];let where='id=$1';
+ if(c.organization_id){params.push(c.organization_id);where+=` AND organization_id=$${params.length}`}
+ const block=await pool.query(`SELECT id,organization_id FROM edge_blocks WHERE ${where}`,params);
+ if(!block.rowCount)throw new ApiError(404,'edge_block_not_found');
+ const organizationId=block.rows[0].organization_id;
+ if(c.building_id){
+  const scope=await pool.query(`SELECT building_id FROM edge_block_buildings
+   WHERE block_id=$1 AND organization_id=$2`,[blockId,organizationId]);
+  if(scope.rowCount!==1||scope.rows[0].building_id!==c.building_id)
+   throw new ApiError(403,'building_scope_mismatch');
+ }
+ const occupied=await pool.query('SELECT id FROM edge_nodes WHERE edge_id=$1',[input.edgeId]);
+ if(occupied.rowCount)throw new ApiError(409,'edge_already_registered');
+ const plaintext=`vne_bootstrap_${randomBytes(32).toString('base64url')}`;
+ const expiresAt=new Date(Date.now()+input.expiresInMinutes*60_000);
+ const token=await transaction(async db=>{
+  const active=await db.query(`SELECT id FROM edge_bootstrap_tokens
+   WHERE edge_id=$1 AND used_at IS NULL AND revoked_at IS NULL AND expires_at>now()`,[input.edgeId]);
+  if(active.rowCount)throw new ApiError(409,'active_bootstrap_token_exists');
+  const row=(await db.query(`INSERT INTO edge_bootstrap_tokens
+   (edge_id,organization_id,building_id,block_id,protocol_version,edge_name,site_code,token_hash,expires_at,created_by_user_id)
+   VALUES($1,$2,NULL,$3,2,$4,$5,$6,$7,$8)
+   RETURNING id,edge_id,organization_id,block_id,protocol_version,expires_at,created_at`,
+   [input.edgeId,organizationId,blockId,input.name,input.siteCode,hash(plaintext),expiresAt,req.user!.id])).rows[0];
+  await record(db,req,{...c,organization_id:organizationId},'edge.bootstrap.v2.create','edge_bootstrap_token',row.id,
+   {edgeId:input.edgeId,blockId,protocolVersion:2,expiresAt});
+  return row;
+ });
+ res.status(201).json({...token,bootstrapToken:plaintext,oneTime:true});
+});
 router.get('/edge-console/fleet',async(req,res)=>{
  const c=await readableEdgeScope(req);
  const global=c.permissions.includes('edge.fleet.read')&&!c.organization_id;
  if(!global&&!c.organization_id)throw new ApiError(403,'organization_scope_required');
  const values:any[]=[];let where='TRUE';
  if(!global){values.push(c.organization_id);where=`n.organization_id=$${values.length}`}
- if(c.building_id){values.push(c.building_id);where+=` AND n.building_id=$${values.length}`}
- const result=await pool.query(`SELECT n.id,n.edge_id,n.organization_id,n.building_id,n.name,n.site_code,
+ if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
+  SELECT 1 FROM edge_node_buildings scope WHERE scope.edge_node_id=n.id
+   AND scope.organization_id=n.organization_id AND scope.building_id=$${values.length})`}
+ const result=await pool.query(`SELECT n.id,n.edge_id,n.organization_id,n.building_id,n.block_id,n.protocol_version,n.name,n.site_code,
   ${edgeStatusSql} AS status,n.registration_state,n.agent_version,n.local_authorization_status,n.queue_depth,
-  n.registered_at,n.last_seen_at,n.last_connected_at,n.credential_version,o.name AS organization_name,b.name AS building_name,
+  n.registered_at,n.last_seen_at,n.last_connected_at,n.credential_version,o.name AS organization_name,
+  b.name AS building_name,bl.name AS block_name,
+  (SELECT count(*)::int FROM edge_node_buildings nb WHERE nb.edge_node_id=n.id) AS building_count,
   (SELECT count(*)::int FROM edge_device_inventory d WHERE d.edge_node_id=n.id) AS device_count,
   (SELECT count(*)::int FROM edge_alarms a WHERE a.edge_node_id=n.id AND a.status='active') AS active_alarms
-  FROM edge_nodes n JOIN organizations o ON o.id=n.organization_id JOIN buildings b ON b.id=n.building_id
+  FROM edge_nodes n JOIN organizations o ON o.id=n.organization_id
+  LEFT JOIN buildings b ON b.id=n.building_id LEFT JOIN edge_blocks bl ON bl.id=n.block_id
   WHERE ${where} ORDER BY n.last_seen_at DESC NULLS LAST,n.name`,values);
  const rows=result.rows.map(row=>c.permissions.includes('edge.alarms.read')||c.permissions.includes('edge.read')
   ?row:{...row,active_alarms:0});
@@ -80,11 +173,13 @@ router.get('/edge-console/nodes/:id',async(req,res)=>{
  if(!permission)throw new ApiError(403,'edge_read_required');
  const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),permission);
  const devices=c.permissions.includes('edge.inventory.read')||c.permissions.includes('edge.read')
-  ?await pool.query(`SELECT d.id,d.edge_device_id,d.thingsboard_id,d.name,d.profile,d.device_type,d.label,d.unit_id,
+  ?await pool.query(`SELECT d.id,d.edge_device_id,d.thingsboard_id,d.building_id,b.name AS building_name,
+    d.name,d.profile,d.device_type,d.label,d.unit_id,
     d.capabilities,d.reported_online,d.last_seen_at,d.last_telemetry_at,
     COALESCE((SELECT jsonb_agg(jsonb_build_object('unitId',a.unit_id,'allowedCapabilities',a.allowed_capabilities))
      FROM edge_device_access a WHERE a.device_id=d.id),'[]'::jsonb) AS access_units
-    FROM edge_device_inventory d WHERE d.edge_node_id=$1 ORDER BY d.name`,[node.id])
+    FROM edge_device_inventory d LEFT JOIN buildings b ON b.id=d.building_id
+    WHERE d.edge_node_id=$1 ORDER BY b.name,d.name`,[node.id])
   :{rows:[]};
  const alarms=c.permissions.includes('edge.alarms.read')||c.permissions.includes('edge.read')
   ?await pool.query(`SELECT id,external_alarm_id,alarm_type,severity,status,received_at,acknowledged_at,resolved_at
@@ -167,7 +262,10 @@ router.post('/edge-console/bootstrap-tokens/:id/revoke',async(req,res)=>{
  const result=await transaction(async db=>{
   const row=await db.query(`UPDATE edge_bootstrap_tokens SET revoked_at=COALESCE(revoked_at,now())
    WHERE id=$1 AND used_at IS NULL AND ($2::uuid IS NULL OR organization_id=$2)
-    AND ($3::uuid IS NULL OR building_id=$3) RETURNING id,organization_id,edge_id`,[tokenId,c.organization_id,c.building_id]);
+    AND ($3::uuid IS NULL OR building_id=$3 OR EXISTS(
+     SELECT 1 FROM edge_block_buildings bb WHERE bb.block_id=edge_bootstrap_tokens.block_id
+      AND bb.organization_id=edge_bootstrap_tokens.organization_id AND bb.building_id=$3))
+   RETURNING id,organization_id,edge_id`,[tokenId,c.organization_id,c.building_id]);
   if(!row.rowCount)throw new ApiError(404,'bootstrap_token_not_found');
   await record(db,req,{...c,organization_id:row.rows[0].organization_id},'edge.bootstrap.revoke','edge_bootstrap_token',row.rows[0].id,{edgeId:row.rows[0].edge_id});
   return row.rows[0];

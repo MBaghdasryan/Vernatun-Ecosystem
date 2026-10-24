@@ -4,7 +4,7 @@ import {pool} from './db.js';
 const digest=(token:string)=>createHash('sha256').update(token).digest('hex');
 export async function authenticateEdgeToken(token:string){
  const result=await pool.query(`SELECT c.id AS credential_id,c.version AS credential_version,c.status AS credential_status,
-  n.id,n.edge_id,n.organization_id,n.building_id,n.name,n.site_code
+  n.id,n.edge_id,n.organization_id,n.building_id,n.block_id,n.protocol_version,n.name,n.site_code
   FROM edge_credentials c JOIN edge_nodes n ON n.id=c.edge_node_id
   WHERE c.credential_hash=$1 AND c.status IN ('active','pending') AND c.revoked_at IS NULL
    AND (c.expires_at IS NULL OR c.expires_at>now())

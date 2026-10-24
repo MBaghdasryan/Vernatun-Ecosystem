@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Activity, AlertTriangle, Building2, Check, ChevronRight, Copy, KeyRound, Radio, RefreshCw, ShieldAlert, Terminal, X } from 'lucide-react';
 import { request, ApiClientError } from './client';
+import EdgeBlockManager from './EdgeBlockManager';
 import type { Language } from './i18n';
 import type { RoleContext } from './types';
 
 type EdgeNode = {
-  id: string; edge_id: string; organization_id: string; building_id: string; name: string; site_code: string;
+  id: string; edge_id: string; organization_id: string; building_id: string | null; block_id?: string | null;
+  protocol_version?: number; building_count?: number; block_name?: string | null; name: string; site_code: string;
   status: string; registration_state: string; agent_version: string | null; local_authorization_status: string;
   queue_depth: number; registered_at: string | null; last_seen_at: string | null; last_connected_at: string | null;
   credential_version: number | null; organization_name: string | null; building_name: string | null;
@@ -159,7 +161,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
         <section className="ew-panel"><header><h2><Radio size={18}/> {tx('nodes')}</h2><span className="ew-eyebrow">{fleet.nodes.length}</span></header>
           {fleet.nodes.length ? <div className="ew-list">{fleet.nodes.map(n=><div className={'ew-node '+(selected===n.id?'selected':'')} key={n.id} data-testid={'row-edge-node-'+n.id}>
             <button className="ew-node-main" onClick={() => void choose(n.id)} data-testid={'button-open-node-'+n.id} aria-current={selected===n.id?'true':undefined}>
-              <strong>{n.name}</strong><small>{n.building_name ?? n.site_code} · {n.edge_id} · {n.device_count} {tx('devices')}</small>
+              <strong>{n.name}</strong><small>{n.block_name ?? n.building_name ?? n.site_code}{n.building_count && n.building_count > 1 ? ` · ${n.building_count} buildings` : ''} · v{n.protocol_version ?? 1} · {n.edge_id} · {n.device_count} {tx('devices')}</small>
             </button><span className={'ew-tag '+statusClass(n.status)} data-testid={'status-edge-node-'+n.id}>{onlineLabel(n.status)}</span>
           </div>)}</div> : <p className="ew-empty" data-testid="text-edge-empty">{tx('empty')}</p>}
         </section>
@@ -196,6 +198,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
         {canReadAlarms && <section className="ew-panel"><header><h2><AlertTriangle size={18}/> {tx('alarmsTitle')}</h2></header>{alarms.length ? <div className="ew-list">{alarms.map((a,i)=><article className="ew-fact" key={a.id??i} data-testid={'row-edge-alarm-'+(a.id??i)}><strong>{String(a.alarm_type??a.title??a.name??a.code??a.type??a.id)}</strong><small>{String(a.severity??'')} · {String(a.status??'')} · {String(a.received_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-alarms-empty">{tx('empty')}</p>}</section>}
         {canReadCommands && <section className="ew-panel"><header><h2><Activity size={18}/> {tx('commands')}</h2></header>{commands.length ? <div className="ew-list">{commands.map((a,i)=><article className="ew-fact" key={a.command_id??a.id??i} data-testid={'row-edge-command-'+(a.command_id??a.id??i)}><strong>{String(a.capability??a.command??a.type??a.command_id??a.id)}</strong><small>{String(a.status??'')} · {String(a.requested_at??a.created_at??a.createdAt??'')}</small></article>)}</div>:<p className="ew-empty" data-testid="text-edge-commands-empty">{tx('empty')}</p>}</section>}
       </div>
+      {canBootstrap && <EdgeBlockManager c={c} language={language} onRefresh={() => void load()}/>}
     </>}
     {notice && <p role="status" className="ew-note" data-testid="status-edge-action">{notice}</p>}
     {confirmRevoke && <div className="ew-modal" role="presentation"><section className="ew-dialog" role="alertdialog" aria-modal="true" aria-labelledby="edge-revoke-title" data-testid="dialog-revoke-edge">

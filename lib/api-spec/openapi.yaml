@@ -162,6 +162,173 @@ paths:
         '200': { description: Command result recorded, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeCommandResultResponse' } } } }
         '401': { description: Machine credential rejected }
         '409': { description: Conflicting result or invalid command state }
+  /edge/v2/register:
+    post:
+      tags: [edge]
+      operationId: registerEdgeV2
+      summary: Register a block-scoped Edge Agent
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2RegisterInput' }
+      responses:
+        '201': { description: Registered with one-time token and authorized building IDs }
+        '401': { description: Bootstrap token invalid, expired, revoked, or used }
+        '403': { description: Block or identity scope mismatch }
+  /edge/v2/heartbeat:
+    post:
+      tags: [edge]
+      operationId: reportEdgeHeartbeatV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2HeartbeatInput' }
+      responses:
+        '200': { description: Heartbeat accepted }
+        '403': { description: Tenant or block scope mismatch }
+  /edge/v2/inventory:
+    post:
+      tags: [edge]
+      operationId: syncEdgeInventoryV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2InventoryInput' }
+      responses:
+        '200': { description: Inventory synchronized for explicitly assigned buildings }
+        '403': { description: Device building is outside this block }
+  /edge/v2/telemetry/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeTelemetryBatchV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2BatchInput' }
+      responses:
+        '200': { description: Telemetry batch accepted }
+  /edge/v2/events/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeEventsBatchV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2BatchInput' }
+      responses:
+        '200': { description: Idempotent events accepted }
+  /edge/v2/alarms/batch:
+    post:
+      tags: [edge]
+      operationId: ingestEdgeAlarmsBatchV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2BatchInput' }
+      responses:
+        '200': { description: Idempotent alarms accepted }
+  /edge/v2/config:
+    get:
+      tags: [edge]
+      operationId: getEdgeConfigurationV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      parameters:
+        - { name: edgeId, in: query, required: true, schema: { type: string, minLength: 3, maxLength: 80 } }
+      responses:
+        '200': { description: Non-secret configuration and authorized building IDs }
+  /edge/v2/commands/{commandId}/result:
+    post:
+      tags: [edge]
+      operationId: reportEdgeCommandResultV2
+      security:
+        - EdgeBearer: []
+          EdgeIdHeader: []
+          EdgeTenantHeader: []
+          EdgeBlockHeader: []
+      parameters:
+        - { name: commandId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeV2CommandResult' }
+      responses:
+        '200': { description: Command result recorded }
+        '409': { description: Conflicting result or command state }
+  /edge-console/blocks:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeBlocks
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Organization-scoped blocks and assigned buildings }
+    post:
+      tags: [edge-console]
+      operationId: createEdgeBlock
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBlockInput' }
+      responses:
+        '201': { description: Block created with explicit building membership }
+        '409': { description: Building already assigned to a block }
+  /edge-console/blocks/{id}/bootstrap-tokens:
+    post:
+      tags: [edge-console]
+      operationId: createBlockEdgeBootstrapToken
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBlockBootstrapInput' }
+      responses:
+        '201': { description: Single-use v2 token shown once }
+        '403': { description: Block is outside caller scope }
   /edge-console/buildings:
     get:
       tags: [edge-console]
@@ -3047,6 +3214,10 @@ components:
       type: apiKey
       in: header
       name: X-Vernatun-Building-Id
+    EdgeBlockHeader:
+      type: apiKey
+      in: header
+      name: X-Vernatun-Block-Id
     SessionCookie:
       type: apiKey
       in: cookie
@@ -3079,6 +3250,112 @@ components:
       properties:
         id: {type: string}
         status: {type: string}
+    EdgeBlockInput:
+      type: object
+      required: [code, name, buildingIds]
+      properties:
+        organizationId: { type: string, format: uuid }
+        code: { type: string, minLength: 1, maxLength: 80 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        buildingIds: { type: array, minItems: 1, maxItems: 1000, items: { type: string, format: uuid } }
+    EdgeBlockBootstrapInput:
+      type: object
+      required: [edgeId, name, siteCode]
+      properties:
+        edgeId: { type: string, minLength: 3, maxLength: 80 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+        expiresInMinutes: { type: integer, minimum: 5, maximum: 120, default: 30 }
+    EdgeV2RegisterInput:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId, siteCode, edgeName]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string, minLength: 3, maxLength: 80 }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+        edgeName: { type: string, minLength: 2, maxLength: 120 }
+        agentVersion: { type: string, maxLength: 80 }
+        platform: { type: string, maxLength: 60 }
+        capabilities: { type: object, additionalProperties: true }
+    EdgeV2RegisterResponse:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId, buildingIds, status, accessToken]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        buildingIds: { type: array, items: { type: string, format: uuid } }
+        status: { type: string, const: REGISTERED }
+        accessToken: { type: string, description: One-time machine credential. Never log or display after bootstrap. }
+        tokenType: { type: string, const: Bearer }
+    EdgeV2HeartbeatInput:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        status: { type: string }
+        agentVersion: { type: string, maxLength: 80 }
+        local: { type: object, additionalProperties: true }
+    EdgeV2InventoryInput:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId, devices]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        devices:
+          type: array
+          maxItems: 5000
+          items:
+            type: object
+            required: [buildingId, deviceId, profile]
+            properties:
+              buildingId: { type: string, format: uuid }
+              deviceId: { type: string, maxLength: 200 }
+              thingsboardId: { type: [string, 'null'], maxLength: 200 }
+              name: { type: string, maxLength: 200 }
+              profile: { type: string, maxLength: 100 }
+              label: { type: [string, 'null'], maxLength: 200 }
+              active: { type: [boolean, 'null'] }
+    EdgeV2BatchInput:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId, items]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        items:
+          type: array
+          maxItems: 2000
+          items:
+            type: object
+            required: [buildingId, deviceId]
+            properties:
+              buildingId: { type: string, format: uuid }
+              deviceId: { type: string, maxLength: 200 }
+    EdgeV2CommandResult:
+      type: object
+      required: [protocolVersion, edgeId, tenantId, blockId, commandId, status]
+      properties:
+        protocolVersion: { type: integer, const: 2 }
+        edgeId: { type: string }
+        tenantId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        commandId: { type: string, format: uuid }
+        status: { type: string, enum: [SUCCESS, REJECTED, FAILED, DENIED] }
+        result: { type: object, additionalProperties: true }
     EdgeRegisterInput:
       type: object
       required: [edgeId, edgeName, tenantId, buildingId, siteCode, agentVersion, platform, connectionMode, transports, capabilities]

@@ -13,7 +13,7 @@ if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/v
  throw new Error('Edge integration tests require the isolated vernatun_test database');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const account=(role:string)=>Object.values(seed.accounts).find((a:any)=>a.role===role) as any;
-const server=createServer(app);attachEdgeWebSocket(server);let base='';let agentSocket:WebSocket|undefined;
+const server=createServer(app);attachEdgeWebSocket(server);let base='';let agentSocket:WebSocket|undefined;let v2Socket:WebSocket|undefined;
 
 class Client{
  cookie='';csrf='';
@@ -56,6 +56,9 @@ before(async()=>{
 after(async()=>{
  if(agentSocket?.readyState===WebSocket.OPEN){
   await new Promise<void>(resolve=>{agentSocket!.once('close',()=>resolve());agentSocket!.close()});
+ }
+ if(v2Socket?.readyState===WebSocket.OPEN){
+  await new Promise<void>(resolve=>{v2Socket!.once('close',()=>resolve());v2Socket!.close()});
  }
  await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
  await pool.end();
@@ -150,4 +153,110 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  const removed=await platform.call(`/edge-console/devices/${device.id}/access/${unitId}`,'DELETE');
  assert.equal(removed.status,200);
  assert.equal((await owner.call(`/me/buildings/${buildingId}/devices`)).data.length,0);
+});
+
+test('Edge v2 registers a block node, scopes inventory to its buildings, and authenticates the v2 socket',async()=>{
+ const suffix=randomBytes(8).toString('hex'),edgeId=`QA-BLOCK-${suffix}`,blockCode=`QA-${suffix}`;
+ const secondBuildingId=(await pool.query(`INSERT INTO buildings(organization_id,name,address)
+  VALUES($1,$2,$3) RETURNING id`,[organizationId,`QA Building ${suffix}`,'QA isolated address'])).rows[0].id as string;
+ const blockBuildingIds=[buildingId,secondBuildingId];
+ const block=await platform.call('/edge-console/blocks','POST',{
+  organizationId,code:blockCode,name:'Isolated QA block',buildingIds:blockBuildingIds,
+ });
+ assert.equal(block.status,201,`block creation failed: ${String(block.data?.error??block.data?.code??'unknown')}`);
+ assert.deepEqual(block.data.buildingIds,blockBuildingIds);
+ const duplicateBuildingBlock=await platform.call('/edge-console/blocks','POST',{
+  organizationId,code:`QA-DUP-${suffix}`,name:'Duplicate building block',buildingIds:[buildingId],
+ });
+ assert.equal(duplicateBuildingBlock.status,409,'a building cannot be assigned to two Edge blocks');
+ const tokenResult=await platform.call(`/edge-console/blocks/${block.data.id}/bootstrap-tokens`,'POST',{
+  edgeId,name:'Isolated QA block node',siteCode:blockCode,expiresInMinutes:30,
+ });
+ assert.equal(tokenResult.status,201,`v2 bootstrap failed: ${String(tokenResult.data?.error??tokenResult.data?.code??'unknown')}`);
+ const bootstrapToken=tokenResult.data.bootstrapToken as string;
+ const identityHeaders={
+  Authorization:`Bearer ${bootstrapToken}`,
+  'X-Vernatun-Edge-Id':edgeId,'X-Vernatun-Tenant-Id':organizationId,
+  'X-Vernatun-Block-Id':block.data.id,
+ };
+ const registration={
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  siteCode:blockCode,edgeName:'Isolated QA block node',agentVersion:'qa-agent-v2',
+  platform:'windows',capabilities:{heartbeat:true,inventory:true},
+ };
+ const registered=await platform.call('/edge/v2/register','POST',registration,identityHeaders);
+ assert.equal(registered.status,201,`v2 registration failed: ${String(registered.data?.error??registered.data?.code??'unknown')}`);
+ assert.equal(registered.data.protocolVersion,2);
+ assert.deepEqual(registered.data.buildingIds,[...blockBuildingIds].sort());
+ const accessToken=registered.data.accessToken as string;
+ const machineHeaders={
+  Authorization:`Bearer ${accessToken}`,
+  'X-Vernatun-Edge-Id':edgeId,'X-Vernatun-Tenant-Id':organizationId,
+  'X-Vernatun-Block-Id':block.data.id,
+ };
+ const heartbeat=await platform.call('/edge/v2/heartbeat','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  local:{commandAuthorization:'OK',queueDepth:0},
+ },machineHeaders);
+ assert.equal(heartbeat.status,200);
+ const inventory=await platform.call('/edge/v2/inventory','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  devices:[
+   {buildingId,deviceId:'qa-block-device-1',name:'QA device 1',profile:'Vernatun Meter',active:true},
+   {buildingId:secondBuildingId,deviceId:'qa-block-device-2',name:'QA device 2',profile:'Vernatun Meter',active:true},
+  ],
+ },machineHeaders);
+ assert.equal(inventory.status,200,`multi-building inventory failed: ${String(inventory.data?.error??inventory.data?.code??'unknown')}`);
+ assert.equal(inventory.data.devices,2);
+ const telemetry=await platform.call('/edge/v2/telemetry/batch','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  items:[{buildingId,deviceId:'qa-block-device-1',timestamp:new Date().toISOString(),temperature:19}],
+ },machineHeaders);
+ assert.equal(telemetry.status,200,`v2 telemetry failed: ${String(telemetry.data?.error??telemetry.data?.code??'unknown')}`);
+ const events=await platform.call('/edge/v2/events/batch','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  items:[{buildingId,deviceId:'qa-block-device-1',eventId:'qa-event-1',type:'meter.read'}],
+ },machineHeaders);
+ assert.equal(events.status,200,`v2 event failed: ${String(events.data?.error??events.data?.code??'unknown')}`);
+ const repeatedEvents=await platform.call('/edge/v2/events/batch','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  items:[{buildingId,deviceId:'qa-block-device-1',eventId:'qa-event-1',type:'meter.read'}],
+ },machineHeaders);
+ assert.equal(repeatedEvents.status,200);
+ assert.equal(repeatedEvents.data.inserted,0,'replayed event IDs are idempotent');
+ const alarms=await platform.call('/edge/v2/alarms/batch','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  items:[{buildingId,deviceId:'qa-block-device-1',alarmId:'qa-alarm-1',type:'meter.alert'}],
+ },machineHeaders);
+ assert.equal(alarms.status,200,`v2 alarm failed: ${String(alarms.data?.error??alarms.data?.code??'unknown')}`);
+ const edgeConfig=await platform.call(`/edge/v2/config?edgeId=${encodeURIComponent(edgeId)}`,'GET',undefined,machineHeaders);
+ assert.equal(edgeConfig.status,200);
+ assert.deepEqual(edgeConfig.data.buildingIds,[...blockBuildingIds].sort());
+ const listedBlocks=await platform.call('/edge-console/blocks');
+ const listedBlock=listedBlocks.data.blocks.find((item:any)=>item.id===block.data.id);
+ assert.equal(listedBlock.building_count,2);
+ assert.equal(listedBlock.edge_node_count,1);
+ const crossBlock=await platform.call('/edge/v2/inventory','POST',{
+  protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,
+  devices:[{buildingId:'00000000-0000-4000-8000-000000000000',deviceId:'outside-device',profile:'Vernatun Meter'}],
+ },machineHeaders);
+ assert.equal(crossBlock.status,403,'v2 inventory cannot write to a building outside the assigned block');
+ assert.equal((await pool.query(`SELECT protocol_version,building_id,block_id FROM edge_nodes WHERE edge_id=$1`,[edgeId])).rows[0].building_id,null);
+ const node=(await pool.query('SELECT id FROM edge_nodes WHERE edge_id=$1',[edgeId])).rows[0];
+ assert.equal((await pool.query(`SELECT count(*)::int AS count FROM edge_node_buildings WHERE edge_node_id=$1`,[node.id])).rows[0].count,blockBuildingIds.length);
+ assert.equal((await pool.query(`SELECT credential_hash FROM edge_credentials WHERE edge_node_id=$1`,[node.id])).rows[0].credential_hash,
+  createHash('sha256').update(accessToken).digest('hex'));
+
+ v2Socket=new WebSocket(`ws://127.0.0.1:${(server.address() as any).port}/api/edge/v2/connect?edgeId=${encodeURIComponent(edgeId)}`,{
+  headers:machineHeaders,
+ });
+ await new Promise<void>((resolve,reject)=>{v2Socket!.once('open',resolve);v2Socket!.once('error',reject)});
+ v2Socket.send(JSON.stringify({type:'EDGE_HELLO',protocolVersion:2,edgeId,tenantId:organizationId,blockId:block.data.id,agentVersion:'qa-agent-v2'}));
+ const deadline=Date.now()+1500;let online=false;
+ while(Date.now()<deadline){
+  const state=await pool.query('SELECT status FROM edge_nodes WHERE id=$1',[node.id]);
+  if(state.rows[0]?.status==='ONLINE'){online=true;break}
+  await new Promise(resolve=>setTimeout(resolve,25));
+ }
+ assert.equal(online,true,'v2 WebSocket hello should mark the block-scoped Edge node online');
 });

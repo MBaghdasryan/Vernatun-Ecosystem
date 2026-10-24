@@ -1,0 +1,59 @@
+version: "2.0"
+
+identity:
+  edge_id: "edge-nor-yerevan-block-a"
+  edge_name: "Vernatun Edge - Nor Yerevan Block A"
+  tenant_id: "REPLACE_WITH_ORGANIZATION_UUID"
+  block_id: "REPLACE_WITH_BLOCK_UUID"
+  site_code: "nor-yerevan-block-a"
+  # Use ThingsBoard UUIDs as keys where possible. Each value must be a building
+  # UUID that belongs to this block in Vernatun. Unmapped devices are not sent.
+  device_building_map: {}
+
+cloud:
+  api_base_url: "https://api.vernatun.io"
+  health_url: "https://api.vernatun.io/api/health"
+  connection_mode: "outbound"
+  transport:
+    request_timeout_seconds: 20
+    heartbeat_interval_seconds: 30
+    reconnect:
+      initial_delay_seconds: 2
+      max_delay_seconds: 60
+  endpoints:
+    register: "/api/edge/v2/register"
+    heartbeat: "/api/edge/v2/heartbeat"
+    websocket: "/api/edge/v2/connect"
+    inventory: "/api/edge/v2/inventory"
+    telemetry_batch: "/api/edge/v2/telemetry/batch"
+    events_batch: "/api/edge/v2/events/batch"
+    alarms_batch: "/api/edge/v2/alarms/batch"
+    command_result: "/api/edge/v2/commands/{command_id}/result"
+    config_pull: "/api/edge/v2/config"
+
+agent:
+  listen_host: "0.0.0.0"
+  listen_port: 8092
+
+local:
+  command_authorization:
+    base_url: "http://host.docker.internal:8091"
+    health_path: "/health"
+    command_path: "/v1/commands"
+  thingsboard:
+    base_url: "http://host.docker.internal:8080"
+    gateway_name: "Vernatun-Edge-Block-A"
+
+sync:
+  inventory:
+    enabled: true
+    interval_seconds: 300
+  offline_queue:
+    retry_interval_seconds: 10
+
+commands:
+  enabled: true
+  # Keep hardware-affecting capabilities denied until separately authorized,
+  # commissioned, and tested at the site.
+  hard_deny:
+    - "BARRIER.OPEN"

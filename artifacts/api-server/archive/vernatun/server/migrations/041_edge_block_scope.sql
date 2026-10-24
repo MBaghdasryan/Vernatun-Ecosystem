@@ -35,6 +35,18 @@ ALTER TABLE edge_nodes ADD CONSTRAINT edge_nodes_protocol_scope_check CHECK(
  (protocol_version=2 AND building_id IS NULL AND block_id IS NOT NULL)
 );
 ALTER TABLE edge_nodes ADD CONSTRAINT edge_nodes_id_organization_unique UNIQUE(id,organization_id);
+CREATE INDEX edge_nodes_block_status ON edge_nodes(organization_id,block_id,status);
+CREATE FUNCTION prevent_edge_node_scope_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ RAISE EXCEPTION 'edge node identity scope is immutable after registration' USING ERRCODE='23514';
+END $$;
+CREATE TRIGGER edge_node_scope_immutable BEFORE UPDATE OF protocol_version,organization_id,building_id,block_id
+ ON edge_nodes FOR EACH ROW WHEN(
+  OLD.protocol_version IS DISTINCT FROM NEW.protocol_version OR
+  OLD.organization_id IS DISTINCT FROM NEW.organization_id OR
+  OLD.building_id IS DISTINCT FROM NEW.building_id OR
+  OLD.block_id IS DISTINCT FROM NEW.block_id
+ ) EXECUTE FUNCTION prevent_edge_node_scope_change();
 
 ALTER TABLE edge_bootstrap_tokens ADD COLUMN protocol_version smallint NOT NULL DEFAULT 1;
 ALTER TABLE edge_bootstrap_tokens ADD COLUMN block_id uuid;
@@ -45,6 +57,8 @@ ALTER TABLE edge_bootstrap_tokens ADD CONSTRAINT edge_bootstrap_tokens_protocol_
  (protocol_version=1 AND building_id IS NOT NULL AND block_id IS NULL) OR
  (protocol_version=2 AND building_id IS NULL AND block_id IS NOT NULL)
 );
+CREATE INDEX edge_bootstrap_block_scope
+ ON edge_bootstrap_tokens(organization_id,block_id,created_at DESC);
 
 CREATE TABLE edge_node_buildings (
  edge_node_id uuid NOT NULL,
