@@ -1,0 +1,33 @@
+services:
+  vernatun-cloud-edge-agent:
+    environment:
+      VERNATUN_TB_URL: http://thingsboard-simulator:8080
+      VERNATUN_TB_USERNAME: edge-test-only
+      VERNATUN_TB_PASSWORD: edge-test-only
+      VERNATUN_EDGE_COMMAND_URL: http://barrier-simulator:8091
+    depends_on:
+      - thingsboard-simulator
+      - barrier-simulator
+    volumes:
+      - vernatun-edge-test-data:/app/data
+
+  thingsboard-simulator:
+    build:
+      context: ${VERNATUN_EDGE_TEST_LAB_DIR:?Set VERNATUN_EDGE_TEST_LAB_DIR}/simulators/thingsboard
+    environment:
+      VERNATUN_TEST_DEVICE_UUID: b40f54f2-fd70-4024-b4b1-63fe65963a90
+
+  barrier-simulator:
+    build:
+      context: ${VERNATUN_EDGE_TEST_LAB_DIR:?Set VERNATUN_EDGE_TEST_LAB_DIR}/simulators/barrier
+    environment:
+      VERNATUN_TEST_EDGE_ID: ${VERNATUN_EDGE_ID:?Set TEST Edge ID in the private .env}
+      VERNATUN_TEST_TENANT_ID: ${VERNATUN_TENANT_ID:?Set TEST tenant ID in the private .env}
+      VERNATUN_TEST_BUILDING_ID: ${VERNATUN_BUILDING_ID:?Set TEST building ID in the private .env}
+      VERNATUN_TEST_DEVICE_ID: Barrier-01
+      VERNATUN_TEST_DEVICE_UUID: b40f54f2-fd70-4024-b4b1-63fe65963a90
+      VERNATUN_EDGE_LOCAL_API_KEY: ${VERNATUN_EDGE_LOCAL_API_KEY:?Set the local Agent key in the private .env}
+
+volumes:
+  vernatun-edge-test-data:
+    name: vernatun-edge-test-data

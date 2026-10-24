@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "organization": {
+    "id": "9e8e581c-d8cf-4bb4-9548-d6e1e961e090",
+    "name": "TEST Vernatun Edge Lab",
+    "timezone": "Asia/Yerevan",
+    "currency": "AMD",
+    "demo": true
+  },
+  "building": {
+    "id": "a6e398fc-2f1d-4724-9db4-11e7874683c7",
+    "name": "TEST Building 01",
+    "address": "TEST ONLY — no physical access",
+    "demo": true
+  },
+  "unit": {
+    "id": "997910a1-177b-4b38-8e0b-dd3b829c2cf7",
+    "number": "TEST Unit 101",
+    "area": 42,
+    "demo": true
+  },
+  "edge": {
+    "protocolVersion": 1,
+    "edgeId": "edge-building01",
+    "siteCode": "building01",
+    "name": "TEST Edge Building 01"
+  },
+  "simulatedDevice": {
+    "deviceId": "Barrier-01",
+    "thingsboardId": "b40f54f2-fd70-4024-b4b1-63fe65963a90",
+    "profile": "Vernatun Barrier",
+    "label": "TEST ONLY — DRY RUN, no actuator"
+  },
+  "enabledModules": [
+    "smart_building"
+  ],
+  "disabledModules": [
+    "requests",
+    "finance",
+    "handover",
+    "access",
+    "community",
+    "maintenance",
+    "meters",
+    "documents"
+  ],
+  "roles": [
+    {"key": "org_admin", "name": "TEST Organization Admin", "scope": "organization"},
+    {"key": "portfolio_owner", "name": "TEST Portfolio Owner", "scope": "building"},
+    {"key": "developer", "name": "TEST Developer", "scope": "organization"},
+    {"key": "manager", "name": "TEST Manager", "scope": "organization"},
+    {"key": "accountant", "name": "TEST Accountant", "scope": "organization"},
+    {"key": "dispatcher", "name": "TEST Dispatcher", "scope": "organization"},
+    {"key": "technician", "name": "TEST Technician", "scope": "building"},
+    {"key": "contractor", "name": "TEST Contractor", "scope": "building"},
+    {"key": "security", "name": "TEST Security", "scope": "building"},
+    {"key": "unit_owner", "name": "TEST Resident Edge", "scope": "unit", "email": "test.resident.edge@vernatun.invalid"},
+    {"key": "renter", "name": "TEST Renter", "scope": "unit"},
+    {"key": "family", "name": "TEST Family Member", "scope": "unit"}
+  ],
+  "excludedGlobalRoles": ["platform_admin", "support"],
+  "safety": {
+    "billing": false,
+    "invoicing": false,
+    "paymentProcessing": false,
+    "bankAndPspOperations": false,
+    "outboundEmailSmsPush": false,
+    "visitorPasses": false,
+    "physicalDevicesAndLocks": false,
+    "barrierCommandMode": "dry-run-only"
+  }
+}

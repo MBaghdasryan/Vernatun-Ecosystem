@@ -29,6 +29,7 @@
     "test:edge": "cd archive/vernatun && tsx server/tests/run.ts --edge-only",
     "db:migrate:coolify:plan": "node dist/migrate.mjs --coolify-plan",
     "db:migrate:coolify:apply": "node dist/migrate.mjs --coolify-apply",
+    "db:provision:edge-test-lab": "node archive/vernatun/server/scripts/provision-edge-test-lab.mjs",
     "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts",
     "storage:inventory": "tsx archive/vernatun/server/inventory-files.ts",
     "backup:create": "tsx archive/vernatun/server/backup-files.ts create",
