@@ -40,7 +40,7 @@ class Client{
  }
 }
 let platform:Client,org:Client;
-const fakeResend={mode:'production',provider:'resend',from:'noreply@example.test'};
+const fakeResend={mode:'production',provider:'resend',from:'noreply@example.test',resendApiKey:'re_test-only-not-a-credential'};
 const fakeRequest={user:{id:seeded.accounts.platform_admin.id}} as Request;
 before(async()=>{
  await new Promise<void>(resolve=>server.listening?resolve():server.once('listening',resolve));

@@ -14,7 +14,8 @@ export function settingsFromEnvironment():EmailSettings{
  if(config.NODE_ENV==='test')return {mode:'test',provider:'outbox'};
  return {mode:config.NODE_ENV,provider:process.env.MAIL_PROVIDER??(config.NODE_ENV==='production'?'disabled':'outbox'),
   host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT??587),user:process.env.SMTP_USER,
-  password:process.env.SMTP_PASS??process.env.SMTP_PASSWORD,from:process.env.EMAIL_FROM??process.env.SMTP_FROM};
+   password:process.env.SMTP_PASS??process.env.SMTP_PASSWORD,from:process.env.EMAIL_FROM??process.env.SMTP_FROM,
+   resendApiKey:process.env.RESEND_API_KEY};
 }
 export function emailProviderState(settings:EmailSettings=settingsFromEnvironment()){
  const provider=createEmailProvider(settings);

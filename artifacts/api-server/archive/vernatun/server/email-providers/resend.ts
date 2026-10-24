@@ -1,5 +1,4 @@
 import {createHash} from 'node:crypto';
-import {ReplitConnectors} from '@replit/connectors-sdk';
 import {z} from 'zod';
 import {Webhook} from 'svix';
 import {ApiError} from '../access.js';
@@ -8,6 +7,7 @@ import {assertConfigured,validSender,type EmailMessage,type EmailProvider,type E
 export class ResendEmailProvider implements EmailProvider {
  readonly name='resend';
  readonly capabilities={deliveryEvents:true,opens:false,clicks:false} as const;
+ private readonly request:ResendFetch;
  normalizeWebhook(input:WebhookInput):DeliveryEvent|null{
   let verified:unknown;
   // Svix 2 verifies bytes but returns void. Parse only after signature verification.
@@ -35,8 +35,10 @@ export class ResendEmailProvider implements EmailProvider {
   }
   return {provider:this.name,scope:input.scope,eventId,messageId:event.data.data.email_id,outcome,occurredAt:event.data.created_at,safeMetadata};
  }
- constructor(private readonly settings:EmailSettings,private readonly fetchEmail?:ResendFetch){}
- isConfigured(){return this.settings.mode!=='test'&&validSender(this.settings.from)}
+ constructor(private readonly settings:EmailSettings,fetchEmail?:ResendFetch){
+  this.request=fetchEmail??((path,init)=>fetch(new URL(path,'https://api.resend.com'),init));
+ }
+ isConfigured(){return this.settings.mode!=='test'&&validSender(this.settings.from)&&!!this.settings.resendApiKey?.trim()}
  async send(message:EmailMessage,key:string):Promise<ProviderReceipt>{
   assertConfigured(this);
   const payload={from:this.settings.from,to:[message.to],subject:message.subject,text:message.text};
@@ -44,10 +46,10 @@ export class ResendEmailProvider implements EmailProvider {
   const digest=createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   const idempotencyKey=`vernatun-${key}-${digest}`;
   try{
-   // No API key in this app. The connector injects credentials and refreshes identity.
-   const fetchEmail=this.fetchEmail??new ReplitConnectors().createProxyFetch('resend');
-   const response=await fetchEmail('/emails',{
-    method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':idempotencyKey},
+    const headers=new Headers({'Content-Type':'application/json','Idempotency-Key':idempotencyKey});
+    headers.set('Authorization',`Bearer ${this.settings.resendApiKey}`);
+    const response=await this.request('/emails',{
+     method:'POST',headers,
     body:JSON.stringify(payload),signal:AbortSignal.timeout(20000)
    });
    if(!response.ok)throw new Error('Provider did not accept the message');

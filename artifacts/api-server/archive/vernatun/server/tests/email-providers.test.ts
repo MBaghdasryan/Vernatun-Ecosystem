@@ -6,7 +6,7 @@ import {deliverEmail,emailProviderState} from '../email.js';
 import {createEmailProvider,ResendEmailProvider,DevelopmentOutboxProvider,type EmailMessage,type EmailSettings} from '../email-providers/index.js';
 
 const message:EmailMessage={to:'recipient@example.test',subject:'QA only',text:'Invitation: https://example.test/?token=fixture-only',url:'https://example.test/?token=fixture-only'};
-const resend:EmailSettings={mode:'production',provider:'resend',from:'noreply@example.test'};
+const resend:EmailSettings={mode:'production',provider:'resend',from:'noreply@example.test',resendApiKey:'re_test-only-not-a-credential'};
 const smtp:EmailSettings={mode:'production',provider:'smtp',host:'smtp.example.test',port:587,from:'noreply@example.test',user:'fake-qa-user',password:'fake-qa-password'};
 const key=()=>`invitation-${randomUUID()}`;
 const failed=(e:any)=>e.code==='email_delivery_failed'&&e.status===503;
@@ -21,13 +21,14 @@ test('Factory selects replaceable adapters, rejects unknown providers and never 
  assert.equal(emailProviderState({mode:'production',provider:'outbox'}),'not_configured');
 });
 
-test('Resend uses the connector transport, accepts a valid API receipt and never returns token/URL',async()=>{
+test('Resend uses its server-side API key, accepts a valid receipt and never returns token/URL',async()=>{
  let request:any;
  const messageId=randomUUID();
  const result=await deliverEmail(message,key(),{settings:resend,dependencies:{resendFetch:async(path,init)=>{
   request={path,init};return Response.json({id:messageId},{status:200});
  }}});
  assert.equal(request.path,'/emails');assert.equal(request.init.method,'POST');
+ assert.equal(new Headers(request.init.headers).get('authorization'),'Bearer re_test-only-not-a-credential');
  assert.deepEqual(JSON.parse(request.init.body),{from:resend.from,to:[message.to],subject:message.subject,text:message.text});
  assert.ok(request.init.signal instanceof AbortSignal);
  assert.equal(result.delivery,'resend_accepted');assert.equal(result.provider,'resend');
@@ -38,7 +39,7 @@ test('Resend uses the connector transport, accepts a valid API receipt and never
 test('Retrying identical content is idempotent; a rotated invitation/reset URL gets a different key',async()=>{
  const keys:string[]=[];const id=key();
  const provider=new ResendEmailProvider(resend,async(_path,init)=>{
-  keys.push((init.headers as Record<string,string>)['Idempotency-Key']);
+  keys.push(new Headers(init.headers).get('Idempotency-Key')??'');
   return Response.json({id:randomUUID()});
  });
  await provider.send(message,id);await provider.send(message,id);
@@ -60,6 +61,14 @@ test('Resend errors, malformed success and network failure cannot masquerade as 
 test('Missing sender fails before any Resend API call',async()=>{
  let calls=0;
  await assert.rejects(deliverEmail(message,key(),{settings:{...resend,from:undefined},dependencies:{resendFetch:async()=>{
+  calls++;return Response.json({id:randomUUID()});
+ }}}),unconfigured);
+ assert.equal(calls,0);
+});
+
+test('Missing Resend API key fails before any external request',async()=>{
+ let calls=0;
+ await assert.rejects(deliverEmail(message,key(),{settings:{...resend,resendApiKey:undefined},dependencies:{resendFetch:async()=>{
   calls++;return Response.json({id:randomUUID()});
  }}}),unconfigured);
  assert.equal(calls,0);
