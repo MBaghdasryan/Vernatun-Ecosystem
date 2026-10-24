@@ -30,6 +30,7 @@
     "db:migrate:coolify:plan": "node dist/migrate.mjs --coolify-plan",
     "db:migrate:coolify:apply": "node dist/migrate.mjs --coolify-apply",
     "db:provision:edge-test-lab": "node archive/vernatun/server/scripts/provision-edge-test-lab.mjs",
+    "db:recover:global-account": "node archive/vernatun/server/scripts/recover-global-account.mjs",
     "storage:migrate": "tsx archive/vernatun/server/migrate-files.ts",
     "storage:inventory": "tsx archive/vernatun/server/inventory-files.ts",
     "backup:create": "tsx archive/vernatun/server/backup-files.ts create",
