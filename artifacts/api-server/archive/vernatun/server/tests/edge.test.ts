@@ -8,7 +8,7 @@ import {pool} from '../db.js';
 import {config} from '../config.js';
 import {isEdgeConnected} from '../edge-sockets.js';
 import {edgeTimestamp,edgeTimestampedRecord} from '../edge-timestamp.js';
-import {normalizeEdgeStatus} from '../edge-management-policy.js';
+import {normalizeEdgeStatus,edgeStatusReasons} from '../edge-management-policy.js';
 
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))
  throw new Error('Edge integration tests require the isolated vernatun_test database');
@@ -281,9 +281,13 @@ test('Human workspace drafts, one-time tokens, real diagnostics, config and cros
  assert.ok(orgFleet.data.nodes.every((v:any)=>v.organization_id===orgContext.organization_id));
  const now=Date.now(),healthy={registration_state:'REGISTERED',last_heartbeat_at:new Date(now),credential_active:true,local_authorization_status:'OK',queue_depth:0};
  assert.equal(normalizeEdgeStatus(healthy,true,now),'ONLINE');
+  assert.deepEqual(edgeStatusReasons(healthy,true,now),[]);
  assert.equal(normalizeEdgeStatus(healthy,false,now),'OFFLINE');
  assert.equal(normalizeEdgeStatus({...healthy,last_heartbeat_at:new Date(now-121000)},true,now),'OFFLINE');
  assert.equal(normalizeEdgeStatus({...healthy,queue_depth:101},true,now),'DEGRADED');
+  assert.deepEqual(edgeStatusReasons({...healthy,queue_depth:101},true,now),['queue_depth']);
+  assert.deepEqual(edgeStatusReasons({...healthy,last_inventory_at:new Date(now-601000)},true,now),['inventory_stale']);
+  assert.deepEqual(edgeStatusReasons({...healthy,last_telemetry_at:new Date(now-301000)},true,now),['telemetry_stale']);
  assert.equal(normalizeEdgeStatus({...healthy,last_heartbeat_at:new Date(now-200000),
   management_config:{heartbeatSeconds:300}},true,now),'ONLINE','custom intervals must not become stale before their scheduled heartbeat');
 

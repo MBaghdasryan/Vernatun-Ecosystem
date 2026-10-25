@@ -7,7 +7,7 @@ import {ApiError,context,requirePermission,type Context} from './access.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {transaction,record} from './operations.js';
 import {isEdgeConnected} from './edge-sockets.js';
-import {edgeHealth,edgeThresholds,edgeModules,lockedEdgeCapabilities,normalizeEdgeStatus} from './edge-management-policy.js';
+import {edgeHealth,edgeThresholds,edgeModules,lockedEdgeCapabilities,normalizeEdgeStatus,edgeStatusReasons} from './edge-management-policy.js';
 
 const router=Router(),uuid=z.string().uuid();
 const configuration=z.object({
@@ -93,7 +93,7 @@ router.get('/edge-console/fleet',async(req,res)=>{
  AND ($3::boolean OR n.archived_at IS NULL) ORDER BY n.name,n.id`,
  [c.organization_id,c.building_id,q.includeArchived==='true'])).rows.map(n=>{
   const connected=isEdgeConnected(n.id);
-  return {...n,status:normalizeEdgeStatus(n,connected),web_socket_open:connected};
+   return {...n,status:normalizeEdgeStatus(n,connected),status_reasons:edgeStatusReasons(n,connected),web_socket_open:connected};
  });
  const unique=(items:{id:string;name:string}[])=>[...new Map(items.filter(i=>i.id).map(i=>[i.id,i])).values()];
  const facets={
@@ -309,7 +309,7 @@ router.get('/edge-console/nodes/:id',async(req,res)=>{
    FROM edge_bootstrap_tokens WHERE edge_id=$1 ORDER BY created_at DESC LIMIT 20`,[node.edge_id]):{rows:[]},
  ]);
  const connected=isEdgeConnected(id);
- res.json({node:{...node,status:normalizeEdgeStatus(node,connected),web_socket_open:connected,building_count:buildings.rows.length,
+  res.json({node:{...node,status:normalizeEdgeStatus(node,connected),status_reasons:edgeStatusReasons(node,connected),web_socket_open:connected,building_count:buildings.rows.length,
   device_count:devices.rows.length,active_alarms:alarms.rows.filter(a=>a.status==='active').length},
   buildings:buildings.rows,devices:devices.rows,alarms:alarms.rows,telemetry:telemetry.rows,events:events.rows,
   commands:commands.rows,audit:audit.rows,tokens:tokens.rows,configuration:configResult(node),

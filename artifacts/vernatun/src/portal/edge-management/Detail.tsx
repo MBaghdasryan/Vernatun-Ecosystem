@@ -111,7 +111,7 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
 
   return <section className="em-panel em-detail" data-testid={'panel-edge-detail-' + node.id}>
     <div className="em-dhead">
-      <div><h2>{node.name} <Badge value={archived ? L('archived') : node.status} /></h2><span className="em-mono">{node.edge_id}</span></div>
+      <div><h2>{node.name} <Badge value={archived ? L('archived') : node.status} /></h2><span className="em-mono">{node.edge_id}</span>{Array.isArray(node.status_reasons) && node.status_reasons.length > 0 && <small className="em-status-reasons">{(node.status_reasons as string[]).map(r => L('reason_' + r)).join(' · ')}</small>}</div>
       <div className="em-actions">
         <button className="em-btn" onClick={() => { setTab('connection'); void runCheck(); }} data-testid="button-detail-check">{L('checkConn')}</button>
         {canManage && !archived && <button className="em-btn bad" onClick={() => setConfirm({ kind: 'archive' })} data-testid="button-archive-edge">{L('archive')}</button>}

@@ -151,7 +151,7 @@ export default function EdgeManagement({ c, language }: { c: RoleContext; langua
       case 'block': return n.block_name ?? n.building_name ?? '—';
       case 'buildings': return n.building_count ?? '—';
       case 'site': return n.site_code;
-      case 'status': return <Badge value={n.archived_at ? L('archived') : n.status} />;
+       case 'status': return <span><Badge value={n.archived_at ? L('archived') : n.status} />{Array.isArray(n.status_reasons) && n.status_reasons.length > 0 && <small className="em-status-reasons">{(n.status_reasons as string[]).map(r => L('reason_' + r)).join(' · ')}</small>}</span>;
       case 'registration': return <Badge value={n.registration_state} />;
       case 'ws': return <Badge value={n.web_socket_open ? 'CONNECTED' : 'DISCONNECTED'} />;
       case 'heartbeat': return rel(n.last_heartbeat_at, language);
@@ -210,7 +210,7 @@ export default function EdgeManagement({ c, language }: { c: RoleContext; langua
               <tbody>{nodes.map(n => <tr key={n.id} className={'row' + (selected === n.id ? ' sel' : '')} onClick={() => setSelected(n.id)} data-testid={'row-edge-node-' + n.id}>
                 {cfg.columns.map(k => <td key={k}>{alarmCell(k, n)}</td>)}
                 <td><button className="em-btn" aria-pressed={selected === n.id} onClick={e => { e.stopPropagation(); setSelected(n.id); }} data-testid={'button-open-node-' + n.id}>{L('open')}</button></td></tr>)}</tbody></table></div>
-            <div className="em-cardlist">{nodes.map(n => <button key={n.id} className={selected === n.id ? 'sel' : ''} onClick={() => setSelected(n.id)}><strong>{n.name}</strong><span className="em-mono">{n.edge_id}</span><span><Badge value={n.status} /> <Badge value={n.web_socket_open ? 'CONNECTED' : 'DISCONNECTED'} /></span><small>{n.block_name ?? n.building_name} · {n.device_count ?? 0} {L('devices')} · {rel(n.last_heartbeat_at, language)}</small></button>)}</div>
+            <div className="em-cardlist">{nodes.map(n => <button key={n.id} className={selected === n.id ? 'sel' : ''} onClick={() => setSelected(n.id)}><strong>{n.name}</strong><span className="em-mono">{n.edge_id}</span><span><Badge value={n.status} /> <Badge value={n.web_socket_open ? 'CONNECTED' : 'DISCONNECTED'} /></span>{Array.isArray(n.status_reasons) && n.status_reasons.length > 0 && <small className="em-status-reasons">{(n.status_reasons as string[]).map(r => L('reason_' + r)).join(' · ')}</small>}<small>{n.block_name ?? n.building_name} · {n.device_count ?? 0} {L('devices')} · {rel(n.last_heartbeat_at, language)}</small></button>)}</div>
             <div className="em-pager"><span>{L('rows')}: <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>{[10, 25, 50, 100].map(n => <option key={n}>{n}</option>)}</select> · {pg.total}</span>
               <span className="em-actions"><button className="em-btn" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="prev">‹</button><span>{L('page')} {pg.page} / {pg.pages || 1}</span><button className="em-btn" disabled={page >= (pg.pages || 1)} onClick={() => setPage(page + 1)} aria-label="next">›</button></span></div>
           </>}
