@@ -38,6 +38,7 @@ import {translate,roleName,roleTitle,roleNames,money,date,type Currency,type Lan
 import {request,ApiClientError} from './client';
 import type {AuthState,Dashboard,RoleContext} from './types';
 import './portal.css';
+import './a11y-touch-targets.css';
 import './kpi-drilldown.css';
 import './accessibility.css';
 type Preferences={language:Language;currency:Currency;setLanguage:(l:Language)=>void;setCurrency:(c:Currency)=>void;t:(key:TextKey)=>string};
