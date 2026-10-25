@@ -58,6 +58,8 @@ import type {
   DelegationResendInput,
   DeleteEmptyPortfolioObject200,
   DeleteEmptyPortfolioObjectParams,
+  DeviceActionAvailability,
+  DeviceCapabilityPolicyInput,
   DownloadPlatformCaseAttachmentParams,
   EdgeAccepted,
   EdgeBatchAccepted,
@@ -3456,6 +3458,165 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAssignEdgeDeviceUnitAccessMutationOptions(options));
     }
+
+export const getSaveDeviceCapabilityPolicyUrl = (deviceId: string,) => {
+
+
+
+
+  return `/api/edge-console/devices/${deviceId}/capabilities`
+}
+
+export const saveDeviceCapabilityPolicy = async (deviceId: string,
+    deviceCapabilityPolicyInput: DeviceCapabilityPolicyInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getSaveDeviceCapabilityPolicyUrl(deviceId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(deviceCapabilityPolicyInput)
+  }
+);}
+
+
+
+
+
+export const getSaveDeviceCapabilityPolicyMutationKey = () => ['saveDeviceCapabilityPolicy'] as const;
+
+export const getSaveDeviceCapabilityPolicyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>, TError,SaveDeviceCapabilityPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>, TError,SaveDeviceCapabilityPolicyMutationVariables, TContext> => {
+
+const mutationKey = getSaveDeviceCapabilityPolicyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>, SaveDeviceCapabilityPolicyMutationVariables> = (props) => {
+          const {deviceId,data} = props ?? {};
+
+          return  saveDeviceCapabilityPolicy(deviceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveDeviceCapabilityPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>>
+    export type SaveDeviceCapabilityPolicyMutationBody = BodyType<DeviceCapabilityPolicyInput>
+    export type SaveDeviceCapabilityPolicyMutationError = ErrorType<void>
+    export type SaveDeviceCapabilityPolicyMutationVariables = {deviceId: string;data: BodyType<DeviceCapabilityPolicyInput>}
+
+    export const useSaveDeviceCapabilityPolicy = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>, TError,SaveDeviceCapabilityPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveDeviceCapabilityPolicy>>,
+        TError,
+        SaveDeviceCapabilityPolicyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveDeviceCapabilityPolicyMutationOptions(options));
+    }
+
+export const getGetBuildingDeviceActionsUrl = (buildingId: string,
+    deviceId: string,) => {
+
+
+
+
+  return `/api/buildings/${buildingId}/devices/${deviceId}/actions`
+}
+
+export const getBuildingDeviceActions = async (buildingId: string,
+    deviceId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeviceActionAvailability> => {
+
+  return customFetch<DeviceActionAvailability>(getGetBuildingDeviceActionsUrl(buildingId,deviceId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBuildingDeviceActionsQueryKey = (buildingId: string,
+    deviceId: string,) => {
+    return [
+    `/api/buildings/${buildingId}/devices/${deviceId}/actions`
+    ] as const;
+    }
+
+
+export const getGetBuildingDeviceActionsQueryOptions = <TData = Awaited<ReturnType<typeof getBuildingDeviceActions>>, TError = ErrorType<void>>(buildingId: string,
+    deviceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuildingDeviceActions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBuildingDeviceActionsQueryKey(buildingId,deviceId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBuildingDeviceActions>>> = ({ signal }) => getBuildingDeviceActions(buildingId,deviceId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: buildingId !== null && buildingId !== undefined && deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBuildingDeviceActions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBuildingDeviceActionsQueryResult = NonNullable<Awaited<ReturnType<typeof getBuildingDeviceActions>>>
+export type GetBuildingDeviceActionsQueryError = ErrorType<void>
+
+
+
+export function useGetBuildingDeviceActions<TData = Awaited<ReturnType<typeof getBuildingDeviceActions>>, TError = ErrorType<void>>(
+ buildingId: string,
+    deviceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuildingDeviceActions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBuildingDeviceActionsQueryOptions(buildingId,deviceId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRequestBuildingEdgeCommandUrl = (buildingId: string,
     deviceId: string,) => {

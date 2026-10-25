@@ -8,6 +8,7 @@ type ResidentDevice = {
   id: string; edge_device_id: string; name: string; label?: string | null; profile?: string | null;
   device_type?: string | null; unit_id?: string | null; reported_online?: boolean | null;
   last_seen_at?: string | null; last_telemetry_at?: string | null; permittedCapabilities: string[];
+  availability?: { online: boolean; state: string | null; actions: { capability: string; enabled: boolean }[] };
 };
 type CommandResult = { commandId: string; command_id?: string; status: string; [key: string]: unknown };
 const COPY: Record<string, [string, string, string]> = {
@@ -38,7 +39,7 @@ const css = `
 .rda-command{border-radius:11px;background:#f1f5e9;padding:.8rem;display:flex;gap:.6rem;align-items:flex-start}.rda-command strong,.rda-command small{display:block}.rda-command small{color:var(--r-muted);margin-top:.2rem}
 @media(max-width:600px){.rda-hero{align-items:flex-start;flex-direction:column}.rda-device{grid-template-columns:1fr}.rda-device .rda-button{width:100%}}
 `;
-const pendingState = (s: string) => ['pending','queued','accepted','sent','running','processing'].includes(s.toLowerCase());
+const pendingState = (s: string) => ['requested','authorized','pending','queued','accepted','sent','delivered','acknowledged','running','processing'].includes(s.toLowerCase());
 const commandShape = (value: CommandResult): CommandResult => ({ ...value, commandId: value.commandId ?? value.command_id ?? '' });
 
 export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; language: Language }) {
@@ -53,6 +54,7 @@ export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; 
   const [commandError, setCommandError] = useState('');
   const [polling, setPolling] = useState(false);
   const activePoll = useRef(false);
+  const commandKeys = useRef<Record<string, string>>({});
   const buildingId = c.building_id;
 
   const load = useCallback(async () => {
@@ -73,6 +75,7 @@ export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; 
         if (cancelled) return;
         setCommand(next);
         if (pendingState(next.status)) timer = setTimeout(poll, 1800);
+        else { commandKeys.current = {}; void load(); }
       } catch (e) { if (!cancelled) setCommandError(e instanceof ApiClientError ? `${t('error')} (${e.status || e.code})` : t('error')); }
     };
     timer = setTimeout(poll, 1200);
@@ -80,11 +83,11 @@ export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; 
   }, [command?.commandId, command?.status]);
 
   const sendCommand = async () => {
-    if (!selected || reason.trim().length < 3 || busy || !selected.permittedCapabilities?.includes('BARRIER.OPEN') || !buildingId) return;
+    if (!selected || reason.trim().length < 3 || busy || !selected.availability?.actions.some(a=>a.capability==='BARRIER.OPEN'&&a.enabled) || !buildingId) return;
     setBusy(true); setCommandError('');
     try {
       const result = commandShape(await request<CommandResult>(`/me/buildings/${encodeURIComponent(buildingId)}/devices/${encodeURIComponent(selected.id)}/commands`, 'POST', {
-        capability: 'BARRIER.OPEN', reason: reason.trim(),
+        capability: 'BARRIER.OPEN', reason: reason.trim(), idempotencyKey: commandKeys.current[selected.id] ??= crypto.randomUUID(),
       }));
       setCommand(result); setReason(''); setSelected(undefined);
     } catch (e) { setCommandError(e instanceof ApiClientError ? `${t('error')} (${e.status || e.code})` : t('error')); }
@@ -92,10 +95,10 @@ export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; 
   };
   const statusText = (status: string) => {
     const k = status.toLowerCase();
-    if (['queued','pending','accepted','running','processing'].includes(k)) return t('queued');
-    if (['sent'].includes(k)) return t('sent');
+    if (['requested','authorized','queued','pending','accepted','running','processing'].includes(k)) return t('queued');
+    if (['sent','delivered','acknowledged'].includes(k)) return t('sent');
     if (['completed','succeeded','success'].includes(k)) return t('completed');
-    if (['failed','rejected','error','cancelled'].includes(k)) return t('failed');
+    if (['failed','rejected','error','cancelled','denied','timeout'].includes(k)) return t('failed');
     return status;
   };
 
@@ -106,13 +109,13 @@ export default function ResidentDeviceAccess({ c, language }: { c: RoleContext; 
     {!!error && <div className="rda-error" role="alert" data-testid="status-resident-error">{error instanceof ApiClientError ? `${t('error')} (${error.status || error.code})` : t('error')} <button className="rda-button rda-secondary" onClick={() => void load()} data-testid="button-retry-resident-devices">{t('retry')}</button></div>}
     {loading && !devices ? <div className="rda-loading" role="status" aria-busy="true" data-testid="status-resident-loading">{t('loading')}</div> :
       devices?.length ? <section className="rda-list" aria-label={t('title')}>{devices.map(d=>{
-        const isOnline = d.reported_online === true;
+        const isOnline = d.availability?.online === true;
         const allowed = d.permittedCapabilities?.includes('BARRIER.OPEN');
         return <article className="rda-device" key={d.id} data-testid={'card-resident-device-'+d.id}>
           <div><div className="rda-name"><span className="rda-pill"><Radio size={15}/></span><div><h2>{d.label||d.name}</h2><small>{d.device_type||d.profile||d.edge_device_id}</small></div></div>
             <p className="rda-meta">{t('state')}: <span className={'rda-pill '+(isOnline?'online':d.reported_online===false?'offline':'')}>{isOnline?t('online'):d.reported_online===false?t('offline'):t('unavailable')}</span> · {t('lastSeen')}: {dateText(d.last_seen_at,language)}</p>
           </div>
-          {allowed && <button className="rda-button" onClick={()=>{setSelected(d);setReason('');setCommandError('')}} data-testid={'button-open-device-'+d.id}><DoorOpen size={17}/>{t('open')}</button>}
+          {allowed && <button className="rda-button" disabled={busy||!!command&&pendingState(command.status)||!d.availability?.actions.some(a=>a.capability==='BARRIER.OPEN'&&a.enabled)} onClick={()=>{setSelected(d);setReason('');setCommandError('')}} data-testid={'button-open-device-'+d.id}><DoorOpen size={17}/>{t('open')}</button>}
         </article>;
       })}</section> : !loading && !error && buildingId ? <p className="rda-empty" data-testid="text-resident-devices-empty">{t('empty')}</p> : null}
     {command && <section className="rda-command" role="status" data-testid={'status-resident-command-'+command.commandId}>

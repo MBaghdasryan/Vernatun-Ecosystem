@@ -205,6 +205,94 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  assert.deepEqual(residentDevices.data[0].permittedCapabilities,['BARRIER.OPEN']);
  const crossBuilding=await owner.call('/me/buildings/00000000-0000-4000-8000-000000000000/devices');
  assert.equal(crossBuilding.status,403,'resident cannot query another building');
+  const manager=await new Client().login('manager'),family=await new Client().login('family');
+  assert.equal((await platform.call('/edge/v1/heartbeat','POST',{
+   ...payload,local:{commandAuthorization:'OK',queueDepth:0},
+  },machineHeaders)).status,200,'restore a healthy heartbeat after the timestamp-validation fixtures');
+  const commandPath=`/buildings/${buildingId}/devices/${device.id}`;
+  const received:any[]=[];
+  const collect=(raw:any)=>{const message=JSON.parse(raw.toString());if(message.type==='COMMAND')received.push(message.command)};
+  agentSocket!.on('message',collect);
+  const waitCommands=async(count:number)=>{
+   const deadline=Date.now()+2000;
+   while(received.length<count&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,20));
+   assert.equal(received.length,count,'only the expected commands may reach the isolated Agent');
+  };
+  const resultFor=(commandId:string,state?:string)=>agentSocket!.send(JSON.stringify({type:'COMMAND_RESULT',result:{
+   commandId,status:'SUCCESS',localHttpStatus:200,result:{decision:'ALLOW',...(state?{deviceResponse:{state}}:{accepted:true})},
+  }}));
+  const waitStatus=async(actor:Client,commandId:string,status:string)=>{
+   const deadline=Date.now()+2000;let result:any;
+   do{
+    result=await actor.call(`/me/edge-commands/${commandId}`);
+    if(result.data.status===status)return result.data;
+    await new Promise(resolve=>setTimeout(resolve,20));
+   }while(Date.now()<deadline);
+   assert.equal(result.data.status,status);
+  };
+  const availability=await manager.call(commandPath+'/actions');
+  assert.equal(availability.status,200);
+  assert.equal(availability.data.actions.find((a:any)=>a.capability==='BARRIER.OPEN').enabled,true,JSON.stringify(availability.data));
+  assert.equal((await platform.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'manual_control'})).status,403,
+   'global administration must not implicitly permit physical control');
+  const key='resident-double-'+randomBytes(8).toString('hex');
+  const input={capability:'BARRIER.OPEN',reason:'Isolated command acceptance',idempotencyKey:key};
+  const [open,duplicate]=await Promise.all([
+   owner.call(`/me${commandPath}/commands`,'POST',input),
+   owner.call(`/me${commandPath}/commands`,'POST',input),
+  ]);
+  assert.equal(open.status,202);assert.equal(duplicate.status,202);
+  assert.equal(open.data.commandId,duplicate.data.commandId,'double submission must return the same command receipt');
+  await waitCommands(1);
+  const ownerId=(await pool.query('SELECT id FROM users WHERE email=$1',[account('unit_owner').email])).rows[0].id;
+  assert.equal(received[0].actor.userId,ownerId);
+  assert.equal(received[0].tenantId,organizationId);
+  assert.equal(received[0].buildingId,buildingId);
+  const concurrent=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.CLOSE',reason:'Conflicting command'});
+  assert.equal(concurrent.status,403);
+  assert.equal(concurrent.data.authorizationReason,'device_command_in_progress');
+  assert.equal(received.length,1);
+  resultFor(open.data.commandId,'OPEN');
+  await waitStatus(owner,open.data.commandId,'SUCCESS');
+  const nowOpen=await manager.call(commandPath+'/actions');
+  assert.equal(nowOpen.data.state,'OPEN');
+  assert.equal(nowOpen.data.actions.find((a:any)=>a.capability==='BARRIER.OPEN').reason,'device_already_in_target_state');
+  assert.equal(nowOpen.data.actions.find((a:any)=>a.capability==='BARRIER.CLOSE').enabled,true);
+  const close=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.CLOSE',reason:'Isolated close'});
+  assert.equal(close.status,202);await waitCommands(2);
+  resultFor(close.data.commandId);
+  await waitStatus(manager,close.data.commandId,'ACKNOWLEDGED');
+  resultFor(close.data.commandId,'CLOSED');
+  await waitStatus(manager,close.data.commandId,'SUCCESS');
+  assert.equal((await manager.call(commandPath+'/actions')).data.state,'CLOSED');
+  for(const capability of ['FIRE.CONTROL','ELEVATOR.SAFETY_CONTROL']){
+   const denied=await manager.call(commandPath+'/commands','POST',{capability,reason:'Safety deny acceptance'});
+   assert.equal(denied.status,403);
+   assert.equal(denied.data.authorizationReason,'safety_capability_hard_denied');
+  }
+  assert.equal((await family.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'No family delegation'})).status,403);
+  await pool.query('UPDATE edge_device_inventory SET reported_online=false WHERE id=$1',[device.id]);
+  const offline=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'Offline acceptance'});
+  assert.equal(offline.status,409);assert.equal(offline.data.errorCode,'device_offline');
+  assert.equal(received.length,2,'offline and denied commands must never be dispatched');
+  await pool.query('UPDATE edge_device_inventory SET reported_online=true WHERE id=$1',[device.id]);
+  const policy=await platform.call(`/edge-console/devices/${device.id}/capabilities`,'PUT',{enabledCapabilities:[]});
+  assert.equal(policy.status,200);
+  const disabled=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'Disabled policy acceptance'});
+  assert.equal(disabled.status,403);assert.equal(disabled.data.authorizationReason,'capability_disabled_by_policy');
+  assert.equal((await platform.call(`/edge-console/devices/${device.id}/capabilities`,'PUT',{enabledCapabilities:['FIRE.CONTROL']})).status,400);
+  assert.equal((await platform.call(`/edge-console/devices/${device.id}/capabilities`,'PUT',{enabledCapabilities:['BARRIER.OPEN','BARRIER.CLOSE']})).status,200);
+  const raced=await Promise.all([1,2].map(n=>manager.call(commandPath+'/commands','POST',{
+   capability:'BARRIER.OPEN',reason:'Concurrent operator '+n,idempotencyKey:'operator-'+n+'-'+randomBytes(8).toString('hex'),
+  })));
+  assert.deepEqual(raced.map(r=>r.status).sort(),[202,403]);
+  await waitCommands(3);
+  const accepted=raced.find(r=>r.status===202)!;
+  resultFor(accepted.data.commandId,'OPEN');await waitStatus(manager,accepted.data.commandId,'SUCCESS');
+  const audit=await pool.query(`SELECT action FROM audit_events WHERE entity_type='edge_command' AND entity_id=$1`,[accepted.data.commandId]);
+  assert.ok(audit.rows.some((r:any)=>r.action==='edge.command.requested'));
+  assert.ok(audit.rows.some((r:any)=>r.action==='edge.command.success'));
+  agentSocket!.off('message',collect);
  const removed=await platform.call(`/edge-console/devices/${device.id}/access/${unitId}`,'DELETE');
  assert.equal(removed.status,200);
  assert.equal((await owner.call(`/me/buildings/${buildingId}/devices`)).data.length,0);

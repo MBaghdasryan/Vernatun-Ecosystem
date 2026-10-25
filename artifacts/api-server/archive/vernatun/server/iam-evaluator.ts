@@ -15,6 +15,9 @@ export async function assignmentPermissions(a:{id:string;role_key:string;permiss
    {permissions=new Set();profileValid=false;}
   else permissions=new Set((profile.permissions as string[]).filter(p=>base.has(p)));
  }
+ // Global administration is not implicit authority to move physical devices.
+ // A separate administrator must explicitly grant execution to this assignment.
+ if(a.role_key==='platform_admin')permissions.delete('edge.commands.execute');
  const rules=(await pool.query('SELECT permission_key,effect,reason,expires_at FROM iam_assignment_rules WHERE assignment_id=$1 AND (expires_at IS NULL OR expires_at>now())',[a.id])).rows;
  for(const r of rules)if(r.effect==='grant'&&base.has(r.permission_key)&&profileValid)permissions.add(r.permission_key);
  for(const r of rules)if(r.effect==='deny')permissions.delete(r.permission_key);

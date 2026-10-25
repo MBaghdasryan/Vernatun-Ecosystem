@@ -6,8 +6,9 @@ import {ApiError,context,requireAuth,requirePermission} from './access.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {transaction,record} from './operations.js';
 import {closeEdgeConnection} from './edge-sockets.js';
-import {requestEdgeCommand} from './edge-command-service.js';
+import {availableDeviceActions,requestEdgeCommand} from './edge-command-service.js';
 import edgeWorkspaceRouter from './edge-workspace-api.js';
+import {reportedCapabilitiesForProfile} from '@workspace/api-zod';
 
 const router=Router();
 router.use(edgeWorkspaceRouter);
@@ -415,10 +416,11 @@ router.put('/edge-console/devices/:deviceId/access',async(req,res)=>{
  if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const deviceId=uuid.parse(req.params.deviceId);
  const result=await transaction(async db=>{
-  const target=await db.query(`SELECT id,organization_id,building_id FROM edge_device_inventory
+  const target=await db.query(`SELECT id,organization_id,building_id,capabilities FROM edge_device_inventory
    WHERE id=$1 AND ($2::uuid IS NULL OR organization_id=$2) AND ($3::uuid IS NULL OR building_id=$3) FOR UPDATE`,
    [deviceId,c.organization_id,c.building_id]);
   if(!target.rowCount)throw new ApiError(404,'device_not_found');
+  if(!target.rows[0].capabilities.includes('BARRIER.OPEN'))throw new ApiError(400,'device_capability_not_reported');
   const unit=await db.query(`SELECT id FROM units WHERE id=$1 AND organization_id=$2 AND building_id=$3`,
    [input.unitId,target.rows[0].organization_id,target.rows[0].building_id]);
   if(!unit.rowCount)throw new ApiError(400,'unit_building_mismatch');
@@ -452,16 +454,17 @@ router.get('/me/buildings/:buildingId/devices',async(req,res)=>{
  const c=await requirePermission(req,'device.read.own'),buildingId=uuid.parse(req.params.buildingId);
  if(!['unit_owner','renter','family'].includes(c.role_key)||!c.unit_id||c.building_id!==buildingId||!c.organization_id)
   throw new ApiError(403,'resident_device_scope_required');
- const rows=await pool.query(`SELECT d.id,d.edge_device_id,d.name,d.profile,d.device_type,d.label,d.capabilities,
+ const rows=await pool.query(`SELECT d.id,d.edge_device_id,d.name,d.profile,d.device_type,d.label,d.capabilities,d.enabled_capabilities,
   d.reported_online,d.last_seen_at,n.status AS edge_status,a.allowed_capabilities
   FROM edge_device_access a JOIN edge_device_inventory d ON d.id=a.device_id
   JOIN edge_nodes n ON n.id=d.edge_node_id
   WHERE a.unit_id=$1 AND a.organization_id=$2 AND a.building_id=$3
    AND n.registration_state='REGISTERED' AND n.status<>'DISABLED'
-  ORDER BY d.name`,[c.unit_id,c.organization_id,buildingId]);
- res.json(rows.rows.map(row=>({...row,permittedCapabilities:c.role_key==='unit_owner'||c.role_key==='renter'
-  ?row.allowed_capabilities.filter((cap:string)=>cap==='BARRIER.OPEN'&&c.permissions.includes('device.barrier.open.own'))
-  :[]})));
+   ORDER BY d.name LIMIT 100`,[c.unit_id,c.organization_id,buildingId]);
+ res.json(await Promise.all(rows.rows.map(async row=>({...row,availability:await availableDeviceActions(c,row.id,buildingId),
+  permittedCapabilities:c.role_key==='unit_owner'||c.role_key==='renter'
+  ?row.allowed_capabilities.filter((cap:string)=>cap==='BARRIER.OPEN'&&c.permissions.includes('device.barrier.open.own')&&row.capabilities.includes(cap)&&row.enabled_capabilities.includes(cap))
+  :[]}))));
 });
 router.post('/me/buildings/:buildingId/devices/:deviceId/commands',async(req,res)=>{
  const c=await requirePermission(req,'device.read.own'),buildingId=uuid.parse(req.params.buildingId),deviceId=uuid.parse(req.params.deviceId);
@@ -470,6 +473,31 @@ router.post('/me/buildings/:buildingId/devices/:deviceId/commands',async(req,res
  const result=await requestEdgeCommand(req,c,{buildingId,deviceId,capability:body.capability,
   reason:body.reason,idempotencyKey:body.idempotencyKey??req.get('Idempotency-Key')??undefined});
  res.status(result.httpStatus).json(result.command);
+});
+router.put('/edge-console/devices/:deviceId/capabilities',async(req,res)=>{
+ const c=await requirePermission(req,'edge.config.manage'),deviceId=uuid.parse(req.params.deviceId);
+ if(!c.organization_id&&c.role_key!=='platform_admin')throw new ApiError(403,'organization_scope_required');
+ const body=z.object({enabledCapabilities:z.array(z.string().trim().min(1).max(80)).max(30)}).strict().parse(req.body);
+ const result=await transaction(async db=>{
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['edge-device:'+deviceId]);
+  const found=await db.query(`SELECT * FROM edge_device_inventory WHERE id=$1
+   AND ($2::uuid IS NULL OR organization_id=$2) AND ($3::uuid IS NULL OR building_id=$3) FOR UPDATE`,
+  [deviceId,c.organization_id,c.building_id]);
+  const device=found.rows[0];if(!device)throw new ApiError(404,'device_not_found');
+  const supported=reportedCapabilitiesForProfile(device.profile,device.capabilities);
+  if(body.enabledCapabilities.some(cap=>!supported.includes(cap)))throw new ApiError(400,'adapter_capability_not_verified');
+  const enabled=[...new Set(body.enabledCapabilities)].sort();
+  await db.query('UPDATE edge_device_inventory SET enabled_capabilities=$2,updated_at=now() WHERE id=$1',[deviceId,enabled]);
+  await record(db,req,{...c,organization_id:device.organization_id},'edge.device.capabilities.update','edge_device',deviceId,
+   {before:device.enabled_capabilities,after:enabled});
+  return {deviceId,enabledCapabilities:enabled};
+ });
+ res.json(result);
+});
+router.get('/buildings/:buildingId/devices/:deviceId/actions',async(req,res)=>{
+ const c=await context(req);
+ if(!c.permissions.includes('edge.inventory.read')&&!c.permissions.includes('device.read.own'))throw new ApiError(403,'forbidden');
+ res.json(await availableDeviceActions(c,uuid.parse(req.params.deviceId),uuid.parse(req.params.buildingId)));
 });
 router.post('/buildings/:buildingId/devices/:deviceId/commands',async(req,res)=>{
  const c=await context(req),buildingId=uuid.parse(req.params.buildingId),deviceId=uuid.parse(req.params.deviceId);
@@ -481,12 +509,19 @@ router.post('/buildings/:buildingId/devices/:deviceId/commands',async(req,res)=>
 });
 router.get('/me/edge-commands/:commandId',async(req,res)=>{
  const c=await context(req),commandId=uuid.parse(req.params.commandId);
+ await pool.query(`UPDATE edge_commands SET status='TIMEOUT',error_code='command_expired',completed_at=now(),updated_at=now()
+  WHERE command_id=$1 AND requested_by_user_id=$2 AND ($3::uuid IS NULL OR organization_id=$3)
+  AND requested_role_assignment_id=$4 AND expires_at<=now()
+  AND status IN ('REQUESTED','AUTHORIZED','QUEUED','DELIVERED','ACKNOWLEDGED')`,
+ [commandId,req.user!.id,c.organization_id,c.id]);
  const row=await pool.query(`SELECT command_id,status,capability,authorization_decision,authorization_reason,
   requested_at,queued_at,delivered_at,completed_at,expires_at,error_code
-  FROM edge_commands WHERE command_id=$1 AND requested_by_user_id=$2 AND organization_id=$3
-   AND ($4::uuid IS NULL OR building_id=$4)`,[commandId,req.user!.id,c.organization_id,c.building_id]);
+  FROM edge_commands WHERE command_id=$1 AND requested_by_user_id=$2 AND ($3::uuid IS NULL OR organization_id=$3)
+   AND ($4::uuid IS NULL OR building_id=$4) AND requested_role_assignment_id=$5`,[commandId,req.user!.id,c.organization_id,c.building_id,c.id]);
  if(!row.rowCount)throw new ApiError(404,'command_not_found');
- res.json(row.rows[0]);
+ const command=row.rows[0];
+ res.json({...command,commandId:command.command_id,requestedAt:command.requested_at,
+  expiresAt:command.expires_at,errorCode:command.error_code});
 });
 
 export const edgeManagementApi:RequestHandler=router;

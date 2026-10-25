@@ -952,6 +952,44 @@ export const AssignEdgeDeviceUnitAccessBody = zod.object({
 export const AssignEdgeDeviceUnitAccessResponse = zod.unknown()
 
 
+export const SaveDeviceCapabilityPolicyParams = zod.object({
+  "deviceId": zod.coerce.string().uuid()
+})
+
+export const saveDeviceCapabilityPolicyBodyEnabledCapabilitiesItemMax = 80;
+
+export const saveDeviceCapabilityPolicyBodyEnabledCapabilitiesMax = 30;
+
+
+
+export const SaveDeviceCapabilityPolicyBody = zod.object({
+  "enabledCapabilities": zod.array(zod.string().min(1).max(saveDeviceCapabilityPolicyBodyEnabledCapabilitiesItemMax)).max(saveDeviceCapabilityPolicyBodyEnabledCapabilitiesMax)
+})
+
+export const SaveDeviceCapabilityPolicyResponse = zod.unknown()
+
+
+export const GetBuildingDeviceActionsParams = zod.object({
+  "buildingId": zod.coerce.string().uuid(),
+  "deviceId": zod.coerce.string().uuid()
+})
+
+export const GetBuildingDeviceActionsResponse = zod.object({
+  "deviceId": zod.string().uuid(),
+  "online": zod.boolean(),
+  "state": zod.string().nullable(),
+  "actions": zod.array(zod.object({
+  "capability": zod.string(),
+  "labelKey": zod.string(),
+  "enabled": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "confirmation": zod.boolean(),
+  "adapterVerified": zod.boolean()
+})),
+  "safetyLocked": zod.array(zod.string())
+})
+
+
 export const RequestBuildingEdgeCommandParams = zod.object({
   "buildingId": zod.coerce.string().uuid(),
   "deviceId": zod.coerce.string().uuid()
@@ -973,7 +1011,7 @@ export const RequestBuildingEdgeCommandBody = zod.object({
 
 export const RequestBuildingEdgeCommandResponse = zod.object({
   "commandId": zod.string().uuid(),
-  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "status": zod.enum(['REQUESTED', 'AUTHORIZED', 'DENIED', 'QUEUED', 'DELIVERED', 'ACKNOWLEDGED', 'SUCCESS', 'FAILED', 'TIMEOUT', 'CANCELLED']),
   "capability": zod.string(),
   "createdAt": zod.coerce.date().optional()
 })
@@ -1023,7 +1061,21 @@ export const ListMyBuildingDevicesResponseItem = zod.object({
   "last_seen_at": zod.coerce.date().nullish(),
   "last_telemetry_at": zod.coerce.date().nullish()
 }).and(zod.object({
-  "permittedCapabilities": zod.array(zod.enum(['BARRIER.OPEN']))
+  "permittedCapabilities": zod.array(zod.enum(['BARRIER.OPEN'])),
+  "availability": zod.object({
+  "deviceId": zod.string().uuid(),
+  "online": zod.boolean(),
+  "state": zod.string().nullable(),
+  "actions": zod.array(zod.object({
+  "capability": zod.string(),
+  "labelKey": zod.string(),
+  "enabled": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "confirmation": zod.boolean(),
+  "adapterVerified": zod.boolean()
+})),
+  "safetyLocked": zod.array(zod.string())
+}).optional()
 }))
 export const ListMyBuildingDevicesResponse = zod.array(ListMyBuildingDevicesResponseItem)
 
@@ -1049,7 +1101,7 @@ export const RequestMyBuildingDeviceCommandBody = zod.object({
 
 export const RequestMyBuildingDeviceCommandResponse = zod.object({
   "commandId": zod.string().uuid(),
-  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "status": zod.enum(['REQUESTED', 'AUTHORIZED', 'DENIED', 'QUEUED', 'DELIVERED', 'ACKNOWLEDGED', 'SUCCESS', 'FAILED', 'TIMEOUT', 'CANCELLED']),
   "capability": zod.string(),
   "createdAt": zod.coerce.date().optional()
 })
@@ -1061,7 +1113,7 @@ export const GetMyEdgeCommandParams = zod.object({
 
 export const GetMyEdgeCommandResponse = zod.object({
   "commandId": zod.string().uuid(),
-  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "status": zod.enum(['REQUESTED', 'AUTHORIZED', 'DENIED', 'QUEUED', 'DELIVERED', 'ACKNOWLEDGED', 'SUCCESS', 'FAILED', 'TIMEOUT', 'CANCELLED']),
   "capability": zod.string(),
   "createdAt": zod.coerce.date().optional()
 })

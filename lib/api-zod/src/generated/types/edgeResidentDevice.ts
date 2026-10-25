@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DeviceActionAvailability } from './deviceActionAvailability';
 import type { EdgeDevice } from './edgeDevice';
 import type { EdgeResidentDevicePermittedCapabilitiesItem } from './edgeResidentDevicePermittedCapabilitiesItem';
 
 export type EdgeResidentDevice = EdgeDevice & {
   permittedCapabilities: EdgeResidentDevicePermittedCapabilitiesItem[];
+  availability?: DeviceActionAvailability;
 };

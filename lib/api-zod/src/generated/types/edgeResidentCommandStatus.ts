@@ -10,9 +10,14 @@ export type EdgeResidentCommandStatus = typeof EdgeResidentCommandStatus[keyof t
 
 
 export const EdgeResidentCommandStatus = {
-  queued: 'queued',
-  sent: 'sent',
-  completed: 'completed',
-  failed: 'failed',
-  expired: 'expired',
+  REQUESTED: 'REQUESTED',
+  AUTHORIZED: 'AUTHORIZED',
+  DENIED: 'DENIED',
+  QUEUED: 'QUEUED',
+  DELIVERED: 'DELIVERED',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  TIMEOUT: 'TIMEOUT',
+  CANCELLED: 'CANCELLED',
 } as const;

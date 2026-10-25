@@ -594,6 +594,34 @@ paths:
       responses:
         '200': { description: Unit-level device permission saved }
         '403': { description: Tenant scope or edge management permission required }
+  /edge-console/devices/{deviceId}/capabilities:
+    put:
+      tags: [edge-console]
+      operationId: saveDeviceCapabilityPolicy
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeviceCapabilityPolicyInput' }
+      responses:
+        '200': { description: Verified capability policy saved and audited }
+        '400': { description: Unverified adapter or safety capability cannot be enabled }
+        '403': { description: Capability configuration permission or tenant scope denied }
+  /buildings/{buildingId}/devices/{deviceId}/actions:
+    get:
+      tags: [edge-console]
+      operationId: getBuildingDeviceActions
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: buildingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Server-authoritative effective actions, content: { application/json: { schema: { $ref: '#/components/schemas/DeviceActionAvailability' } } } }
+        '403': { description: Device read permission is absent }
+        '404': { description: Device is outside the current scope }
   /buildings/{buildingId}/devices/{deviceId}/commands:
     post:
       tags: [edge-console]
@@ -3972,6 +4000,32 @@ components:
           required: [permittedCapabilities]
           properties:
             permittedCapabilities: { type: array, items: { type: string, enum: [BARRIER.OPEN] } }
+            availability: { $ref: '#/components/schemas/DeviceActionAvailability' }
+    DeviceCapabilityPolicyInput:
+      type: object
+      additionalProperties: false
+      required: [enabledCapabilities]
+      properties:
+        enabledCapabilities: { type: array, maxItems: 30, items: { type: string, minLength: 1, maxLength: 80 } }
+    AvailableDeviceAction:
+      type: object
+      required: [capability, labelKey, enabled, reason, confirmation, adapterVerified]
+      properties:
+        capability: { type: string }
+        labelKey: { type: string }
+        enabled: { type: boolean }
+        reason: { type: [string, "null"] }
+        confirmation: { type: boolean }
+        adapterVerified: { type: boolean }
+    DeviceActionAvailability:
+      type: object
+      required: [deviceId, online, state, actions, safetyLocked]
+      properties:
+        deviceId: { type: string, format: uuid }
+        online: { type: boolean }
+        state: { type: [string, "null"] }
+        actions: { type: array, items: { $ref: '#/components/schemas/AvailableDeviceAction' } }
+        safetyLocked: { type: array, items: { type: string } }
     EdgeResidentCommandInput:
       type: object
       required: [capability, reason]
@@ -3991,7 +4045,7 @@ components:
       required: [commandId, status, capability]
       properties:
         commandId: { type: string, format: uuid }
-        status: { type: string, enum: [queued, sent, completed, failed, expired] }
+        status: { type: string, enum: [REQUESTED, AUTHORIZED, DENIED, QUEUED, DELIVERED, ACKNOWLEDGED, SUCCESS, FAILED, TIMEOUT, CANCELLED] }
         capability: { type: string }
         createdAt: { type: string, format: date-time }
     IntegrationInstanceActionInput:

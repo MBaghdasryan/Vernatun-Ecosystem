@@ -11,7 +11,7 @@ import {normalizeEdgeStatus} from './edge-management-policy.js';
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const hardDenied=new Set(['FIRE.CONTROL','ELEVATOR.SAFETY_CONTROL']);
 const residentRoles=new Set(['unit_owner','renter']);
-const buildingControlRoles=new Set(['org_admin','manager','dispatcher','security']);
+const buildingControlRoles=new Set(['platform_admin','org_admin','manager','dispatcher','security']);
 const permissionFor=(capability:string,role:string)=>{
  if(capability==='BARRIER.OPEN')return residentRoles.has(role)?'device.barrier.open.own':'device.barrier.open.building';
  if(capability==='BARRIER.CLOSE')return 'device.barrier.close.building';
@@ -34,29 +34,101 @@ async function deviceTelemetryState(db:any,deviceId:string){
  return Object.fromEntries(result.rows.map((row:any)=>[String(row.telemetry_key).toLowerCase(),row.value]));
 }
 
+async function policyReason(db:any,c:Context,device:any,capability:string,permissionResult:{allowed:boolean;reason:string},telemetry:Record<string,any>){
+ if(hardDenied.has(capability))return 'safety_capability_hard_denied';
+ const action=getDeviceActionProfile(device.profile)?.actions.find(item=>item.capability===capability);
+ if(!action?.adapterVerified)return 'adapter_not_verified';
+ if(!Array.isArray(device.capabilities)||!device.capabilities.includes(capability))return 'device_capability_not_reported';
+ if(!Array.isArray(device.enabled_capabilities)||!device.enabled_capabilities.includes(capability))return 'capability_disabled_by_policy';
+ if(residentRoles.has(c.role_key)){
+  if(capability!=='BARRIER.OPEN')return 'operational_role_required';
+  if(!c.unit_id)return 'unit_device_access_missing';
+  const access=await db.query(`SELECT 1 FROM edge_device_access WHERE device_id=$1
+   AND organization_id=$2 AND building_id=$3 AND unit_id=$4 AND $5=ANY(allowed_capabilities)`,
+  [device.device_inventory_id,c.organization_id,device.building_id,c.unit_id,capability]);
+  if(!access.rowCount)return 'unit_device_access_missing';
+ }else if(!buildingControlRoles.has(c.role_key)||!c.permissions.includes('edge.commands.execute')){
+  return 'command_execution_permission_required';
+ }
+ if(!permissionResult.allowed)return permissionResult.reason;
+ const state=scalar(telemetry.state??telemetry.status),fault=scalar(telemetry.fault);
+ if(fault&&!['FALSE','0','NORMAL','OK'].includes(fault))return 'device_fault';
+ if(action.blocksWhenState?.includes(state))return state===action.targetState?'device_already_in_target_state':'device_transition_in_progress';
+ return null;
+}
+
+function connectionReason(device:any){
+ if(device.reported_online!==true)return 'device_offline';
+ const status=normalizeEdgeStatus({...device,last_telemetry_at:device.node_last_telemetry_at??device.last_telemetry_at},isEdgeConnected(device.edge_node_id));
+ return status==='ONLINE'?null:status==='DEGRADED'?'edge_degraded':'edge_offline';
+}
+
+export async function availableDeviceActions(c:Context,deviceId:string,buildingId:string){
+ if(c.building_id&&c.building_id!==buildingId)throw new ApiError(404,'device_not_found');
+ if(!c.organization_id&&c.role_key!=='platform_admin')throw new ApiError(403,'organization_scope_required');
+ const target=await pool.query(`SELECT d.*,d.id AS device_inventory_id,n.status,n.registration_state,n.last_heartbeat_at,
+  n.last_inventory_at,n.last_telemetry_at AS node_last_telemetry_at,n.local_authorization_status,n.queue_depth,
+  n.management_config,n.archived_at,
+  EXISTS(SELECT 1 FROM edge_credentials ec WHERE ec.edge_node_id=n.id AND ec.status='active' AND ec.revoked_at IS NULL) AS credential_active
+  FROM edge_device_inventory d JOIN edge_nodes n ON n.id=d.edge_node_id WHERE d.id=$1
+  AND d.building_id=$2 AND ($3::uuid IS NULL OR d.organization_id=$3)`,
+ [deviceId,buildingId,c.organization_id]);
+ if(!target.rowCount)throw new ApiError(404,'device_not_found');
+ const device=target.rows[0],profile=getDeviceActionProfile(device.profile);
+ const scopedContext={...c,organization_id:device.organization_id};
+ if(['unit_owner','renter','family'].includes(c.role_key)){
+  const access=await pool.query('SELECT 1 FROM edge_device_access WHERE device_id=$1 AND unit_id=$2',[device.id,c.unit_id]);
+  if(!access.rowCount)throw new ApiError(404,'device_not_found');
+ }
+ const telemetry=await deviceTelemetryState(pool,device.id),offline=connectionReason(device);
+ const inFlight=await pool.query(`SELECT 1 FROM edge_commands WHERE device_inventory_id=$1
+  AND status IN ('REQUESTED','AUTHORIZED','QUEUED','DELIVERED','ACKNOWLEDGED') AND expires_at>now()`,[device.id]);
+ const actions=await Promise.all((profile?.actions??[]).map(async action=>{
+  const permission=permissionFor(action.capability,c.role_key);
+  const permissionResult=permission?await permissionDecision(scopedContext,permission,'POST'):{allowed:false,reason:'capability_not_supported'};
+  const reason=await policyReason(pool,scopedContext,device,action.capability,permissionResult,telemetry)
+   ??(inFlight.rowCount?'device_command_in_progress':null)??offline;
+  return {capability:action.capability,labelKey:action.labelKey,enabled:reason===null,reason,
+   confirmation:action.confirmation,adapterVerified:action.adapterVerified};
+ }));
+ return {deviceId:device.id,online:offline===null,state:scalar(telemetry.state??telemetry.status)||null,actions,
+  safetyLocked:profile?.hardDenied??[]};
+}
+
 export async function requestEdgeCommand(req:Request,context:Context,input:CommandInput){
  if(!req.user)throw new ApiError(401,'unauthenticated');
- if(context.organization_id===null||context.organization_id==='')throw new ApiError(403,'organization_scope_required');
+ if(!context.organization_id){
+  if(context.role_key!=='platform_admin'||!context.permissions.includes('edge.commands.execute'))throw new ApiError(403,'command_execution_permission_required');
+  const target=await pool.query('SELECT organization_id FROM edge_device_inventory WHERE id=$1 AND building_id=$2',[input.deviceId,input.buildingId]);
+  if(!target.rowCount)throw new ApiError(404,'device_not_found');
+  context={...context,organization_id:target.rows[0].organization_id};
+ }
  if(context.building_id&&context.building_id!==input.buildingId)throw new ApiError(404,'device_not_found');
  const key=input.idempotencyKey?.trim()||randomUUID();
  if(key.length>160)throw new ApiError(400,'invalid_idempotency_key');
  const requestHash=digest({buildingId:input.buildingId,deviceId:input.deviceId,capability:input.capability,reason:input.reason});
+ const permission=permissionFor(input.capability,context.role_key);
+ const permissionResult=permission?await permissionDecision(context,permission,'POST'):{allowed:false,reason:'capability_not_supported'};
  const client=await pool.connect();
- let created:any;
+ let created:any,dispatch:{nodeId:string;command:any}|undefined;
  try{
   await client.query('BEGIN');
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+key]);
-  const previous=await client.query(`SELECT command_id,status,authorization_decision,authorization_reason,
+   const previous=await client.query(`SELECT command_id,status,capability,authorization_decision,authorization_reason,
+    organization_id,requested_role_assignment_id,
    requested_at,expires_at,error_code,request_hash FROM edge_commands
    WHERE requested_by_user_id=$1 AND idempotency_key=$2`,[req.user.id,key]);
   if(previous.rowCount){
+    if(previous.rows[0].organization_id!==context.organization_id||previous.rows[0].requested_role_assignment_id!==context.id)
+     throw new ApiError(409,'idempotency_scope_conflict');
    if(previous.rows[0].request_hash!==requestHash)throw new ApiError(409,'idempotency_conflict');
-   created={...previous.rows[0],idempotent:true};
-   await client.query('COMMIT');
-  }else{
+    created={...previous.rows[0],idempotent:true};
+    await client.query('COMMIT');
+   }else{
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['edge-device:'+input.deviceId]);
     const target=await client.query(`SELECT d.id AS device_inventory_id,d.edge_node_id,d.edge_device_id,d.thingsboard_id,
      d.capabilities,d.enabled_capabilities,d.device_type,d.profile,d.unit_id,d.reported_online,d.last_telemetry_at,
-     n.organization_id,n.building_id,n.status,n.registration_state,n.name AS edge_name,
+     n.organization_id,d.building_id,n.building_id AS node_building_id,n.status,n.registration_state,n.name AS edge_name,
      n.block_id,n.protocol_version,n.last_heartbeat_at,n.last_inventory_at,n.last_telemetry_at AS node_last_telemetry_at,
      n.local_authorization_status,n.queue_depth,n.management_config,n.archived_at,
      EXISTS(SELECT 1 FROM edge_credentials ec WHERE ec.edge_node_id=n.id AND ec.status='active'
@@ -66,53 +138,21 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
     FOR SHARE OF d,n`,[input.deviceId,context.organization_id,input.buildingId]);
    if(!target.rowCount)throw new ApiError(404,'device_not_found');
    const device=target.rows[0];
-   let decision='DENY',decisionReason='capability_not_supported';
-    let permission=permissionFor(input.capability,context.role_key);
-   if(hardDenied.has(input.capability)){permission=null;decisionReason='safety_capability_hard_denied'}
-    else if(input.capability==='BARRIER.OPEN'&&!residentRoles.has(context.role_key)&&!buildingControlRoles.has(context.role_key)){
-    decisionReason='resident_role_required';
-    }else if(input.capability==='BARRIER.CLOSE'&&!buildingControlRoles.has(context.role_key)){
-    decisionReason='operational_role_required';
-   }else if(!permission){
-    decisionReason='capability_not_supported';
-    }else if(!getDeviceActionProfile(device.profile)?.adapterVerified||
-      !(device.capabilities as unknown[]).includes(input.capability)){
-    decisionReason='device_capability_not_reported';
-    }else if(!(device.enabled_capabilities as string[]).includes(input.capability)){
-     decisionReason='capability_disabled_by_policy';
-    }else if(buildingControlRoles.has(context.role_key)&&!context.permissions.includes('edge.commands.execute')){
-     decisionReason='command_execution_permission_required';
-   }else if(context.role_key==='unit_owner'||context.role_key==='renter'){
-    const access=await client.query(`SELECT 1 FROM edge_device_access
-     WHERE device_id=$1 AND organization_id=$2 AND building_id=$3 AND unit_id=$4
-      AND $5=ANY(allowed_capabilities)`,[device.device_inventory_id,context.organization_id,
-      input.buildingId,context.unit_id,input.capability]);
-    if(!context.unit_id||!access.rowCount)decisionReason='unit_device_access_missing';
-    else{
-     const permissionResult=await permissionDecision(context,permission,'POST');
-     if(permissionResult.allowed){decision='ALLOW';decisionReason='role_scope_and_device_access_verified'}
-     else decisionReason=permissionResult.reason;
-    }
-   }else{
-    const permissionResult=await permissionDecision(context,permission,'POST');
-    if(permissionResult.allowed){decision='ALLOW';decisionReason='role_scope_verified'}
-    else decisionReason=permissionResult.reason;
-   }
     const telemetry=await deviceTelemetryState(client,device.device_inventory_id);
-    const state=scalar(telemetry.state??telemetry.status);
-    const fault=scalar(telemetry.fault);
-    const action=getDeviceActionProfile(device.profile)?.actions.find(item=>item.capability===input.capability);
-    if(decision==='ALLOW'&&fault&& !['FALSE','0','NORMAL','OK'].includes(fault)){
-     decision='DENY';decisionReason='device_fault';
-    }else if(decision==='ALLOW'&&action?.blocksWhenState?.includes(state)){
-     decision='DENY';decisionReason=state===action.targetState?'device_already_in_target_state':'device_transition_in_progress';
-    }
-    const nodeStatus=normalizeEdgeStatus(device,isEdgeConnected(device.edge_node_id));
-    const online=device.reported_online===true&&device.registration_state==='REGISTERED'&&nodeStatus==='ONLINE';
+    await client.query(`UPDATE edge_commands SET status='TIMEOUT',error_code='command_expired',completed_at=now(),updated_at=now()
+     WHERE device_inventory_id=$1 AND expires_at<=now() AND status IN ('REQUESTED','AUTHORIZED','QUEUED','DELIVERED','ACKNOWLEDGED')`,
+    [device.device_inventory_id]);
+    const inFlight=await client.query(`SELECT 1 FROM edge_commands WHERE device_inventory_id=$1
+     AND status IN ('REQUESTED','AUTHORIZED','QUEUED','DELIVERED','ACKNOWLEDGED') AND expires_at>now()`,
+    [device.device_inventory_id]);
+    const rejection=await policyReason(client,context,device,input.capability,permissionResult,telemetry)
+     ??(inFlight.rowCount?'device_command_in_progress':null);
+    const decision=rejection?'DENY':'ALLOW',decisionReason=rejection??'role_scope_and_device_policy_verified';
+    const offlineReason=connectionReason(device);
+    const online=offlineReason===null;
    const commandId=randomUUID(),expiresAt=new Date(Date.now()+30_000).toISOString();
    const denied=decision!=='ALLOW',offline=decision==='ALLOW'&&!online;
    const status=denied?'DENIED':offline?'FAILED':'QUEUED';
-    const offlineReason=!device.reported_online?'device_offline':nodeStatus==='DEGRADED'?'edge_degraded':'edge_offline';
     const reason=denied?decisionReason:offline?offlineReason:decisionReason;
    const actorClaim={userId:req.user.id,roleKey:context.role_key,roleAssignmentId:context.id,
     organizationId:context.organization_id,buildingId:input.buildingId,unitId:context.unit_id,
@@ -127,7 +167,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
      error_code,failed_at,completed_at)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
      CASE WHEN $15='FAILED' THEN now() END,CASE WHEN $15='DENIED' THEN now() END)
-    RETURNING command_id,status,authorization_decision,authorization_reason,requested_at,expires_at,error_code`,
+     RETURNING command_id,status,capability,authorization_decision,authorization_reason,requested_at,expires_at,error_code`,
    [commandId,key,requestHash,device.edge_node_id,device.device_inventory_id,context.organization_id,
     input.buildingId,device.edge_device_id,input.capability,req.user.id,context.id,context.role_key,
     sourceProduct,input.reason,status,decision,reason,JSON.stringify(actorClaim),
@@ -141,29 +181,32 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
      buildingId:input.buildingId,role:context.role_key,decisionReason:reason})]);
    await client.query('COMMIT');
    if(!denied&&!offline){
-    const sent=sendEdgeMessage(device.edge_node_id,{type:'COMMAND',command:{
+     dispatch={nodeId:device.edge_node_id,command:{
      commandId,idempotencyKey:key,tenantId:context.organization_id,
      ...(device.protocol_version===2?{protocolVersion:2,blockId:device.block_id}:{}),
      buildingId:input.buildingId,
      deviceId:device.thingsboard_id??device.edge_device_id,edgeDeviceId:device.edge_device_id,
      capability:input.capability,reason,source:sourceProduct,actor:actorClaim,expiresAt
-    }});
+     }};
+    }
+   }
+  }catch(error){await client.query('ROLLBACK');throw error}
+  finally{client.release()}
+  if(dispatch){
+     const sent=Date.now()<new Date(created.expires_at).getTime()&&sendEdgeMessage(dispatch.nodeId,{type:'COMMAND',command:dispatch.command});
     if(sent){
      await pool.query(`UPDATE edge_commands SET status='DELIVERED',delivered_at=now(),updated_at=now()
-      WHERE command_id=$1 AND status='QUEUED'`,[commandId]);
+       WHERE command_id=$1 AND status='QUEUED'`,[created.command_id]);
      created.status='DELIVERED';
     }else{
      await pool.query(`UPDATE edge_commands SET status='FAILED',error_code='edge_offline',
       error_message='Edge disconnected before delivery',failed_at=now(),updated_at=now()
-      WHERE command_id=$1 AND status='QUEUED'`,[commandId]);
+       WHERE command_id=$1 AND status='QUEUED'`,[created.command_id]);
      created.status='FAILED';created.error_code='edge_offline';
     }
-   }
   }
- }catch(error){await client.query('ROLLBACK');throw error}
- finally{client.release()}
   const httpStatus=created.status==='DENIED'?403:created.status==='FAILED'?409:202;
- return {httpStatus,command:{commandId:created.command_id,status:created.status,
+  return {httpStatus,command:{commandId:created.command_id,status:created.status,capability:created.capability,
   authorizationDecision:created.authorization_decision,authorizationReason:created.authorization_reason,
   requestedAt:created.requested_at,expiresAt:created.expires_at,errorCode:created.error_code??null,
   idempotent:created.idempotent}};

@@ -5,6 +5,7 @@ import type { Language } from '../i18n';
 import type { RoleContext } from '../types';
 import { ENVIRONMENTS, EDGE_CONFIG, LOCKED_CAPS, MODULES, UNPROVEN_CAPS, tr, type EdgeMode } from './config';
 import { Badge, Modal, errorText, fmt, rel, type Row } from './ui';
+import DeviceActions, { DeviceCapabilityPolicy } from './DeviceActions';
 
 type Props = {
   c: RoleContext; language: Language; mode: EdgeMode; detail: Row; buildings: Row[]; blocks: Row[];
@@ -161,10 +162,11 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
         <button className="em-btn pri" disabled={!addB || !!busy} onClick={() => void patchBuildings([...buildingsList.map(x => x.id), addB])}>{L('addBuilding')}</button></div>}
     </div>}
 
-    {tab === 'devices' && Table([L('device'), L('deviceId'), L('profile'), L('building'), L('zone'), L('status'), L('lastTelemetry'), L('lastEvt'), L('tbId'), L('access')],
-      (detail.devices ?? []).map((d: Row) => [d.label || d.name, <span className="em-mono">{d.edge_device_id}</span>, d.profile ?? d.device_type, d.building_name, d.zone ?? d.unit_id, <Badge value={d.reported_online == null ? 'UNKNOWN' : d.reported_online ? 'ONLINE' : 'OFFLINE'} />, t(d.last_telemetry_at), t(d.last_event_at), <span className="em-mono">{d.thingsboard_id ?? '—'}</span>,
-        <div className="em-form">{(d.access_units ?? []).map((a: Row) => <span className="em-actions" key={a.unitId}><span className="em-mono">{a.unitId} · {(a.allowedCapabilities ?? []).join(', ')}</span>{canManage && !archived && <button className="em-btn bad" disabled={!!busy} onClick={() => setConfirm({ kind: 'removeAccess', id: d.id, extra: a.unitId })}>{L('removeAccess')}</button>}</span>)}
-          {canManage && !archived && <span className="em-actions"><input aria-label={L('unitId')} placeholder={L('unitId')} value={access[d.id] ?? ''} onChange={e => setAccess({ ...access, [d.id]: e.target.value })} /><button className="em-btn" disabled={!!busy || !access[d.id]?.trim()} onClick={() => setConfirm({ kind: 'access', id: d.id, extra: access[d.id].trim() })}>{L('allowOpen')}</button></span>}</div>]))}
+    {tab === 'devices' && Table([L('device'), L('deviceId'), L('profile'), L('building'), L('zone'), L('status'), L('actions'), L('lastTelemetry'), L('lastEvt'), L('tbId'), L('access')],
+      (detail.devices ?? []).map((d: Row) => [d.label || d.name, <span className="em-mono">{d.edge_device_id}</span>, d.profile ?? d.device_type, d.building_name, d.zone ?? d.unit_id, <Badge value={d.reported_online == null ? 'UNKNOWN' : d.reported_online ? 'ONLINE' : 'OFFLINE'} />, <DeviceActions key={`${c.id}:${d.id}`} context={c} language={language} node={node} device={d} />, t(d.last_telemetry_at), t(d.last_event_at), <span className="em-mono">{d.thingsboard_id ?? '—'}</span>,
+        <div className="em-form">{canConfig && !archived && <DeviceCapabilityPolicy key={`${d.id}:${(d.enabled_capabilities ?? []).join(',')}`} device={d} language={language} onSaved={onReload} />}
+          {Array.isArray(d.capabilities) && d.capabilities.includes('BARRIER.OPEN') && <>{(d.access_units ?? []).map((a: Row) => <span className="em-actions" key={a.unitId}><span className="em-mono">{a.unitId} · {(a.allowedCapabilities ?? []).join(', ')}</span>{canManage && !archived && <button className="em-btn bad" disabled={!!busy} onClick={() => setConfirm({ kind: 'removeAccess', id: d.id, extra: a.unitId })}>{L('removeAccess')}</button>}</span>)}
+          {canManage && !archived && <span className="em-actions"><input aria-label={L('unitId')} placeholder={L('unitId')} value={access[d.id] ?? ''} onChange={e => setAccess({ ...access, [d.id]: e.target.value })} /><button className="em-btn" disabled={!!busy || !access[d.id]?.trim()} onClick={() => setConfirm({ kind: 'access', id: d.id, extra: access[d.id].trim() })}>{L('allowOpen')}</button></span>}</>}</div>]))}
 
     {tab === 'commands' && <div className="em-form"><div className="em-alert info">{L('cmdReadOnly')}</div>
       {Table([L('time'), 'ID', L('actor'), L('role'), L('device'), L('capability'), L('decision'), L('status'), L('source'), L('error')],

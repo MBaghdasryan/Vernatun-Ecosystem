@@ -5,6 +5,7 @@ import {ApiError} from './access.js';
 import {authenticateEdgeToken} from './edge-auth.js';
 import {edgeTimestampedRecord} from './edge-timestamp.js';
 import {logger} from '../../../src/lib/logger.js';
+import {getDeviceActionDefinition} from '@workspace/api-zod';
 
 const SOCKET_PATH_V1='/api/edge/v1/connect';
 const SOCKET_PATH_V2='/api/edge/v2/connect';
@@ -36,12 +37,18 @@ export async function recordEdgeCommandResult(edgeNodeId:string,result:any){
  const commandId=String(result?.commandId??'');
  if(!commandId)throw new ApiError(400,'invalid_command_result');
  const status=String(result?.status??'').toUpperCase();
- if(!['SUCCESS','REJECTED','FAILED','DENIED'].includes(status))throw new ApiError(400,'invalid_command_result');
- const command=await pool.query(`SELECT id,status,expires_at,organization_id,building_id FROM edge_commands
+ if(!['SUCCESS','ACKNOWLEDGED','REJECTED','FAILED','DENIED'].includes(status))throw new ApiError(400,'invalid_command_result');
+ const command=await pool.query(`SELECT id,status,expires_at,organization_id,building_id,capability,device_inventory_id FROM edge_commands
   WHERE command_id=$1 AND edge_node_id=$2`,[commandId,edgeNodeId]);
  if(!command.rowCount)throw new ApiError(404,'command_not_found');
  const prior=command.rows[0];
- const next=status==='SUCCESS'?'SUCCESS':'FAILED';
+ const body=result.result??result;
+ const actualState=String(body.deviceResponse?.state??body.actualState??'').toUpperCase();
+ const targetState=getDeviceActionDefinition(prior.capability)?.targetState;
+ const localDenied=body.decision==='DENY'||Number(result.localHttpStatus??200)>=400;
+ // For a stateful adapter an accepted RPC alone is not proof of movement.
+ const next=localDenied?'FAILED':status==='ACKNOWLEDGED'?'ACKNOWLEDGED':
+  status==='SUCCESS'?(targetState?(actualState===targetState?'SUCCESS':actualState?'FAILED':'ACKNOWLEDGED'):'ACKNOWLEDGED'):'FAILED';
  if(['SUCCESS','FAILED','DENIED','TIMEOUT','CANCELLED'].includes(prior.status)){
   const existing=await pool.query('SELECT result_json=$2::jsonb AS same FROM edge_commands WHERE id=$1',[prior.id,JSON.stringify(result)]);
   if(existing.rows[0]?.same!==true)throw new ApiError(409,'command_result_conflict');
@@ -54,12 +61,19 @@ export async function recordEdgeCommandResult(edgeNodeId:string,result:any){
   return {status:'TIMEOUT',idempotent:false};
  }
  const updated=await pool.query(`UPDATE edge_commands SET status=$2,result_json=$3,
-  completed_at=now(),failed_at=CASE WHEN $2='FAILED' THEN now() ELSE NULL END,
+  acknowledged_at=COALESCE(acknowledged_at,now()),completed_at=CASE WHEN $2<>'ACKNOWLEDGED' THEN now() ELSE NULL END,
+  failed_at=CASE WHEN $2='FAILED' THEN now() ELSE NULL END,
   error_code=CASE WHEN $2='FAILED' THEN 'edge_command_rejected' ELSE NULL END,
   updated_at=now()
   WHERE id=$1 AND status IN ('QUEUED','DELIVERED','ACKNOWLEDGED','AUTHORIZED')
   RETURNING status`,[prior.id,next,JSON.stringify(result)]);
  if(!updated.rowCount)throw new ApiError(409,'command_state_conflict');
+ if(next==='SUCCESS'&&actualState){
+  await pool.query(`INSERT INTO edge_telemetry_current(device_inventory_id,telemetry_key,value,source_timestamp)
+   VALUES($1,'state',$2::jsonb,now()) ON CONFLICT(device_inventory_id,telemetry_key)
+   DO UPDATE SET value=EXCLUDED.value,source_timestamp=EXCLUDED.source_timestamp,received_at=now()`,
+  [prior.device_inventory_id,JSON.stringify(actualState)]);
+ }
  await pool.query(`INSERT INTO audit_events(organization_id,action,entity_type,entity_id,details)
   VALUES($1,$2,'edge_command',$3,$4)`,[prior.organization_id,`edge.command.${next.toLowerCase()}`,commandId,
   JSON.stringify({status:next,buildingId:prior.building_id})]);

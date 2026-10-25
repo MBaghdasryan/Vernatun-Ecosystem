@@ -803,9 +803,38 @@ export const EdgeResidentDevicePermittedCapabilitiesItem = {
   BARRIEROPEN: 'BARRIER.OPEN',
 } as const;
 
+export interface AvailableDeviceAction {
+  capability: string;
+  labelKey: string;
+  enabled: boolean;
+  /** @nullable */
+  reason: string | null;
+  confirmation: boolean;
+  adapterVerified: boolean;
+}
+
+export interface DeviceActionAvailability {
+  deviceId: string;
+  online: boolean;
+  /** @nullable */
+  state: string | null;
+  actions: AvailableDeviceAction[];
+  safetyLocked: string[];
+}
+
 export type EdgeResidentDevice = EdgeDevice & {
   permittedCapabilities: EdgeResidentDevicePermittedCapabilitiesItem[];
+  availability?: DeviceActionAvailability;
 };
+
+export interface DeviceCapabilityPolicyInput {
+  /**
+     * @maxItems 30
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  enabledCapabilities: string[];
+}
 
 export type EdgeResidentCommandInputCapability = typeof EdgeResidentCommandInputCapability[keyof typeof EdgeResidentCommandInputCapability];
 
@@ -854,11 +883,16 @@ export type EdgeResidentCommandStatus = typeof EdgeResidentCommandStatus[keyof t
 
 
 export const EdgeResidentCommandStatus = {
-  queued: 'queued',
-  sent: 'sent',
-  completed: 'completed',
-  failed: 'failed',
-  expired: 'expired',
+  REQUESTED: 'REQUESTED',
+  AUTHORIZED: 'AUTHORIZED',
+  DENIED: 'DENIED',
+  QUEUED: 'QUEUED',
+  DELIVERED: 'DELIVERED',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  TIMEOUT: 'TIMEOUT',
+  CANCELLED: 'CANCELLED',
 } as const;
 
 export interface EdgeResidentCommand {

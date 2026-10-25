@@ -17,6 +17,7 @@ INSERT INTO role_permissions(role_key,permission_key)
 SELECT r.role_key,r.permission_key
 FROM (VALUES
  ('platform_admin','edge.config.manage'),
+ ('platform_admin','edge.commands.execute'),('platform_admin','device.barrier.open.building'),('platform_admin','device.barrier.close.building'),
  ('org_admin','edge.commands.execute'),('org_admin','device.read'),
  ('org_admin','device.barrier.open.building'),('org_admin','device.barrier.close.building'),
  ('manager','edge.commands.execute'),('manager','device.barrier.open.building'),('manager','device.barrier.close.building'),
