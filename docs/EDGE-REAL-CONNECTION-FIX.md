@@ -115,3 +115,30 @@ physical relay/lock/service reachable. A TEST organization name is not proof.
 Do not share `.env`, full Agent configuration, bootstrap/access tokens, session
 cookies, or unfiltered logs. Share only the selected health fields and sanitized
 Cloud log codes above.
+
+## Operator evidence received after deployment
+
+The Windows status snapshot provided by the operator reports:
+
+- Cloud health: REACHABLE / HTTP 200.
+- WebSocket: CONNECTED.
+- Heartbeat: SUCCESS, `2026-10-25T22:41:08.866943+00:00`.
+- Inventory: SUCCESS (3 devices), `2026-10-25T22:40:37.298680+00:00`.
+- Queue: 1; no command execution reported.
+- Local command URL in the supplied startup log:
+  `http://host.docker.internal:8091`.
+
+These confirm the corrected transport and timestamp handling from the operator's
+Agent, not direct access to its Windows host from this workspace. Device names
+and Cloud UI/log correlation are not established by the count alone.
+
+The local `registrationState: STARTING` / null HTTP status after restart is an
+Agent v1 status-restoration issue: the in-memory state initializes to STARTING;
+the main loop skips `ensure_registration()` if SQLite already says registered.
+That helper is what would restore the displayed REGISTERED value. Successful
+authenticated WSS/heartbeat/inventory must not trigger another bootstrap to
+correct this display. No Agent patch is included in this Cloud correction.
+
+Queue drainage and simulator isolation remain unverified. Port 8091 and local
+authorization OK do not prove `dry-run-only` or `physicalAction=false`; do not
+send commands before establishing the actual destination's identity and scope.
