@@ -44,3 +44,20 @@ corepack pnpm --filter @workspace/api-server run db:provision:global-accounts --
 Если вход, смена пароля или MFA не завершились успешно, не удаляйте файл до восстановления доступа. Не вставляйте содержимое файла или пароли в чат для диагностики.
 
 Команда не обходит существующие правила MFA и не меняет базу вне указанных двух новых аккаунтов, их ролей и соответствующих записей аудита.
+
+## Read-only проверка после настройки
+
+После смены паролей и включения MFA можно проверить обе роли, активность аккаунтов и MFA администратора. Проверка выполняется в read-only транзакции и не печатает адреса, пароли, хеши, токены или `DATABASE_URL`.
+
+Запустите в Coolify shell API-контейнера, подставив те же адреса:
+
+```bash
+VERNATUN_GLOBAL_ACCOUNT_VERIFY=VERIFY_GLOBAL_ACCOUNTS \
+NODE_ENV=production \
+corepack pnpm --filter @workspace/api-server run db:verify:global-accounts -- \
+  --platform-admin-email=<адрес-администратора> \
+  --support-email=<адрес-поддержки> \
+  --confirm-production-global-account-verification
+```
+
+Успешный результат — `status: "pass"` для обоих ролей и `mfa: "pass"` для `platform_admin`. Любой `fail` завершает команду с кодом выхода 1. Проверка не заменяет фактический повторный вход: подтвердите вход с новыми паролями и TOTP вручную до удаления временного файла.

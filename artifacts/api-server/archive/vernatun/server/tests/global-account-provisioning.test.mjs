@@ -13,6 +13,7 @@ import {
  provisionGlobalAccounts,
  provisioningSuccessSummary,
 } from '../scripts/provision-global-accounts.mjs';
+import { verifyGlobalAccounts } from '../scripts/verify-global-accounts.mjs';
 
 const databaseUrl=process.env.DATABASE_URL;
 if(process.env.NODE_ENV!=='test'||!databaseUrl||new URL(databaseUrl).pathname!=='/vernatun_test'){
@@ -89,6 +90,28 @@ try{
    )).rows;
    assert.deepEqual(assignments.map(row=>row.role_key),['platform_admin','support']);
    assert.ok(assignments.every(row=>row.organization_id===null&&row.active&&row.assignment_status==='active'));
+
+    const admin=users.find(user=>user.email===accounts[0].email);
+    assert.ok(admin);
+    await client.query(
+     'INSERT INTO mfa_credentials(user_id,secret_encrypted,enabled) VALUES($1,$2,true)',
+     [admin.id,'test-only-encrypted-secret'],
+    );
+    try{
+     const verification=await verifyGlobalAccounts({
+      client,accounts,
+      expectedDatabase:identity.database,
+      expectedSchema:identity.schema,
+     });
+     assert.equal(verification.status,'pass');
+     assert.deepEqual(verification.accounts.map(account=>account.role),['platform_admin','support']);
+     assert.equal(verification.accounts[0].checks.mfa,'pass');
+     const verificationOutput=JSON.stringify(verification);
+     for(const account of accounts)assert.equal(verificationOutput.includes(account.email),false);
+     assert.equal(verificationOutput.includes('password_hash'),false);
+    }finally{
+     await client.query('DELETE FROM mfa_credentials WHERE user_id=$1',[admin.id]);
+    }
 
    const audit=(await client.query(
     `SELECT action,entity_id,actor_user_id,details
