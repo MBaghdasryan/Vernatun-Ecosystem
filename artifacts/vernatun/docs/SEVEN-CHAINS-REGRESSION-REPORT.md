@@ -1,6 +1,6 @@
 # Seven-chain isolated regression report
 
-- Run: 2026-10-25T08:01:21.886Z
+- Run: 2026-10-25T09:55:18.615Z
 - Result: PASS
 - Target: isolated database `vernatun_test`; each journey receives its own random schema. CI supplies disposable PostgreSQL and configures no production credentials.
 - External services: `NODE_ENV=test` selects the development outbox; this CI job does not provide mail, payment, banking, or production secrets.

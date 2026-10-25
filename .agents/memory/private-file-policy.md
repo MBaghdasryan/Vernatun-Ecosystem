@@ -53,3 +53,21 @@ not thereby gain access to the customer's entire document catalog.
 versioning is introduced, pin the exact shared version before allowing a parent
 document to change: consent to one attachment is not consent to future replacement
 content. Include case-shared versions in the live-reference cleanup inventory.
+
+App Storage can emit a transient `MaxListenersExceededWarning` for a single
+Google Storage HTTP response because nested SDK pipelines attach their own
+error/close listeners. Do not suppress it by raising listener limits or changing
+the storage provider. Verify the response reaches `destroyed`/`readableEnded` and
+that repeated PDF generation does not create additional open streams.
+
+**Why:** Isolated phase-six tracing showed the warning on a node-fetch response
+passing through three SDK pipelines; the response closed shortly after the API
+operation completed. The phase-six test worker had no open PassThrough streams
+at exit. Separate instrumentation also saw other node-fetch streams in the
+`tsx --test` parent process; their origin was not attributed to protocol generation.
+
+**How to apply:** Attribute warnings by tracing stream origin and lifecycle.
+`protocolPdf` returns a Buffer and does not own the App Storage transport stream;
+check the test worker and parent runner separately before claiming all processes
+are leak-free. Change or upgrade the transport dependency only after a repeatable
+leak is attributed to that dependency.

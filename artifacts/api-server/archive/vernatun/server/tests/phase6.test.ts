@@ -124,8 +124,13 @@ test('protocol is generated only after end, as a private Unicode PDF and immutab
  const p={key:randomUUID(),version:2,action:'finalize'},f=await clients.manager.call(`/governance/meetings/${meeting.id}/actions`,'POST',p);
  assert.equal(f.status,200,JSON.stringify(f.data));assert.equal(f.data.status,'finalized');assert.ok(f.data.protocol_document_id);
  assert.equal((await clients.manager.call(`/governance/meetings/${meeting.id}/actions`,'POST',p)).data.protocol_document_id,f.data.protocol_document_id);
+ assert.equal((await pool.query('SELECT count(*)::int AS count FROM meeting_results WHERE meeting_id=$1',[meeting.id])).rows[0].count,1);
+ assert.equal((await pool.query('SELECT count(*)::int AS count FROM documents WHERE id=$1',[f.data.protocol_document_id])).rows[0].count,1);
  const pdf=await clients.unit_owner.call('/documents/'+f.data.protocol_document_id+'/download');assert.equal(pdf.status,200);assert.equal(pdf.data.subarray(0,5).toString(),'%PDF-');assert.ok(pdf.data.length>1000);
- const bytes=await protocolPdf({...meeting,title:'Հայերեն русский',description:'Ստուգում'}, {totalEligibleShare:10000,participationShare:10000,agenda:[]});assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
+ for(let attempt=0;attempt<12;attempt++){
+  const bytes=await protocolPdf({...meeting,title:'Հայերեն русский',description:'Ստուգում'}, {totalEligibleShare:10000,participationShare:10000,agenda:[]});
+  assert.ok(Buffer.isBuffer(bytes));assert.equal(bytes.subarray(0,5).toString(),'%PDF-');assert.ok(bytes.length>1000);
+ }
  await assert.rejects(pool.query('UPDATE meeting_results SET result=$2 WHERE meeting_id=$1',[meeting.id,'{}']),/append-only/);
 });
 test('portfolio exact arithmetic, recorded budget CAS, real series and contractor history',async()=>{
