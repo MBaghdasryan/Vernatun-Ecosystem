@@ -83,6 +83,77 @@ test('Queue search, status counts, building filters and pagination preserve orga
  assert.deepEqual(filtered.data.stats,[{status:'new',count:27}]);
 });
 
+test('Dispatcher queue KPIs respect SLA time, executor and organization/building/unit scopes',async()=>{
+ const f=seeded.fixtures,token='HAYAT KPI '+randomUUID();
+ const otherUnit=(await pool.query(
+  'INSERT INTO units(organization_id,building_id,number,area,is_demo) VALUES($1,$2,$3,42,true) RETURNING id',
+  [f.orgA,f.ba,'KPI-'+randomUUID().slice(0,8)]
+ )).rows[0].id;
+ async function add(label:string,unitId:string,status:string,dueOffset:string,technicianId?:string){
+  const request=(await pool.query(`INSERT INTO resident_requests(organization_id,unit_id,author_user_id,subject,description,status)
+   VALUES($1,$2,$3,$4,'Queue KPI isolation',$5) RETURNING id`,
+   [f.orgA,unitId,seeded.accounts.unit_owner.id,token+' '+label,status])).rows[0];
+  if(technicianId)await pool.query(`INSERT INTO work_orders(request_id,technician_id,assigned_by,status)
+   VALUES($1,$2,$3,$4)`,[request.id,technicianId,seeded.accounts.dispatcher.id,status]);
+  await pool.query(`INSERT INTO request_sla_deadlines(request_id,kind,due_at)
+   VALUES($1,'assignment',now()+$2::interval)`,[request.id,dueOffset]);
+  return request.id;
+ }
+ await add('assigned-state-without-executor',f.ua,'assigned','-1 hour');
+ await add('overdue-assigned',f.ua,'in_progress','-1 hour',seeded.accounts.technician.id);
+ await add('future-unassigned',f.ua,'new','+1 hour');
+ await add('other-unit-overdue',otherUnit,'new','-1 hour');
+ await add('closed-past-deadline',f.ua,'closed','-1 hour');
+
+ const query='/hayat/queue?search='+encodeURIComponent(token);
+ const dispatcher=await clients.dispatcher.call(query);
+ assert.equal(dispatcher.status,200);
+ assert.deepEqual(dispatcher.data.metrics,{unassigned:3,overdue:3});
+ assert.equal(dispatcher.data.total,5);
+ const unassigned=await clients.dispatcher.call(query+'&focus=unassigned');
+ assert.equal(unassigned.data.total,3);
+ assert.ok(unassigned.data.rows.every((r:any)=>r.unassigned));
+ const overdue=await clients.dispatcher.call(query+'&focus=overdue');
+ assert.equal(overdue.data.total,3);
+ assert.ok(overdue.data.rows.every((r:any)=>r.overdue));
+ const allRows=dispatcher.data.rows;
+ assert.equal(allRows.find((r:any)=>r.subject.endsWith('assigned-state-without-executor')).unassigned,true);
+ assert.equal(allRows.find((r:any)=>r.subject.endsWith('future-unassigned')).overdue,false);
+ assert.equal(allRows.find((r:any)=>r.subject.endsWith('overdue-assigned')).unassigned,false);
+ assert.equal(allRows.find((r:any)=>r.subject.endsWith('closed-past-deadline')).overdue,false);
+ assert.equal((await clients.dispatcher.call(query+'&status=closed')).data.total,1);
+
+ const sameBuilding=await clients.dispatcher.call(query+'&building='+f.ba);
+ assert.deepEqual(sameBuilding.data.metrics,{unassigned:3,overdue:3});
+ const foreignBuilding=await clients.dispatcher.call(query+'&building='+f.bb);
+ assert.equal(foreignBuilding.data.total,0);
+ assert.deepEqual(foreignBuilding.data.metrics,{unassigned:0,overdue:0});
+
+ const manager=await clients.manager.call(query);
+ assert.deepEqual(manager.data.metrics,{unassigned:3,overdue:3});
+ const technician=await clients.technician.call(query);
+ assert.equal(technician.data.total,1);
+ assert.deepEqual(technician.data.metrics,{unassigned:0,overdue:1});
+ assert.equal((await clients.unit_owner.call(query)).status,403);
+
+ const assignment=(await pool.query(`INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id)
+  VALUES($1,$2,'dispatcher',$3,$4) RETURNING id`,
+  [seeded.accounts.dispatcher.id,f.orgA,f.ba,f.ua])).rows[0].id;
+ try{
+  const unitScoped=await new Client().login('dispatcher');
+  const session=await unitScoped.call('/auth/session');
+  const scopedContext=session.data.contexts.find((c:any)=>c.id===assignment);
+  assert.ok(scopedContext);
+  assert.equal((await unitScoped.call('/auth/context','POST',{id:assignment})).status,200);
+  const scopedQueue=await unitScoped.call(query);
+  assert.equal(scopedQueue.data.total,4);
+  assert.deepEqual(scopedQueue.data.metrics,{unassigned:2,overdue:2});
+  assert.equal((await unitScoped.call(query+'&focus=unassigned')).data.total,2);
+ }finally{
+  await pool.query('DELETE FROM role_assignments WHERE id=$1',[assignment]);
+ }
+});
+
 test('Technicians and contractors see only personally assigned scoped records',async()=>{
  for(const role of ['technician','contractor']){
   const result=await clients[role].call('/hayat/queue');

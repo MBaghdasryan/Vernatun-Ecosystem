@@ -79,10 +79,11 @@
     "/hayat/queue": {
       "get": {
         "summary": "HAYAT role-scoped paginated work, defect or visitor-pass queue",
-        "description": "Active server context only: manager/dispatcher need requests.read, technician needs workorders.assigned, contractor needs defects.assigned, security needs access.validate. Modules and organization/building/unit/personal assignment scopes are enforced. Read-only repeatable-read snapshot. Status statistics ignore the selected status but include search/building filters.",
+        "description": "Active server context only: manager/dispatcher need requests.read, technician needs workorders.assigned, contractor needs defects.assigned, security needs access.validate. Modules and organization/building/unit/personal assignment scopes are enforced. Read-only repeatable-read snapshot. Status statistics and operational metrics ignore status/focus drills but include search, building, priority and authorized scope filters. Operational metrics are returned for the request/work-order queue.",
         "parameters": [
           {"name":"search","in":"query","schema":{"type":"string","maxLength":200,"default":""}},
           {"name":"status","in":"query","schema":{"type":"string","maxLength":40,"default":""}},
+          {"name":"focus","in":"query","schema":{"type":"string","enum":["","unassigned","overdue"],"default":""}},
           {"name":"building","in":"query","schema":{"type":"string","format":"uuid"}},
           {"name":"page","in":"query","schema":{"type":"integer","minimum":0,"maximum":100000,"default":0}}
         ],
@@ -92,9 +93,10 @@
             "content": {"application/json":{"schema":{
               "type":"object","required":["rows","total","stats","buildings","pageSize","serverTime"],
               "properties":{
-                "rows":{"type":"array","maxItems":24,"items":{"type":"object"}},
+                "rows":{"type":"array","maxItems":24,"items":{"type":"object","properties":{"unassigned":{"type":"boolean"},"overdue":{"type":"boolean"}}}},
                 "total":{"type":"integer","minimum":0},
                 "stats":{"type":"array","items":{"type":"object","properties":{"status":{"type":"string"},"count":{"type":"integer"}}}},
+                "metrics":{"type":"object","description":"Operational roles only; counts use the same search/building/priority and server-authorized scope as the queue.","properties":{"unassigned":{"type":"integer","minimum":0},"overdue":{"type":"integer","minimum":0}}},
                 "buildings":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"name":{"type":"string"}}}},
                 "pageSize":{"type":"integer","const":24},"serverTime":{"type":"string","format":"date-time"}
               }

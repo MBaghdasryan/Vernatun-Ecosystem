@@ -9,6 +9,7 @@ hayat.use(requireAuth);
 const querySchema=z.object({
  search:z.string().trim().max(200).default(''),
  status:z.string().max(40).default(''),
+ focus:z.enum(['','unassigned','overdue']).default(''),
  priority:z.enum(['','low','normal','high','urgent','emergency']).default(''),
  sort:z.enum(['created','priority','due']).default('priority'),
  building:z.string().uuid().optional(),
@@ -25,7 +26,8 @@ hayat.get('/hayat/queue',async(req,res)=>{
  await requirePermission(req,contractor?'defects.assigned':security?'access.validate':technician?'workorders.assigned':'requests.read');
  const q=querySchema.parse(req.query);
  const source=contractor?`
-  SELECT d.id,d.subject,d.description,d.status,d.version,d.created_at,d.due_on,d.location,
+   SELECT d.id,d.subject,d.description,d.status,d.version,d.created_at,d.due_on,d.location,
+    false AS unassigned,false AS overdue,
    u.number,u.building_id,b.name AS building_name,t.name AS technician_name,NULL::uuid AS work_order_id
   FROM defects d JOIN units u ON u.id=d.unit_id JOIN buildings b ON b.id=u.building_id
   LEFT JOIN users t ON t.id=d.contractor_id
@@ -36,7 +38,7 @@ hayat.get('/hayat/queue',async(req,res)=>{
    CASE WHEN p.revoked_at IS NOT NULL THEN 'revoked'
     WHEN p.valid_until<=now() THEN 'expired'
     WHEN p.valid_from>now() THEN 'waiting' ELSE p.state END AS status,
-   0 AS version,p.created_at,p.valid_from,p.valid_until,
+    0 AS version,p.created_at,p.valid_from,p.valid_until,false AS unassigned,false AS overdue,
    u.number,u.building_id,b.name AS building_name,NULL::text AS technician_name,NULL::uuid AS work_order_id
   FROM visitor_passes p JOIN units u ON u.id=p.unit_id JOIN buildings b ON b.id=u.building_id
   WHERE p.organization_id=$1 AND ($2::uuid IS NULL OR u.building_id=$2)
@@ -46,7 +48,8 @@ hayat.get('/hayat/queue',async(req,res)=>{
    r.version,r.created_at,u.number,COALESCE(r.building_id,u.building_id) AS building_id,b.name AS building_name,
     t.name AS technician_name,w.id AS work_order_id,w.checklist,r.priority,r.source,r.category_id,w.accepted_at,w.paused_at,w.blocked_reason,
     (SELECT min(d.due_at) FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AS due_at,
-    EXISTS(SELECT 1 FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND d.due_at<now() AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AND r.status<>'closed' AS overdue,
+     w.technician_id IS NULL AND COALESCE(w.status,r.status)<>'closed' AS unassigned,
+     EXISTS(SELECT 1 FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND d.due_at<now() AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AND COALESCE(w.status,r.status)<>'closed' AS overdue,
     (SELECT starts_at FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_start,
     (SELECT ends_at FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_end,
     (SELECT status FROM request_visits v WHERE v.request_id=r.id AND v.status IN('proposed','confirmed') LIMIT 1) AS visit_status
@@ -71,8 +74,16 @@ hayat.get('/hayat/queue',async(req,res)=>{
  try{
   await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   const stats=(await db.query(`${cte} SELECT status,count(*)::int AS count FROM filtered GROUP BY status ORDER BY status`,values)).rows;
-    const filtered=`${cte} SELECT * FROM filtered WHERE ($${values.length+1}::text='' OR status=$${values.length+1})`;
-    const filterValues=[...values,q.status];
+  const queueMetrics=operational?(await db.query(`${cte}
+   SELECT count(*) FILTER(WHERE unassigned)::int AS unassigned,
+    count(*) FILTER(WHERE overdue)::int AS overdue
+   FROM filtered`,values)).rows[0]:undefined;
+  const filtered=`${cte} SELECT * FROM filtered
+   WHERE ($${values.length+1}::text='' OR status=$${values.length+1})
+    AND ($${values.length+2}::text=''
+     OR ($${values.length+2}::text='unassigned' AND unassigned)
+     OR ($${values.length+2}::text='overdue' AND overdue))`;
+  const filterValues=[...values,q.status,q.focus];
    const total=(await db.query(`SELECT count(*)::int AS total FROM (${filtered}) x`,filterValues)).rows[0].total;
   const rows=(await db.query(`${filtered}
    ORDER BY CASE WHEN status IN ('closed','accepted','exited','expired','revoked') THEN 1 ELSE 0 END,
@@ -87,7 +98,7 @@ hayat.get('/hayat/queue',async(req,res)=>{
    values.slice(0,4))).rows;
   const serverTime=(await db.query('SELECT now() AS time')).rows[0].time;
   await db.query('COMMIT');
-  res.json({rows,total,stats,buildings,pageSize:24,serverTime});
+   res.json({rows,total,stats,metrics:queueMetrics,buildings,pageSize:24,serverTime});
  }catch(error){await db.query('ROLLBACK');throw error}
  finally{db.release()}
 });
