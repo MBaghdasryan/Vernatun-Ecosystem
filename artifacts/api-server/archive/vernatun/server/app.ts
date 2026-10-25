@@ -3,6 +3,7 @@ import {staffAvailability} from './staff-availability.js';
 import {unitPlans} from './unit-plans.js';
 import {handoverReadiness} from './handover-readiness.js';
 import {systemCenter} from './system-center.js';
+import {systemUpdateCallbacks} from './system-update-callbacks.js';
 import {externalApi} from './system-api.js';
 import {systemRequestLog,safeCode} from './system-observability.js';
 import {safeDatabaseFailure} from './system-diagnostics.js';
@@ -91,6 +92,9 @@ app.use('/api/edge/v2',edgeMachineApiV2);
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(sessionRevocationGuard);
 app.use(passport.initialize());app.use(passport.session());
+// Update callbacks authenticate with a per-release bearer token, not a browser session.
+// Keep the exception path-scoped; all other mutating API routes retain CSRF protection.
+app.use('/api/system/updates',systemUpdateCallbacks);
 app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['GET','HEAD','OPTIONS'].includes(req.method))return next();const origin=req.headers.origin;if(origin&&origin!==config.APP_ORIGIN)return next(new ApiError(403,'csrf_invalid'));const expected=req.session.csrf;const actual=req.get('X-CSRF-Token');if(!expected||!actual||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return next(new ApiError(403,'csrf_invalid'));next()});
 app.use('/api',edgeManagementApi);
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});

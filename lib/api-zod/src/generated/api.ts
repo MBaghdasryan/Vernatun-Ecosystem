@@ -1869,7 +1869,7 @@ export const InstallSystemUpdateBody = zod.object({
   "confirmation": zod.enum(['INSTALL UPDATE'])
 })
 
-export const InstallSystemUpdateResponse = zod.void()
+export const InstallSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
 
 
 export const RollbackSystemUpdateParams = zod.object({
@@ -1880,7 +1880,61 @@ export const RollbackSystemUpdateBody = zod.object({
   "confirmation": zod.enum(['ROLLBACK UPDATE'])
 })
 
-export const RollbackSystemUpdateResponse = zod.void()
+export const RollbackSystemUpdateResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * Internal deployment-pipeline callback authenticated with a one-release bearer token.
+ */
+export const ReportSystemUpdatePipelineResultParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const reportSystemUpdatePipelineResultBodyDeploymentIdMax = 128;
+
+export const reportSystemUpdatePipelineResultBodyReleaseRefMax = 320;
+
+
+export const reportSystemUpdatePipelineResultBodyReleaseRefRegExp = new RegExp('^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$');
+export const reportSystemUpdatePipelineResultBodyPreviousReleaseRefMax = 320;
+
+
+export const reportSystemUpdatePipelineResultBodyPreviousReleaseRefRegExp = new RegExp('^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$');
+export const reportSystemUpdatePipelineResultBodyMigrationBaselineVersionMax = 100;
+
+export const reportSystemUpdatePipelineResultBodyMigrationSchemaVersionMax = 100;
+
+export const reportSystemUpdatePipelineResultBodyRollbackReleaseRefMax = 320;
+
+
+export const reportSystemUpdatePipelineResultBodyRollbackReleaseRefRegExp = new RegExp('^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$');
+
+
+export const ReportSystemUpdatePipelineResultBody = zod.object({
+  "jobId": zod.string().uuid(),
+  "result": zod.enum(['deployed', 'deployment_rolled_back', 'deployment_failed', 'rollback_succeeded', 'rollback_failed']),
+  "backupId": zod.string().uuid(),
+  "deploymentId": zod.string().max(reportSystemUpdatePipelineResultBodyDeploymentIdMax).nullable(),
+  "releaseRef": zod.string().max(reportSystemUpdatePipelineResultBodyReleaseRefMax).regex(reportSystemUpdatePipelineResultBodyReleaseRefRegExp).nullable(),
+  "previousReleaseRef": zod.string().max(reportSystemUpdatePipelineResultBodyPreviousReleaseRefMax).regex(reportSystemUpdatePipelineResultBodyPreviousReleaseRefRegExp).nullable(),
+  "migration": zod.object({
+  "preflight": zod.enum(['passed', 'failed']),
+  "driftFree": zod.boolean(),
+  "baselineVersion": zod.string().max(reportSystemUpdatePipelineResultBodyMigrationBaselineVersionMax).nullable(),
+  "schemaVersion": zod.string().max(reportSystemUpdatePipelineResultBodyMigrationSchemaVersionMax).nullable(),
+  "result": zod.enum(['not_required', 'applied', 'not_attempted', 'failed'])
+}),
+  "healthCheck": zod.object({
+  "status": zod.enum(['passed', 'failed']),
+  "checkedAt": zod.coerce.date()
+}),
+  "rollback": zod.object({
+  "status": zod.enum(['not_required', 'succeeded', 'failed']),
+  "releaseRef": zod.string().max(reportSystemUpdatePipelineResultBodyRollbackReleaseRefMax).regex(reportSystemUpdatePipelineResultBodyRollbackReleaseRefRegExp).nullable()
+})
+})
+
+export const ReportSystemUpdatePipelineResultResponse = zod.unknown()
 
 
 

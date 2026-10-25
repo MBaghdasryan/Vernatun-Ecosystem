@@ -3282,6 +3282,109 @@ export interface DefectCollaboration {
   reports: DefectEvidenceReport[];
 }
 
+export type ReleasePipelineCallbackInputResult = typeof ReleasePipelineCallbackInputResult[keyof typeof ReleasePipelineCallbackInputResult];
+
+
+export const ReleasePipelineCallbackInputResult = {
+  deployed: 'deployed',
+  deployment_rolled_back: 'deployment_rolled_back',
+  deployment_failed: 'deployment_failed',
+  rollback_succeeded: 'rollback_succeeded',
+  rollback_failed: 'rollback_failed',
+} as const;
+
+export type ReleasePipelineCallbackInputMigrationPreflight = typeof ReleasePipelineCallbackInputMigrationPreflight[keyof typeof ReleasePipelineCallbackInputMigrationPreflight];
+
+
+export const ReleasePipelineCallbackInputMigrationPreflight = {
+  passed: 'passed',
+  failed: 'failed',
+} as const;
+
+export type ReleasePipelineCallbackInputMigrationResult = typeof ReleasePipelineCallbackInputMigrationResult[keyof typeof ReleasePipelineCallbackInputMigrationResult];
+
+
+export const ReleasePipelineCallbackInputMigrationResult = {
+  not_required: 'not_required',
+  applied: 'applied',
+  not_attempted: 'not_attempted',
+  failed: 'failed',
+} as const;
+
+export type ReleasePipelineCallbackInputMigration = {
+  preflight: ReleasePipelineCallbackInputMigrationPreflight;
+  driftFree: boolean;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  baselineVersion: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  schemaVersion: string | null;
+  result: ReleasePipelineCallbackInputMigrationResult;
+};
+
+export type ReleasePipelineCallbackInputHealthCheckStatus = typeof ReleasePipelineCallbackInputHealthCheckStatus[keyof typeof ReleasePipelineCallbackInputHealthCheckStatus];
+
+
+export const ReleasePipelineCallbackInputHealthCheckStatus = {
+  passed: 'passed',
+  failed: 'failed',
+} as const;
+
+export type ReleasePipelineCallbackInputHealthCheck = {
+  status: ReleasePipelineCallbackInputHealthCheckStatus;
+  checkedAt: string;
+};
+
+export type ReleasePipelineCallbackInputRollbackStatus = typeof ReleasePipelineCallbackInputRollbackStatus[keyof typeof ReleasePipelineCallbackInputRollbackStatus];
+
+
+export const ReleasePipelineCallbackInputRollbackStatus = {
+  not_required: 'not_required',
+  succeeded: 'succeeded',
+  failed: 'failed',
+} as const;
+
+export type ReleasePipelineCallbackInputRollback = {
+  status: ReleasePipelineCallbackInputRollbackStatus;
+  /**
+     * @maxLength 320
+     * @nullable
+     * @pattern ^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$
+     */
+  releaseRef: string | null;
+};
+
+export interface ReleasePipelineCallbackInput {
+  jobId: string;
+  result: ReleasePipelineCallbackInputResult;
+  backupId: string;
+  /**
+     * @maxLength 128
+     * @nullable
+     */
+  deploymentId: string | null;
+  /**
+     * @maxLength 320
+     * @nullable
+     * @pattern ^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$
+     */
+  releaseRef: string | null;
+  /**
+     * @maxLength 320
+     * @nullable
+     * @pattern ^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$
+     */
+  previousReleaseRef: string | null;
+  migration: ReleasePipelineCallbackInputMigration;
+  healthCheck: ReleasePipelineCallbackInputHealthCheck;
+  rollback: ReleasePipelineCallbackInputRollback;
+}
+
 export type RoleInsightCardCurrency = typeof RoleInsightCardCurrency[keyof typeof RoleInsightCardCurrency];
 
 
@@ -3968,6 +4071,8 @@ export type InstallSystemUpdateBody = {
   confirmation: InstallSystemUpdateBodyConfirmation;
 };
 
+export type InstallSystemUpdate202 = { [key: string]: unknown };
+
 export type InstallSystemUpdate409 = { [key: string]: unknown };
 
 export type RollbackSystemUpdateBodyConfirmation = typeof RollbackSystemUpdateBodyConfirmation[keyof typeof RollbackSystemUpdateBodyConfirmation];
@@ -3980,6 +4085,8 @@ export const RollbackSystemUpdateBodyConfirmation = {
 export type RollbackSystemUpdateBody = {
   confirmation: RollbackSystemUpdateBodyConfirmation;
 };
+
+export type RollbackSystemUpdate202 = { [key: string]: unknown };
 
 export type RollbackSystemUpdate409 = { [key: string]: unknown };
 

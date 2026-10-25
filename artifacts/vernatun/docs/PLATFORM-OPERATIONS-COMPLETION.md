@@ -28,9 +28,9 @@ Current implementation status. The eight-phase prompt is
 | Extensions | NOT IMPLEMENTED | Policy enforced | No extension package registry or executable plugin support; arbitrary archive/script execution is disabled |
 | Update Upload | COMPLETE | Private App Storage + isolated tests | ZIP package upload is bounded, rate-limited, private and recorded in update history |
 | Update Validation | COMPLETE | Isolated tests | Manifest, checksums, paths, file types, size, compression ratio, expected app structure and compatibility are checked; package is never extracted or executed |
-| Update Staging | PARTIAL | Real + isolated tests | Requires a compatible package and verified database backup; no automatic update-triggered backup creation |
-| Update Installation | NOT SUPPORTED BY CURRENT DEPLOYMENT | Runtime boundary | Current deployment filesystem is not a safe persistent installation target; deploy through the configured pipeline |
-| Rollback | NOT SUPPORTED BY CURRENT DEPLOYMENT | Runtime boundary | Runtime rollback is blocked; use deployment history and verified recovery procedures |
+| Update Staging | COMPLETE | Real + isolated tests | Requires a compatible package and verified database backup at the recorded migration baseline; protects the backup for at least 30 more days |
+| Update Installation | PARTIAL | Real + isolated tests | Rechecks the package digest, backup status and migration baseline, then transfers the immutable ZIP to a configured release pipeline; the external pipeline must build and deploy a digest-pinned image |
+| Rollback | PARTIAL | Real + isolated tests | Sends only a previously recorded immutable image reference to the release pipeline; deployment health and rollback outcomes are recorded through an authenticated callback |
 | Environment | COMPLETE | Real + isolated tests | Fixed allowlist of runtime/provider modes and secret configured/not-configured flags, no arbitrary environment enumeration |
 | Payments integration framework | PARTIAL | Existing business ledger only | General provider-capability framework still to build |
 | Concrete payment provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
@@ -38,9 +38,10 @@ Current implementation status. The eight-phase prompt is
 | Concrete bank provider | NOT IMPLEMENTED | — | Intentionally excluded by prompt |
 | Manual bank statement import | COMPLETE | Existing implementation, unchanged | Not re-tested or modified in this increment |
 
-Next scope: complete the deployment-native update/rollback path, register real
-core-module dependency/version metadata and organization-admin controls, and finish
-authenticated browser/production acceptance. Do not equate staging with installation.
+Next scope: configure and verify the external release pipeline on a Coolify
+staging resource, register real core-module dependency/version metadata and
+organization-admin controls, and finish authenticated browser/production
+acceptance. Do not equate staging with installation.
 
 ## Update Center and module-registry increment — 2026-10-22
 
@@ -50,9 +51,9 @@ authenticated browser/production acceptance. Do not equate staging with installa
   paths, duplicate entries, encrypted/unsupported compression, ZIP64, symlinks and
   executable/special files, size/ratio overruns, CRC failures, invalid manifests and
   incomplete app structure. Accepted packages are stored in private App Storage.
-- Staging requires current-version compatibility and a completed, verified database
-  or full-data backup. Install and rollback return `manual_deployment_required`;
-  no package code or application files are changed by the runtime.
+- Staging requires current-version compatibility, a completed verified database or
+  full-data backup, and a matching migration baseline. Install and rollback still
+  never replace files in the running API process.
 - Added additive migration `037_platform_updates.sql`. It passed the isolated
   `vernatun_test` migration and system test run. The live Coolify database was not
   queried or changed; production migration planning/application remains separate.
@@ -66,6 +67,29 @@ authenticated browser/production acceptance. Do not equate staging with installa
 - `VERNATUN_APP_VERSION` is not known to this build. Upload validation can inspect
   package structure and checksums, but compatibility remains unknown until the
   deployment records its current release version.
+
+## Coolify-compatible immutable release handoff
+
+- Added a deployment-pipeline handoff for the prepared ZIP. The API rechecks its
+  SHA-256 digest, the selected backup's completed/verified state and the exact
+  migration baseline immediately before dispatch. Staging extends the backup's
+  retention by at least 30 days.
+- The handoff is disabled unless the HTTPS pipeline endpoint, public callback base
+  URL and a 32-character-or-longer pipeline token are configured. The archive is
+  sent as the request body with a stable idempotency key; the application runtime
+  does not unpack or execute it.
+- The pipeline must build and retain an immutable OCI image reference, run the
+  Coolify migration preflight before switching releases, verify the Coolify health
+  check, and restore the previous image if the new release is unhealthy. It reports
+  a pinned image digest and migration/health/rollback evidence using a one-release
+  callback token. API audit events record accepted and rejected requests/results.
+- Manual rollback is allowed only after a successful deployment has recorded a
+  previous immutable image. It changes the application image only; it does not
+  reverse migrations, restore a database or remove data.
+- The pipeline contract and Coolify setup requirements are in
+  `VERNATUN-RELEASE-PIPELINE.md`. No release-pipeline URL/token is configured in
+  this Replit environment, and no Coolify resource, production database or live
+  deployment was contacted or changed. End-to-end Coolify acceptance remains open.
 
 ## Storage, cache, sessions, retention and encryption increment
 

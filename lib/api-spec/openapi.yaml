@@ -1087,7 +1087,7 @@ paths:
                 confirmation: {type: string, enum: ["STAGE UPDATE"]}
       responses:
         '200':
-          description: Validated update staged with a verified database backup; deployment still requires the configured deployment pipeline
+          description: Compatible update staged with a verified backup and the current migration baseline
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
@@ -1109,11 +1109,17 @@ paths:
               properties:
                 confirmation: {type: string, enum: ["INSTALL UPDATE"]}
       responses:
-        '409':
-          description: Runtime file replacement is not supported; manual deployment is required
+        '202':
+          description: Immutable update artifact accepted by the configured release pipeline
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
+        '409':
+          description: Staging, backup, migration, or deployment preflight is not satisfied
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '503': {description: Release pipeline is not configured}
   /system/updates/{id}/rollback:
     parameters:
       - name: id
@@ -1132,11 +1138,37 @@ paths:
               properties:
                 confirmation: {type: string, enum: ["ROLLBACK UPDATE"]}
       responses:
-        '409':
-          description: Runtime rollback is not supported; use deployment history and verified backup recovery
+        '202':
+          description: Previous immutable release accepted by the configured rollback pipeline
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
+        '409':
+          description: Previous immutable release, verified backup, or migration baseline is not available
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '503': {description: Release pipeline is not configured}
+  /system/updates/{id}/pipeline-result:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: reportSystemUpdatePipelineResult
+      security:
+        - ApiKeyBearer: []
+      description: Internal deployment-pipeline callback authenticated with a one-release bearer token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReleasePipelineCallbackInput'}
+      responses:
+        '200': {description: Pipeline result accepted or safely deduplicated}
+        '401': {description: Invalid or expired release callback token}
+        '409': {description: Callback does not match the active release action or required evidence}
   /system/api:
     get:
       operationId: getApiCenter
@@ -5477,6 +5509,41 @@ components:
         reports:
           type: array
           items: { $ref: '#/components/schemas/DefectEvidenceReport' }
+    ReleasePipelineCallbackInput:
+      type: object
+      additionalProperties: false
+      required: [jobId, result, backupId, deploymentId, releaseRef, previousReleaseRef, migration, healthCheck, rollback]
+      properties:
+        jobId: {type: string, format: uuid}
+        result: {type: string, enum: [deployed, deployment_rolled_back, deployment_failed, rollback_succeeded, rollback_failed]}
+        backupId: {type: string, format: uuid}
+        deploymentId: {type: [string, 'null'], maxLength: 128}
+        releaseRef: {type: [string, 'null'], maxLength: 320, pattern: '^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$'}
+        previousReleaseRef: {type: [string, 'null'], maxLength: 320, pattern: '^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$'}
+        migration:
+          type: object
+          additionalProperties: false
+          required: [preflight, driftFree, baselineVersion, schemaVersion, result]
+          properties:
+            preflight: {type: string, enum: [passed, failed]}
+            driftFree: {type: boolean}
+            baselineVersion: {type: [string, 'null'], maxLength: 100}
+            schemaVersion: {type: [string, 'null'], maxLength: 100}
+            result: {type: string, enum: [not_required, applied, not_attempted, failed]}
+        healthCheck:
+          type: object
+          additionalProperties: false
+          required: [status, checkedAt]
+          properties:
+            status: {type: string, enum: [passed, failed]}
+            checkedAt: {type: string, format: date-time}
+        rollback:
+          type: object
+          additionalProperties: false
+          required: [status, releaseRef]
+          properties:
+            status: {type: string, enum: [not_required, succeeded, failed]}
+            releaseRef: {type: [string, 'null'], maxLength: 320, pattern: '^[a-z0-9._/-]{1,240}@sha256:[a-f0-9]{64}$'}
     RoleInsightCard:
       type: object
       required: [key, value, definition, queryId, permission, module, scope, dataState, noDataBehavior]

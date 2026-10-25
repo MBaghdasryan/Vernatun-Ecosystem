@@ -202,7 +202,7 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
     {current==='sessions'&&<SessionsPanel key={ck+':s'} ck={ck} l={l} canRevoke={c.permissions.includes('sessions.revoke')}/>}
     {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}
      {current==='modules'&&<SystemModules key={ck+':m'} language={l} canRead={c.permissions.includes('plugins.read')}/>}
-     {current==='updates'&&<SystemUpdates key={ck+':u'} language={l} canRead={c.permissions.includes('updates.read')} canUpload={c.permissions.includes('updates.upload')} canStage={c.permissions.includes('updates.upload')} canBackups={c.permissions.includes('backups.read')}/>}
+     {current==='updates'&&<SystemUpdates key={ck+':u'} language={l} canRead={c.permissions.includes('updates.read')} canUpload={c.permissions.includes('updates.upload')} canStage={c.permissions.includes('updates.upload')} canInstall={c.permissions.includes('updates.install')} canRollback={c.permissions.includes('updates.rollback')} canBackups={c.permissions.includes('backups.read')}/>}
   </div>
  </div>;
 }

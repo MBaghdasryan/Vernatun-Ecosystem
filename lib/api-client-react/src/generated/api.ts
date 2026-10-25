@@ -162,6 +162,7 @@ import type {
   ImplementationDiagnostics,
   IncidentInput,
   IncidentTransitionInput,
+  InstallSystemUpdate202,
   InstallSystemUpdate409,
   InstallSystemUpdateBody,
   IntegrationCenter,
@@ -243,12 +244,14 @@ import type {
   PortfolioObject,
   PortfolioObjectInput,
   RecentAuthenticationInput,
+  ReleasePipelineCallbackInput,
   RemoveOrganizationLogoParams,
   ReplacePortfolioBuildingsBody,
   ResendDeliveryInput,
   ResidentDelegationInput,
   ResolveNotificationDestinationParams,
   RevokeSystemSessions200,
+  RollbackSystemUpdate202,
   RollbackSystemUpdate409,
   RollbackSystemUpdateBody,
   SaveOperatingBudget200,
@@ -6953,7 +6956,7 @@ export const getInstallSystemUpdateUrl = (id: string,) => {
 }
 
 export const installSystemUpdate = async (id: string,
-    installSystemUpdateBody: InstallSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+    installSystemUpdateBody: InstallSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<InstallSystemUpdate202> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -6969,7 +6972,7 @@ export const installSystemUpdate = async (id: string,
     }
     return headers;
   };
-return customFetch<unknown>(getInstallSystemUpdateUrl(id),
+return customFetch<InstallSystemUpdate202>(getInstallSystemUpdateUrl(id),
   {
     ...options,
     method: 'POST',
@@ -6984,7 +6987,7 @@ return customFetch<unknown>(getInstallSystemUpdateUrl(id),
 
 export const getInstallSystemUpdateMutationKey = () => ['installSystemUpdate'] as const;
 
-export const getInstallSystemUpdateMutationOptions = <TError = ErrorType<InstallSystemUpdate409>,
+export const getInstallSystemUpdateMutationOptions = <TError = ErrorType<InstallSystemUpdate409 | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext> => {
 
@@ -7013,10 +7016,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type InstallSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof installSystemUpdate>>>
     export type InstallSystemUpdateMutationBody = BodyType<InstallSystemUpdateBody>
-    export type InstallSystemUpdateMutationError = ErrorType<InstallSystemUpdate409>
+    export type InstallSystemUpdateMutationError = ErrorType<InstallSystemUpdate409 | void>
     export type InstallSystemUpdateMutationVariables = {id: string;data: BodyType<InstallSystemUpdateBody>}
 
-    export const useInstallSystemUpdate = <TError = ErrorType<InstallSystemUpdate409>,
+    export const useInstallSystemUpdate = <TError = ErrorType<InstallSystemUpdate409 | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installSystemUpdate>>, TError,InstallSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof installSystemUpdate>>,
@@ -7036,7 +7039,7 @@ export const getRollbackSystemUpdateUrl = (id: string,) => {
 }
 
 export const rollbackSystemUpdate = async (id: string,
-    rollbackSystemUpdateBody: RollbackSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+    rollbackSystemUpdateBody: RollbackSystemUpdateBody, options?: Parameters<typeof customFetch>[1]): Promise<RollbackSystemUpdate202> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -7052,7 +7055,7 @@ export const rollbackSystemUpdate = async (id: string,
     }
     return headers;
   };
-return customFetch<unknown>(getRollbackSystemUpdateUrl(id),
+return customFetch<RollbackSystemUpdate202>(getRollbackSystemUpdateUrl(id),
   {
     ...options,
     method: 'POST',
@@ -7067,7 +7070,7 @@ return customFetch<unknown>(getRollbackSystemUpdateUrl(id),
 
 export const getRollbackSystemUpdateMutationKey = () => ['rollbackSystemUpdate'] as const;
 
-export const getRollbackSystemUpdateMutationOptions = <TError = ErrorType<RollbackSystemUpdate409>,
+export const getRollbackSystemUpdateMutationOptions = <TError = ErrorType<RollbackSystemUpdate409 | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext> => {
 
@@ -7096,10 +7099,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RollbackSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof rollbackSystemUpdate>>>
     export type RollbackSystemUpdateMutationBody = BodyType<RollbackSystemUpdateBody>
-    export type RollbackSystemUpdateMutationError = ErrorType<RollbackSystemUpdate409>
+    export type RollbackSystemUpdateMutationError = ErrorType<RollbackSystemUpdate409 | void>
     export type RollbackSystemUpdateMutationVariables = {id: string;data: BodyType<RollbackSystemUpdateBody>}
 
-    export const useRollbackSystemUpdate = <TError = ErrorType<RollbackSystemUpdate409>,
+    export const useRollbackSystemUpdate = <TError = ErrorType<RollbackSystemUpdate409 | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackSystemUpdate>>, TError,RollbackSystemUpdateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof rollbackSystemUpdate>>,
@@ -7108,6 +7111,92 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRollbackSystemUpdateMutationOptions(options));
+    }
+
+export const getReportSystemUpdatePipelineResultUrl = (id: string,) => {
+
+
+
+
+  return `/api/system/updates/${id}/pipeline-result`
+}
+
+/**
+ * Internal deployment-pipeline callback authenticated with a one-release bearer token.
+ */
+export const reportSystemUpdatePipelineResult = async (id: string,
+    releasePipelineCallbackInput: ReleasePipelineCallbackInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReportSystemUpdatePipelineResultUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(releasePipelineCallbackInput)
+  }
+);}
+
+
+
+
+
+export const getReportSystemUpdatePipelineResultMutationKey = () => ['reportSystemUpdatePipelineResult'] as const;
+
+export const getReportSystemUpdatePipelineResultMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>, TError,ReportSystemUpdatePipelineResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>, TError,ReportSystemUpdatePipelineResultMutationVariables, TContext> => {
+
+const mutationKey = getReportSystemUpdatePipelineResultMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>, ReportSystemUpdatePipelineResultMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reportSystemUpdatePipelineResult(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportSystemUpdatePipelineResultMutationResult = NonNullable<Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>>
+    export type ReportSystemUpdatePipelineResultMutationBody = BodyType<ReleasePipelineCallbackInput>
+    export type ReportSystemUpdatePipelineResultMutationError = ErrorType<void>
+    export type ReportSystemUpdatePipelineResultMutationVariables = {id: string;data: BodyType<ReleasePipelineCallbackInput>}
+
+    export const useReportSystemUpdatePipelineResult = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>, TError,ReportSystemUpdatePipelineResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportSystemUpdatePipelineResult>>,
+        TError,
+        ReportSystemUpdatePipelineResultMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportSystemUpdatePipelineResultMutationOptions(options));
     }
 
 export const getGetApiCenterUrl = (params?: GetApiCenterParams,) => {

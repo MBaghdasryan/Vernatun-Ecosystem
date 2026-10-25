@@ -45,14 +45,18 @@ repeated afterward.
 claim it proves before/after preservation. Record the evidence gap explicitly.
 
 Published application files are not a durable in-place update target. Keep
-uploaded release packages in private App Storage and send installation through
-the configured deployment pipeline; never extract or execute a package inside
-the running service.
+uploaded release packages in private App Storage and send them as immutable
+artifacts through a separately configured deployment pipeline; never extract or
+execute a package inside the running service. A release is supported only when
+that pipeline verifies a current backup and migration baseline, checks health,
+and can restore the prior immutable image without reverting database data.
 
 **Why:** Replit's published runtime filesystem is discarded across restart,
 redeploy, and republish, so a successful local file replacement could disappear
-or diverge from the next deployment.
+or diverge from the next deployment. Coolify image rollback restores application
+code but does not reverse migrations or recover persistent data.
 
 **How to apply:** Separate package upload/validation/staging from installation.
-Require a verified backup before staging, and report installation as unsupported
-until a deployment-native, reversible release mechanism exists.
+Require a verified backup before staging and recheck it with the migration state
+immediately before dispatch. Keep installation unavailable until the release
+pipeline endpoint and callback are configured; never treat staging as release.

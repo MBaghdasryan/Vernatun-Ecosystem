@@ -1,5 +1,6 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
 import {readFile,rm} from 'node:fs/promises';
 import {app} from '../app.js';
 import {pool} from '../db.js';
@@ -142,8 +143,20 @@ test('update package validation rejects unsafe paths and executable archive memb
  const result=validateUpdateArchive(updateZip(),'1.0.0');
  assert.equal(result.valid,true);assert.equal(result.compatible,true);assert.equal(result.manifest?.version,'1.0.1');
 });
-test('update packages are private, validated, permission-gated, staged only with verified backup, and never installed by runtime',async()=>{
- const previous=process.env.VERNATUN_APP_VERSION;process.env.VERNATUN_APP_VERSION='1.0.0';let id:string|undefined;
+test('update packages require a current verified backup, use an immutable pipeline artifact, and confirm release and rollback health',async()=>{
+  const previous={version:process.env.VERNATUN_APP_VERSION,pipelineUrl:process.env.VERNATUN_RELEASE_PIPELINE_URL,
+   pipelineToken:process.env.VERNATUN_RELEASE_PIPELINE_TOKEN,callbackUrl:process.env.VERNATUN_RELEASE_CALLBACK_URL};
+  process.env.VERNATUN_APP_VERSION='1.0.0';let id:string|undefined,failedId:string|undefined,backupId:string|undefined;
+  const pipelineRequests:{headers:Record<string,string|string[]|undefined>;body:Buffer}[]=[];
+  const pipeline=createServer(async(req,res)=>{
+   const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(Buffer.from(chunk));
+   pipelineRequests.push({headers:req.headers as Record<string,string|string[]|undefined>,body:Buffer.concat(chunks)});
+   const jobId=req.headers['x-vernatun-job-id'];
+   res.writeHead(202,{'Content-Type':'application/json'});res.end(JSON.stringify({jobId}));
+  });
+  await new Promise<void>(resolve=>pipeline.listen(0,'127.0.0.1',resolve));
+  const pipelinePort=(pipeline.address() as any).port;
+  const currentSchema=String((await pool.query('SELECT max(name) AS name FROM schema_migrations')).rows[0].name);
  try{
   const denied=await support.call('/system/updates');assert.equal(denied.status,403);
   const password=(Object.values(seeded.accounts) as any[]).find(x=>x.role==='platform_admin').password;
@@ -155,14 +168,94 @@ test('update packages are private, validated, permission-gated, staged only with
   assert.equal(detail.status,200);assert.equal(detail.data.version,'1.0.1');assert.equal('bytes' in detail.data,false);
   const checked=await admin.call(`/system/updates/${id}/validate`,'POST',{});
   assert.equal(checked.status,200);assert.equal(checked.data.status,'validated');
-  const stage=await admin.call(`/system/updates/${id}/stage`,'POST',{backupId:randomUUID(),confirmation:'STAGE UPDATE'});
-  assert.equal(stage.status,409);assert.equal(stage.data.error,'verified_database_backup_required');
-  const install=await admin.call(`/system/updates/${id}/install`,'POST',{confirmation:'INSTALL UPDATE'});
-  assert.equal(install.status,409);assert.equal(install.data.status,'manual_deployment_required');
-  assert.equal((await admin.call(`/system/updates/${id}`)).data.status,'validated');
+   const badStage=await admin.call(`/system/updates/${id}/stage`,'POST',{backupId:randomUUID(),confirmation:'STAGE UPDATE'});
+   assert.equal(badStage.status,409);assert.equal(badStage.data.error,'verified_database_backup_required');
+   const backup=randomUUID();backupId=backup;
+   await pool.query(`INSERT INTO operations_backups(id,kind,status,provider,verification,verified_at,migration_version,
+    application_version,bytes,checksum) VALUES($1,'database','completed','local','verified',now(),$2,'1.0.0',10,$3)`,
+    [backup,currentSchema,'a'.repeat(64)]);
+   const stage=await admin.call(`/system/updates/${id}/stage`,'POST',{backupId:backup,confirmation:'STAGE UPDATE'});
+   assert.equal(stage.status,200);assert.equal(stage.data.status,'staged');
+   const notConfigured=await admin.call(`/system/updates/${id}/install`,'POST',{confirmation:'INSTALL UPDATE'});
+   assert.equal(notConfigured.status,503);assert.equal(notConfigured.data.error,'release_pipeline_not_configured');
+   process.env.VERNATUN_RELEASE_PIPELINE_URL=`http://127.0.0.1:${pipelinePort}/release`;
+   process.env.VERNATUN_RELEASE_PIPELINE_TOKEN=randomBytes(32).toString('hex');
+   process.env.VERNATUN_RELEASE_CALLBACK_URL=`http://127.0.0.1:${(server.address() as any).port}/api/system/updates`;
+   const install=await admin.call(`/system/updates/${id}/install`,'POST',{confirmation:'INSTALL UPDATE'});
+   assert.equal(install.status,202);assert.equal(install.data.status,'deploying');
+   assert.equal(pipelineRequests.length,1);
+   assert.equal(pipelineRequests[0].headers['x-vernatun-artifact-sha256'],uploaded.data.checksum);
+   assert.equal(createHash('sha256').update(pipelineRequests[0].body).digest('hex'),uploaded.data.checksum);
+   const jobId=String(pipelineRequests[0].headers['x-vernatun-job-id']);
+   const callbackToken=String(pipelineRequests[0].headers['x-vernatun-callback-token']);
+   const previousRef=`registry.example/vernatun@sha256:${'b'.repeat(64)}`;
+   const releaseRef=`registry.example/vernatun@sha256:${'a'.repeat(64)}`;
+   const callbackBody={jobId,result:'deployed',backupId:backup,deploymentId:'coolify-qa-deploy-1',releaseRef,previousReleaseRef:previousRef,
+    migration:{preflight:'passed',driftFree:true,baselineVersion:currentSchema,schemaVersion:currentSchema,result:'not_required'},
+    healthCheck:{status:'passed',checkedAt:new Date().toISOString()},rollback:{status:'not_required',releaseRef:null}};
+   const callbackUrl=`${base}/api/system/updates/${id}/pipeline-result`;
+   const badCallback=await fetch(callbackUrl,{method:'POST',headers:{Authorization:'Bearer '+'0'.repeat(64),'Content-Type':'application/json'},
+    body:JSON.stringify(callbackBody)});
+   assert.equal(badCallback.status,401);
+   const invalidCallback=await fetch(callbackUrl,{method:'POST',headers:{Authorization:`Bearer ${callbackToken}`,'Content-Type':'application/json'},
+    body:JSON.stringify({jobId})});
+   assert.equal(invalidCallback.status,400);
+   const callback=await fetch(callbackUrl,{method:'POST',headers:{Authorization:`Bearer ${callbackToken}`,'Content-Type':'application/json'},
+    body:JSON.stringify(callbackBody)});
+   assert.equal(callback.status,200);
+   const repeated=await fetch(callbackUrl,{method:'POST',headers:{Authorization:`Bearer ${callbackToken}`,'Content-Type':'application/json'},
+    body:JSON.stringify(callbackBody)});
+   assert.equal(repeated.status,200);assert.equal((await repeated.json() as any).duplicate,true);
+   const deployed=await admin.call(`/system/updates/${id}`);
+   assert.equal(deployed.data.status,'deployed');assert.equal(deployed.data.pipelineReleaseRef,releaseRef);
+   const rollback=await admin.call(`/system/updates/${id}/rollback`,'POST',{confirmation:'ROLLBACK UPDATE'});
+   assert.equal(rollback.status,202);assert.equal(rollback.data.status,'rolling_back');
+   assert.equal(pipelineRequests.length,2);assert.equal(pipelineRequests[1].headers['x-vernatun-action'],'rollback');
+   const rollbackJobId=String(pipelineRequests[1].headers['x-vernatun-job-id']);
+   const rollbackToken=String(pipelineRequests[1].headers['x-vernatun-callback-token']);
+   const rollbackBody={...callbackBody,jobId:rollbackJobId,result:'rollback_succeeded',deploymentId:'coolify-qa-rollback-1',
+    migration:{...callbackBody.migration,baselineVersion:currentSchema,schemaVersion:currentSchema},
+    healthCheck:{status:'passed',checkedAt:new Date().toISOString()},
+    rollback:{status:'succeeded',releaseRef:previousRef}};
+   const rollbackCallback=await fetch(callbackUrl,{method:'POST',headers:{Authorization:`Bearer ${rollbackToken}`,'Content-Type':'application/json'},
+    body:JSON.stringify(rollbackBody)});
+   assert.equal(rollbackCallback.status,200);
+   const restored=await admin.call(`/system/updates/${id}`);
+   assert.equal(restored.data.status,'rollback_completed');assert.equal(restored.data.pipelineReleaseRef,previousRef);
+   const failedUpload=await admin.upload('/system/updates/upload',updateZip(),'vernatun-1.0.1-health-fail.zip');
+   assert.equal(failedUpload.status,201);failedId=failedUpload.data.id;
+   const failedStage=await admin.call(`/system/updates/${failedId}/stage`,'POST',{backupId:backup,confirmation:'STAGE UPDATE'});
+   assert.equal(failedStage.status,200);
+   const failedInstall=await admin.call(`/system/updates/${failedId}/install`,'POST',{confirmation:'INSTALL UPDATE'});
+   assert.equal(failedInstall.status,202);assert.equal(failedInstall.data.status,'deploying');
+   const failRequest=pipelineRequests[2],failJobId=String(failRequest.headers['x-vernatun-job-id']);
+   const failToken=String(failRequest.headers['x-vernatun-callback-token']);
+   const rolledBackBody={...callbackBody,jobId:failJobId,result:'deployment_rolled_back',backupId:backup,
+    deploymentId:'coolify-qa-unhealthy-release',releaseRef:`registry.example/vernatun@sha256:${'c'.repeat(64)}`,
+    previousReleaseRef:previousRef,
+    healthCheck:{status:'failed',checkedAt:new Date().toISOString()},
+    rollback:{status:'succeeded',releaseRef:previousRef}};
+   const rolledBack=await fetch(`${base}/api/system/updates/${failedId}/pipeline-result`,
+    {method:'POST',headers:{Authorization:`Bearer ${failToken}`,'Content-Type':'application/json'},body:JSON.stringify(rolledBackBody)});
+   assert.equal(rolledBack.status,200);
+   const failedDetail=await admin.call(`/system/updates/${failedId}`);
+   assert.equal(failedDetail.data.status,'deployment_rolled_back');assert.equal(failedDetail.data.pipelineReleaseRef,previousRef);
+   const audit=await pool.query(`SELECT entity_id,action FROM audit_events WHERE entity_type='platform_update' AND entity_id=ANY($1::text[])`,[[id,failedId]]);
+   assert.ok(audit.rows.some((row:any)=>row.entity_id===id&&row.action==='system.update.stage_rejected'));
+   assert.ok(audit.rows.some((row:any)=>row.entity_id===id&&row.action==='system.update.pipeline_callback_rejected'));
+   assert.ok(audit.rows.some((row:any)=>row.entity_id===id&&row.action==='system.update.deployed'));
+   assert.ok(audit.rows.some((row:any)=>row.entity_id===id&&row.action==='system.update.rollback_succeeded'));
+   assert.ok(audit.rows.some((row:any)=>row.entity_id===failedId&&row.action==='system.update.deployment_rolled_back'));
  }finally{
-  if(previous===undefined)delete process.env.VERNATUN_APP_VERSION;else process.env.VERNATUN_APP_VERSION=previous;
-  if(id){await updatePackageStorage().remove(id).catch(()=>{});await pool.query('DELETE FROM platform_updates WHERE id=$1',[id])}
+   for(const [key,value] of Object.entries({VERNATUN_APP_VERSION:previous.version,VERNATUN_RELEASE_PIPELINE_URL:previous.pipelineUrl,
+    VERNATUN_RELEASE_PIPELINE_TOKEN:previous.pipelineToken,VERNATUN_RELEASE_CALLBACK_URL:previous.callbackUrl})){
+    if(value===undefined)delete process.env[key];else process.env[key]=value;
+   }
+   for(const updateId of [id,failedId].filter((value):value is string=>!!value)){
+    await updatePackageStorage().remove(updateId).catch(()=>{});await pool.query('DELETE FROM platform_updates WHERE id=$1',[updateId]);
+   }
+   if(backupId)await pool.query('DELETE FROM operations_backups WHERE id=$1',[backupId]);
+   pipeline.close();pipeline.closeAllConnections();
  }
 });
 test('API documentation and credentials are permission-gated, hashed, one-time, and organization-scoped',async()=>{
@@ -599,6 +692,7 @@ test('request logs exclude secrets, query tokens and request bodies; filters and
  assert.equal(safeCode('password='+secret),'internal_error');
 });
 test('job persistence records success, failure and stale heartbeats without arbitrary execution',async()=>{
+ await pool.query('DELETE FROM auth_rate_limits WHERE key=$1',[new PostgresRateStore('system-read').key(admin.user)]);
  await observedJob('qa_success',async()=>{});
  await assert.rejects(observedJob('qa_failure',async()=>{throw Object.assign(Error('sensitive message'),{code:'EQA'})}));
  await pool.query("INSERT INTO system_job_runs(id,job,status,heartbeat_at) VALUES(gen_random_uuid(),'qa_interrupted','running',now()-interval '3 minutes')");
@@ -610,6 +704,7 @@ test('job persistence records success, failure and stale heartbeats without arbi
  assert.equal((await admin.call('/system/jobs/qa_failure/retry','POST',{})).status,404);
 });
 test('bounded JSON/CSV exports require both permissions, preserve filters and are audited',async()=>{
+ await pool.query('DELETE FROM auth_rate_limits WHERE key=$1',[new PostgresRateStore('system-read').key(admin.user)]);
  const body={format:'json',from:new Date(Date.now()-86400000).toISOString(),to:new Date(Date.now()+1000).toISOString(),category:'system',q:'qa_pagination'};
  assert.equal((await support.call('/system/log-exports','POST',body)).status,403);
  assert.equal((await org.call('/system/log-exports','POST',body)).status,403);
