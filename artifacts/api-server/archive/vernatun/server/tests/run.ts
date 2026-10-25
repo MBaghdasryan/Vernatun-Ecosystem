@@ -15,8 +15,9 @@ const schemas=Array.from({length:isSevenChains?7:1},()=>`qa_${randomBytes(10).to
 const schema=schemas[0];
 const urlForSchema=(name:string)=>{const target=new URL(url);target.searchParams.set('options',`-c search_path=${name},public`);return target.toString()};
 const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin.connect();
+const browserEnv=process.argv.includes('--phase6-only')?{APP_ORIGIN:'http://127.0.0.1:4191'}:{};
 const createdSchemas:string[]=[];
-const env={...process.env,NODE_ENV:'test',DATABASE_URL:urlForSchema(schema),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema};
+const env={...process.env,NODE_ENV:'test',DATABASE_URL:urlForSchema(schema),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema,...browserEnv};
 // Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
 if(process.argv.includes('--system-only')||process.argv.includes('--payments-only')||process.argv.includes('--browser-only')||process.argv.includes('--seven-chains-only')||process.argv.includes('--edge-only'))Object.assign(env,{
  VERNATUN_OPERATIONS_ENCRYPTION_KEY:randomBytes(32).toString('hex'),BACKUP_STORAGE_MODE:'local',

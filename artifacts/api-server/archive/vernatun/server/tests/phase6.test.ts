@@ -8,6 +8,9 @@ import {config} from '../config.js';
 import {contexts} from '../access.js';
 import {storedFiles} from '../file-migration.js';
 import {protocolPdf} from '../meeting-results.js';
+import {chromium} from 'playwright';
+import {spawn,type ChildProcess} from 'node:child_process';
+import {resolve} from 'node:path';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const account=(role:string)=>Object.keys(seed.accounts).find(k=>k!=='second_org'&&seed.accounts[k].role===role)!;
@@ -132,6 +135,103 @@ test('protocol is generated only after end, as a private Unicode PDF and immutab
   assert.ok(Buffer.isBuffer(bytes));assert.equal(bytes.subarray(0,5).toString(),'%PDF-');assert.ok(bytes.length>1000);
  }
  await assert.rejects(pool.query('UPDATE meeting_results SET result=$2 WHERE meeting_id=$1',[meeting.id,'{}']),/append-only/);
+});
+test('manager and resident complete a weighted meeting through the UI and download its protocol',async()=>{
+ const uiUnit=(await pool.query("INSERT INTO units(organization_id,building_id,number,area) VALUES($1,$2,'P6-UI',52) RETURNING id",[org,building])).rows[0].id;
+ for(const role of ['unit_owner','family'])await pool.query(
+  'INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id) VALUES($1,$2,$3,$4,$5)',
+  [users[role],org,role,building,uiUnit],
+ );
+ await pool.query("UPDATE users SET locale='en' WHERE id=ANY($1::uuid[])",[[users.manager,users.unit_owner]]);
+ const startsOn=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yerevan'}).format(new Date());
+ for(const [userId,shareBasisPoints] of [[users.unit_owner,6000],[users.family,4000]] as const){
+  const ownership=await clients.manager.call('/ownerships','POST',{
+   key:randomUUID(),unitId:uiUnit,userId,startsOn,endsOn:null,shareBasisPoints,basis:'Isolated browser acceptance ownership',
+  });
+  assert.equal(ownership.status,201,JSON.stringify(ownership.data));
+ }
+
+ const webPort=4191,webDir=resolve(process.cwd(),'../../../vernatun');
+ const viteBin=resolve(webDir,'node_modules/vite/bin/vite.js');
+ let web:ChildProcess|undefined,browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
+ try{
+  web=spawn(process.execPath,[viteBin,'--host','127.0.0.1'],{
+   cwd:webDir,
+   env:{...process.env,PORT:String(webPort),BASE_PATH:'/',API_PROXY_TARGET:base},
+   stdio:'ignore',
+  });
+  const launch=Date.now();
+  while(Date.now()-launch<30000){
+   if(web.exitCode!==null)throw new Error(`Vite exited with code ${web.exitCode}`);
+   try{const response=await fetch(`http://127.0.0.1:${webPort}/`);if(response.ok)break}catch{}
+   await new Promise(r=>setTimeout(r,200));
+  }
+  assert.ok(Date.now()-launch<30000,'Vite UI server did not become ready');
+  browser=await chromium.launch({headless:true,executablePath:process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE,args:['--no-sandbox']});
+  const managerAccount=seed.accounts[account('manager')],ownerAccount=seed.accounts[account('unit_owner')];
+  const signIn=async(page:import('playwright').Page,a:{email:string;password:string})=>{
+   await page.addInitScript(()=>localStorage.setItem('vernatun.language','en'));
+   await page.goto(`http://127.0.0.1:${webPort}/login`,{waitUntil:'domcontentloaded'});
+   await page.locator('input[name="email"]').fill(a.email);
+   await page.locator('input[name="password"]').fill(a.password);
+   await page.getByRole('button',{name:'Sign in'}).click();
+   await page.waitForFunction(()=>location.pathname!=='/login',{timeout:15000});
+  };
+  const managerPage=await browser.newPage();
+  await signIn(managerPage,managerAccount);
+  if(await managerPage.locator('.p-context-grid').count())await managerPage.getByRole('button').filter({hasText:'Manager'}).first().click();
+  await managerPage.goto(`http://127.0.0.1:${webPort}/os/meetings`);
+  await managerPage.getByRole('button',{name:'New weighted meeting'}).waitFor({timeout:10000});
+  await managerPage.getByRole('button',{name:'New weighted meeting'}).click();
+  const createDialog=managerPage.locator('dialog.p-modal').filter({hasText:'New weighted meeting'});
+  try{await createDialog.waitFor({state:'visible',timeout:5000})}
+  catch{throw new Error(`Weighted meeting editor did not open. Dialogs: ${await managerPage.locator('dialog').count()}; page: ${(await managerPage.locator('body').innerText()).slice(-900)}`)}
+  const now=new Date(),start=new Date(now.getTime()+30*60_000),end=new Date(now.getTime()+60*60_000);
+  const inOrgTime=(date:Date)=>new Intl.DateTimeFormat('sv-SE',{
+   timeZone:'Asia/Yerevan',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23',
+  }).format(date).replace(' ','T');
+  await createDialog.locator('select').first().selectOption({label:'Phase6 isolated building'});
+  await createDialog.locator('input:not([type])').nth(0).fill('QA browser weighted meeting');
+  await createDialog.locator('input[type="datetime-local"]').nth(0).fill(inOrgTime(start));
+  await createDialog.locator('input[type="datetime-local"]').nth(1).fill(inOrgTime(end));
+  await createDialog.locator('input:not([type])').nth(2).fill('Approve the maintenance plan');
+  await createDialog.getByRole('button',{name:'Create',exact:true}).click();
+  await managerPage.getByRole('button',{name:'Publish',exact:true}).click();
+  await managerPage.getByRole('button',{name:'Cancel meeting',exact:true}).waitFor({timeout:10000});
+  const meetingId=(await clients.manager.call('/governance/meetings')).data.find((m:any)=>m.title==='QA browser weighted meeting')?.id;
+  assert.ok(meetingId,'UI-created meeting should appear in the API list');
+
+  // Advance only this disposable test meeting's clock after publication so the
+  // resident can vote in the published open window without a long real-time wait.
+  await pool.query('UPDATE meetings SET starts_at=now()-interval \'1 second\' WHERE id=$1',[meetingId]);
+  const ownerPage=await browser.newPage();
+  await signIn(ownerPage,ownerAccount);
+  if(await ownerPage.locator('.p-context-grid').count()){
+   await ownerPage.getByRole('button').filter({hasText:'P6-UI'}).click();
+  }
+  await ownerPage.goto(`http://127.0.0.1:${webPort}/imtun/meetings`);
+  await ownerPage.getByRole('button',{name:/QA browser weighted meeting/}).waitFor();
+  await ownerPage.getByRole('button',{name:/QA browser weighted meeting/}).click();
+  const option=ownerPage.locator('.p6-opt select').first();
+  await option.selectOption('yes');
+  await ownerPage.getByRole('button',{name:'Cast vote',exact:true}).click();
+  await ownerPage.getByText(/60(?:\.0+)?%/).first().waitFor({timeout:10000});
+  await ownerPage.getByText(/Ballot recorded/).waitFor();
+
+  await pool.query('UPDATE meetings SET ends_at=now()-interval \'1 second\' WHERE id=$1',[meetingId]);
+  await managerPage.goto(`http://127.0.0.1:${webPort}/os/meetings`);
+  await managerPage.getByRole('button',{name:/QA browser weighted meeting/}).click();
+  await managerPage.getByRole('button',{name:'Finalize and produce protocol'}).click();
+  const protocolLink=managerPage.getByRole('link',{name:/Protected protocol.*Download/});
+  await protocolLink.waitFor({timeout:10000});
+  const [download]=await Promise.all([managerPage.waitForEvent('download'),protocolLink.click()]);
+  const path=await download.path();assert.ok(path);
+  const pdf=await readFile(path);assert.equal(pdf.subarray(0,5).toString(),'%PDF-');assert.ok(pdf.length>1000);
+  await ownerPage.close();
+ }finally{
+  await browser?.close();
+  if(web&&!web.killed)web.kill('SIGTERM');
+ }
 });
 test('portfolio exact arithmetic, recorded budget CAS, real series and contractor history',async()=>{
  const budget={key:randomUUID(),buildingId:building,period:month,currency:'AMD',amountMinor:'99999999999999'};
