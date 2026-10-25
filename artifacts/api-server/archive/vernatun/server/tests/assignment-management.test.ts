@@ -133,7 +133,7 @@ test('concurrent edits cannot silently overwrite; revoke immediately removes con
  assert.equal((await sessions.contexts(seeded.accounts.dispatcher.id)).some(c=>c.id===assignment.id),false);
  assert.equal((await org.call('/roles/'+assignment.id,'DELETE')).status,204);
 });
-test('IAM profiles, deny precedence, exceptional grants and shared permission explanation',async()=>{
+test('IAM profiles, per-user permission overrides and shared permission explanation',async()=>{
  const {roleCatalog}=await import('../roles.js');
  const a=(await pool.query("SELECT * FROM role_assignments WHERE user_id=$1 AND role_key='manager'",[seeded.accounts.manager.id])).rows[0];
  const profile={name:'Limited manager QA',description:'No property registry',baseRole:'manager',permissions:roleCatalog.manager.permissions.filter(p=>p!=='properties.read'),active:true};
@@ -148,6 +148,7 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  const policy={version:await version(),profileId:created.data.id,denies:[],grants:[],reason:'Isolated access policy verification',expiresAt:null};
  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,profileId:foreign.data.id})).status,404);
  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',policy)).status,200);
+  assert.equal((await org.call('/iam/users/'+a.user_id)).data.assignments.find((x:any)=>x.id===a.id).canChangePolicy,true);
  assert.equal((await manager.call('/properties')).status,403);
  const explanation=await org.call('/iam/assignments/'+a.id+'/access');
  assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='properties.read').allowed,false);
@@ -156,7 +157,11 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  assert.equal(simulation.data.evaluations.find((p:any)=>p.permission==='properties.read').allowed,false);
  assert.equal((await other.call('/iam/assignments/'+a.id+'/access')).status,404);
  const expiry=new Date(Date.now()+3600000).toISOString();
- assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version(),grants:['properties.read'],expiresAt:expiry})).status,403);
+  const userGrant={...policy,version:await version(),grants:['properties.read'],expiresAt:null};
+  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',userGrant)).status,200);
+  assert.equal((await manager.call('/properties')).status,200);
+  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version(),grants:['organizations.manage']})).status,403);
+  assert.equal((await other.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version()})).status,404);
  const platform=await new Client().login('platform_admin');
  assert.equal((await platform.call('/invoices')).status,403);
  const grant={...policy,version:await version(),grants:['properties.read'],denies:['properties.read'],expiresAt:expiry};
@@ -166,7 +171,7 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  assert.equal((await manager.call('/properties')).status,200);
  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version(),denies:['properties.read']})).status,200);
  assert.equal((await manager.call('/properties')).status,403);
- assert.equal((await pool.query("SELECT count(*)::int AS n FROM iam_assignment_rules WHERE assignment_id=$1 AND effect='grant'",[a.id])).rows[0].n,1);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM iam_assignment_rules WHERE assignment_id=$1 AND effect='grant'",[a.id])).rows[0].n,0);
  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version()})).status,200);
  assert.equal((await manager.call('/properties')).status,200);
  const updated=(await org.call('/iam/users/'+a.user_id)).data.assignments.find((x:any)=>x.id===a.id);
@@ -176,6 +181,12 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  assert.equal(suspended.active,false);assert.equal(suspended.assignment_status,'suspended');
  assert.equal((await org.call('/iam/assignments/'+a.id+'/status','POST',{version:suspended.version,status:'active',reason:'Isolated resume test'})).status,204);
  assert.equal((await manager.call('/properties')).status,200);
+  const adminAssignment=(await pool.query("SELECT *,xmin::text AS version FROM role_assignments WHERE user_id=$1 AND role_key='org_admin'",[seeded.accounts.org_admin.id])).rows[0];
+  assert.ok(adminAssignment);
+  assert.equal((await platform.call('/iam/assignments/'+adminAssignment.id+'/policy','POST',{
+   version:adminAssignment.version,profileId:adminAssignment.profile_id,denies:['roles.assign'],grants:[],
+   reason:'Verify last administrator recovery is protected',expiresAt:null
+  })).status,409);
  assert.equal((await platform.call('/iam/users/'+seeded.accounts.org_admin.id+'/status','POST',{status:'disabled',reason:'Last admin denial test'})).status,409);
  assert.equal((await platform.call('/iam/users/'+seeded.accounts.manager.id+'/status','POST',{status:'disabled',reason:'Isolated disable account'})).status,204);
  assert.equal((await manager.call('/properties')).status,401);
@@ -186,13 +197,18 @@ test('IAM profiles, deny precedence, exceptional grants and shared permission ex
  assert.equal((await org.call('/iam/users/'+seeded.accounts.manager.id+'/logout','POST',{reason:'Not platform administrator'})).status,403);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM roles')).rows[0].n,14);
 });
-test('profiles cannot bypass module, subscription or required MFA gates',async()=>{
+test('profiles and per-user overrides cannot bypass module, subscription or required MFA gates',async()=>{
  const platform=await new Client().login('platform_admin'),m=await new Client().login('manager');
  const a=(await pool.query("SELECT * FROM role_assignments WHERE user_id=$1 AND role_key='manager'",[seeded.accounts.manager.id])).rows[0];
  const oldModule=(await pool.query("SELECT * FROM module_entitlements WHERE organization_id=$1 AND module='documents'",[a.organization_id])).rows[0];
  try{
   await pool.query("UPDATE module_entitlements SET override_state='disabled' WHERE organization_id=$1 AND module='documents'",[a.organization_id]);
   assert.equal((await m.call('/documents')).status,403);
+   const version=(await platform.call('/roles/'+a.id)).data.assignment.version;
+   assert.equal((await platform.call('/iam/assignments/'+a.id+'/policy','POST',{
+    version,profileId:a.profile_id,denies:[],grants:['documents.read'],reason:'Confirm module gate remains enforced',expiresAt:null
+   })).status,200);
+   assert.equal((await m.call('/documents')).status,403);
   const explanation=await platform.call('/iam/assignments/'+a.id+'/access');
   assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='documents.read').reason,'module_disabled');
  }finally{await pool.query("UPDATE module_entitlements SET override_state=$2 WHERE organization_id=$1 AND module='documents'",[a.organization_id,oldModule.override_state])}
@@ -202,7 +218,7 @@ test('profiles cannot bypass module, subscription or required MFA gates',async()
   await pool.query('UPDATE organizations SET subscription_enforced=true WHERE id=$1',[a.organization_id]);
   await pool.query("UPDATE subscriptions SET status='paused' WHERE organization_id=$1",[a.organization_id]);
   const explanation=await platform.call('/iam/assignments/'+a.id+'/access','POST',{method:'PATCH'});
-  assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='properties.read').reason,'subscription_restricted');
+   assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='documents.read').reason,'subscription_restricted');
   assert.equal((await org.call('/roles/'+a.id,'PATCH',await updateBody(a.id))).status,403);
  }finally{
   await pool.query('UPDATE organizations SET subscription_enforced=$2 WHERE id=$1',[a.organization_id,oldOrg.subscription_enforced]);

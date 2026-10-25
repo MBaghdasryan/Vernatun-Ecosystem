@@ -25,6 +25,18 @@ async function target(req:Request,id:string,readOnly=false,db?:any){
 }
 async function lockIam(db:any){await db.query('SELECT pg_advisory_xact_lock(6172924)')}
 function scopeManager(c:Context){if(!isPlatform(c)&&(!c.organization_id||c.building_id||c.unit_id))throw new ApiError(403,'forbidden')}
+async function preserveGlobalAdministrator(db:any,a:any){
+ const critical=['organizations.manage','roles.assign'];
+ const other=await db.query(`SELECT a.id FROM role_assignments a JOIN users u ON u.id=a.user_id
+  WHERE a.id<>$1 AND a.organization_id IS NULL AND a.role_key='platform_admin'
+  AND a.active AND a.assignment_status='active' AND u.account_status='active' AND NOT u.blocked
+  AND a.starts_at<=now() AND a.expires_at IS NULL AND a.building_id IS NULL AND a.unit_id IS NULL
+  AND a.profile_id IS NULL
+  AND NOT EXISTS(SELECT 1 FROM iam_assignment_rules r WHERE r.assignment_id=a.id
+   AND r.effect='deny' AND r.permission_key=ANY($2::text[]) AND (r.expires_at IS NULL OR r.expires_at>now()))
+  FOR SHARE OF a,u`,[a.id,critical]);
+ if(!other.rowCount)throw new ApiError(409,'last_administrator');
+}
 const profileInput=z.object({name:z.string().trim().min(2).max(100),description:z.string().max(1000).default(''),
  baseRole:z.string(),permissions:z.array(z.string()).max(100),tenantAllowed:z.boolean().default(false),active:z.boolean().default(true),version:z.string().optional()}).strict();
 iam.get('/iam/catalog',async(req,res)=>{
@@ -93,9 +105,9 @@ iam.get('/iam/users/:id',async(req,res)=>{
  const history=(await pool.query(`SELECT action,entity_id,details,created_at FROM audit_events
  WHERE (entity_type='role_assignment' AND entity_id=ANY($1::text[]))
  OR ($2 AND entity_type='user' AND entity_id=$3) ORDER BY created_at DESC LIMIT 100`,[ids,isPlatform(c),id])).rows;
- res.json({user,assignments:assignments.map(a=>({...a,
+  res.json({user,assignments:assignments.map(a=>({...a,
   canEditScope:a.user_id!==req.user!.id&&a.active&&!!a.organization_id&&!['unit_owner','renter','family','support','platform_admin'].includes(a.role_key),
-  canChangePolicy:a.user_id!==req.user!.id&&a.active&&!!a.organization_id&&!['org_admin','unit_owner','renter','family','support','platform_admin'].includes(a.role_key),
+   canChangePolicy:a.user_id!==req.user!.id&&a.active&&(isPlatform(c)||(c.role_key==='org_admin'&&a.organization_id===c.organization_id&&c.permissions.includes('roles.assign'))),
   canChangeStatus:a.user_id!==req.user!.id&&a.assignment_status!=='revoked'&&!['unit_owner','renter','family','support','platform_admin'].includes(a.role_key)})),
  sessions,history,platform:isPlatform(c),canManageAccount:isPlatform(c)&&id!==req.user!.id});
 });
@@ -160,23 +172,29 @@ async function explainAccess(req:Request,res:Response){
 iam.get('/iam/assignments/:id/access',explainAccess);
 iam.post('/iam/assignments/:id/access',explainAccess);
 iam.post('/iam/assignments/:id/policy',async(req,res)=>{
- const id=uuid.parse(req.params.id),b=z.object({version:z.string(),profileId:uuid.nullable(),denies:z.array(z.string()).max(100),grants:z.array(z.string()).max(10),reason,expiresAt:z.string().datetime({offset:true}).nullable()}).strict().parse(req.body);
+  const id=uuid.parse(req.params.id),b=z.object({version:z.string(),profileId:uuid.nullable(),denies:z.array(z.string()).max(100),grants:z.array(z.string()).max(100),reason,expiresAt:z.string().datetime({offset:true}).nullable()}).strict().parse(req.body);
  res.json(await transaction(async db=>{
   await lockIam(db);const {c,a}=await target(req,id,false,db);
-  if(a.user_id===req.user!.id||!a.organization_id||['platform_admin','support','org_admin','unit_owner','renter','family'].includes(a.role_key))throw new ApiError(403,'forbidden');
+   if(a.user_id===req.user!.id||(!isPlatform(c)&&(!a.organization_id||c.role_key!=='org_admin'||['platform_admin','support'].includes(a.role_key))))throw new ApiError(403,'forbidden');
   if(!a.active||a.version!==b.version)throw new ApiError(409,'concurrent_change');
   if(b.expiresAt&&Date.parse(b.expiresAt)<=Date.now())throw new ApiError(400,'invalid_dates');
   const base:readonly string[]=roleCatalog[a.role_key as keyof typeof roleCatalog].permissions;
-  if(b.denies.some(p=>!base.includes(p))||b.grants.some(p=>!base.includes(p)||!exceptionalGrantAllowlist.includes(p as any))||
-   (b.grants.length&&(!b.expiresAt||!isPlatform(c))))throw new ApiError(403,'forbidden');
+   if(b.denies.some(p=>!base.includes(p))||b.grants.some(p=>!base.includes(p)))throw new ApiError(403,'forbidden');
+   let profilePermissions:readonly string[]=base;
   if(b.profileId){
    const p=(await db.query(`SELECT * FROM iam_profiles WHERE id=$1 AND active AND base_role=$2
    AND (organization_id=$3 OR (organization_id IS NULL AND tenant_allowed))`,[b.profileId,a.role_key,a.organization_id])).rows[0];
    if(!p)throw new ApiError(404,'not_found');
+    profilePermissions=(p.permissions as string[]).filter(permission=>base.includes(permission));
   }
+   const effective=new Set(profilePermissions);
+   for(const permission of b.grants)effective.add(permission);
+   for(const permission of b.denies)effective.delete(permission);
+   if(a.role_key==='org_admin'&&!effective.has('roles.assign'))await preserveAdministrator(db,a);
+   if(a.role_key==='platform_admin'&&(!effective.has('organizations.manage')||!effective.has('roles.assign')))await preserveGlobalAdministrator(db,a);
   const previous=(await db.query('SELECT permission_key,effect,reason,expires_at FROM iam_assignment_rules WHERE assignment_id=$1',[id])).rows;
   await db.query('UPDATE role_assignments SET profile_id=$2 WHERE id=$1',[id,b.profileId]);
-  await db.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND ($2 OR effect='deny')",[id,isPlatform(c)]);
+   await db.query('DELETE FROM iam_assignment_rules WHERE assignment_id=$1',[id]);
   for(const [effect,keys] of [['deny',b.denies],['grant',b.grants]] as const)
    for(const key of new Set(keys))await db.query('INSERT INTO iam_assignment_rules(assignment_id,permission_key,effect,reason,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6)',[id,key,effect,b.reason,b.expiresAt,req.user!.id]);
   const savedRules=(await db.query('SELECT permission_key,effect,reason,expires_at FROM iam_assignment_rules WHERE assignment_id=$1',[id])).rows;

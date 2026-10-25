@@ -2,8 +2,8 @@ import {pool} from './db.js';
 import {moduleForPermission,roleCatalog} from './roles.js';
 import {subscriptionPolicy} from './subscription-policy.js';
 
-// Exceptional grants restore selected read capabilities removed by a custom
-// profile, never add a capability outside the immutable base role.
+// Per-assignment grants can restore permissions removed by a custom profile,
+// but never add a capability outside the immutable system role.
 export const exceptionalGrantAllowlist=['properties.read','people.read','documents.read','announcements.read'] as const;
 export async function assignmentPermissions(a:{id:string;role_key:string;permissions:string[];organization_id:string|null;profile_id?:string|null}){
  const base=new Set(a.permissions);
@@ -16,7 +16,7 @@ export async function assignmentPermissions(a:{id:string;role_key:string;permiss
   else permissions=new Set((profile.permissions as string[]).filter(p=>base.has(p)));
  }
  const rules=(await pool.query('SELECT permission_key,effect,reason,expires_at FROM iam_assignment_rules WHERE assignment_id=$1 AND (expires_at IS NULL OR expires_at>now())',[a.id])).rows;
- for(const r of rules)if(r.effect==='grant'&&exceptionalGrantAllowlist.includes(r.permission_key as any)&&base.has(r.permission_key)&&profileValid)permissions.add(r.permission_key);
+ for(const r of rules)if(r.effect==='grant'&&base.has(r.permission_key)&&profileValid)permissions.add(r.permission_key);
  for(const r of rules)if(r.effect==='deny')permissions.delete(r.permission_key);
  return {permissions:[...permissions].sort(),basePermissions:[...base].sort(),profile,rules};
 }
