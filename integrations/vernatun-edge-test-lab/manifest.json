@@ -23,7 +23,7 @@
     "protocolVersion": 1,
     "edgeId": "edge-building01",
     "siteCode": "building01",
-    "name": "TEST Edge Building 01"
+    "name": "Vernatun Edge - TEST Building 01"
   },
   "simulatedDevice": {
     "deviceId": "Barrier-01",

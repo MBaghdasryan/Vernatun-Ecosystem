@@ -10,11 +10,18 @@
 | Здание / `BuildingId` | `TEST Building 01` / `a6e398fc-2f1d-4724-9db4-11e7874683c7` |
 | Помещение | `TEST Unit 101` / `997910a1-177b-4b38-8e0b-dd3b829c2cf7` |
 | Edge v1 ID | `edge-building01` |
+| Edge Name | `Vernatun Edge - TEST Building 01` |
 | Site code | `building01` |
 | Виртуальное устройство | `Barrier-01` |
 | ThingsBoard test ID | `b40f54f2-fd70-4024-b4b1-63fe65963a90` |
 
 Это зарезервированные ID из manifest, а не подтверждение существующих production-записей. Provisioner остановится, если обнаружит совпадение или несовпадение по имени.
+
+Для текущей проверки только registration/WSS/heartbeat/inventory используйте
+`docs/EDGE-WINDOWS-LIVE-ACCEPTANCE.md`. Не запускайте обычный installer до выбора
+Compose override: installer сам запускает Agent и иначе подключит его к локальным
+ThingsBoard/Command Authorization сервисам. Команды устройствам в этой проверке
+не выполняются, включая dry-run.
 
 ## Что создаёт provisioning-команда
 
