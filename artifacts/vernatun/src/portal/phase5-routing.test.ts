@@ -19,3 +19,11 @@ test('Phase5 feature routes remain available in their existing products',()=>{
  assert.ok(viewInProduct('os','imports'));
  assert.equal(routeView('/os/accounting','','accountant'),'overview');
 });
+test('Edge management routes are available from Vernatun Console and OS',()=>{
+ for(const product of ['console','os'] as const){
+  for(const view of ['edge','edge-inventory','edge-health']){
+   assert.equal(routeView('/'+product+'/'+view,'','platform_admin'),view);
+   assert.ok(viewInProduct(product,view),product+'/'+view+' should not be filtered out of navigation');
+  }
+ }
+});
