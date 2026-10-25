@@ -2495,11 +2495,41 @@ export type HayatQueueResponseBuildingsItem = {
   name: string;
 };
 
+export type HayatQueueResponseMetricsChecklist = {
+  /** @minimum 0 */
+  done: number;
+  /** @minimum 0 */
+  total: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  percent: number | null;
+};
+
+/**
+ * Counts use the same server-authorized scope, search, building, and priority filters. Technician-only urgent, checklist, and upcoming values are server-assigned work; checklist percent is null when no checklist items exist.
+ */
+export type HayatQueueResponseMetrics = {
+  /** @minimum 0 */
+  unassigned: number;
+  /** @minimum 0 */
+  overdue: number;
+  /** @minimum 0 */
+  urgent?: number;
+  /** @minimum 0 */
+  upcoming?: number;
+  checklist?: HayatQueueResponseMetricsChecklist;
+};
+
 export interface HayatQueueResponse {
   rows: HayatQueueRow[];
   total: number;
   stats: HayatQueueResponseStatsItem[];
   buildings: HayatQueueResponseBuildingsItem[];
+  /** Counts use the same server-authorized scope, search, building, and priority filters. Technician-only urgent, checklist, and upcoming values are server-assigned work; checklist percent is null when no checklist items exist. */
+  metrics?: HayatQueueResponseMetrics;
   pageSize: number;
   serverTime: string;
 }
@@ -3534,6 +3564,7 @@ search?: string;
  * @maxLength 40
  */
 status?: string;
+focus?: GetHayatQueueFocus;
 priority?: GetHayatQueuePriority;
 sort?: GetHayatQueueSort;
 building?: string;
@@ -3543,6 +3574,18 @@ building?: string;
  */
 page?: number;
 };
+
+export type GetHayatQueueFocus = typeof GetHayatQueueFocus[keyof typeof GetHayatQueueFocus];
+
+
+export const GetHayatQueueFocus = {
+  '': '',
+  unassigned: 'unassigned',
+  overdue: 'overdue',
+  urgent: 'urgent',
+  checklist: 'checklist',
+  upcoming: 'upcoming',
+} as const;
 
 export type GetHayatQueuePriority = typeof GetHayatQueuePriority[keyof typeof GetHayatQueuePriority];
 

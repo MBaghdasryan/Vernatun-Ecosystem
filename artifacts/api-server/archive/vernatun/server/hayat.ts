@@ -9,7 +9,7 @@ hayat.use(requireAuth);
 const querySchema=z.object({
  search:z.string().trim().max(200).default(''),
  status:z.string().max(40).default(''),
- focus:z.enum(['','unassigned','overdue']).default(''),
+ focus:z.enum(['','unassigned','overdue','urgent','checklist','upcoming']).default(''),
  priority:z.enum(['','low','normal','high','urgent','emergency']).default(''),
  sort:z.enum(['created','priority','due']).default('priority'),
  building:z.string().uuid().optional(),
@@ -25,6 +25,8 @@ hayat.get('/hayat/queue',async(req,res)=>{
  const technician=c.role_key==='technician';
  await requirePermission(req,contractor?'defects.assigned':security?'access.validate':technician?'workorders.assigned':'requests.read');
  const q=querySchema.parse(req.query);
+ if(['urgent','checklist','upcoming'].includes(q.focus)&&!technician)
+  throw new ApiError(400,'invalid_filter');
  const source=contractor?`
    SELECT d.id,d.subject,d.description,d.status,d.version,d.created_at,d.due_on,d.location,
     false AS unassigned,false AS overdue,
@@ -74,20 +76,52 @@ hayat.get('/hayat/queue',async(req,res)=>{
  try{
   await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   const stats=(await db.query(`${cte} SELECT status,count(*)::int AS count FROM filtered GROUP BY status ORDER BY status`,values)).rows;
-  const queueMetrics=operational?(await db.query(`${cte}
+  let queueMetrics:any=operational?(await db.query(`${cte}
    SELECT count(*) FILTER(WHERE unassigned)::int AS unassigned,
     count(*) FILTER(WHERE overdue)::int AS overdue
    FROM filtered`,values)).rows[0]:undefined;
+  if(technician&&queueMetrics){
+   const technicianMetrics=(await db.query(`${cte}
+    SELECT
+     count(*) FILTER(WHERE status IN('assigned','in_progress') AND priority IN('urgent','emergency'))::int AS urgent,
+     count(*) FILTER(WHERE status IN('assigned','in_progress')
+      AND ((visit_start IS NOT NULL AND visit_start>=now()) OR (due_at IS NOT NULL AND due_at>=now())))::int AS upcoming,
+     COALESCE(sum(CASE WHEN status<>'closed' THEN
+      CASE WHEN jsonb_typeof(checklist)='array' THEN jsonb_array_length(checklist) ELSE 0 END
+      ELSE 0 END),0)::int AS checklist_total,
+     COALESCE(sum(CASE WHEN status<>'closed' THEN
+      (SELECT count(*) FROM jsonb_array_elements(
+       CASE WHEN jsonb_typeof(checklist)='array' THEN checklist ELSE '[]'::jsonb END
+      ) AS item(value) WHERE value->'done'='true'::jsonb)
+      ELSE 0 END),0)::int AS checklist_done
+    FROM filtered`,values)).rows[0];
+   const checklistTotal=Number(technicianMetrics.checklist_total);
+   const checklistDone=Number(technicianMetrics.checklist_done);
+   queueMetrics={...queueMetrics,
+    urgent:Number(technicianMetrics.urgent),
+    upcoming:Number(technicianMetrics.upcoming),
+    checklist:{done:checklistDone,total:checklistTotal,percent:checklistTotal?Math.round(checklistDone*100/checklistTotal):null}
+   };
+  }
   const filtered=`${cte} SELECT * FROM filtered
    WHERE ($${values.length+1}::text='' OR status=$${values.length+1})
     AND ($${values.length+2}::text=''
      OR ($${values.length+2}::text='unassigned' AND unassigned)
-     OR ($${values.length+2}::text='overdue' AND overdue))`;
+     OR ($${values.length+2}::text='overdue' AND overdue)
+     ${operational?`
+      OR ($${values.length+2}::text='urgent' AND status IN('assigned','in_progress') AND priority IN('urgent','emergency'))
+      OR ($${values.length+2}::text='checklist' AND status<>'closed' AND EXISTS(
+       SELECT 1 FROM jsonb_array_elements(
+        CASE WHEN jsonb_typeof(checklist)='array' THEN checklist ELSE '[]'::jsonb END
+       ) AS item(value) WHERE COALESCE(value->'done','false'::jsonb)<>'true'::jsonb))
+      OR ($${values.length+2}::text='upcoming' AND status IN('assigned','in_progress')
+       AND ((visit_start IS NOT NULL AND visit_start>=now()) OR (due_at IS NOT NULL AND due_at>=now())))
+     `:''})`;
   const filterValues=[...values,q.status,q.focus];
    const total=(await db.query(`SELECT count(*)::int AS total FROM (${filtered}) x`,filterValues)).rows[0].total;
   const rows=(await db.query(`${filtered}
    ORDER BY CASE WHEN status IN ('closed','accepted','exited','expired','revoked') THEN 1 ELSE 0 END,
-    ${operational&&q.sort==='due'?'due_at ASC NULLS LAST,':operational&&q.sort==='priority'?"CASE priority WHEN 'emergency' THEN 5 WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'normal' THEN 2 ELSE 1 END DESC,":''}
+    ${operational&&q.focus==='upcoming'?'CASE WHEN visit_start>=now() THEN visit_start ELSE due_at END ASC NULLS LAST,':operational&&q.sort==='due'?'due_at ASC NULLS LAST,':operational&&q.sort==='priority'?"CASE priority WHEN 'emergency' THEN 5 WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'normal' THEN 2 ELSE 1 END DESC,":''}
     created_at DESC,id LIMIT 24 OFFSET $${filterValues.length+1}`,[...filterValues,q.page*24])).rows;
   const buildings=(await db.query(contractor||technician?
    `WITH scoped AS (${source}) SELECT DISTINCT building_id AS id,building_name AS name FROM scoped ORDER BY name`:

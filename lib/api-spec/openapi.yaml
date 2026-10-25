@@ -757,10 +757,11 @@ paths:
   /hayat/queue:
     get:
       operationId: getHayatQueue
-      description: Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+      description: Existing role-scoped operational queue. Technician metrics use only active assignments in the current server-authorized organization/building/unit scope. Checklist percent is null when no checklist items exist; upcoming counts assigned or in-progress work with a future visit or SLA deadline.
       parameters:
         - { name: search, in: query, schema: { type: string, maxLength: 200 } }
         - { name: status, in: query, schema: { type: string, maxLength: 40 } }
+        - { name: focus, in: query, schema: { type: string, enum: ["", unassigned, overdue, urgent, checklist, upcoming] } }
         - { name: priority, in: query, schema: { type: string, enum: ["", low, normal, high, urgent, emergency] } }
         - { name: sort, in: query, schema: { type: string, enum: [created, priority, due] } }
         - { name: building, in: query, schema: { type: string, format: uuid } }
@@ -4977,6 +4978,22 @@ components:
             properties:
               id: { type: string, format: uuid }
               name: { type: string }
+        metrics:
+          type: object
+          description: Counts use the same server-authorized scope, search, building, and priority filters. Technician-only urgent, checklist, and upcoming values are server-assigned work; checklist percent is null when no checklist items exist.
+          required: [unassigned, overdue]
+          properties:
+            unassigned: { type: integer, minimum: 0 }
+            overdue: { type: integer, minimum: 0 }
+            urgent: { type: integer, minimum: 0 }
+            upcoming: { type: integer, minimum: 0 }
+            checklist:
+              type: object
+              required: [done, total, percent]
+              properties:
+                done: { type: integer, minimum: 0 }
+                total: { type: integer, minimum: 0 }
+                percent: { type: [integer, "null"], minimum: 0, maximum: 100 }
         pageSize: { type: integer }
         serverTime: { type: string, format: date-time }
     DefectTransitionInput:

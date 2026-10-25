@@ -5296,7 +5296,7 @@ export const getGetHayatQueueUrl = (params?: GetHayatQueueParams,) => {
 }
 
 /**
- * Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+ * Existing role-scoped operational queue. Technician metrics use only active assignments in the current server-authorized organization/building/unit scope. Checklist percent is null when no checklist items exist; upcoming counts assigned or in-progress work with a future visit or SLA deadline.
  */
 export const getHayatQueue = async (params?: GetHayatQueueParams, options?: Parameters<typeof customFetch>[1]): Promise<HayatQueueResponse> => {
 

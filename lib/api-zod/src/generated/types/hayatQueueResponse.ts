@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HayatQueueResponseBuildingsItem } from './hayatQueueResponseBuildingsItem';
+import type { HayatQueueResponseMetrics } from './hayatQueueResponseMetrics';
 import type { HayatQueueResponseStatsItem } from './hayatQueueResponseStatsItem';
 import type { HayatQueueRow } from './hayatQueueRow';
 
@@ -14,6 +15,8 @@ export interface HayatQueueResponse {
   total: number;
   stats: HayatQueueResponseStatsItem[];
   buildings: HayatQueueResponseBuildingsItem[];
+  /** Counts use the same server-authorized scope, search, building, and priority filters. Technician-only urgent, checklist, and upcoming values are server-assigned work; checklist percent is null when no checklist items exist. */
+  metrics?: HayatQueueResponseMetrics;
   pageSize: number;
   serverTime: Date;
 }

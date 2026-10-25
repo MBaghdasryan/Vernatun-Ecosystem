@@ -1331,7 +1331,7 @@ export const GetApiHealthResponse = zod.object({
 
 
 /**
- * Existing role-scoped operational queue. Contractor rows contain only defects assigned to the authenticated contractor.
+ * Existing role-scoped operational queue. Technician metrics use only active assignments in the current server-authorized organization/building/unit scope. Checklist percent is null when no checklist items exist; upcoming counts assigned or in-progress work with a future visit or SLA deadline.
  */
 export const getHayatQueueQuerySearchMax = 200;
 
@@ -1345,11 +1345,29 @@ export const getHayatQueueQueryPageMax = 100000;
 export const GetHayatQueueQueryParams = zod.object({
   "search": zod.coerce.string().max(getHayatQueueQuerySearchMax).optional(),
   "status": zod.coerce.string().max(getHayatQueueQueryStatusMax).optional(),
+  "focus": zod.enum(['', 'unassigned', 'overdue', 'urgent', 'checklist', 'upcoming']).optional(),
   "priority": zod.enum(['', 'low', 'normal', 'high', 'urgent', 'emergency']).optional(),
   "sort": zod.enum(['created', 'priority', 'due']).optional(),
   "building": zod.coerce.string().uuid().optional(),
   "page": zod.coerce.number().int().min(getHayatQueueQueryPageMin).max(getHayatQueueQueryPageMax).optional()
 })
+
+export const getHayatQueueResponseMetricsUnassignedMin = 0;
+
+export const getHayatQueueResponseMetricsOverdueMin = 0;
+
+export const getHayatQueueResponseMetricsUrgentMin = 0;
+
+export const getHayatQueueResponseMetricsUpcomingMin = 0;
+
+export const getHayatQueueResponseMetricsChecklistDoneMin = 0;
+
+export const getHayatQueueResponseMetricsChecklistTotalMin = 0;
+
+export const getHayatQueueResponseMetricsChecklistPercentMin = 0;
+export const getHayatQueueResponseMetricsChecklistPercentMax = 100;
+
+
 
 export const GetHayatQueueResponse = zod.object({
   "rows": zod.array(zod.object({
@@ -1376,6 +1394,17 @@ export const GetHayatQueueResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string()
 })),
+  "metrics": zod.object({
+  "unassigned": zod.number().int().min(getHayatQueueResponseMetricsUnassignedMin),
+  "overdue": zod.number().int().min(getHayatQueueResponseMetricsOverdueMin),
+  "urgent": zod.number().int().min(getHayatQueueResponseMetricsUrgentMin).optional(),
+  "upcoming": zod.number().int().min(getHayatQueueResponseMetricsUpcomingMin).optional(),
+  "checklist": zod.object({
+  "done": zod.number().int().min(getHayatQueueResponseMetricsChecklistDoneMin),
+  "total": zod.number().int().min(getHayatQueueResponseMetricsChecklistTotalMin),
+  "percent": zod.number().int().min(getHayatQueueResponseMetricsChecklistPercentMin).max(getHayatQueueResponseMetricsChecklistPercentMax).nullable()
+}).optional()
+}).optional().describe('Counts use the same server-authorized scope, search, building, and priority filters. Technician-only urgent, checklist, and upcoming values are server-assigned work; checklist percent is null when no checklist items exist.'),
   "pageSize": zod.number().int(),
   "serverTime": zod.coerce.date()
 })

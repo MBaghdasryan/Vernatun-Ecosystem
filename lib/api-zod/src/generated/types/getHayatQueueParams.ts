@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GetHayatQueueFocus } from './getHayatQueueFocus';
 import type { GetHayatQueuePriority } from './getHayatQueuePriority';
 import type { GetHayatQueueSort } from './getHayatQueueSort';
 
@@ -17,6 +18,7 @@ search?: string;
  * @maxLength 40
  */
 status?: string;
+focus?: GetHayatQueueFocus;
 priority?: GetHayatQueuePriority;
 sort?: GetHayatQueueSort;
 building?: string;
