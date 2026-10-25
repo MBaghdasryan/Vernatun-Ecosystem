@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Check, Copy, Download } from 'lucide-react';
 import { request } from '../client';
+import { ReauthPrompt, needsReauth, reauthDone } from '../Reauth';
 import type { Language } from '../i18n';
 import { ENVIRONMENTS, MODULES, tr, type EdgeMode } from './config';
 import { Modal, errorText, fmt, type Row } from './ui';
@@ -15,11 +16,12 @@ export function TokenModal({ language, nodes, presetId, onClose, onDone }: { lan
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>();
   const [res, setRes] = useState<Row>();
+  const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState('');
   const node = nodes.find(n => n.id === nodeId);
 
   const submit = async (e: FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr(undefined);
+    e.preventDefault(); setBusy(true); setErr(undefined); setConfirmed(false);
     try { setRes(await request<Row>(`/edge-console/nodes/${encodeURIComponent(nodeId)}/bootstrap-token`, 'POST', { expiresInMinutes: Number(minutes) })); onDone(); }
     catch (x) { setErr(x); } finally { setBusy(false); }
   };
@@ -37,7 +39,8 @@ export function TokenModal({ language, nodes, presetId, onClose, onDone }: { lan
   const fact = (k: string, v: unknown) => <div className="em-fact" key={k}><small>{k}</small><strong>{String(v ?? '—')}</strong></div>;
 
   return <Modal title={res ? L('tokenOk') : L('genToken')} onClose={onClose} wide labelId="em-token-title">
-    {!res ? <form className="em-form" onSubmit={submit}>
+    {needsReauth(err) ? <ReauthPrompt language={language} onDone={() => { setErr(undefined); setConfirmed(true); }} onCancel={() => setErr(undefined)} /> : !res ? <form className="em-form" onSubmit={submit}>
+      {confirmed && <div className="em-alert info" role="status">{reauthDone(language)}</div>}
       <label>{L('chooseEdge')}<select required value={nodeId} onChange={e => setNodeId(e.target.value)} data-testid="select-token-edge"><option value="">—</option>{nodes.filter(n => !n.archived_at).map(n => <option key={n.id} value={n.id}>{n.name} · {n.edge_id}</option>)}</select></label>
       {node && <div className="em-facts">{fact(L('org'), node.organization_name)}{fact(L('block'), node.block_name)}{fact(L('building'), node.building_name)}{fact(L('edgeId'), node.edge_id)}{fact(L('site'), node.site_code)}</div>}
       <label>{L('expiry')}<input type="number" min={5} max={1440} required value={minutes} onChange={e => setMinutes(e.target.value)} data-testid="input-token-minutes" /></label>
@@ -66,6 +69,7 @@ export function AddEdgeWizard({ language, mode, buildings, blocks, onClose, onCr
   const [err, setErr] = useState<unknown>();
   const [f, setF] = useState({ orgId: '', edgeId: '', name: '', siteCode: '', description: '', scope: 'newBlock', blockId: '', buildingId: '', blockName: '', blockCode: '', buildingIds: [] as string[], modules: [] as string[], projectName: '', environment: '' });
   const [madeBlock, setMadeBlock] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
   const set = (p: Partial<typeof f>) => setF(c => ({ ...c, ...p }));
   const orgs = Array.from(new Map(buildings.map(b => [b.organization_id, b.organization_name ?? b.organization_id])).entries());
   const orgId = mode === 'platform' ? f.orgId : '';
@@ -82,7 +86,7 @@ export function AddEdgeWizard({ language, mode, buildings, blocks, onClose, onCr
   const toggle = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
   const submit = async () => {
-    setBusy(true); setErr(undefined);
+    setBusy(true); setErr(undefined); setConfirmed(false);
     try {
       let blockId = madeBlock || f.blockId;
       if (f.scope === 'newBlock' && !madeBlock) {
@@ -104,6 +108,10 @@ export function AddEdgeWizard({ language, mode, buildings, blocks, onClose, onCr
   const names = [L('wiz1'), L('wiz2'), L('wiz3'), L('wiz4')];
   const buildingName = (id: string) => buildings.find(b => b.id === id)?.name ?? id;
 
+  if (needsReauth(err)) return <Modal title={L('add')} onClose={onClose} wide labelId="em-wiz-title">
+    <ReauthPrompt language={language} onDone={() => { setErr(undefined); setConfirmed(true); }} onCancel={() => setErr(undefined)} />
+  </Modal>;
+
   return <Modal title={L('add')} onClose={onClose} wide labelId="em-wiz-title">
     <div className="em-steps" aria-label="steps">{names.map((n, i) => <span key={n} className={i === step ? 'on' : ''} aria-current={i === step ? 'step' : undefined}>{i + 1}. {n}</span>)}</div>
     <div className="em-form">
@@ -122,14 +130,23 @@ export function AddEdgeWizard({ language, mode, buildings, blocks, onClose, onCr
         <label>{L('scope')}<select value={f.scope} onChange={e => set({ scope: e.target.value })} data-testid="select-wizard-scope"><option value="newBlock">{L('newBlock')}</option><option value="existingBlock">{L('existingBlock')}</option><option value="singleBuilding">{L('singleBuilding')}</option></select></label>
         {f.scope === 'newBlock' && <>
           <div className="em-grid2"><label>{L('blockName')}<input value={f.blockName} onChange={e => set({ blockName: e.target.value })} /></label><label>{L('blockCode')}<input value={f.blockCode} onChange={e => set({ blockCode: e.target.value })} /></label></div>
-          {freeBuildings.length ? <fieldset style={{ border: '1px solid var(--ln)', borderRadius: 8, maxHeight: 220, overflow: 'auto' }}><legend>{L('buildings')} ({f.buildingIds.length})</legend>
-            {freeBuildings.map(b => <label className="em-opt" key={b.id}><input type="checkbox" checked={f.buildingIds.includes(b.id)} onChange={() => set({ buildingIds: toggle(f.buildingIds, b.id) })} />{b.name}</label>)}</fieldset> : <div className="em-alert info">{L('noBuildings')}</div>}
+          {orgBuildings.length ? <>
+            <fieldset style={{ border: '1px solid var(--ln)', borderRadius: 8, maxHeight: 220, overflow: 'auto' }}><legend>{L('buildings')} ({f.buildingIds.length})</legend>
+              {orgBuildings.map(b => {
+                const assigned = orgBlocks.find(bl => bl.buildings?.some((x: Row) => x.id === b.id));
+                return <label className="em-opt" key={b.id}><input type="checkbox" disabled={!!assigned} checked={f.buildingIds.includes(b.id)} onChange={() => set({ buildingIds: toggle(f.buildingIds, b.id) })} />{b.name}{assigned ? ` · ${L('blockAssigned')}: ${assigned.name}` : ''}</label>;
+              })}
+            </fieldset>
+            {!freeBuildings.length && <div className="em-alert info">{L('noFreeBuildings')}</div>}
+            {!!orgBlocks.length && <button type="button" className="em-btn" onClick={() => set({ scope: 'existingBlock', blockId: orgBlocks[0].id })}>{L('existingBlock')}</button>}
+          </> : <div className="em-alert info">{L('noBuildings')}</div>}
         </>}
         {f.scope === 'existingBlock' && <label>{L('block')}<select value={f.blockId} onChange={e => set({ blockId: e.target.value })}><option value="">{L('chooseBlock')}</option>{orgBlocks.map(b => <option key={b.id} value={b.id}>{b.name} · {b.building_count}</option>)}</select></label>}
         {f.scope === 'singleBuilding' && <label>{L('building')}<select value={f.buildingId} onChange={e => set({ buildingId: e.target.value })}><option value="">{L('chooseBuilding')}</option>{orgBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
       </>}
       {step === 2 && <fieldset style={{ border: '1px solid var(--ln)', borderRadius: 8 }}><legend>{L('modules')}</legend>{MODULES.map(m => <label className="em-opt" key={m}><input type="checkbox" checked={f.modules.includes(m)} onChange={() => set({ modules: toggle(f.modules, m) })} />{L('m_' + m)}</label>)}</fieldset>}
       {step === 3 && <>
+        {confirmed && <div className="em-alert info" role="status">{reauthDone(language)}</div>}
         <div className="em-facts">
           {[[L('name'), f.name], [L('edgeId'), f.edgeId], [L('site'), f.siteCode], [L('protocol'), f.scope === 'singleBuilding' ? 'v1' : 'v2'],
           [L('block'), f.scope === 'newBlock' ? f.blockName : f.scope === 'existingBlock' ? blocks.find(b => b.id === f.blockId)?.name : '—'],

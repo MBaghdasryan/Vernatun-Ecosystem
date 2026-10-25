@@ -54,7 +54,9 @@ async function managed<T>(path:string,method:string,body?:unknown):Promise<T>{
   }
   return result;
  }catch(e){
-  if(e instanceof ApiClientError&&(e.status===401||e.status===403)&&path!=='/auth/login'){
+  // A step-up challenge does not invalidate the signed-in identity. Keep the
+  // context while the caller confirms password/MFA and manually retries.
+  if(e instanceof ApiClientError&&(e.status===401||e.status===403)&&e.code!=='recent_authentication_required'&&path!=='/auth/login'){
    forgetSession();
    if(typeof window!=='undefined')window.dispatchEvent(new Event('hayat-identity'));
   }

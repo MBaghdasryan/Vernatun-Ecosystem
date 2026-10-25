@@ -174,6 +174,7 @@ export const COPY: Record<string, T3> = {
   chooseBlock: ['Ընտրեք բլոկը', 'Выберите блок', 'Choose a block'], chooseBuilding: ['Ընտրեք շենքը', 'Выберите здание', 'Choose a building'],
   chooseOrg: ['Ընտրեք կազմակերպությունը', 'Выберите организацию', 'Choose an organization'],
   noBuildings: ['Հասանելի շենքեր չկան։', 'Нет доступных зданий.', 'No buildings available.'],
+  noFreeBuildings: ['Բոլոր շենքերն արդեն բլոկներում են։ Ընտրեք գոյություն ունեցող բլոկ կամ մեկ շենք (v1)։', 'Все здания уже включены в блоки. Выберите существующий блок или одно здание (v1).', 'All buildings already belong to blocks. Choose an existing block or a single building (v1).'],
   afterCreate: ['Ստեղծումից հետո կարգավիճակը՝ WAITING_BOOTSTRAP_TOKEN։', 'После создания статус: WAITING_BOOTSTRAP_TOKEN.', 'After creation the status is WAITING_BOOTSTRAP_TOKEN.'],
   // token modal
   tokenFor: ['Edge', 'Edge', 'Edge'], chooseEdge: ['Ընտրեք Edge-ը', 'Выберите Edge', 'Choose an Edge'], expiry: ['Ժամկետ (րոպե)', 'Срок действия (мин)', 'Expiry (minutes)'],
