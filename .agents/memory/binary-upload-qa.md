@@ -31,3 +31,14 @@ For presentation captures, distinguish Expo Web from native Android evidence.
 **Why:** The Expo web renderer can authenticate against the isolated API through a browser-local transport redirect even when production CORS prevents preview access. That proves the rendered demo flow, not production CORS or native-device behavior.
 
 **How to apply:** Preserve normal login, cookies, and CSRF; document the isolated transport and renderer alongside screenshots. Never present browser-local CORS headers as a deployed fix or Expo Web as an APK capture.
+
+For multi-role browser acceptance, verify the selected authenticated context by
+its role key instead of assuming login selected the intended role.
+
+**Why:** A seeded organization administrator can have multiple assignments, and
+the context picker is localized. Choosing by visible label or the first option
+can silently test a different role.
+
+**How to apply:** After login, inspect the authenticated context list, choose
+the matching role assignment, and verify the protected UI/API under that
+context.
