@@ -1,6 +1,7 @@
 import {Router,type Request} from 'express';
 import {createHash,randomBytes} from 'node:crypto';
 import {z} from 'zod';
+import {defaultEnabledCapabilitiesForProfile,getDeviceActionProfile,reportedCapabilitiesForProfile} from '@workspace/api-zod';
 import {pool} from './db.js';
 import {ApiError} from './access.js';
 import {recordEdgeCommandResult} from './edge-sockets.js';
@@ -58,6 +59,8 @@ async function assertBuilding(node:EdgeV2Node,buildingId:string,db:any=pool){
  if(!found.rowCount)throw new ApiError(403,'building_outside_edge_block');
 }
 function deviceType(profile:string){
+ const registered=getDeviceActionProfile(profile);
+ if(registered)return registered.deviceType;
  if(profile.includes('Barrier'))return 'barrier';
  if(profile.includes('Camera'))return 'camera';
  if(profile.includes('Elevator'))return 'elevator';
@@ -67,9 +70,6 @@ function deviceType(profile:string){
  if(profile.includes('HVAC'))return 'hvac';
  if(profile.includes('Pump'))return 'pump';
  return 'unknown';
-}
-function capabilitiesFor(profile:string){
- return profile==='Vernatun Barrier'?['BARRIER.OPEN','BARRIER.CLOSE']:[];
 }
 const batchItems=(body:any)=>{
  edgeTimestampedRecord.parse(body);
@@ -166,7 +166,7 @@ router.post('/inventory',machineAuth,async(req:EdgeV2Request,res)=>{
    deviceId:z.string().trim().min(1).max(200),name:z.string().max(200).optional(),
    thingsboardId:z.string().max(200).nullable().optional(),
    profile:z.string().trim().min(1).max(100),label:z.string().max(200).nullable().optional(),
-   active:z.boolean().nullable().optional()})).max(5000),
+    active:z.boolean().nullable().optional(),capabilities:z.array(z.string().trim().max(80)).max(30).optional()})).max(5000),
  }).strict().parse(req.body);
  verifyIdentity(req,node,body);
  const client=await pool.connect();
@@ -174,18 +174,19 @@ router.post('/inventory',machineAuth,async(req:EdgeV2Request,res)=>{
   await client.query('BEGIN');
   for(const device of body.devices){
    await assertBuilding(node,device.buildingId,client);
-   const capabilities=capabilitiesFor(device.profile);
+    const capabilities=reportedCapabilitiesForProfile(device.profile,device.capabilities);
+    const enabledCapabilities=defaultEnabledCapabilitiesForProfile(device.profile);
    await client.query(`INSERT INTO edge_device_inventory
     (edge_node_id,organization_id,building_id,edge_device_id,thingsboard_id,name,profile,device_type,label,
-     capabilities,reported_online,last_seen_at,metadata,updated_at)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),'{}',now())
+      capabilities,enabled_capabilities,reported_online,last_seen_at,metadata,updated_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now(),'{}',now())
     ON CONFLICT(edge_node_id,building_id,edge_device_id) DO UPDATE SET
      thingsboard_id=EXCLUDED.thingsboard_id,name=EXCLUDED.name,profile=EXCLUDED.profile,
      device_type=EXCLUDED.device_type,label=EXCLUDED.label,capabilities=EXCLUDED.capabilities,
      reported_online=EXCLUDED.reported_online,last_seen_at=now(),updated_at=now()`,
    [node.id,node.organization_id,device.buildingId,device.deviceId,device.thingsboardId??null,
     device.name??device.deviceId,device.profile,deviceType(device.profile),device.label??null,
-    JSON.stringify(capabilities),device.active??null]);
+     JSON.stringify(capabilities),enabledCapabilities,device.active??null]);
   }
   await client.query(`UPDATE edge_nodes SET last_seen_at=now(),last_inventory_at=now(),status='ONLINE',updated_at=now() WHERE id=$1`,[node.id]);
   await client.query('COMMIT');
