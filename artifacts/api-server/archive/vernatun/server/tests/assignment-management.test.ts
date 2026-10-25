@@ -172,7 +172,7 @@ test('IAM profiles, per-user permission overrides and shared permission explanat
  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version(),denies:['properties.read']})).status,200);
  assert.equal((await manager.call('/properties')).status,403);
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM iam_assignment_rules WHERE assignment_id=$1 AND effect='grant'",[a.id])).rows[0].n,0);
- assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version()})).status,200);
+  assert.equal((await org.call('/iam/assignments/'+a.id+'/policy','POST',{...policy,version:await version(),profileId:null})).status,200);
  assert.equal((await manager.call('/properties')).status,200);
  const updated=(await org.call('/iam/users/'+a.user_id)).data.assignments.find((x:any)=>x.id===a.id);
  assert.equal((await org.call('/iam/assignments/'+a.id+'/status','POST',{version:updated.version,status:'suspended',reason:'Isolated pause test'})).status,204);
@@ -218,7 +218,7 @@ test('profiles and per-user overrides cannot bypass module, subscription or requ
   await pool.query('UPDATE organizations SET subscription_enforced=true WHERE id=$1',[a.organization_id]);
   await pool.query("UPDATE subscriptions SET status='paused' WHERE organization_id=$1",[a.organization_id]);
   const explanation=await platform.call('/iam/assignments/'+a.id+'/access','POST',{method:'PATCH'});
-   assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='documents.read').reason,'subscription_restricted');
+   assert.equal(explanation.data.evaluations.find((p:any)=>p.permission==='properties.read').reason,'subscription_restricted');
   assert.equal((await org.call('/roles/'+a.id,'PATCH',await updateBody(a.id))).status,403);
  }finally{
   await pool.query('UPDATE organizations SET subscription_enforced=$2 WHERE id=$1',[a.organization_id,oldOrg.subscription_enforced]);

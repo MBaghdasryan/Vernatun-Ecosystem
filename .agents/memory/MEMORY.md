@@ -26,3 +26,4 @@
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.
 - [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.
 - [Edge integration contract](edge-integration-contract.md) — preserve v1; versioned v2 assigns each Edge node to a block with explicit building/device scope.
+- [Per-user IAM overrides](per-user-iam-overrides.md) — platform admins edit globally; organization admins edit within their organization, without bypassing base-role or resource guards.
