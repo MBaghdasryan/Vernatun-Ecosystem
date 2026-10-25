@@ -1,6 +1,6 @@
 # Vernatun — keyboard and screen-reader acceptance
 
-**Date:** 2026-10-23  
+**Date:** 2026-10-25
 **Status:** source audit and shared-shell fixes complete; full interactive acceptance remains **PARTIAL**.
 
 This report separates source inspection from browser/assistive-technology evidence.
@@ -46,6 +46,14 @@ opened and keyboard-tested individually in this pass.
   have a 24×24 px minimum size.
 - Existing modal focus behavior and mobile navigation focus handling were reviewed
   in source. This is not evidence of a live keyboard interaction test.
+- HAYAT modal dialogs now expose their heading as the dialog name and use a
+  localized “Close” accessible name instead of repeating the dialog title.
+- ImTun’s mobile navigation is now labelled as service navigation, matching its
+  desktop navigation rather than being announced as “Home.”
+- Source inspection confirmed that Vernatun’s global search dialog captures
+  Escape even when the search input contains text, restores focus to its opener,
+  and announces loading, failure, and empty-result states through a polite live
+  region. These behaviors still need real browser and screen-reader confirmation.
 
 ## Viewport evidence
 
@@ -73,6 +81,10 @@ those widths, and the coarse-pointer rules were not tested on a physical device.
 - NVDA, VoiceOver, TalkBack, and a screen-reader announcement/order check were not
   available. ARIA names, state changes, chart descriptions, and live-region
   announcements remain unconfirmed with assistive technology.
+- No authenticated browser session was used in this pass. Browser and operating
+  system for interactive acceptance: **not run / not recorded**. The 14 role
+  routes above were source-audited as shared-shell coverage only, not opened as
+  signed-in users.
 - No automated axe scan was run against authenticated pages.
 - Touch target dimensions were raised in shared CSS, but individual rendered
   controls, spacing exceptions, and overlap at each viewport still need browser
@@ -80,13 +92,16 @@ those widths, and the coarse-pointer rules were not tested on a physical device.
 - Manual acceptance is still required for all 14 roles, especially mobile menu
   focus trapping/return, dialogs with populated search inputs, workflow forms,
   validation errors, dense tables, and charts.
+- The Vernatun OS compact bottom navigation still needs live mobile verification
+  of its current-page announcement; desktop navigation already exposes the
+  current link in source.
 
 ## Checks run
 
 - `corepack pnpm --filter @workspace/vernatun run typecheck` — **PASS**.
 - `PORT=5173 BASE_PATH=/vernatun/ corepack pnpm --filter @workspace/vernatun run build`
-  — **PASS**. Vite reports the existing large Portal bundle warning.
-- Restarted `artifacts/vernatun: web`; the preview served the Armenian sign-in
-  page without browser console errors. This confirms the public login route only,
-  not authenticated role screens.
-- `git diff --check` — **PASS**.
+  — **PASS**. Vite reports the existing large Portal bundle warning (about 1.09 MB).
+- `DANGEROUSLY_ALLOW_GIT=1 git diff --check` — **PASS**.
+- Restarted `artifacts/vernatun: web`; the public `/login` route rendered the
+  Armenian sign-in page in the preview with no browser console errors. This does
+  not verify any authenticated role screen.
