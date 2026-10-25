@@ -1007,6 +1007,62 @@ paths:
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
+  /modules:
+    get:
+      operationId: getOrganizationModules
+      responses:
+        '200':
+          description: Modules available to the current organization under its active subscription policy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [modules, enforced, state, readOnly]
+                properties:
+                  modules:
+                    type: array
+                    items:
+                      type: object
+                      required: [module, enabled, override_state, updatedAt]
+                      properties:
+                        module: {type: string, enum: [requests, finance, handover, access, community, maintenance, meters, documents]}
+                        enabled: {type: boolean}
+                        override_state: {type: string, enum: [inherited, enabled, disabled]}
+                        updatedAt: {type: string}
+                  enforced: {type: boolean}
+                  state: {type: string}
+                  readOnly: {type: boolean}
+  /modules/{module}:
+    parameters:
+      - name: module
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [requests, finance, handover, access, community, maintenance, meters, documents]
+    patch:
+      operationId: updateOrganizationModule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, expectedUpdatedAt]
+              properties:
+                enabled: {type: boolean}
+                expectedUpdatedAt: {type: string, minLength: 1, maxLength: 64}
+      responses:
+        '200':
+          description: Updated module entitlement and concurrency token
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '403':
+          description: Module is outside the plan, subscription is read-only, or permission is missing
+        '409':
+          description: Module changed since it was read
   /system/updates:
     get:
       operationId: getSystemUpdates

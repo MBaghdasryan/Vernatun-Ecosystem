@@ -30,7 +30,19 @@ test('Technician, contractor and support cannot browse residents or finances',as
 test('Organization admin cannot issue a platform role or foreign-unit invitation',async()=>{assert.equal((await org.call('/invitations','POST',{email:'forbidden@vernatun.test',role:'platform_admin'})).status,403);assert.equal((await org.call('/invitations','POST',{email:'forbidden@vernatun.test',role:'family',buildingId:seeded.fixtures.bb,unitId:seeded.fixtures.ub})).status,404)});
 test('Revoking role takes effect on the next direct API request',async()=>{const id=(await family.call('/auth/session')).data.contextId;try{assert.equal((await org.call('/roles/'+id,'DELETE')).status,204);assert.equal((await family.call('/properties')).status,403)}finally{await pool.query('UPDATE role_assignments SET active=true WHERE id=$1',[id])}});
 test('Expired assignments are rejected even with an existing session',async()=>{const id=(await renter.call('/auth/session')).data.contextId;const before=(await pool.query('SELECT starts_at,expires_at FROM role_assignments WHERE id=$1',[id])).rows[0];try{await pool.query("UPDATE role_assignments SET starts_at=now()-interval '2 days',expires_at=now()-interval '1 day' WHERE id=$1",[id]);assert.equal((await renter.call('/invoices')).status,403)}finally{await pool.query('UPDATE role_assignments SET starts_at=$1,expires_at=$2 WHERE id=$3',[before.starts_at,before.expires_at,id])}});
-test('Disabled modules cannot be accessed through API',async()=>{try{assert.equal((await org.call('/modules/finance','PATCH',{enabled:false})).status,200);assert.equal((await owner.call('/invoices')).status,403)}finally{await org.call('/modules/finance','PATCH',{enabled:true})}});
+test('Disabled modules cannot be accessed through API',async()=>{
+ const initial=await org.call('/modules');
+ const finance=initial.data.modules.find((m:any)=>m.module==='finance');
+ assert.ok(finance);
+ try{
+  assert.equal((await org.call('/modules/finance','PATCH',{enabled:false,expectedUpdatedAt:finance.updatedAt})).status,200);
+  assert.equal((await owner.call('/invoices')).status,403);
+ }finally{
+  const current=await org.call('/modules');
+  const latest=current.data.modules.find((m:any)=>m.module==='finance');
+  if(latest&&!latest.enabled)assert.equal((await org.call('/modules/finance','PATCH',{enabled:true,expectedUpdatedAt:latest.updatedAt})).status,200);
+ }
+});
 test('Published financial rows are immutable at database level',async()=>{const invoice=(await owner.call('/invoices')).data[0];await assert.rejects(pool.query('UPDATE invoices SET amount_minor=1 WHERE id=$1',[invoice.id]),/immutable/)});
 test('Organization onboarding links create a separate account with limited scope; block revokes session',async()=>{
  const tag=randomBytes(5).toString('hex');

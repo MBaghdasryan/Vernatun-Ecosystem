@@ -4038,6 +4038,54 @@ export type GetSystemApiDocumentation200 = { [key: string]: unknown };
 
 export type GetSystemModuleRegistry200 = { [key: string]: unknown };
 
+export type GetOrganizationModules200ModulesItemModule = typeof GetOrganizationModules200ModulesItemModule[keyof typeof GetOrganizationModules200ModulesItemModule];
+
+
+export const GetOrganizationModules200ModulesItemModule = {
+  requests: 'requests',
+  finance: 'finance',
+  handover: 'handover',
+  access: 'access',
+  community: 'community',
+  maintenance: 'maintenance',
+  meters: 'meters',
+  documents: 'documents',
+} as const;
+
+export type GetOrganizationModules200ModulesItemOverrideState = typeof GetOrganizationModules200ModulesItemOverrideState[keyof typeof GetOrganizationModules200ModulesItemOverrideState];
+
+
+export const GetOrganizationModules200ModulesItemOverrideState = {
+  inherited: 'inherited',
+  enabled: 'enabled',
+  disabled: 'disabled',
+} as const;
+
+export type GetOrganizationModules200ModulesItem = {
+  module: GetOrganizationModules200ModulesItemModule;
+  enabled: boolean;
+  override_state: GetOrganizationModules200ModulesItemOverrideState;
+  updatedAt: string;
+};
+
+export type GetOrganizationModules200 = {
+  modules: GetOrganizationModules200ModulesItem[];
+  enforced: boolean;
+  state: string;
+  readOnly: boolean;
+};
+
+export type UpdateOrganizationModuleBody = {
+  enabled: boolean;
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  expectedUpdatedAt: string;
+};
+
+export type UpdateOrganizationModule200 = { [key: string]: unknown };
+
 export type GetSystemUpdates200 = { [key: string]: unknown };
 
 export type UploadSystemUpdate201 = { [key: string]: unknown };

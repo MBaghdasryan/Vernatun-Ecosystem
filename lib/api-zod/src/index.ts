@@ -42,3 +42,4 @@ export type { UpdatePortfolioObjectBody } from "./generated/types/updatePortfoli
 export type { StageSystemUpdateBody } from "./generated/types/stageSystemUpdateBody";
 export type { InstallSystemUpdateBody } from "./generated/types/installSystemUpdateBody";
 export type { RollbackSystemUpdateBody } from "./generated/types/rollbackSystemUpdateBody";
+export type { UpdateOrganizationModuleBody } from "./generated/types/updateOrganizationModuleBody";

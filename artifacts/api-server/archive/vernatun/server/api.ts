@@ -1,6 +1,6 @@
 import {assertEmailConfigured,emailProviderState} from './email.js';
 import {sendInvitation} from './invitation-delivery.js';
-import {subscriptionPolicy,moduleKeys} from './subscription-policy.js';
+import {subscriptionPolicy} from './subscription-policy.js';
 import {transaction,record} from './operations.js';
 import {invoiceAmounts} from './operations.js';
 import {Router} from 'express';
@@ -14,23 +14,7 @@ import {assignmentManagement} from './assignment-management.js';
 import {iam} from './iam.js';
 export const api=Router();api.use(requireAuth);api.use(iam);api.use(assignmentManagement);
 const uuid=z.string().uuid();
-api.get('/dashboard',async(req,res)=>{
- const c=await context(req),metrics:Record<string,number>={};
- if(c.permissions.includes('organizations.read')){
-  metrics.organizations=Number((await pool.query('SELECT count(*) FROM organizations')).rows[0].count);
-  metrics.buildings=Number((await pool.query('SELECT count(*) FROM buildings')).rows[0].count);
-  metrics.accounts=Number((await pool.query('SELECT count(*) FROM users WHERE NOT blocked')).rows[0].count);
-  metrics.roles=Number((await pool.query('SELECT count(*) FROM roles')).rows[0].count);
- }else if(c.organization_id){
-  if(c.permissions.includes('properties.read')||c.permissions.includes('properties.own')){
-   metrics.buildings=Number((await pool.query('SELECT count(*) FROM buildings WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2)',[c.organization_id,c.building_id])).rows[0].count);
-   metrics.units=Number((await pool.query('SELECT count(*) FROM units WHERE organization_id=$1 AND ($2::uuid IS NULL OR building_id=$2) AND ($3::uuid IS NULL OR id=$3)',[c.organization_id,c.building_id,c.unit_id])).rows[0].count);
-  }
-  if(c.permissions.includes('people.read'))metrics.team=Number((await pool.query(`SELECT count(DISTINCT a.user_id) FROM role_assignments a JOIN users u ON u.id=a.user_id JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id WHERE a.organization_id=$1 AND a.active AND m.active AND NOT u.blocked AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) AND ($2::uuid IS NULL OR a.building_id=$2) AND ($3::uuid IS NULL OR a.unit_id=$3)`,[c.organization_id,c.building_id,c.unit_id])).rows[0].count);
-  if(c.permissions.includes('modules.read'))metrics.modules=(await subscriptionPolicy(c.organization_id)).modules.length;
- }
- res.json({context:c,metrics,stage:1,currencies:['AMD','RUB','USD'],timezone:'Asia/Yerevan',integrations:{payments:'not_connected',email:emailProviderState(),door:'not_connected',mfa:'totp_available'}});
-});
+api.get('/dashboard',async(req,res)=>{const c=await context(req);const metrics:Record<string,number>={};if(c.permissions.includes('organizations.read')){metrics.organizations=Number((await pool.query('SELECT count(*) FROM organizations')).rows[0].count);metrics.buildings=Number((await pool.query('SELECT count(*) FROM buildings')).rows[0].count);metrics.accounts=Number((await pool.query('SELECT count(*) FROM users WHERE NOT blocked')).rows[0].count);metrics.roles=Number((await pool.query('SELECT count(*) FROM roles')).rows[0].count)}else if(c.organization_id){if(c.permissions.includes('properties.read')||c.permissions.includes('properties.own')){metrics.buildings=Number((await pool.query('SELECT count(*) FROM buildings WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2)',[c.organization_id,c.building_id])).rows[0].count);metrics.units=Number((await pool.query('SELECT count(*) FROM units WHERE organization_id=$1 AND ($2::uuid IS NULL OR building_id=$2) AND ($3::uuid IS NULL OR id=$3)',[c.organization_id,c.building_id,c.unit_id])).rows[0].count)}if(c.permissions.includes('people.read'))metrics.team=Number((await pool.query(`SELECT count(DISTINCT a.user_id) FROM role_assignments a JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id WHERE a.organization_id=$1 AND a.active AND m.active AND ($2::uuid IS NULL OR a.building_id=$2)`,[c.organization_id,c.building_id])).rows[0].count);if(c.permissions.includes('modules.read'))metrics.modules=Number((await pool.query('SELECT count(*) FROM module_entitlements WHERE organization_id=$1 AND enabled',[c.organization_id])).rows[0].count)}res.json({context:c,metrics,stage:1,currencies:['AMD','RUB','USD'],timezone:'Asia/Yerevan',integrations:{payments:'not_connected',email:emailProviderState(),door:'not_connected',mfa:'totp_available'}})});
 api.get('/organizations',async(req,res)=>{await requirePermission(req,'organizations.read');res.json((await pool.query('SELECT id,name,status,version,timezone,currency,is_demo,created_at FROM organizations ORDER BY created_at')).rows)});
 api.post('/organizations',async(req,res)=>{await requirePermission(req,'organizations.manage');const b=z.object({name:z.string().trim().min(2).max(120),currency:z.enum(['AMD','RUB','USD']).default('AMD')}).strict().parse(req.body);const client=await pool.connect();try{await client.query('BEGIN');const r=await client.query('INSERT INTO organizations(name,currency) VALUES($1,$2) RETURNING *',[b.name,b.currency]);for(const module of ['requests','finance','handover','access','community','maintenance','meters','documents'])await client.query('INSERT INTO module_entitlements(organization_id,module) VALUES($1,$2)',[r.rows[0].id,module]);await client.query('COMMIT');await audit(req.user!.id,r.rows[0].id,'organization.create','organization',r.rows[0].id);res.status(201).json(r.rows[0])}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}});
 api.get('/properties',async(req,res)=>{const c=await context(req);await requirePermission(req,c.permissions.includes('properties.read')?'properties.read':'properties.own');res.json((await pool.query('SELECT b.id,b.name,b.address,b.is_demo,(SELECT count(*)::int FROM units u WHERE u.building_id=b.id AND ($3::uuid IS NULL OR u.id=$3)) AS units FROM buildings b WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2) ORDER BY name',[c.organization_id,c.building_id,c.unit_id])).rows)});
@@ -39,8 +23,39 @@ api.get('/units',async(req,res)=>{const c=await context(req);await requirePermis
 api.get('/units/:id',async(req,res)=>{res.json(await requireUnitRead(req,uuid.parse(req.params.id)))});
 api.post('/units',async(req,res)=>{const c=await requirePermission(req,'properties.manage');const b=z.object({buildingId:uuid,number:z.string().trim().min(1).max(20),area:z.coerce.number().positive().max(100000)}).strict().parse(req.body);if(c.unit_id||(c.building_id&&c.building_id!==b.buildingId))throw new ApiError(403,'forbidden');const building=await pool.query('SELECT id FROM buildings WHERE id=$1 AND organization_id=$2',[b.buildingId,c.organization_id]);if(!building.rowCount)throw new ApiError(404,'not_found');const r=await pool.query('INSERT INTO units(organization_id,building_id,number,area) VALUES($1,$2,$3,$4) RETURNING *',[c.organization_id,b.buildingId,b.number,b.area]);await audit(req.user!.id,c.organization_id,'unit.create','unit',r.rows[0].id);res.status(201).json(r.rows[0])});
 api.get('/people',async(req,res)=>{const c=await requirePermission(req,'people.read');res.json((await pool.query(`SELECT a.id,u.name,u.email,a.role_key,a.building_id,a.unit_id,a.active,a.expires_at FROM role_assignments a JOIN users u ON u.id=a.user_id WHERE a.organization_id=$1 AND ($2::uuid IS NULL OR a.building_id=$2) ORDER BY u.name`,[c.organization_id,c.building_id])).rows)});
-api.get('/modules',async(req,res)=>{const c=await requirePermission(req,'modules.read');if(!c.organization_id)throw new ApiError(403,'forbidden');const policy=await subscriptionPolicy(c.organization_id);res.json(policy.overrides.map(e=>({...e,legacy_enabled:e.enabled,enabled:e.effective}))) });
-api.patch('/modules/:module',async(req,res)=>{const c=await requirePermission(req,'modules.manage');if(!c.organization_id||c.building_id||c.unit_id)throw new ApiError(403,'forbidden');const {enabled}=z.object({enabled:z.boolean()}).strict().parse(req.body);const module=z.enum(moduleKeys).parse(req.params.module);res.json(await transaction(async db=>{await db.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[c.organization_id]);const policy=await subscriptionPolicy(c.organization_id!,db);if(enabled&&policy.enforced){const p=(await db.query('SELECT p.allowed_modules FROM subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.id=$1',[policy.subscriptionId])).rows[0];if(!p?.allowed_modules.includes(module))throw new ApiError(403,'plan_module_not_available')}const r=await db.query("UPDATE module_entitlements SET enabled=$1,override_state=$2,override_reason='Organization module setting',updated_by=$3,updated_at=now() WHERE organization_id=$4 AND module=$5 RETURNING *",[enabled,enabled?'inherited':'disabled',req.user!.id,c.organization_id,module]);if(!r.rowCount)throw new ApiError(404,'not_found');await record(db,req,c,'module.update','module',module,{enabled,reason:'Organization module setting'});return r.rows[0]}))});
+api.get('/modules',async(req,res)=>{
+ const c=await requirePermission(req,'modules.read');
+ if(!c.organization_id)throw new ApiError(403,'forbidden');
+ const policy=await subscriptionPolicy(c.organization_id);
+ const modules=policy.overrides.filter(e=>policy.planModules.includes(e.module)).map(e=>({
+  module:e.module,enabled:e.effective,override_state:e.override_state,updatedAt:e.updated_at,
+ }));
+ res.set('Cache-Control','private, no-store').json({modules,enforced:policy.enforced,state:policy.state,readOnly:policy.readOnly});
+});
+api.patch('/modules/:module',async(req,res)=>{
+ const c=await requirePermission(req,'modules.manage');
+ if(!c.organization_id||c.building_id||c.unit_id)throw new ApiError(403,'forbidden');
+ const {enabled,expectedUpdatedAt}=z.object({enabled:z.boolean(),expectedUpdatedAt:z.string().min(1).max(64)}).strict().parse(req.body);
+ const module=z.enum(['finance','requests','handover','access','community','maintenance','meters','documents']).parse(req.params.module);
+ res.json(await transaction(async db=>{
+  await db.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[c.organization_id]);
+  const policy=await subscriptionPolicy(c.organization_id!,db);
+  if(policy.readOnly)throw new ApiError(403,'subscription_restricted');
+  if(policy.enforced&&!policy.planModules.includes(module))throw new ApiError(403,'plan_module_not_available');
+  const before=(await db.query('SELECT enabled,override_state,updated_at::text AS updated_at FROM module_entitlements WHERE organization_id=$1 AND module=$2 FOR UPDATE',[c.organization_id,module])).rows[0];
+  if(!before)throw new ApiError(404,'not_found');
+  if(before.updated_at!==expectedUpdatedAt)throw new ApiError(409,'stale_module_state');
+  const r=(await db.query(`UPDATE module_entitlements SET enabled=$1,override_state=$2,
+   override_reason='Organization module setting',updated_by=$3,updated_at=clock_timestamp()
+   WHERE organization_id=$4 AND module=$5 RETURNING module,enabled,override_state,updated_at::text AS "updatedAt"`,
+   [enabled,enabled?'inherited':'disabled',req.user!.id,c.organization_id,module])).rows[0];
+  await record(db,req,c,'module.update','module',module,{
+   before:{enabled:before.enabled,overrideState:before.override_state},
+   after:{enabled:r.enabled,overrideState:r.override_state},reason:'Organization module setting',
+  });
+  return r;
+ }));
+});
 api.get('/invoices',async(req,res)=>{const c=await context(req);const own=!c.permissions.includes('billing.read');await requirePermission(req,own?'billing.own':'billing.read');const currency=z.enum(['AMD','RUB','USD']).parse(req.query.currency??req.user!.currency);const r=await pool.query(`SELECT i.id,i.period,${invoiceAmounts},i.currency,i.status,u.number FROM invoices i JOIN units u ON u.id=i.unit_id WHERE i.organization_id=$1 AND i.currency=$2 AND ($3::uuid IS NULL OR u.building_id=$3) AND ($4::uuid IS NULL OR u.id=$4) AND (NOT $5::boolean OR (i.payer_user_id=$6 AND i.status='published')) ORDER BY i.period DESC`,[c.organization_id,currency,c.building_id,c.unit_id,own,req.user!.id]);res.json(r.rows)});
 api.get('/audit',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.audit');await requirePermission(req,platform?'platform.audit':'audit.read');const r=await pool.query(`SELECT a.id,a.organization_id,a.actor_user_id,a.action,a.entity_type,a.entity_id,a.details,a.created_at,u.name AS actor FROM audit_events a LEFT JOIN users u ON u.id=a.actor_user_id WHERE ${platform?'TRUE':'a.organization_id=$1'} ORDER BY a.created_at DESC,a.id DESC LIMIT 100`,platform?[]:[c.organization_id]);res.json(r.rows)});
 api.get('/invitations',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.invite');await requirePermission(req,platform?'platform.invite':'people.invite');res.json((await pool.query(`SELECT i.id,i.organization_id,o.name AS organization_name,i.email,i.role_key,i.expires_at,i.accepted_at,i.revoked_at FROM invitations i JOIN organizations o ON o.id=i.organization_id WHERE ${platform?'TRUE':'i.organization_id=$1'} ORDER BY i.expires_at DESC`,platform?[]:[c.organization_id])).rows)});

@@ -126,6 +126,7 @@ import type {
   GetIntegrationCenterParams,
   GetLandingLeadsParams,
   GetNotificationCatalog200,
+  GetOrganizationModules200,
   GetPortfolioAnalytics200,
   GetPortfolioAnalyticsParams,
   GetPrivateBrandLogoParams,
@@ -288,6 +289,8 @@ import type {
   UnreadNotificationCount,
   UpdateEmployeeAssignment200,
   UpdateOrganizationBrandingBody,
+  UpdateOrganizationModule200,
+  UpdateOrganizationModuleBody,
   UpdatePortfolioObjectBody,
   UploadDocumentVersion201,
   UploadDocumentVersionParams,
@@ -6571,6 +6574,160 @@ export function useGetSystemModuleRegistry<TData = Awaited<ReturnType<typeof get
 
 
 
+
+export const getGetOrganizationModulesUrl = () => {
+
+
+
+
+  return `/api/modules`
+}
+
+export const getOrganizationModules = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetOrganizationModules200> => {
+
+  return customFetch<GetOrganizationModules200>(getGetOrganizationModulesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrganizationModulesQueryKey = () => {
+    return [
+    `/api/modules`
+    ] as const;
+    }
+
+
+export const getGetOrganizationModulesQueryOptions = <TData = Awaited<ReturnType<typeof getOrganizationModules>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrganizationModules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrganizationModulesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrganizationModules>>> = ({ signal }) => getOrganizationModules({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrganizationModules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrganizationModulesQueryResult = NonNullable<Awaited<ReturnType<typeof getOrganizationModules>>>
+export type GetOrganizationModulesQueryError = ErrorType<unknown>
+
+
+
+export function useGetOrganizationModules<TData = Awaited<ReturnType<typeof getOrganizationModules>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrganizationModules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrganizationModulesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateOrganizationModuleUrl = (module: 'requests' | 'finance' | 'handover' | 'access' | 'community' | 'maintenance' | 'meters' | 'documents',) => {
+
+
+
+
+  return `/api/modules/${module}`
+}
+
+export const updateOrganizationModule = async (module: 'requests' | 'finance' | 'handover' | 'access' | 'community' | 'maintenance' | 'meters' | 'documents',
+    updateOrganizationModuleBody: UpdateOrganizationModuleBody, options?: Parameters<typeof customFetch>[1]): Promise<UpdateOrganizationModule200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UpdateOrganizationModule200>(getUpdateOrganizationModuleUrl(module),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateOrganizationModuleBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateOrganizationModuleMutationKey = () => ['updateOrganizationModule'] as const;
+
+export const getUpdateOrganizationModuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationModule>>, TError,UpdateOrganizationModuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationModule>>, TError,UpdateOrganizationModuleMutationVariables, TContext> => {
+
+const mutationKey = getUpdateOrganizationModuleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrganizationModule>>, UpdateOrganizationModuleMutationVariables> = (props) => {
+          const {module,data} = props ?? {};
+
+          return  updateOrganizationModule(module,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrganizationModuleMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrganizationModule>>>
+    export type UpdateOrganizationModuleMutationBody = BodyType<UpdateOrganizationModuleBody>
+    export type UpdateOrganizationModuleMutationError = ErrorType<void>
+    export type UpdateOrganizationModuleMutationVariables = {module: 'requests' | 'finance' | 'handover' | 'access' | 'community' | 'maintenance' | 'meters' | 'documents';data: BodyType<UpdateOrganizationModuleBody>}
+
+    export const useUpdateOrganizationModule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganizationModule>>, TError,UpdateOrganizationModuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrganizationModule>>,
+        TError,
+        UpdateOrganizationModuleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateOrganizationModuleMutationOptions(options));
+    }
 
 export const getGetSystemUpdatesUrl = () => {
 

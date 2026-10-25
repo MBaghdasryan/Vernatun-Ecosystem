@@ -205,12 +205,37 @@ test('Plan modules, override reasons, building limit, grace and read-only cancel
   assert.equal(policy.enforced,true);assert.equal(policy.state,'trial');assert.equal(policy.readOnly,false);
   assert.equal((await accountant.call('/invoices')).status,403);
   assert.equal((await org.call('/properties','POST',{name:'Blocked quota building',address:'Isolated quota test only'})).status,409);
+  const allowedModules=await org.call('/modules');
+  assert.equal(allowedModules.status,200);
+  assert.equal(allowedModules.data.enforced,true);
+  assert.deepEqual(allowedModules.data.modules.map((m:any)=>m.module),['requests']);
+  assert.equal(allowedModules.data.readOnly,false);
+  const requestVersion=allowedModules.data.modules[0].updatedAt;
+  const concurrent=await Promise.all([
+   org.call('/modules/requests','PATCH',{enabled:false,expectedUpdatedAt:requestVersion}),
+   org.call('/modules/requests','PATCH',{enabled:true,expectedUpdatedAt:requestVersion}),
+  ]);
+  assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
+  const refreshed=await org.call('/modules');
+  assert.notEqual(refreshed.data.modules[0].updatedAt,requestVersion);
+  assert.equal((await org.call('/modules/requests','PATCH',{enabled:!refreshed.data.modules[0].enabled,expectedUpdatedAt:requestVersion})).status,409);
+  assert.equal((await accountant.call('/modules/requests','PATCH',{enabled:false,expectedUpdatedAt:refreshed.data.modules[0].updatedAt})).status,403);
+  assert.equal((await org.call('/modules/not-a-core-module','PATCH',{enabled:true,expectedUpdatedAt:refreshed.data.modules[0].updatedAt})).status,400);
+  const enabledNow=await org.call('/modules');
+  const requestsNow=enabledNow.data.modules[0];
+  if(!requestsNow.enabled)assert.equal((await org.call('/modules/requests','PATCH',{enabled:true,expectedUpdatedAt:requestsNow.updatedAt})).status,200);
+  const moduleAudit=(await pool.query("SELECT organization_id,details FROM audit_events WHERE action='module.update' AND entity_id='requests' ORDER BY created_at DESC LIMIT 1")).rows[0];
+  assert.equal(moduleAudit.organization_id,seeded.fixtures.orgA);
+  assert.ok(moduleAudit.details.after);
   const override='/organizations/'+seeded.fixtures.orgA+'/module-overrides/finance';
   assert.equal((await platform.call(override,'PATCH',{state:'enabled',reason:'short'})).status,400);
   assert.equal((await platform.call(override,'PATCH',{state:'enabled',reason:'Explicit isolated override'})).status,200);
   assert.equal((await accountant.call('/invoices')).status,200);
-  assert.equal((await org.call('/modules/finance','PATCH',{enabled:true})).status,403);
+  assert.equal((await org.call('/modules/finance','PATCH',{enabled:true,expectedUpdatedAt:new Date().toISOString()})).status,403);
   assert.equal((await platform.call('/subscriptions/'+subscription.data.id,'PATCH',{status:'past_due',reason:'Test elapsed grace policy',graceUntil:new Date(Date.now()-1000).toISOString()})).status,200);
+  const restrictedModules=await org.call('/modules');
+  assert.equal(restrictedModules.data.readOnly,true);
+  assert.equal((await org.call('/modules/requests','PATCH',{enabled:!restrictedModules.data.modules[0].enabled,expectedUpdatedAt:restrictedModules.data.modules[0].updatedAt})).status,403);
   const blocked=await org.call('/invitations','POST',{email:randomUUID()+'@example.test',role:'manager'});
   assert.equal(blocked.status,403);assert.equal(blocked.data.error,'subscription_restricted');
   assert.equal((await org.call('/invitations')).status,200);

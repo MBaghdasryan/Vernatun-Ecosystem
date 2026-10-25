@@ -5,12 +5,12 @@ export const moduleKeys=['requests','finance','handover','access','community','m
 export type ModuleKey=typeof moduleKeys[number];
 export type SubscriptionPolicy={
  enforced:boolean;state:string;readOnly:boolean;grace:boolean;modules:string[];
- subscriptionId:string|null;buildingLimit:number|null;
- overrides:{module:string;enabled:boolean;override_state:string;override_reason:string;effective:boolean}[];
+ subscriptionId:string|null;buildingLimit:number|null;planModules:string[];
+ overrides:{module:string;enabled:boolean;override_state:string;override_reason:string;effective:boolean;updated_at:string}[];
 };
 export async function subscriptionPolicy(org:string,db:Pool|PoolClient=pool):Promise<SubscriptionPolicy>{
  const organization=(await db.query('SELECT subscription_enforced FROM organizations WHERE id=$1',[org])).rows[0];
- const entries=(await db.query('SELECT module,enabled,override_state,override_reason FROM module_entitlements WHERE organization_id=$1 ORDER BY module',[org])).rows;
+ const entries=(await db.query('SELECT module,enabled,override_state,override_reason,updated_at::text AS updated_at FROM module_entitlements WHERE organization_id=$1 ORDER BY module',[org])).rows;
  const subscription=(await db.query(`SELECT s.*,p.allowed_modules,p.building_limit,
   s.starts_on<=(now() AT TIME ZONE 'Asia/Yerevan')::date AS started,
   s.ends_on>=(now() AT TIME ZONE 'Asia/Yerevan')::date AS within_dates,
@@ -26,11 +26,12 @@ export async function subscriptionPolicy(org:string,db:Pool|PoolClient=pool):Pro
  }
  const grace=enforced&&state==='past_due'&&subscription?.within_grace===true;
  const readOnly=enforced&&!(['active','trial'].includes(state)||grace);
+ const planModules=enforced?moduleKeys.filter(module=>(subscription?.allowed_modules??[]).includes(module)):[...moduleKeys];
  const allowed=new Set<string>(subscription?.allowed_modules??[]);
  const overrides=entries.map(e=>({...e,effective:e.override_state==='enabled'||
   (e.override_state!=='disabled'&&e.enabled&&(!enforced||allowed.has(e.module)))}));
  return {enforced,state:enforced?state:'legacy',grace,readOnly,modules:overrides.filter(e=>e.effective).map(e=>e.module),
-  subscriptionId:subscription?.id??null,buildingLimit:subscription?.building_limit??null,overrides};
+  subscriptionId:subscription?.id??null,buildingLimit:subscription?.building_limit??null,planModules,overrides};
 }
 
 export async function platformHousekeeping(){

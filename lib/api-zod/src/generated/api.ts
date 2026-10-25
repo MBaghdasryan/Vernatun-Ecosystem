@@ -1820,6 +1820,35 @@ export const GetSystemApiDocumentationResponse = zod.record(zod.string(), zod.un
 export const GetSystemModuleRegistryResponse = zod.record(zod.string(), zod.unknown())
 
 
+export const GetOrganizationModulesResponse = zod.object({
+  "modules": zod.array(zod.object({
+  "module": zod.enum(['requests', 'finance', 'handover', 'access', 'community', 'maintenance', 'meters', 'documents']),
+  "enabled": zod.boolean(),
+  "override_state": zod.enum(['inherited', 'enabled', 'disabled']),
+  "updatedAt": zod.string()
+})),
+  "enforced": zod.boolean(),
+  "state": zod.string(),
+  "readOnly": zod.boolean()
+})
+
+
+export const UpdateOrganizationModuleParams = zod.object({
+  "module": zod.enum(['requests', 'finance', 'handover', 'access', 'community', 'maintenance', 'meters', 'documents'])
+})
+
+export const updateOrganizationModuleBodyExpectedUpdatedAtMax = 64;
+
+
+
+export const UpdateOrganizationModuleBody = zod.object({
+  "enabled": zod.boolean(),
+  "expectedUpdatedAt": zod.string().min(1).max(updateOrganizationModuleBodyExpectedUpdatedAtMax)
+})
+
+export const UpdateOrganizationModuleResponse = zod.record(zod.string(), zod.unknown())
+
+
 export const GetSystemUpdatesResponse = zod.record(zod.string(), zod.unknown())
 
 
