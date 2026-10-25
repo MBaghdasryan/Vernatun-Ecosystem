@@ -33,6 +33,46 @@ entitlement.
 | `paid` | Sum of payment allocations applied to the selected published invoices. | `finance.published_invoice_totals` | `billing.read` or `billing.own` (effective permission returned in card) | `finance` | Organization, building, unit, or authenticated payer | If no published invoices match, `dataState=no_data`; UI labels it “No data.” |
 | `balance` | Sum of published invoice charges plus adjustments minus payment allocations. | `finance.published_invoice_totals` | `billing.read` or `billing.own` (effective permission returned in card) | `finance` | Organization, building, unit, or authenticated payer | If no published invoices match, `dataState=no_data`; UI labels it “No data.” |
 
+## Rendered-card contract
+
+`RoleHome` renders cards returned by `GET /api/role-insights`; it does not
+derive additional KPIs from the current table page. The server chooses cards
+using the active role, scope, effective permission, and module. The same key
+can appear for different roles with a different permission or scope.
+
+| Card key | Applicable reference(s) | UI destination when separately authorized | Rendered meaning / empty behavior |
+|---|---|---|---|
+| `organizations` | Platform admin overview and control center | `/console/organizations` (`organizations.read`) | Measured count; `0` is a real result. |
+| `buildings` | Platform admin; organization/property roles | `/console/organizations` or `/os/properties` (`organizations.read` or `properties.read`) | Measured in platform or selected tenant scope. |
+| `activeSubscriptions` | Platform admin | `/console/subscriptions` (`subscriptions.manage`) | Active-subscription count; no revenue is inferred. |
+| `openSupport` | Platform admin or support | `/console/support-cases` (`support.cases`) when authorized | Platform-wide unresolved cases or cases assigned to the support operator. |
+| `team` | Organization admin and `people.read` roles | `/os/people` (`people.read`) | Distinct active, unblocked people/assignments in selected context. |
+| `units` | Organization admin and property/resident roles | `/os/units` (`properties.read`) when in OS | Measured units in selected organization/building/unit context. |
+| `activeGrants` | Support | `/console/support` (`support.access.request`) | Current approved grants for the authenticated operator. |
+| `onboardingRemaining` | Platform admin or assigned support operator | `/console/onboarding` (`onboarding.manage`) | Remaining platform steps or only the operator's assigned steps. |
+| `pendingInvites` | Organization admin | `/os/invitations` (`people.invite`) | Pending, unexpired invitations in the active OS scope. |
+| `openRequests` | Manager, dispatcher, and eligible residents | `/hayat/works` (`requests.read`) when in HAYAT | Open in-scope requests; `requests.own` is author-scoped. |
+| `assignedWork` | Technician | `/hayat/works` (`workorders.assigned`) | Assigned work for the signed-in technician; a page preview is not presented as a total. |
+| `openDefects` | Developer/manager or assigned contractor | `/os/defects` or `/hayat/defects` (`defects.read` or `defects.assigned`) | Non-accepted defects; contractor results remain assignment-scoped. |
+| `reviewDefects` | Developer/manager or assigned contractor | `/os/defects?status=review` or `/hayat/defects?status=review` (effective defect permission) | Review-state defects; the status filter is preselected from the URL over the authorized defect list, including when the filtered result is empty. |
+| `handoverReady` | Developer and other authorized handover readers | `/os/handovers` (`handover.read`) | Handover cases whose current status is `ready`. |
+| `validPasses` | Security or authorized pass creator | `/hayat/security` (`access.validate`) when in HAYAT | Valid in-scope passes; create-only access sees passes created by that user. |
+| `charged` | Accountant, portfolio owner, eligible residents | `/os/finance` (`billing.read`) when in OS | Published invoice charges for selected currency, period, payer, and scope. |
+| `paid` | Accountant, portfolio owner, eligible residents | `/os/finance` (`billing.read`) when in OS | Allocations applied to selected published invoices; imported bank rows alone are not paid. |
+| `balance` | Accountant, portfolio owner, eligible residents | `/os/finance` (`billing.read`) when in OS | Published charges plus adjustments minus applied allocations. |
+
+The card title is translated from its key. Its registered definition is exposed
+as a tooltip and accessible label. A card is clickable only when the separate
+destination permission is present; server authorization and module entitlement
+remain authoritative. `0` count values are measured. Finance cards with no
+matching published invoices show “No data,” not a verified zero. Errors remain
+errors. The period selector applies only to the three finance cards.
+
+The reference and authenticated dashboard screenshots were compared in an
+isolated QA run. Each reference-to-screen mapping and observed visual difference
+is recorded in `REFERENCE-SCREEN-GAP-REPORT.md`; this comparison confirms the
+remaining layout gaps and does not claim pixel parity.
+
 ## Contract rules
 
 - The optional `period` and `currency` filters affect only the three finance
@@ -45,8 +85,10 @@ entitlement.
   to a zero-valued card.
 - The SQL is parameterized and is executed only after the endpoint authorizes
   the active context. Tenant scope is not inferred from the requested period.
-- This registry covers current dashboard KPI cards; it does not certify
-  reference-chart parity or add SaaS platform billing revenue.
+- This registry covers current dashboard KPI cards; a separate portfolio history
+  chart uses actual `/portfolio/analytics` series. It does not certify full
+  reference-chart or pixel parity, and it does not add or imply SaaS platform
+  billing revenue.
 - The broader mapping from each of the 15 product screenshots to these cards,
   their real-data sources, no-data semantics, and current drill-down status is
   in [`KPI-REFERENCE-CROSSWALK.md`](KPI-REFERENCE-CROSSWALK.md). That crosswalk

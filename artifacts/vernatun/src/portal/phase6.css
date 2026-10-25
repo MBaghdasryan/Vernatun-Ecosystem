@@ -8,10 +8,14 @@
 .portal-root .p6-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .portal-root .p6-scroll{overflow-x:auto;max-width:100%}
 .portal-root .p6-scroll table{min-width:640px}
+.portal-root .p6-cashflow-chart{width:100%;min-width:0;height:280px;margin:0 0 14px;padding:12px 8px 4px;border:1px solid var(--p-border);border-radius:12px;background:#fff}
+.portal-root .p6-chart-tooltip{padding:9px 11px;border:1px solid var(--p-border);border-radius:9px;background:#fff;box-shadow:0 8px 24px rgba(22,42,58,.12);font-size:12px}
+.portal-root .p6-chart-tooltip strong{display:block;margin-bottom:4px;color:var(--p-ink)}
+.portal-root .p6-chart-tooltip div{margin-top:2px;font-variant-numeric:tabular-nums}
 .portal-root .p6-empty{display:grid;justify-items:center;gap:8px;padding:28px 12px;color:var(--p-muted);text-align:center;border:1px dashed var(--p-border);border-radius:12px}
 .portal-root .p6-empty span{width:34px;height:34px;border-radius:50%;border:2px solid var(--p-orange);opacity:.55}
 .portal-root .p6-agenda{border:1px solid var(--p-border);border-radius:11px;padding:12px;display:grid;gap:10px;margin:0 0 10px;background:#fff}
 .portal-root .p6-legacy{border-left:4px solid #e2b255;padding-left:12px}
 .portal-root .p6-opt{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .portal-root .p6-pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
-@media(max-width:560px){.portal-root .p6-kpis{grid-template-columns:1fr 1fr}.portal-root .p6-scroll table{min-width:560px}}
+@media(max-width:560px){.portal-root .p6-kpis{grid-template-columns:1fr 1fr}.portal-root .p6-scroll table{min-width:560px}.portal-root .p6-cashflow-chart{height:240px;padding:8px 2px 2px}}

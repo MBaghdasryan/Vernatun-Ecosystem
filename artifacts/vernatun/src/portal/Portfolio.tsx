@@ -3,8 +3,23 @@ import type {Currency,Language} from './i18n';
 import type {RoleContext} from './types';
 import {Fail,Frozen,useFrozen,useMounted,useLoad,LoadFail,Empty,p6,bp,minorText,minorFromMajor,dayText,ISO_DAY,type Row} from './phase6-ui';
 import PortfolioObjects from './PortfolioObjects';
+import {Bar,BarChart,CartesianGrid,Legend,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 
 type Flt={from:string;to:string;currency:string;buildingId:string;propertyId:string;portfolioObjectId?:string};
+type PortfolioChartPoint={period:string;billed:number|null;collected:number|null;expenses:number|null;billedMinor:unknown;collectedMinor:unknown;expensesMinor:unknown};
+function chartAmount(v:unknown):number|null{
+ if(v===null||v===undefined||v==='')return null;
+ const s=String(v);if(!/^-?\d+$/.test(s))return null;
+ const n=Number(BigInt(s))/100;return Number.isFinite(n)?n:null;
+}
+function PortfolioTooltip({active,payload,label,cur,l}:{active?:boolean;payload?:Array<{dataKey?:string;name?:string;color?:string;payload?:PortfolioChartPoint}>;label?:string;cur:string;l:Language}){
+ if(!active||!payload?.length)return null;
+ const row=payload[0]?.payload;if(!row)return null;
+ const names:Record<string,string>={billed:p6(l,'billed'),collected:p6(l,'collected'),expenses:p6(l,'expenses')};
+  const raw=String(label??row.period);
+  const date=raw.length===7?`${raw}-01`:raw.slice(0,10);
+ return <div className="p6-chart-tooltip"><strong>{dayText(date,l)}</strong>{payload.map((point)=><div key={point.dataKey} style={{color:point.color}}>{names[point.dataKey??'']??point.name}: {minorText(row[`${point.dataKey}Minor` as keyof PortfolioChartPoint],cur,l)}</div>)}</div>;
+}
 function Filters({c,l,currency,withCurrency,onApply}:{c:RoleContext;l:Language;currency:Currency;withCurrency:boolean;onApply:(f:Flt)=>void}){
  const blds=useLoad<Row[]>('/community/buildings',[c.id]);
  const objects=useLoad<Row[]>('/portfolio/objects',[c.id]);
@@ -23,6 +38,15 @@ const qs=(f:Flt|undefined,cur:boolean)=>{const q=new URLSearchParams();if(f){if(
 export function Analytics({c,language:l,currency}:{c:RoleContext;language:Language;currency:Currency}){
  const [f,setF]=useState<Flt>();const cur=f?.currency||currency;
  const a=useLoad<Row>(f?'/portfolio/analytics?'+qs(f,true):null,[c.id]);const d=a.data;const m=(v:unknown,miss?:string)=>minorText(v,cur,l,miss);const nr=p6(l,'notRecorded');
+  const chartRows:PortfolioChartPoint[]=(d?.series??[]).map((s:Row)=>({
+   period:String(s.period),
+   billed:chartAmount(s.billedMinor),
+   collected:chartAmount(s.collectedMinor),
+   expenses:chartAmount(s.approvedExpensesMinor),
+   billedMinor:s.billedMinor,
+   collectedMinor:s.collectedMinor,
+   expensesMinor:s.approvedExpensesMinor,
+  }));
  if(!f)return <div className="p5"><section className="p-card"><h2>{p6(l,'portfolio')}</h2><Filters c={c} l={l} currency={currency} withCurrency onApply={setF}/><p className="p-info">{l==='hy'?'Ընտրեք ժամանակահատվածը և կիրառեք ֆիլտրերը։':l==='ru'?'Выберите период и примените фильтры.':'Choose a period and apply the filters.'}</p></section></div>;
   const openBreakdown=()=>{const target=document.getElementById('portfolio-building-breakdown');target?.focus({preventScroll:true});target?.scrollIntoView({behavior:'smooth',block:'start'})};
   const kpi=(k:string,v:string)=><button type="button" className="p6-kpi p6-kpi-link" key={k} aria-label={`${p6(l,k)}: ${v}. ${p6(l,'byBuilding')}`} onClick={openBreakdown}><small>{p6(l,k)}</small><strong>{v}</strong></button>;
@@ -33,7 +57,23 @@ export function Analytics({c,language:l,currency}:{c:RoleContext;language:Langua
    {kpi('occupancy',occ(d.summary,l))}{kpi('billed',m(d.summary?.billedMinor))}{kpi('collected',m(d.summary?.collectedMinor))}{kpi('outstanding',m(d.summary?.outstandingMinor))}{kpi('rate',bp(d.summary?.collectionRateBasisPoints))}{kpi('expenses',m(d.summary?.approvedExpensesMinor))}{kpi('budget',m(d.summary?.budgetMinor,nr))}{kpi('variance',m(d.summary?.budgetVarianceMinor,nr))}{kpi('net',m(d.summary?.netAllocatedCashflowMinor))}{kpi('expiring',String(d.summary?.expiringContracts??'—'))}{kpi('workOrders',String(d.summary?.workOrders??'—'))}{kpi('sla',String(d.summary?.slaViolations??'—'))}</div>
     <h3 id="portfolio-building-breakdown" tabIndex={-1}>{p6(l,'byBuilding')}</h3>{(d.buildings??[]).length===0?<Empty l={l}/>:<div className="p6-scroll"><table><thead><tr><th>{p6(l,'building')}</th><th>{p6(l,'occupancy')}</th><th>{p6(l,'billed')}</th><th>{p6(l,'collected')}</th><th>{p6(l,'outstanding')}</th><th>{p6(l,'rate')}</th><th>{p6(l,'expenses')}</th><th>{p6(l,'budget')}</th><th>{p6(l,'variance')}</th><th>{p6(l,'net')}</th><th>{p6(l,'expiring')}</th><th>{p6(l,'workOrders')}</th><th>{p6(l,'sla')}</th></tr></thead><tbody>{(d.buildings as Row[]).map(b=><tr key={b.id}><td>{b.name}</td><td className="p6-num">{occ(b,l)}</td><td className="p6-num">{m(b.billedMinor)}</td><td className="p6-num">{m(b.collectedMinor)}</td><td className="p6-num">{m(b.outstandingMinor)}</td><td className="p6-num">{bp(b.collectionRateBasisPoints)}</td><td className="p6-num">{m(b.approvedExpensesMinor)}</td><td className="p6-num">{m(b.budgetMinor,nr)}</td><td className="p6-num">{m(b.budgetVarianceMinor,nr)}</td><td className="p6-num">{m(b.netAllocatedCashflowMinor)}</td><td className="p6-num">{b.expiringContracts}</td><td className="p6-num">{b.workOrders}</td><td className="p6-num">{b.slaViolations}</td></tr>)}</tbody></table></div>}
    <p className="p5-muted">{p6(l,'budgetNull')}</p>
-   <h3>{p6(l,'series')}</h3>{(d.series??[]).length===0?<Empty l={l} text={p6(l,'noSeries')}/>:<div className="p6-scroll"><table><thead><tr><th>{p6(l,'period')}</th><th>{p6(l,'billed')}</th><th>{p6(l,'collected')}</th><th>{p6(l,'expenses')}</th></tr></thead><tbody>{(d.series as Row[]).map(s=><tr key={s.period}><td>{dayText(String(s.period).length===7?s.period+'-01':s.period,l)}</td><td className="p6-num">{m(s.billedMinor)}</td><td className="p6-num">{m(s.collectedMinor)}</td><td className="p6-num">{m(s.approvedExpensesMinor)}</td></tr>)}</tbody></table></div>}</>}
+    <h3>{p6(l,'series')}</h3>{chartRows.length===0?<Empty l={l} text={p6(l,'noSeries')}/>:<>
+     <div className="p6-cashflow-chart" role="img" aria-label={`${p6(l,'series')} · ${cur}`}>
+      <ResponsiveContainer width="100%" height={280}>
+       <BarChart data={chartRows} margin={{top:12,right:12,left:8,bottom:8}}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe2e8"/>
+          <XAxis dataKey="period" type="category" tickFormatter={v=>{const value=String(v);return dayText(value.length===7?value+'-01':value.slice(0,10),l)}} minTickGap={18}/>
+         <YAxis type="number" width={70} tickFormatter={v=>new Intl.NumberFormat(l==='hy'?'hy-AM':l==='ru'?'ru-RU':'en-US',{notation:'compact',maximumFractionDigits:1}).format(Number(v))}/>
+         <Tooltip cursor={false} content={<PortfolioTooltip cur={cur} l={l}/>}/>
+        <Legend/>
+         <Bar dataKey="billed" name={p6(l,'billed')} fill="#61A9BD" radius={[4,4,0,0]}/>
+         <Bar dataKey="collected" name={p6(l,'collected')} fill="#E98E2E" radius={[4,4,0,0]}/>
+         <Bar dataKey="expenses" name={p6(l,'expenses')} fill="#1F74AD" radius={[4,4,0,0]}/>
+       </BarChart>
+      </ResponsiveContainer>
+     </div>
+     <div className="p6-scroll"><table><thead><tr><th>{p6(l,'period')}</th><th>{p6(l,'billed')}</th><th>{p6(l,'collected')}</th><th>{p6(l,'expenses')}</th></tr></thead><tbody>{(d.series as Row[]).map(s=><tr key={s.period}><td>{dayText(String(s.period).length===7?s.period+'-01':s.period,l)}</td><td className="p6-num">{m(s.billedMinor)}</td><td className="p6-num">{m(s.collectedMinor)}</td><td className="p6-num">{m(s.approvedExpensesMinor)}</td></tr>)}</tbody></table></div>
+    </>}</>}
  </section></div>}
 
 export function Scorecard({c,language:l}:{c:RoleContext;language:Language}){

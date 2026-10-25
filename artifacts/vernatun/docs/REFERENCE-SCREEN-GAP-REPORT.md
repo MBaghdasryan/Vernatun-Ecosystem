@@ -38,7 +38,7 @@
 | User/profile/logout | Есть | auth/session, logout, sessions | Собственная сессия | A | Logout очищает UI/cache, Back не возвращает данные |
 | Organization/building/unit selector | Context picker есть | auth/context; contexts | Активные назначения | B | Нужные dashboard filters; clear/ignore late responses |
 | Period/month selector | В финансовых формах | Финансовые агрегаты | Finance + scope | B | Общий период для KPI/таблицы/графика, без смешения валют |
-| KPI card/drill-down | Role-insights с реестром: определение, query ID, effective permission, module, scope и no-data metadata; карточки показывают отсутствие финансовых данных | `server/kpi-registry.ts` + role-insights | Permission + module | B | Метаданные прошли API-тест для 14 ролей; полный визуальный parity, drill-down и браузерная проверка остаются |
+| KPI card/drill-down | Role-insights с реестром: определение, query ID, effective permission, module, scope и no-data metadata; карточки показывают отсутствие финансовых данных | `server/kpi-registry.ts` + role-insights | Permission + module | B | Метаданные прошли API-тест для 14 ролей; review KPI проверены в OS и HAYAT, включая сохранение выбранного фильтра при пустом результате; полный visual parity остаётся gap |
 | Table search/filter/paging/row action | Есть в части таблиц | records paging; доменные списки | По ресурсу | B | Все видимые actions реальны; полнота не ограничена первой страницей |
 | Chart/history | Отдельные analytics | Только сохранённые данные | Finance/operations | B | Если нет истории — «Недостаточно данных для графика» |
 | Status chips | Есть | Настоящие статусы домена | Read | A | Статус не только цветом, не подменять lifecycle |
@@ -379,7 +379,12 @@ IAM milestone завершён: целевые API/browser проверки пр
 
 На момент этого снимка из семи сквозных UI-процессов были подтверждены
 приглашение, custom role/debugger, заявка жителя, начисление/сверка,
-дефект/подрядчик и пропуск/охрана. Результат собрания обновлён в разделе 21 ниже.
+дефект/подрядчик и пропуск/охрана. Взвешенное собрание было создано и
+опубликовано, однако тестовый голос отправлен после окончания окна голосования:
+участие осталось 0%, действительный голос и сгенерированный протокол не были
+подтверждены. Старый архивный опрос не засчитывается как собрание с долями
+собственности. Последующая проверка собрания приведена в разделе 21; сверка
+референсов — в разделе 22.
 
 Сводки, графики, визуальная композиция всех 15 референсов и соответствие каждой
 их карточки реальному источнику данных по-прежнему имеют статус **PARTIAL**.
@@ -418,3 +423,102 @@ production build прошли; `git diff --check` прошёл. Preview `/login`
 touch-target проверка всех экранов; формальное сопоставление каждого показателя
 и drill-down с его реальным источником; оставшиеся композиции overview, графики
 и доменные сводки. Это остаётся **PARTIAL** и не выводится из успешного meeting test.
+## 22. Сверка каждого референса — 2026-10-23
+
+Ниже каждая строка соответствует отдельному PNG из `attached_assets/`, в том
+числе двум разным вариантам platform admin. Указаны действующие точки входа и
+компоненты, источники данных и права, поведение фильтров/пустых результатов и
+наблюдаемый визуальный разрыв. Основной KPI-компонент — `RoleHome`; обзорные
+таблицы отрисовывает `RoleOverviewPanels`. Серверный `/api/role-insights`
+возвращает карточки только после проверки активного контекста, прав и модулей.
+
+**Визуальное доказательство:** для 14 ролей сделаны аутентифицированные снимки
+в изолированной `vernatun_test` QA-схеме: 1440×1000 для desktop и 430×932 для
+компактных экранов. Два platform-admin референса проверены отдельно: первый
+сопоставлен с `/console/overview`, а для второго сохранён ближайший
+`/console/system`; прямого эквивалента «super-admin control center» в текущей
+навигации нет. Каждая пара визуально просмотрена; файлы снимков и три листа
+сравнения сохранены в игнорируемом Git каталоге
+`.local/qa/task69-visual/`. Тестовые входы шли только через созданные для QA
+учётные записи. Ошибок JavaScript и ответов 5xx на проверенных экранах не
+было; `/console/overview` для support ожидаемо закрыт, его рабочий экран —
+`/console/onboarding`.
+
+Это подтверждает сравнение по изображениям и каждый записанный ниже gap, но
+не заявляет пиксельного совпадения: большинство reference dashboard содержит
+больше данных и более плотную компоновку, чем действующий продукт.
+
+| № / референс | Работающий экран → компонент | Источник данных / права / фильтры и пустое состояние | Проверенный визуальный gap |
+|---|---|---|---|
+| 1. `Vernatun_SaaS_admin_overview_dashboard_1791289210910.png` | `/console/overview` → `Portal`, `RoleHome`, `RoleOverviewPanels` | `/api/role-insights`; platform organizations/subscriptions/support/onboarding feeds; `organizations.read`, `subscriptions.manage`, `support.cases`, `onboarding.manage`; active platform scope. Error/retry and no-record states are rendered. | Референс содержит растущий SaaS revenue chart и плотную таблицу организаций. В платформе нет billing source, поэтому график намеренно исключён; overview остаётся более разреженной карточной композицией. Не заменять демо-выручкой. |
+| 2. `Vernatun_super_admin_control_center_1791289210911.png` | Ближайший кандидат `/console/system` → `SystemConsole`; действующий platform overview — `/console/overview` → `RoleHome`. Отдельного режима super-admin нет. | `SystemConsole` использует system overview/health/logs/jobs; вход через `canEnterSystem` (`system.read` или другое разрешение системных модулей). Platform KPI остаются в `/console/overview`, без tenant/business scope. | Reference отличается от SaaS overview: сводная операционная композиция отсутствует и в `/console/system`, и как отдельный dashboard-режим. Не считать system settings эквивалентом control center и не выдумывать статусы. |
+| 3. `Vernatun_implementation_and_support_dashboard_1791289210911.png` | `/console/onboarding` → `Lifecycle` / `OnboardingConsole`; cases, meetings и imports — отдельные destinations | `/api/platform/onboarding`, `/api/platform/support-cases`, `/api/platform/support-meetings`, imports; `onboarding.manage`, `support.cases`, scoped import permissions; assigned-operator filter for support. Empty schedules/lists and API error/retry are distinct. | Функции разнесены между onboarding, cases, meetings и imports вместо единой плотной support workspace; полноценная diagnostics dashboard остаётся gap. `/console/overview` для support запрещён и не является рабочим экраном. |
+| 4. `Vernatun_organization_dashboard_1791289210914.png` | `/os/overview` → `RoleHome`, `RoleOverviewPanels`, `IAMWorkspace`, `InvitationConsole`, `SystemModules` | `/api/role-insights`, `/api/people`, `/api/modules`, invitations and audit; effective `people.read`, `properties.read`, `modules.read`, `people.invite`, `audit.read`; tenant/building/unit scope. Server scope is authoritative; no records and load failures are separate. | Staff, module and audit lists exist but appear as separate directory panels/shortcuts, not as the reference's compact multi-column admin overview. Bank/SMS/telephony tiles must stay unconfigured, not green. |
+| 5. `Vernatun_portfolio_oversight_dashboard_1791289210912.png` | `/os/overview`; analytics at `/os/analytics` → `RoleHome`, `RoleOverviewPanels`, `Portfolio.tsx` `Analytics` | `/api/role-insights`; `/api/portfolio/analytics` after explicit date/currency/scope filters; `properties.read`, `billing.read`, `expenses.read`, `reports.read` as enforced by source routes. Empty series uses the “no history” state. | The reference puts occupancy, portfolio KPIs and monthly trend on one dashboard. RoleHome still lacks this integrated portfolio chart; real monthly billed/collected/approved-expense series now render as a chart on the existing analytics screen, with exact values retained in its table and tooltip. No forecast is synthesized. |
+| 6. `Apartment_handover_and_warranty_dashboard_1791289210910.png` | `/os/overview` and `/os/handovers` → `RoleHome`, `RoleOverviewPanels`, `Lifecycle`, `UnitPlanPanel`, `FloorReadiness`; developer review KPI → `/os/defects?status=review` → `BusinessTable` | Role insights, handover/inspection/warranty/defect APIs; `handover.read/manage`, `defects.read/manage`; project/building and selected-unit scope. Empty plan/readiness/history is represented without generated units; the review filter remains selected when there are no matching defects. | Plans and floor readiness are already implemented and must not be reopened as missing work. Their detail screens are not composed into the home overview like the reference's floor matrix/plan; markers and dashboard-level matrix composition remain gaps. |
+| 7. `Residential_property_operations_dashboard_1791289210913.png` | `/hayat/overview` → `RoleHome`, `RoleOverviewPanels`, `Maintenance`, `Community`, `Workflow` | `/api/role-insights`, queue, incidents, maintenance, meetings, announcements; `requests.read`, `workorders.accept`, `incidents.read`, `assets.*`, `meetings.read`, `announcements.read`; selected tenant/building scope. Empty list and partial feed errors remain explicit. | Reference combines work/maintenance, resident and financial summaries on one screen; current home uses role KPI/list panels and shortcuts. Finance stays behind its own permission/module route and is not inferred from request counts. |
+| 8. `Vernatun_dispatcher_control_center_1791289210912.png` | `/hayat/overview` and `/hayat/works` → `RoleHome`, `RoleOverviewPanels`, `Workflow` | Queue and incident endpoints; `/api/role-insights`; `requests.read`, `requests.assign`, `incidents.read`; status-filtered queue (`new`/`review`), with server totals where returned. Empty queue is explicit. | Reference has denser kanban, calendar and executor composition. A live map is intentionally absent because there is no authorized geodata source; dispatcher is not granted technician acceptance rights. |
+| 9. `Accountant’s_accruals_and_reconciliation_dashboard_1791289210915.png` | `/os/overview` and `/os/finance` → `RoleHome`, `FinanceWorkspace`, `BillingBatches`, `BankReconciliation`, `Credits` | `/api/role-insights` and finance/bank endpoints; `billing.read/calculate/publish`, `payments.reconcile`; currency and finance month filter for KPI, organization-wide scope for reconciliation. Unpublished/no-matching invoices are not presented as paid or as a measured zero balance. | Real lists and reconciliation exist, but the reference's dense summary/table arrangement is split across the home and finance workspace. Banking provider status is not connected; no cash history is derived from imported rows alone. |
+| 10. `Technician’s_daily_work_dashboard_1791289210916.png` | `/hayat/overview` and `/hayat/my-work` → `RoleHome`, `Workflow`, offline work UI | Assigned queue/workorder endpoints; `workorders.assigned`, `workorders.execute`, scoped asset read; assigned technician and work status filters. Empty assigned queue and per-work draft states are distinct. | Reference foregrounds an active job, checklist and photo actions; home currently summarizes work and routes to the assigned-work flow. Reconnect does not automatically submit offline work; draft remains tied to user and work context. |
+| 11. `Contractor_dashboard_for_assigned_repairs_1791289210913.png` | `/hayat/overview` and `/hayat/contractor` → `RoleHome`, `DefectCollaboration`, `DefectReopen`; review KPI → `/hayat/defects?status=review` → `HayatApp` | Assigned defects/evidence endpoints; `defects.assigned`, `defects.execute`; assigned-contract scope and defect lifecycle filters. The URL-selected review filter remains visible with an explicit empty state when no assigned defect matches. | Reference shows defect-specific tabs and documents count. The running product shows assigned defect evidence, not a general organization document library; no generic `documents.read` is added. |
+| 12. `Security_passes_and_events_dashboard_1791289210917.png` | `/hayat/overview` and `/hayat/security` → `RoleHome`, `Business`, incident/event views | Pass validation, access events and incidents; `access.validate`, `access.events`, `incidents.read`; expected/inside/history and validity filters. Empty event history differs from a failed load. | Pass and event workflows exist, but the controller-online indicator in the image has no physical provider behind it. It must remain explicitly unconfigured and cannot show a simulated online state. |
+| 13. `Vernatun_homeowner_mobile_dashboard_1791289210916.png` | `/imtun/owner` → resident home/`RoleHome`, finance, governance and delegation views | Own invoices, requests, meters, passes, documents, meetings and ownership APIs; `billing.own`, `requests.own`, `properties.own` and domain-specific own permissions; payer/ownership context. Financial no-data is labeled, not shown as a real zero. | Reference's mobile hero and quick-action grid are more integrated than current multi-panel home. Online payment is intentionally unavailable without a gateway; no payment-success chart/status is fabricated. |
+| 14. `Vernatun_renter_home_dashboard_1791289210915.png` | `/imtun/renter` → resident home/`RoleHome`, own finance/request and lease views | Own payer/request and current lease endpoints; `billing.own`, `requests.own`, `leases.own`; active lease/unit scope and current lease end. Expired/absent lease is not replaced with a sample date. | Reference prominently shows the lease-end badge and visit approval shortcut; lease/request views work but are not all surfaced in the home hero. Payment gateway remains unconfigured. |
+| 15. `Vernatun_resident_home_dashboard_1791289210917.png` | `/imtun/family` → resident home/`RoleHome` | Own/delegated request and announcement/document APIs; context-bound delegated permissions; no finance or ownership scope by default. Empty content remains distinct from request failure. | Reference includes key/access, contact and emergency-call panels. Actual organization support contacts are available only when configured; physical credential/door service is not configured. Finance, ownership and voting remain denied, not duplicated as open gaps. |
+
+### Screenshot evidence map
+
+| № | Isolated QA capture |
+|---|---|
+| 1 | `platform_admin.jpg` (`/console/overview`) |
+| 2 | `platform_admin-system.jpg` (`/console/system`, nearest candidate only; no equivalent control center) |
+| 3 | `support.jpg` (`/console/onboarding`) |
+| 4 | `org_admin.jpg` (`/os/overview`) |
+| 5 | `portfolio_owner.jpg` (`/os/overview`); chart: `portfolio-analytics.jpg` (`/os/analytics`, after applying a period) |
+| 6 | `developer.jpg` (`/os/overview`); review drill-down: `os-review-drilldown.jpg` (`/os/defects?status=review`) |
+| 7 | `manager.jpg` (`/hayat/overview`) |
+| 8 | `dispatcher.jpg` (`/hayat/overview`) |
+| 9 | `accountant.jpg` (`/os/overview`) |
+| 10 | `technician.jpg` (`/hayat/my-work`) |
+| 11 | `contractor.jpg` (`/hayat/overview`); review drill-down: `contractor-review-drilldown.jpg` (`/hayat/defects?status=review`) |
+| 12 | `security.jpg` (`/hayat/overview`) |
+| 13 | `unit_owner.jpg` (`/imtun/owner`) |
+| 14 | `renter.jpg` (`/imtun/renter`) |
+| 15 | `family.jpg` (`/imtun/family`) |
+
+All captures and paired comparison sheets `comparison-1.jpg` through
+`comparison-3.jpg` are in `.local/qa/task69-visual/` (ignored by Git; QA-only).
+
+### KPI cards and chart evidence
+
+Every live dashboard KPI is mapped in [KPI-REGISTRY.md](KPI-REGISTRY.md) to its
+definition, canonical SQL query ID, effective permission, module, scope,
+destination, and empty-data behavior. `RoleHome` links a card only when the
+destination permission is also present; endpoint permission/module checks remain
+server-side. Period and currency affect only the finance KPI cards.
+
+The portfolio analytics graph added in this pass is built from the same
+`/api/portfolio/analytics` series as its table: billed invoice totals, allocated
+collections and approved expenses, with the selected dates, currency and scope.
+The table retains exact stored values; the graph does not project or fabricate
+future values. Its empty state uses the API's missing-history result. A
+single-month series is rendered on a categorical month axis so the bar remains
+visible; hover tooltip values were checked against the same series and table.
+The graph is currently on the analytics destination, not on the role home screenshot.
+
+The platform overview intentionally has no SaaS revenue KPI or revenue chart:
+Platform Billing is not configured. IAM, subscription/module controls, unit
+plans and floor readiness are already implemented; they are referenced above
+only where their actual placement differs from the reference, and are not
+re-listed as unimplemented backend features.
+
+### Browser screenshot acceptance status
+
+| Evidence | Result |
+|---|---|
+| 15 original reference screenshots in `attached_assets/` | Visually reviewed; 14 roles, with two platform-admin variants. |
+| 14 authenticated roles / 15 reference mappings | Screenshots captured in isolated QA and compared side-by-side; second platform reference has no equivalent current route. |
+| Screenshot viewports | Desktop 1440×1000 for 8 roles; compact 430×932 for 6 roles; the additional `/console/system` capture is the unmatched platform candidate. |
+| Portfolio analytics chart | `/os/analytics` loaded actual API series after applying 2026-01-01 to 2026-12-31; chart, summary and exact-value tables rendered with no JS errors or 4xx/5xx. |
+| Review KPI drill-downs | OS and HAYAT routes retain `status=review`, show the selected filter and explicit empty result; authenticated captures are linked in the evidence map. |
+| Visual/pixel parity across all 15 | **PARTIAL.** Visual gaps are now confirmed from screenshot pairs; the report does not claim pixel parity or that every redesign gap is resolved. |
