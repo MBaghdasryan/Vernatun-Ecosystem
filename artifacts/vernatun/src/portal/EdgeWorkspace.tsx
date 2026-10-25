@@ -8,6 +8,7 @@ import type { RoleContext } from './types';
 type EdgeNode = {
   id: string; edge_id: string; organization_id: string; building_id: string | null; block_id?: string | null;
   protocol_version?: number; building_count?: number; block_name?: string | null; name: string; site_code: string;
+  archived_at?: string | null;
   status: string; registration_state: string; agent_version: string | null; local_authorization_status: string;
   queue_depth: number; registered_at: string | null; last_seen_at: string | null; last_connected_at: string | null;
   credential_version: number | null; organization_name: string | null; building_name: string | null;
@@ -22,8 +23,9 @@ type Device = {
 };
 type Alarm = { id?: string; command_id?: string; [key: string]: unknown };
 type Fleet = { summary: { total: number; online: number; degraded: number; offline: number; activeAlarms: number }; nodes: EdgeNode[] };
-type Detail = { node: EdgeNode; devices: Device[]; alarms: Alarm[] };
+type Detail = { node: EdgeNode; buildings: { id: string; name: string }[]; devices: Device[]; alarms: Alarm[] };
 type TokenResult = { bootstrapToken: string; oneTime: true; instruction?: string; [key: string]: unknown };
+type ConnectionCheck = { edgeId: string; webSocketOpen: boolean; heartbeatFresh: boolean; heartbeatAgeSeconds: number | null; reachable: boolean; checkedAt: string };
 
 const COPY: Record<string, [string, string, string]> = {
   edge: ['Edge կառավարում', 'Управление Edge', 'Edge workspace'], fleet: ['Edge հանգույցների ցանց', 'Сеть Edge-узлов', 'Edge fleet'],
@@ -50,6 +52,24 @@ const COPY: Record<string, [string, string, string]> = {
   cancel: ['Չեղարկել', 'Отмена', 'Cancel'], confirm: ['Հաստատել չեղարկումը', 'Подтвердить отзыв', 'Confirm revocation'], success: ['Գործողությունը կատարված է։', 'Действие выполнено.', 'Action completed.'],
   registered: ['Գրանցված', 'Зарегистрирован', 'Registered'], unregistered: ['Չգրանցված', 'Не зарегистрирован', 'Unregistered'], capabilities: ['Հնարավորություններ', 'Возможности', 'Capabilities'],
   tokenVersion: ['Տարբերակ', 'Версия', 'Version'], tokenExpires: ['Ժամկետը լրանում է', 'Истекает', 'Expires'],
+  tenantId: ['Tenant ID', 'Tenant ID организации', 'Tenant ID'], buildingId: ['Building ID', 'Building ID', 'Building ID'],
+  blockId: ['Block ID', 'Block ID', 'Block ID'], edgeName: ['Edge հանգույցի անվանում', 'Название Edge-узла', 'Edge node name'],
+  copyConfig: ['Պատճենել ամբողջ կազմաձևը', 'Скопировать всю конфигурацию', 'Copy full configuration'],
+  protocol: ['Протокол', 'Протокол', 'Protocol'],
+  showArchived: ['Показать архив', 'Показать архив', 'Show archived'], archived: ['В архиве', 'В архиве', 'Archived'],
+  edit: ['Փոփոխել', 'Изменить', 'Edit'], save: ['Պահպանել', 'Сохранить', 'Save'], cancelEdit: ['Չեղարկել', 'Отмена', 'Cancel'],
+  archive: ['Արխիվացնել', 'В архив', 'Archive'], restore: ['Վերականգնել', 'Восстановить', 'Restore'],
+  archivePrompt: ['Արխիվացնե՞լ հանգույցը։ Բոլոր մուտքային բանալիները կչեղարկվեն, պատմությունը կպահպանվի։', 'Архивировать узел? Все ключи будут отозваны, история сохранится.', 'Archive this node? Credentials will be revoked and history preserved.'],
+  connectionCheck: ['Ստուգել կապը', 'Проверить соединение', 'Check connection'],
+  connectionOpen: ['WSS-соединение открыто', 'WSS-соединение открыто', 'WebSocket is open'],
+  connectionClosed: ['WSS-соединение закрыто', 'WSS-соединение закрыто', 'WebSocket is closed'],
+  heartbeatFresh: ['Heartbeat получен менее 90 секунд назад', 'Heartbeat получен менее 90 секунд назад', 'Heartbeat received within 90 seconds'],
+  heartbeatStale: ['Свежего heartbeat нет', 'Свежего heartbeat нет', 'No recent heartbeat'],
+  connectionNote: ['Проверяется состояние WSS и heartbeat. Команды устройствам не отправляются.', 'Проверяются состояние WSS и heartbeat. Команды устройствам не отправляются.', 'Checks WSS and heartbeat only; no device command is sent.'],
+  reauth: ['Կրկին մուտք գործեք և կրկնեք գործողությունը 5 րոպեի ընթացքում։', 'Войдите заново и повторите действие в течение 5 минут.', 'Sign in again and retry within five minutes.'],
+  activeToken: ['Для этого Edge ID уже есть действующий ключ. Проверьте историю ключей или отзовите старый.', 'Для этого Edge ID уже есть действующий ключ. Проверьте историю ключей или отзовите старый.', 'An active token already exists for this Edge ID. Review or revoke it in token history.'],
+  edgeRegistered: ['Этот Edge ID уже зарегистрирован. Откройте узел в списке или создайте другой Edge ID.', 'Этот Edge ID уже зарегистрирован. Откройте узел в списке или создайте другой Edge ID.', 'This Edge ID is already registered. Open the existing node or choose another ID.'],
+  restoredCredential: ['Узел восстановлен, но старые ключи отозваны. Выпустите новые учётные данные перед подключением агента.', 'Узел восстановлен, но старые ключи отозваны. Выпустите новые учётные данные перед подключением агента.', 'Node restored, but old credentials remain revoked. Rotate credentials before reconnecting the agent.'],
 };
 const idx = (l: Language) => l === 'hy' ? 0 : l === 'ru' ? 1 : 2;
 const when = (v: string | null | undefined, l: Language) => v ? new Intl.DateTimeFormat(l === 'hy' ? 'hy-AM' : l === 'ru' ? 'ru-RU' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v)) : '—';
@@ -85,8 +105,14 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
   const [notice, setNotice] = useState('');
   const [token, setToken] = useState<TokenResult>();
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', siteCode: '' });
+  const [connection, setConnection] = useState<ConnectionCheck>();
   const [form, setForm] = useState({ buildingId: '', edgeId: '', name: '', siteCode: '', expiresInMinutes: '60' });
   const [access, setAccess] = useState<Record<string, string>>({});
+  const prefillDone = useRef(false);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
 
@@ -94,7 +120,7 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
     setLoading(true); setError(undefined);
     try {
       const [f, b, a, cmd] = await Promise.all([
-        request<Fleet>('/edge-console/fleet'),
+        request<Fleet>(`/edge-console/fleet${showArchived ? '?includeArchived=true' : ''}`),
         canBootstrap ? request<Building[]>('/edge-console/buildings') : Promise.resolve([] as Building[]),
         canReadAlarms ? request<Alarm[]>('/edge-console/alarms') : Promise.resolve([] as Alarm[]),
         canReadCommands ? request<Alarm[]>('/edge-console/commands') : Promise.resolve([] as Alarm[]),
@@ -105,8 +131,17 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
       setSelected(nextId);
       if (nextId) setDetail(await request<Detail>(`/edge-console/nodes/${encodeURIComponent(nextId)}`)); else setDetail(undefined);
     } catch (e) { setError(e); } finally { setLoading(false); }
-  }, [canBootstrap, canReadAlarms, canReadCommands]);
+  }, [canBootstrap, canReadAlarms, canReadCommands, showArchived]);
   useEffect(() => { void load(); }, [c.id, load]);
+  useEffect(() => {
+    if (prefillDone.current || !buildings.length) return;
+    prefillDone.current = true;
+    const testBuilding = buildings.find(building => building.id === 'a6e398fc-2f1d-4724-9db4-11e7874683c7' || building.name === 'TEST Building 01');
+    if (testBuilding) setForm(current => current.buildingId ? current : {
+      ...current, buildingId: testBuilding.id, edgeId: 'edge-building01',
+      name: 'Vernatun Edge - TEST Building 01', siteCode: 'building01',
+    });
+  }, [buildings]);
   const choose = async (id: string) => {
     setSelected(id); setDetail(undefined); setError(undefined);
     try { setDetail(await request<Detail>(`/edge-console/nodes/${encodeURIComponent(id)}`)); } catch (e) { setError(e); }
@@ -127,6 +162,29 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
     try { const response = await request<Record<string, unknown> | null>(path, method, body); setNotice(tx('success')); return response; }
     catch (e) { setError(e); return undefined; } finally { setBusy(''); }
   };
+  const saveNode = async (event: FormEvent) => {
+    event.preventDefault();
+    const result = await action('edit-node', `/edge-console/nodes/${encodeURIComponent(selected)}`, 'PATCH', {
+      name: editForm.name.trim(), siteCode: editForm.siteCode.trim(),
+    });
+    if (result !== undefined) { setEditing(false); await load(); }
+  };
+  const checkConnection = async () => {
+    setBusy('connection'); setError(undefined); setNotice('');
+    try {
+      const result = await request<ConnectionCheck>(`/edge-console/nodes/${encodeURIComponent(selected)}/connection-check`);
+      setConnection(result);
+    } catch (e) { setError(e); }
+    finally { setBusy(''); }
+  };
+  const archiveNode = async () => {
+    const result = await action('archive-node', `/edge-console/nodes/${encodeURIComponent(selected)}`, 'DELETE');
+    if (result !== undefined) { setConfirmArchive(false); await load(); }
+  };
+  const restoreNode = async () => {
+    const result = await action('restore-node', `/edge-console/nodes/${encodeURIComponent(selected)}/restore`, 'POST');
+    if (result !== undefined) { setNotice(tx('restoredCredential')); await load(); }
+  };
   const rotate = async () => {
     const result = await action('rotate', `/edge-console/nodes/${encodeURIComponent(selected)}/credentials/rotate`, 'POST');
     if (result && typeof result.accessToken === 'string') { setToken({ ...result, bootstrapToken: result.accessToken, oneTime: true }); await load(); }
@@ -146,12 +204,31 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
   };
   const onlineLabel = (s: string) => s.toLowerCase() === 'online' ? tx('online') : s.toLowerCase() === 'offline' ? tx('offline') : s.toLowerCase() === 'degraded' ? tx('degraded') : s;
   const statusClass = (s: string) => s.toLowerCase();
-  const errorMessage = error instanceof ApiClientError ? `${tx('error')} (${error.status || error.code})` : tx('error');
+  const errorMessage = error instanceof ApiClientError
+    ? error.code === 'recent_authentication_required' ? tx('reauth')
+      : error.code === 'active_bootstrap_token_exists' ? tx('activeToken')
+        : error.code === 'edge_already_registered' ? tx('edgeRegistered')
+          : `${tx('error')} (${error.code || error.status})`
+    : tx('error');
   const node = detail?.node;
+  const selectedBuilding = buildings.find(building => building.id === form.buildingId);
+  const oneTimeConfig = token && token.edge_id && token.organization_id && token.building_id
+    ? [
+      `-EdgeId "${String(token.edge_id)}"`,
+      `-EdgeName "${form.name}"`,
+      `-TenantId "${String(token.organization_id)}"`,
+      `-BuildingId "${String(token.building_id)}"`,
+      `-SiteCode "${form.siteCode}"`,
+      `-BootstrapToken "${token.bootstrapToken}"`,
+    ].join('\n') : '';
+  const copyConfiguration = async () => {
+    try { await navigator.clipboard.writeText(oneTimeConfig); setNotice(tx('copied')); }
+    catch { setError(new Error('clipboard')); }
+  };
 
   return <div className="edge-work" data-testid="edge-workspace">
     <style>{styles}</style>
-    <section className="ew-hero"><div><span className="ew-eyebrow">Vernatun OS · HAYAT · Edge</span><h1>{tx('edge')}</h1><p>{tx('fleetHint')}</p></div><button className="ew-button" onClick={() => void load()} disabled={loading} data-testid="button-refresh-edge"><RefreshCw size={16}/>{tx('refresh')}</button></section>
+    <section className="ew-hero"><div><span className="ew-eyebrow">Vernatun OS · HAYAT · Edge</span><h1>{tx('edge')}</h1><p>{tx('fleetHint')}</p></div><div className="ew-actions">{canManage&&<label><input type="checkbox" checked={showArchived} onChange={e=>setShowArchived(e.target.checked)}/> {tx('showArchived')}</label>}<button className="ew-button" onClick={() => void load()} disabled={loading} data-testid="button-refresh-edge"><RefreshCw size={16}/>{tx('refresh')}</button></div></section>
     {!!error && <div className="ew-error" role="alert" data-testid="status-edge-error">{errorMessage}<button className="ew-button" onClick={() => void load()} data-testid="button-retry-edge">{tx('retry')}</button></div>}
     {loading && !fleet ? <div className="ew-loading" role="status" aria-busy="true" data-testid="status-edge-loading">{tx('loading')}</div> : fleet && <>
       <div className="ew-grid" aria-label={tx('fleet')} data-testid="edge-fleet-summary">
@@ -162,16 +239,18 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
           {fleet.nodes.length ? <div className="ew-list">{fleet.nodes.map(n=><div className={'ew-node '+(selected===n.id?'selected':'')} key={n.id} data-testid={'row-edge-node-'+n.id}>
             <button className="ew-node-main" onClick={() => void choose(n.id)} data-testid={'button-open-node-'+n.id} aria-current={selected===n.id?'true':undefined}>
               <strong>{n.name}</strong><small>{n.block_name ?? n.building_name ?? n.site_code}{n.building_count && n.building_count > 1 ? ` · ${n.building_count} buildings` : ''} · v{n.protocol_version ?? 1} · {n.edge_id} · {n.device_count} {tx('devices')}</small>
-            </button><span className={'ew-tag '+statusClass(n.status)} data-testid={'status-edge-node-'+n.id}>{onlineLabel(n.status)}</span>
+            </button><span className={'ew-tag '+statusClass(n.status)} data-testid={'status-edge-node-'+n.id}>{n.archived_at?tx('archived'):onlineLabel(n.status)}</span>
           </div>)}</div> : <p className="ew-empty" data-testid="text-edge-empty">{tx('empty')}</p>}
         </section>
         {canBootstrap && <section className="ew-panel"><header><h2><KeyRound size={18}/> {tx('bootstrap')}</h2></header>
           {token ? <div data-testid="panel-one-time-token"><p className="ew-note" role="alert">{tx('oneTime')}</p><div className="ew-token" data-testid="text-one-time-token">{token.bootstrapToken}</div>
-            <div className="ew-token-actions"><button className="ew-button primary" onClick={() => void copyToken()} data-testid="button-copy-token"><Copy size={15}/>{tx('copy')}</button><button className="ew-button" onClick={() => {setToken(undefined);setNotice('')}} data-testid="button-dismiss-token"><X size={15}/>{tx('dismiss')}</button></div>
+            {!!oneTimeConfig&&<><p className="ew-note">{tx('tenantId')}: {String(token.organization_id)} · {tx('buildingId')}: {String(token.building_id)}</p><pre className="ew-token" data-testid="text-edge-v1-config">{oneTimeConfig}</pre></>}
+            <div className="ew-token-actions"><button className="ew-button primary" onClick={() => void copyToken()} data-testid="button-copy-token"><Copy size={15}/>{tx('copy')}</button>{!!oneTimeConfig&&<button className="ew-button" onClick={() => void copyConfiguration()} data-testid="button-copy-edge-v1-config"><Copy size={15}/>{tx('copyConfig')}</button>}<button className="ew-button" onClick={() => {setToken(undefined);setNotice('')}} data-testid="button-dismiss-token"><X size={15}/>{tx('dismiss')}</button></div>
             {typeof token.version === 'number' && <p>{tx('tokenVersion')}: {token.version} · {tx('tokenExpires')}: {String(token.expiresAt ?? '—')}</p>}
             {typeof token.instruction === 'string' && <p className="ew-note" data-testid="text-credential-instruction">{token.instruction}</p>}
           </div> : <form className="ew-form" onSubmit={submitBootstrap} data-testid="form-bootstrap-token">
             <label>{tx('building')}<select required value={form.buildingId} onChange={e=>setForm({...form,buildingId:e.target.value})} data-testid="select-bootstrap-building"><option value="">{tx('choose')}</option>{buildings.map(b=><option key={b.id} value={b.id}>{b.name}{b.organization_name?` · ${b.organization_name}`:''}</option>)}</select></label>
+            {selectedBuilding&&<div className="ew-note"><strong>{tx('tenantId')}:</strong> <span className="ew-fact">{selectedBuilding.organization_id}</span><br/><strong>{tx('buildingId')}:</strong> <span className="ew-fact">{selectedBuilding.id}</span></div>}
             <label>{tx('edgeId')}<input required maxLength={120} value={form.edgeId} onChange={e=>setForm({...form,edgeId:e.target.value})} data-testid="input-bootstrap-edge-id"/></label>
             <label>{tx('name')}<input required maxLength={120} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} data-testid="input-bootstrap-name"/></label>
             <label>{tx('siteCode')}<input required maxLength={80} value={form.siteCode} onChange={e=>setForm({...form,siteCode:e.target.value})} data-testid="input-bootstrap-site-code"/></label>
@@ -181,11 +260,27 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
         </section>}
       </div>
       {node && <section className="ew-panel ew-details" data-testid={'panel-edge-detail-'+node.id}>
-        <header><h2><Building2 size={18}/> {tx('nodeDetails')} · {node.name}</h2><span className={'ew-tag '+statusClass(node.status)}>{onlineLabel(node.status)}</span></header>
+        <header><h2><Building2 size={18}/> {tx('nodeDetails')} · {node.name}</h2><div className="ew-actions">
+          <span className={'ew-tag '+statusClass(node.status)}>{node.archived_at?tx('archived'):onlineLabel(node.status)}</span>
+          <button className="ew-button" disabled={!!busy} onClick={()=>void checkConnection()} data-testid="button-check-edge-connection"><Activity size={15}/>{tx('connectionCheck')}</button>
+          {canManage&&!node.archived_at&&<button className="ew-button" disabled={!!busy} onClick={()=>{setEditForm({name:node.name,siteCode:node.site_code});setEditing(true)}} data-testid="button-edit-edge-node">{tx('edit')}</button>}
+          {canManage&&node.archived_at&&<button className="ew-button" disabled={!!busy} onClick={()=>void restoreNode()} data-testid="button-restore-edge-node">{tx('restore')}</button>}
+          {canManage&&!node.archived_at&&<button className="ew-button danger" disabled={!!busy} onClick={()=>setConfirmArchive(true)} data-testid="button-archive-edge-node">{tx('archive')}</button>}
+        </div></header>
         <div className="ew-facts">
-          {[[tx('registration'),node.registration_state],[tx('authorization'),node.local_authorization_status],[tx('queue'),node.queue_depth],[tx('agent'),node.agent_version??'—'],[tx('lastSeen'),when(node.last_seen_at,language)],['Edge ID',node.edge_id]].map(([label,value])=><div className="ew-fact" key={label}><small>{label}</small><strong>{value}</strong></div>)}
+          {[[tx('registration'),node.registration_state],[tx('authorization'),node.local_authorization_status],[tx('queue'),node.queue_depth],[tx('agent'),node.agent_version??'—'],[tx('lastSeen'),when(node.last_seen_at,language)],[tx('protocol'),`v${node.protocol_version??1}`],['Edge ID',node.edge_id],[tx('edgeName'),node.name],[tx('siteCode'),node.site_code],[tx('tenantId'),node.organization_id],[tx('blockId'),node.block_id??'—'],[tx('buildingId'),detail.buildings.map(building=>`${building.name}: ${building.id}`).join('\n')||node.building_id||'—']].map(([label,value])=><div className="ew-fact" key={label}><small>{label}</small><strong>{value}</strong></div>)}
         </div>
-        {(canRotate || canRevoke) && <div className="ew-actions">{canRotate && <button className="ew-button" disabled={!!busy} onClick={()=>void rotate()} data-testid="button-rotate-edge-credentials"><KeyRound size={15}/>{tx('rotate')}</button>}{canRevoke && <button className="ew-button danger" disabled={!!busy} onClick={()=>setConfirmRevoke(true)} data-testid="button-revoke-edge-credentials"><ShieldAlert size={15}/>{tx('revoke')}</button>}</div>}
+        {editing&&<form className="ew-form" onSubmit={saveNode} data-testid="form-edit-edge-node">
+          <label>{tx('edgeName')}<input required maxLength={120} value={editForm.name} onChange={e=>setEditForm({...editForm,name:e.target.value})}/></label>
+          <label>{tx('siteCode')}<input required maxLength={100} value={editForm.siteCode} onChange={e=>setEditForm({...editForm,siteCode:e.target.value})}/></label>
+          <div className="ew-actions"><button className="ew-button primary" disabled={!!busy}><Check size={15}/>{tx('save')}</button><button type="button" className="ew-button" onClick={()=>setEditing(false)}>{tx('cancelEdit')}</button></div>
+        </form>}
+        {connection&&connection.edgeId===node.edge_id&&<div className="ew-note" role="status" data-testid="status-edge-connection">
+          <strong>{connection.reachable?tx('online'):tx('offline')}</strong> · {connection.webSocketOpen?tx('connectionOpen'):tx('connectionClosed')} · {connection.heartbeatFresh?tx('heartbeatFresh'):tx('heartbeatStale')}
+          <br/>{connection.heartbeatAgeSeconds===null?'—':`${connection.heartbeatAgeSeconds}s`} · {when(connection.checkedAt,language)}
+          <br/><small>{tx('connectionNote')}</small>
+        </div>}
+        {(canRotate || canRevoke) && !node.archived_at && <div className="ew-actions">{canRotate && <button className="ew-button" disabled={!!busy} onClick={()=>void rotate()} data-testid="button-rotate-edge-credentials"><KeyRound size={15}/>{tx('rotate')}</button>}{canRevoke && <button className="ew-button danger" disabled={!!busy} onClick={()=>setConfirmRevoke(true)} data-testid="button-revoke-edge-credentials"><ShieldAlert size={15}/>{tx('revoke')}</button>}</div>}
         {canRotate && <p className="ew-note">{tx('rotateNote')}</p>}
         {(c.permissions.includes('edge.inventory.read') || c.permissions.includes('edge.read')) && <><h2><Terminal size={17}/> {tx('inventory')} · {detail.devices.length}</h2>
         {detail.devices.length ? <div className="ew-scroll"><table className="ew-table"><thead><tr><th>{tx('device')}</th><th>{tx('status')}</th><th>{tx('capabilities')}</th><th>{tx('access')}</th></tr></thead><tbody>{detail.devices.map(d=><tr key={d.id} data-testid={'row-edge-device-'+d.id}>
@@ -204,6 +299,10 @@ export default function EdgeWorkspace({ c, language }: { c: RoleContext; languag
     {confirmRevoke && <div className="ew-modal" role="presentation"><section className="ew-dialog" role="alertdialog" aria-modal="true" aria-labelledby="edge-revoke-title" data-testid="dialog-revoke-edge">
       <h2 id="edge-revoke-title">{tx('revoke')}</h2><p className="ew-prompt">{tx('revokeConfirm')}</p>
       <div className="ew-actions"><button className="ew-button" onClick={()=>setConfirmRevoke(false)} data-testid="button-cancel-revoke">{tx('cancel')}</button><button className="ew-button danger" disabled={!!busy} onClick={async()=>{const ok=await action('revoke',`/edge-console/nodes/${encodeURIComponent(selected)}/credentials/revoke`,'POST');if(ok!==undefined){setConfirmRevoke(false);await load()}}} data-testid="button-confirm-revoke">{tx('confirm')}</button></div>
+    </section></div>}
+    {confirmArchive&&node&&<div className="ew-modal" role="presentation"><section className="ew-dialog" role="alertdialog" aria-modal="true" aria-labelledby="edge-archive-title" data-testid="dialog-archive-edge">
+      <h2 id="edge-archive-title">{tx('archive')}</h2><p className="ew-prompt">{tx('archivePrompt')}</p>
+      <div className="ew-actions"><button className="ew-button" onClick={()=>setConfirmArchive(false)}>{tx('cancelEdit')}</button><button className="ew-button danger" disabled={!!busy} onClick={()=>void archiveNode()}>{tx('archive')}</button></div>
     </section></div>}
   </div>;
 }

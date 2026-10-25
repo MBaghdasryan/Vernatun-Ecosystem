@@ -10,6 +10,615 @@ export interface OperationIdResult {
   status?: string;
 }
 
+export interface EdgeBlockInput {
+  organizationId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  code: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  buildingIds: string[];
+}
+
+export interface EdgeBlockUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  code?: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  buildingIds?: string[];
+}
+
+export interface EdgeBlockBootstrapInput {
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  edgeId: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode: string;
+  /**
+     * @minimum 5
+     * @maximum 120
+     */
+  expiresInMinutes?: number;
+}
+
+export type EdgeV2RegisterInputCapabilities = { [key: string]: unknown };
+
+export interface EdgeV2RegisterInput {
+  protocolVersion: 2;
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  edgeName: string;
+  /** @maxLength 80 */
+  agentVersion?: string;
+  /** @maxLength 60 */
+  platform?: string;
+  capabilities?: EdgeV2RegisterInputCapabilities;
+}
+
+export interface EdgeV2RegisterResponse {
+  protocolVersion: 2;
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  buildingIds: string[];
+  status: 'REGISTERED';
+  /** One-time machine credential. Never log or display after bootstrap. */
+  accessToken: string;
+  tokenType?: 'Bearer';
+}
+
+export type EdgeV2HeartbeatInputLocal = { [key: string]: unknown };
+
+export interface EdgeV2HeartbeatInput {
+  protocolVersion: 2;
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  timestamp?: string;
+  status?: string;
+  /** @maxLength 80 */
+  agentVersion?: string;
+  local?: EdgeV2HeartbeatInputLocal;
+}
+
+export type EdgeV2InventoryInputDevicesItem = {
+  buildingId: string;
+  /** @maxLength 200 */
+  deviceId: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  thingsboardId?: string | null;
+  /** @maxLength 200 */
+  name?: string;
+  /** @maxLength 100 */
+  profile: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  label?: string | null;
+  /** @nullable */
+  active?: boolean | null;
+};
+
+export interface EdgeV2InventoryInput {
+  protocolVersion: 2;
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  timestamp?: string;
+  /** @maxItems 5000 */
+  devices: EdgeV2InventoryInputDevicesItem[];
+}
+
+export type EdgeV2BatchInputItemsItem = {
+  buildingId: string;
+  /** @maxLength 200 */
+  deviceId: string;
+};
+
+export interface EdgeV2BatchInput {
+  protocolVersion: 2;
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  timestamp?: string;
+  /** @maxItems 2000 */
+  items: EdgeV2BatchInputItemsItem[];
+}
+
+export type EdgeV2CommandResultStatus = typeof EdgeV2CommandResultStatus[keyof typeof EdgeV2CommandResultStatus];
+
+
+export const EdgeV2CommandResultStatus = {
+  SUCCESS: 'SUCCESS',
+  REJECTED: 'REJECTED',
+  FAILED: 'FAILED',
+  DENIED: 'DENIED',
+} as const;
+
+export type EdgeV2CommandResultResult = { [key: string]: unknown };
+
+export interface EdgeV2CommandResult {
+  protocolVersion: 2;
+  edgeId: string;
+  tenantId: string;
+  blockId: string;
+  buildingId?: string;
+  commandId: string;
+  status: EdgeV2CommandResultStatus;
+  result?: EdgeV2CommandResultResult;
+}
+
+export type EdgeRegisterInputConnectionMode = typeof EdgeRegisterInputConnectionMode[keyof typeof EdgeRegisterInputConnectionMode];
+
+
+export const EdgeRegisterInputConnectionMode = {
+  OUTBOUND: 'OUTBOUND',
+} as const;
+
+export type EdgeRegisterInputTransportsItem = typeof EdgeRegisterInputTransportsItem[keyof typeof EdgeRegisterInputTransportsItem];
+
+
+export const EdgeRegisterInputTransportsItem = {
+  WEBSOCKET: 'WEBSOCKET',
+  HTTPS: 'HTTPS',
+} as const;
+
+export type EdgeRegisterInputCapabilities = {[key: string]: boolean};
+
+export interface EdgeRegisterInput {
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  edgeId: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  edgeName: string;
+  tenantId: string;
+  buildingId: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode: string;
+  /** @maxLength 80 */
+  agentVersion: string;
+  /** @maxLength 60 */
+  platform: string;
+  connectionMode: EdgeRegisterInputConnectionMode;
+  transports: EdgeRegisterInputTransportsItem[];
+  capabilities: EdgeRegisterInputCapabilities;
+}
+
+export type EdgeRegisterResponseStatus = typeof EdgeRegisterResponseStatus[keyof typeof EdgeRegisterResponseStatus];
+
+
+export const EdgeRegisterResponseStatus = {
+  REGISTERED: 'REGISTERED',
+} as const;
+
+export interface EdgeRegisterResponse {
+  status: EdgeRegisterResponseStatus;
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  /** Returned only to the registering Edge Agent. Never log or persist this value outside the Agent. */
+  accessToken: string;
+  oneTime: true;
+}
+
+export type EdgeHeartbeatInputLocal = { [key: string]: unknown };
+
+export interface EdgeHeartbeatInput {
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  timestamp: string;
+  local: EdgeHeartbeatInputLocal;
+}
+
+export type EdgeInventoryInputDevicesItem = { [key: string]: unknown };
+
+export interface EdgeInventoryInput {
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  timestamp: string;
+  devices: EdgeInventoryInputDevicesItem[];
+}
+
+export type EdgeBatchInputItemsItem = { [key: string]: unknown };
+
+export interface EdgeBatchInput {
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  timestamp: string;
+  /** @maxItems 2000 */
+  items: EdgeBatchInputItemsItem[];
+}
+
+export const EdgeAcceptedValue = {
+  accepted: true,
+} as const;
+export type EdgeAccepted = typeof EdgeAcceptedValue;
+
+export type EdgeInventoryAccepted = EdgeAccepted & {
+  /** @minimum 0 */
+  devices: number;
+};
+
+export type EdgeBatchAccepted = EdgeAccepted & {
+  /** @minimum 0 */
+  acceptedCount: number;
+};
+
+export interface EdgeConfiguration {
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  /** @minimum 1 */
+  heartbeatIntervalSeconds: number;
+  /** @minimum 1 */
+  commandTimeoutSeconds: number;
+  commandCapabilities?: string[];
+}
+
+export type EdgeCommandResultStatus = typeof EdgeCommandResultStatus[keyof typeof EdgeCommandResultStatus];
+
+
+export const EdgeCommandResultStatus = {
+  SUCCESS: 'SUCCESS',
+  REJECTED: 'REJECTED',
+  FAILED: 'FAILED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export type EdgeCommandResultResult = { [key: string]: unknown };
+
+export interface EdgeCommandResult {
+  edgeId: string;
+  tenantId: string;
+  buildingId: string;
+  status: EdgeCommandResultStatus;
+  result?: EdgeCommandResultResult;
+}
+
+export const EdgeCommandResultResponseValue = {
+  accepted: true,
+} as const;
+export type EdgeCommandResultResponse = typeof EdgeCommandResultResponseValue;
+
+export interface EdgeBuilding {
+  id: string;
+  name: string;
+  address?: string | null;
+  organization_id: string;
+  organization_name?: string | null;
+}
+
+export type EdgeFleetSummary = {
+  /** @minimum 0 */
+  total: number;
+  /** @minimum 0 */
+  online: number;
+  /** @minimum 0 */
+  degraded: number;
+  /** @minimum 0 */
+  offline: number;
+  /** @minimum 0 */
+  activeAlarms: number;
+};
+
+export type EdgeNodeProtocolVersion = typeof EdgeNodeProtocolVersion[keyof typeof EdgeNodeProtocolVersion];
+
+
+export const EdgeNodeProtocolVersion = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export interface EdgeNode {
+  id: string;
+  edge_id: string;
+  organization_id: string;
+  building_id?: string | null;
+  block_id?: string | null;
+  protocol_version?: EdgeNodeProtocolVersion;
+  name: string;
+  site_code: string;
+  archived_at?: string | null;
+  status: string;
+  registration_state: string;
+  agent_version?: string | null;
+  local_authorization_status?: string;
+  /** @minimum 0 */
+  queue_depth: number;
+  registered_at?: string | null;
+  last_seen_at?: string | null;
+  last_connected_at?: string | null;
+  credential_version?: number | null;
+  organization_name?: string | null;
+  building_name?: string | null;
+  block_name?: string | null;
+  /** @minimum 0 */
+  device_count: number;
+  /** @minimum 0 */
+  active_alarms: number;
+}
+
+export interface EdgeFleet {
+  summary: EdgeFleetSummary;
+  nodes: EdgeNode[];
+}
+
+export interface EdgeDevice {
+  id: string;
+  edge_device_id: string;
+  thingsboard_id?: string | null;
+  name: string;
+  profile?: string | null;
+  device_type?: string | null;
+  label?: string | null;
+  unit_id?: string | null;
+  capabilities?: string[];
+  reported_online?: boolean | null;
+  last_seen_at?: string | null;
+  last_telemetry_at?: string | null;
+}
+
+export type EdgeNodeDetailBuildingsItem = {
+  id: string;
+  name: string;
+};
+
+export type EdgeNodeDetailAlarmsItem = { [key: string]: unknown };
+
+export interface EdgeNodeDetail {
+  node: EdgeNode;
+  buildings: EdgeNodeDetailBuildingsItem[];
+  devices: EdgeDevice[];
+  alarms: EdgeNodeDetailAlarmsItem[];
+}
+
+export interface EdgeNodeUpdate {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode?: string;
+}
+
+export interface EdgeConnectionCheck {
+  edgeId: string;
+  webSocketOpen: boolean;
+  heartbeatFresh: boolean;
+  heartbeatAgeSeconds?: number | null;
+  reachable: boolean;
+  checkedAt: string;
+  probe: 'websocket_and_heartbeat_status';
+}
+
+export type EdgeBootstrapTokenProtocolVersion = typeof EdgeBootstrapTokenProtocolVersion[keyof typeof EdgeBootstrapTokenProtocolVersion];
+
+
+export const EdgeBootstrapTokenProtocolVersion = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export type EdgeBootstrapTokenStatus = typeof EdgeBootstrapTokenStatus[keyof typeof EdgeBootstrapTokenStatus];
+
+
+export const EdgeBootstrapTokenStatus = {
+  PENDING: 'PENDING',
+  USED: 'USED',
+  REVOKED: 'REVOKED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export interface EdgeBootstrapToken {
+  id: string;
+  edge_id: string;
+  organization_id: string;
+  building_id?: string | null;
+  block_id?: string | null;
+  protocol_version: EdgeBootstrapTokenProtocolVersion;
+  edge_name?: string;
+  site_code?: string;
+  expires_at: string;
+  used_at?: string | null;
+  revoked_at?: string | null;
+  created_at: string;
+  organization_name?: string;
+  building_name?: string | null;
+  block_name?: string | null;
+  status: EdgeBootstrapTokenStatus;
+}
+
+export interface EdgeBootstrapInput {
+  organizationId?: string;
+  buildingId: string;
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  edgeId: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode: string;
+  /**
+     * @minimum 5
+     * @maximum 120
+     */
+  expiresInMinutes: number;
+}
+
+export interface EdgeBootstrapResponse {
+  id: string;
+  edgeId: string;
+  /** One-time bootstrap secret. Shown once in the authenticated UI. */
+  bootstrapToken: string;
+  oneTime: true;
+  expiresAt: string;
+}
+
+export interface EdgeRotatedCredential {
+  /** Staged credential displayed once to an authorized operator. */
+  accessToken: string;
+  /** @minimum 1 */
+  version: number;
+  expiresAt: string;
+  oneTime: true;
+  instruction?: string;
+}
+
+export type EdgeDeviceAccessInputAllowedCapabilitiesItem = typeof EdgeDeviceAccessInputAllowedCapabilitiesItem[keyof typeof EdgeDeviceAccessInputAllowedCapabilitiesItem];
+
+
+export const EdgeDeviceAccessInputAllowedCapabilitiesItem = {
+  BARRIEROPEN: 'BARRIER.OPEN',
+} as const;
+
+export interface EdgeDeviceAccessInput {
+  unitId: string;
+  /** @minItems 1 */
+  allowedCapabilities: EdgeDeviceAccessInputAllowedCapabilitiesItem[];
+}
+
+export type EdgeResidentDevicePermittedCapabilitiesItem = typeof EdgeResidentDevicePermittedCapabilitiesItem[keyof typeof EdgeResidentDevicePermittedCapabilitiesItem];
+
+
+export const EdgeResidentDevicePermittedCapabilitiesItem = {
+  BARRIEROPEN: 'BARRIER.OPEN',
+} as const;
+
+export type EdgeResidentDevice = EdgeDevice & {
+  permittedCapabilities: EdgeResidentDevicePermittedCapabilitiesItem[];
+};
+
+export type EdgeResidentCommandInputCapability = typeof EdgeResidentCommandInputCapability[keyof typeof EdgeResidentCommandInputCapability];
+
+
+export const EdgeResidentCommandInputCapability = {
+  BARRIEROPEN: 'BARRIER.OPEN',
+} as const;
+
+export interface EdgeResidentCommandInput {
+  capability: EdgeResidentCommandInputCapability;
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 160
+     */
+  idempotencyKey?: string;
+}
+
+export type EdgeStaffCommandInputCapability = typeof EdgeStaffCommandInputCapability[keyof typeof EdgeStaffCommandInputCapability];
+
+
+export const EdgeStaffCommandInputCapability = {
+  BARRIEROPEN: 'BARRIER.OPEN',
+  BARRIERCLOSE: 'BARRIER.CLOSE',
+} as const;
+
+export interface EdgeStaffCommandInput {
+  capability: EdgeStaffCommandInputCapability;
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 160
+     */
+  idempotencyKey?: string;
+}
+
+export type EdgeResidentCommandStatus = typeof EdgeResidentCommandStatus[keyof typeof EdgeResidentCommandStatus];
+
+
+export const EdgeResidentCommandStatus = {
+  queued: 'queued',
+  sent: 'sent',
+  completed: 'completed',
+  failed: 'failed',
+  expired: 'expired',
+} as const;
+
+export interface EdgeResidentCommand {
+  commandId: string;
+  status: EdgeResidentCommandStatus;
+  capability: string;
+  createdAt?: string;
+}
+
 export type IntegrationInstanceActionInputConfirmation = typeof IntegrationInstanceActionInputConfirmation[keyof typeof IntegrationInstanceActionInputConfirmation];
 
 
@@ -2847,6 +3456,40 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetEdgeConfigurationParams = {
+/**
+ * @minLength 3
+ * @maxLength 80
+ */
+edgeId: string;
+};
+
+export type GetEdgeConfigurationV2Params = {
+/**
+ * @minLength 3
+ * @maxLength 80
+ */
+edgeId: string;
+};
+
+export type ListEdgeBlocksParams = {
+includeArchived?: boolean;
+};
+
+export type GetEdgeFleetParams = {
+includeArchived?: boolean;
+};
+
+export type ListEdgeBootstrapTokens200 = {
+  tokens: EdgeBootstrapToken[];
+};
+
+export type ListEdgeAlarms200Item = { [key: string]: unknown };
+
+export type ListEdgeEvents200Item = { [key: string]: unknown };
+
+export type ListEdgeCommands200Item = { [key: string]: unknown };
 
 export type GetSupportKnowledgeBaseParams = {
 language?: GetSupportKnowledgeBaseLanguage;

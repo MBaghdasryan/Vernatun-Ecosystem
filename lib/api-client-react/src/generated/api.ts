@@ -59,6 +59,39 @@ import type {
   DeleteEmptyPortfolioObject200,
   DeleteEmptyPortfolioObjectParams,
   DownloadPlatformCaseAttachmentParams,
+  EdgeAccepted,
+  EdgeBatchAccepted,
+  EdgeBatchInput,
+  EdgeBlockBootstrapInput,
+  EdgeBlockInput,
+  EdgeBlockUpdate,
+  EdgeBootstrapInput,
+  EdgeBootstrapResponse,
+  EdgeBuilding,
+  EdgeCommandResult,
+  EdgeCommandResultResponse,
+  EdgeConfiguration,
+  EdgeConnectionCheck,
+  EdgeDevice,
+  EdgeDeviceAccessInput,
+  EdgeFleet,
+  EdgeHeartbeatInput,
+  EdgeInventoryAccepted,
+  EdgeInventoryInput,
+  EdgeNodeDetail,
+  EdgeNodeUpdate,
+  EdgeRegisterInput,
+  EdgeRegisterResponse,
+  EdgeResidentCommand,
+  EdgeResidentCommandInput,
+  EdgeResidentDevice,
+  EdgeRotatedCredential,
+  EdgeStaffCommandInput,
+  EdgeV2BatchInput,
+  EdgeV2CommandResult,
+  EdgeV2HeartbeatInput,
+  EdgeV2InventoryInput,
+  EdgeV2RegisterInput,
   EmailHealth,
   EmailMessageDetail,
   EmailMessagePage,
@@ -75,6 +108,9 @@ import type {
   GetContractorScorecardParams,
   GetDefectCollaborationParams,
   GetDispatcherSetupParams,
+  GetEdgeConfigurationParams,
+  GetEdgeConfigurationV2Params,
+  GetEdgeFleetParams,
   GetEmailHealthParams,
   GetExternalHealth200,
   GetExternalRecords200,
@@ -136,6 +172,11 @@ import type {
   LeaseLifecycleInput,
   ListBankTransactionsParams,
   ListDocumentVersions200Item,
+  ListEdgeAlarms200Item,
+  ListEdgeBlocksParams,
+  ListEdgeBootstrapTokens200,
+  ListEdgeCommands200Item,
+  ListEdgeEvents200Item,
   ListEmailMessagesParams,
   ListFinanceAccountsParams,
   ListGovernanceMeetings200Item,
@@ -284,6 +325,3402 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getRegisterEdgeV1Url = () => {
+
+
+
+
+  return `/api/edge/v1/register`
+}
+
+/**
+ * @summary Register one Edge Agent using a single-use building-bound bootstrap token
+ */
+export const registerEdgeV1 = async (edgeRegisterInput: EdgeRegisterInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeRegisterResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeRegisterResponse>(getRegisterEdgeV1Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeRegisterInput)
+  }
+);}
+
+
+
+
+
+export const getRegisterEdgeV1MutationKey = () => ['registerEdgeV1'] as const;
+
+export const getRegisterEdgeV1MutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV1>>, TError,RegisterEdgeV1MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV1>>, TError,RegisterEdgeV1MutationVariables, TContext> => {
+
+const mutationKey = getRegisterEdgeV1MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerEdgeV1>>, RegisterEdgeV1MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerEdgeV1(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterEdgeV1MutationResult = NonNullable<Awaited<ReturnType<typeof registerEdgeV1>>>
+    export type RegisterEdgeV1MutationBody = BodyType<EdgeRegisterInput>
+    export type RegisterEdgeV1MutationError = ErrorType<void>
+    export type RegisterEdgeV1MutationVariables = {data: BodyType<EdgeRegisterInput>}
+
+    /**
+ * @summary Register one Edge Agent using a single-use building-bound bootstrap token
+ */
+export const useRegisterEdgeV1 = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV1>>, TError,RegisterEdgeV1MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerEdgeV1>>,
+        TError,
+        RegisterEdgeV1MutationVariables,
+        TContext
+      > => {
+      return useMutation(getRegisterEdgeV1MutationOptions(options));
+    }
+
+export const getReportEdgeHeartbeatUrl = () => {
+
+
+
+
+  return `/api/edge/v1/heartbeat`
+}
+
+export const reportEdgeHeartbeat = async (edgeHeartbeatInput: EdgeHeartbeatInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeAccepted>(getReportEdgeHeartbeatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeHeartbeatInput)
+  }
+);}
+
+
+
+
+
+export const getReportEdgeHeartbeatMutationKey = () => ['reportEdgeHeartbeat'] as const;
+
+export const getReportEdgeHeartbeatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeat>>, TError,ReportEdgeHeartbeatMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeat>>, TError,ReportEdgeHeartbeatMutationVariables, TContext> => {
+
+const mutationKey = getReportEdgeHeartbeatMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportEdgeHeartbeat>>, ReportEdgeHeartbeatMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportEdgeHeartbeat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportEdgeHeartbeatMutationResult = NonNullable<Awaited<ReturnType<typeof reportEdgeHeartbeat>>>
+    export type ReportEdgeHeartbeatMutationBody = BodyType<EdgeHeartbeatInput>
+    export type ReportEdgeHeartbeatMutationError = ErrorType<void>
+    export type ReportEdgeHeartbeatMutationVariables = {data: BodyType<EdgeHeartbeatInput>}
+
+    export const useReportEdgeHeartbeat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeat>>, TError,ReportEdgeHeartbeatMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportEdgeHeartbeat>>,
+        TError,
+        ReportEdgeHeartbeatMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportEdgeHeartbeatMutationOptions(options));
+    }
+
+export const getSyncEdgeInventoryUrl = () => {
+
+
+
+
+  return `/api/edge/v1/inventory`
+}
+
+export const syncEdgeInventory = async (edgeInventoryInput: EdgeInventoryInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeInventoryAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeInventoryAccepted>(getSyncEdgeInventoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeInventoryInput)
+  }
+);}
+
+
+
+
+
+export const getSyncEdgeInventoryMutationKey = () => ['syncEdgeInventory'] as const;
+
+export const getSyncEdgeInventoryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventory>>, TError,SyncEdgeInventoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventory>>, TError,SyncEdgeInventoryMutationVariables, TContext> => {
+
+const mutationKey = getSyncEdgeInventoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncEdgeInventory>>, SyncEdgeInventoryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncEdgeInventory(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncEdgeInventoryMutationResult = NonNullable<Awaited<ReturnType<typeof syncEdgeInventory>>>
+    export type SyncEdgeInventoryMutationBody = BodyType<EdgeInventoryInput>
+    export type SyncEdgeInventoryMutationError = ErrorType<void>
+    export type SyncEdgeInventoryMutationVariables = {data: BodyType<EdgeInventoryInput>}
+
+    export const useSyncEdgeInventory = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventory>>, TError,SyncEdgeInventoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncEdgeInventory>>,
+        TError,
+        SyncEdgeInventoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSyncEdgeInventoryMutationOptions(options));
+    }
+
+export const getIngestEdgeTelemetryBatchUrl = () => {
+
+
+
+
+  return `/api/edge/v1/telemetry/batch`
+}
+
+export const ingestEdgeTelemetryBatch = async (edgeBatchInput: EdgeBatchInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeBatchAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeBatchAccepted>(getIngestEdgeTelemetryBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeTelemetryBatchMutationKey = () => ['ingestEdgeTelemetryBatch'] as const;
+
+export const getIngestEdgeTelemetryBatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>, TError,IngestEdgeTelemetryBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>, TError,IngestEdgeTelemetryBatchMutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeTelemetryBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>, IngestEdgeTelemetryBatchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeTelemetryBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeTelemetryBatchMutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>>
+    export type IngestEdgeTelemetryBatchMutationBody = BodyType<EdgeBatchInput>
+    export type IngestEdgeTelemetryBatchMutationError = ErrorType<void>
+    export type IngestEdgeTelemetryBatchMutationVariables = {data: BodyType<EdgeBatchInput>}
+
+    export const useIngestEdgeTelemetryBatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>, TError,IngestEdgeTelemetryBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeTelemetryBatch>>,
+        TError,
+        IngestEdgeTelemetryBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeTelemetryBatchMutationOptions(options));
+    }
+
+export const getIngestEdgeEventsBatchUrl = () => {
+
+
+
+
+  return `/api/edge/v1/events/batch`
+}
+
+export const ingestEdgeEventsBatch = async (edgeBatchInput: EdgeBatchInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeBatchAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeBatchAccepted>(getIngestEdgeEventsBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeEventsBatchMutationKey = () => ['ingestEdgeEventsBatch'] as const;
+
+export const getIngestEdgeEventsBatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatch>>, TError,IngestEdgeEventsBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatch>>, TError,IngestEdgeEventsBatchMutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeEventsBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeEventsBatch>>, IngestEdgeEventsBatchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeEventsBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeEventsBatchMutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeEventsBatch>>>
+    export type IngestEdgeEventsBatchMutationBody = BodyType<EdgeBatchInput>
+    export type IngestEdgeEventsBatchMutationError = ErrorType<void>
+    export type IngestEdgeEventsBatchMutationVariables = {data: BodyType<EdgeBatchInput>}
+
+    export const useIngestEdgeEventsBatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatch>>, TError,IngestEdgeEventsBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeEventsBatch>>,
+        TError,
+        IngestEdgeEventsBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeEventsBatchMutationOptions(options));
+    }
+
+export const getIngestEdgeAlarmsBatchUrl = () => {
+
+
+
+
+  return `/api/edge/v1/alarms/batch`
+}
+
+export const ingestEdgeAlarmsBatch = async (edgeBatchInput: EdgeBatchInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeBatchAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeBatchAccepted>(getIngestEdgeAlarmsBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeAlarmsBatchMutationKey = () => ['ingestEdgeAlarmsBatch'] as const;
+
+export const getIngestEdgeAlarmsBatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>, TError,IngestEdgeAlarmsBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>, TError,IngestEdgeAlarmsBatchMutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeAlarmsBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>, IngestEdgeAlarmsBatchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeAlarmsBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeAlarmsBatchMutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>>
+    export type IngestEdgeAlarmsBatchMutationBody = BodyType<EdgeBatchInput>
+    export type IngestEdgeAlarmsBatchMutationError = ErrorType<void>
+    export type IngestEdgeAlarmsBatchMutationVariables = {data: BodyType<EdgeBatchInput>}
+
+    export const useIngestEdgeAlarmsBatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>, TError,IngestEdgeAlarmsBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeAlarmsBatch>>,
+        TError,
+        IngestEdgeAlarmsBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeAlarmsBatchMutationOptions(options));
+    }
+
+export const getGetEdgeConfigurationUrl = (params: GetEdgeConfigurationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/edge/v1/config?${stringifiedParams}` : `/api/edge/v1/config`
+}
+
+export const getEdgeConfiguration = async (params: GetEdgeConfigurationParams, options?: Parameters<typeof customFetch>[1]): Promise<EdgeConfiguration> => {
+
+  return customFetch<EdgeConfiguration>(getGetEdgeConfigurationUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEdgeConfigurationQueryKey = (params?: GetEdgeConfigurationParams,) => {
+    return [
+    `/api/edge/v1/config`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEdgeConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof getEdgeConfiguration>>, TError = ErrorType<void>>(params: GetEdgeConfigurationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEdgeConfigurationQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdgeConfiguration>>> = ({ signal }) => getEdgeConfiguration(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfiguration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEdgeConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof getEdgeConfiguration>>>
+export type GetEdgeConfigurationQueryError = ErrorType<void>
+
+
+
+export function useGetEdgeConfiguration<TData = Awaited<ReturnType<typeof getEdgeConfiguration>>, TError = ErrorType<void>>(
+ params: GetEdgeConfigurationParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEdgeConfigurationQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReportEdgeCommandResultUrl = (commandId: string,) => {
+
+
+
+
+  return `/api/edge/v1/commands/${commandId}/result`
+}
+
+export const reportEdgeCommandResult = async (commandId: string,
+    edgeCommandResult: EdgeCommandResult, options?: Parameters<typeof customFetch>[1]): Promise<EdgeCommandResultResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeCommandResultResponse>(getReportEdgeCommandResultUrl(commandId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeCommandResult)
+  }
+);}
+
+
+
+
+
+export const getReportEdgeCommandResultMutationKey = () => ['reportEdgeCommandResult'] as const;
+
+export const getReportEdgeCommandResultMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResult>>, TError,ReportEdgeCommandResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResult>>, TError,ReportEdgeCommandResultMutationVariables, TContext> => {
+
+const mutationKey = getReportEdgeCommandResultMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportEdgeCommandResult>>, ReportEdgeCommandResultMutationVariables> = (props) => {
+          const {commandId,data} = props ?? {};
+
+          return  reportEdgeCommandResult(commandId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportEdgeCommandResultMutationResult = NonNullable<Awaited<ReturnType<typeof reportEdgeCommandResult>>>
+    export type ReportEdgeCommandResultMutationBody = BodyType<EdgeCommandResult>
+    export type ReportEdgeCommandResultMutationError = ErrorType<void>
+    export type ReportEdgeCommandResultMutationVariables = {commandId: string;data: BodyType<EdgeCommandResult>}
+
+    export const useReportEdgeCommandResult = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResult>>, TError,ReportEdgeCommandResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportEdgeCommandResult>>,
+        TError,
+        ReportEdgeCommandResultMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportEdgeCommandResultMutationOptions(options));
+    }
+
+export const getRegisterEdgeV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/register`
+}
+
+/**
+ * @summary Register a block-scoped Edge Agent
+ */
+export const registerEdgeV2 = async (edgeV2RegisterInput: EdgeV2RegisterInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getRegisterEdgeV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2RegisterInput)
+  }
+);}
+
+
+
+
+
+export const getRegisterEdgeV2MutationKey = () => ['registerEdgeV2'] as const;
+
+export const getRegisterEdgeV2MutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV2>>, TError,RegisterEdgeV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV2>>, TError,RegisterEdgeV2MutationVariables, TContext> => {
+
+const mutationKey = getRegisterEdgeV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerEdgeV2>>, RegisterEdgeV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerEdgeV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterEdgeV2MutationResult = NonNullable<Awaited<ReturnType<typeof registerEdgeV2>>>
+    export type RegisterEdgeV2MutationBody = BodyType<EdgeV2RegisterInput>
+    export type RegisterEdgeV2MutationError = ErrorType<void>
+    export type RegisterEdgeV2MutationVariables = {data: BodyType<EdgeV2RegisterInput>}
+
+    /**
+ * @summary Register a block-scoped Edge Agent
+ */
+export const useRegisterEdgeV2 = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerEdgeV2>>, TError,RegisterEdgeV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerEdgeV2>>,
+        TError,
+        RegisterEdgeV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getRegisterEdgeV2MutationOptions(options));
+    }
+
+export const getReportEdgeHeartbeatV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/heartbeat`
+}
+
+export const reportEdgeHeartbeatV2 = async (edgeV2HeartbeatInput: EdgeV2HeartbeatInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReportEdgeHeartbeatV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2HeartbeatInput)
+  }
+);}
+
+
+
+
+
+export const getReportEdgeHeartbeatV2MutationKey = () => ['reportEdgeHeartbeatV2'] as const;
+
+export const getReportEdgeHeartbeatV2MutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>, TError,ReportEdgeHeartbeatV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>, TError,ReportEdgeHeartbeatV2MutationVariables, TContext> => {
+
+const mutationKey = getReportEdgeHeartbeatV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>, ReportEdgeHeartbeatV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportEdgeHeartbeatV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportEdgeHeartbeatV2MutationResult = NonNullable<Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>>
+    export type ReportEdgeHeartbeatV2MutationBody = BodyType<EdgeV2HeartbeatInput>
+    export type ReportEdgeHeartbeatV2MutationError = ErrorType<void>
+    export type ReportEdgeHeartbeatV2MutationVariables = {data: BodyType<EdgeV2HeartbeatInput>}
+
+    export const useReportEdgeHeartbeatV2 = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>, TError,ReportEdgeHeartbeatV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportEdgeHeartbeatV2>>,
+        TError,
+        ReportEdgeHeartbeatV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportEdgeHeartbeatV2MutationOptions(options));
+    }
+
+export const getSyncEdgeInventoryV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/inventory`
+}
+
+export const syncEdgeInventoryV2 = async (edgeV2InventoryInput: EdgeV2InventoryInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getSyncEdgeInventoryV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2InventoryInput)
+  }
+);}
+
+
+
+
+
+export const getSyncEdgeInventoryV2MutationKey = () => ['syncEdgeInventoryV2'] as const;
+
+export const getSyncEdgeInventoryV2MutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventoryV2>>, TError,SyncEdgeInventoryV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventoryV2>>, TError,SyncEdgeInventoryV2MutationVariables, TContext> => {
+
+const mutationKey = getSyncEdgeInventoryV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncEdgeInventoryV2>>, SyncEdgeInventoryV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncEdgeInventoryV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncEdgeInventoryV2MutationResult = NonNullable<Awaited<ReturnType<typeof syncEdgeInventoryV2>>>
+    export type SyncEdgeInventoryV2MutationBody = BodyType<EdgeV2InventoryInput>
+    export type SyncEdgeInventoryV2MutationError = ErrorType<void>
+    export type SyncEdgeInventoryV2MutationVariables = {data: BodyType<EdgeV2InventoryInput>}
+
+    export const useSyncEdgeInventoryV2 = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEdgeInventoryV2>>, TError,SyncEdgeInventoryV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncEdgeInventoryV2>>,
+        TError,
+        SyncEdgeInventoryV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getSyncEdgeInventoryV2MutationOptions(options));
+    }
+
+export const getIngestEdgeTelemetryBatchV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/telemetry/batch`
+}
+
+export const ingestEdgeTelemetryBatchV2 = async (edgeV2BatchInput: EdgeV2BatchInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getIngestEdgeTelemetryBatchV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2BatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeTelemetryBatchV2MutationKey = () => ['ingestEdgeTelemetryBatchV2'] as const;
+
+export const getIngestEdgeTelemetryBatchV2MutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>, TError,IngestEdgeTelemetryBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>, TError,IngestEdgeTelemetryBatchV2MutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeTelemetryBatchV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>, IngestEdgeTelemetryBatchV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeTelemetryBatchV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeTelemetryBatchV2MutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>>
+    export type IngestEdgeTelemetryBatchV2MutationBody = BodyType<EdgeV2BatchInput>
+    export type IngestEdgeTelemetryBatchV2MutationError = ErrorType<unknown>
+    export type IngestEdgeTelemetryBatchV2MutationVariables = {data: BodyType<EdgeV2BatchInput>}
+
+    export const useIngestEdgeTelemetryBatchV2 = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>, TError,IngestEdgeTelemetryBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeTelemetryBatchV2>>,
+        TError,
+        IngestEdgeTelemetryBatchV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeTelemetryBatchV2MutationOptions(options));
+    }
+
+export const getIngestEdgeEventsBatchV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/events/batch`
+}
+
+export const ingestEdgeEventsBatchV2 = async (edgeV2BatchInput: EdgeV2BatchInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getIngestEdgeEventsBatchV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2BatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeEventsBatchV2MutationKey = () => ['ingestEdgeEventsBatchV2'] as const;
+
+export const getIngestEdgeEventsBatchV2MutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>, TError,IngestEdgeEventsBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>, TError,IngestEdgeEventsBatchV2MutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeEventsBatchV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>, IngestEdgeEventsBatchV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeEventsBatchV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeEventsBatchV2MutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>>
+    export type IngestEdgeEventsBatchV2MutationBody = BodyType<EdgeV2BatchInput>
+    export type IngestEdgeEventsBatchV2MutationError = ErrorType<unknown>
+    export type IngestEdgeEventsBatchV2MutationVariables = {data: BodyType<EdgeV2BatchInput>}
+
+    export const useIngestEdgeEventsBatchV2 = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>, TError,IngestEdgeEventsBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeEventsBatchV2>>,
+        TError,
+        IngestEdgeEventsBatchV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeEventsBatchV2MutationOptions(options));
+    }
+
+export const getIngestEdgeAlarmsBatchV2Url = () => {
+
+
+
+
+  return `/api/edge/v2/alarms/batch`
+}
+
+export const ingestEdgeAlarmsBatchV2 = async (edgeV2BatchInput: EdgeV2BatchInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getIngestEdgeAlarmsBatchV2Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2BatchInput)
+  }
+);}
+
+
+
+
+
+export const getIngestEdgeAlarmsBatchV2MutationKey = () => ['ingestEdgeAlarmsBatchV2'] as const;
+
+export const getIngestEdgeAlarmsBatchV2MutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>, TError,IngestEdgeAlarmsBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>, TError,IngestEdgeAlarmsBatchV2MutationVariables, TContext> => {
+
+const mutationKey = getIngestEdgeAlarmsBatchV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>, IngestEdgeAlarmsBatchV2MutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestEdgeAlarmsBatchV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestEdgeAlarmsBatchV2MutationResult = NonNullable<Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>>
+    export type IngestEdgeAlarmsBatchV2MutationBody = BodyType<EdgeV2BatchInput>
+    export type IngestEdgeAlarmsBatchV2MutationError = ErrorType<unknown>
+    export type IngestEdgeAlarmsBatchV2MutationVariables = {data: BodyType<EdgeV2BatchInput>}
+
+    export const useIngestEdgeAlarmsBatchV2 = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>, TError,IngestEdgeAlarmsBatchV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestEdgeAlarmsBatchV2>>,
+        TError,
+        IngestEdgeAlarmsBatchV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getIngestEdgeAlarmsBatchV2MutationOptions(options));
+    }
+
+export const getGetEdgeConfigurationV2Url = (params: GetEdgeConfigurationV2Params,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/edge/v2/config?${stringifiedParams}` : `/api/edge/v2/config`
+}
+
+export const getEdgeConfigurationV2 = async (params: GetEdgeConfigurationV2Params, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getGetEdgeConfigurationV2Url(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEdgeConfigurationV2QueryKey = (params?: GetEdgeConfigurationV2Params,) => {
+    return [
+    `/api/edge/v2/config`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEdgeConfigurationV2QueryOptions = <TData = Awaited<ReturnType<typeof getEdgeConfigurationV2>>, TError = ErrorType<unknown>>(params: GetEdgeConfigurationV2Params, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfigurationV2>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEdgeConfigurationV2QueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdgeConfigurationV2>>> = ({ signal }) => getEdgeConfigurationV2(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfigurationV2>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEdgeConfigurationV2QueryResult = NonNullable<Awaited<ReturnType<typeof getEdgeConfigurationV2>>>
+export type GetEdgeConfigurationV2QueryError = ErrorType<unknown>
+
+
+
+export function useGetEdgeConfigurationV2<TData = Awaited<ReturnType<typeof getEdgeConfigurationV2>>, TError = ErrorType<unknown>>(
+ params: GetEdgeConfigurationV2Params, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeConfigurationV2>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEdgeConfigurationV2QueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReportEdgeCommandResultV2Url = (commandId: string,) => {
+
+
+
+
+  return `/api/edge/v2/commands/${commandId}/result`
+}
+
+export const reportEdgeCommandResultV2 = async (commandId: string,
+    edgeV2CommandResult: EdgeV2CommandResult, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReportEdgeCommandResultV2Url(commandId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeV2CommandResult)
+  }
+);}
+
+
+
+
+
+export const getReportEdgeCommandResultV2MutationKey = () => ['reportEdgeCommandResultV2'] as const;
+
+export const getReportEdgeCommandResultV2MutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResultV2>>, TError,ReportEdgeCommandResultV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResultV2>>, TError,ReportEdgeCommandResultV2MutationVariables, TContext> => {
+
+const mutationKey = getReportEdgeCommandResultV2MutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportEdgeCommandResultV2>>, ReportEdgeCommandResultV2MutationVariables> = (props) => {
+          const {commandId,data} = props ?? {};
+
+          return  reportEdgeCommandResultV2(commandId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportEdgeCommandResultV2MutationResult = NonNullable<Awaited<ReturnType<typeof reportEdgeCommandResultV2>>>
+    export type ReportEdgeCommandResultV2MutationBody = BodyType<EdgeV2CommandResult>
+    export type ReportEdgeCommandResultV2MutationError = ErrorType<void>
+    export type ReportEdgeCommandResultV2MutationVariables = {commandId: string;data: BodyType<EdgeV2CommandResult>}
+
+    export const useReportEdgeCommandResultV2 = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportEdgeCommandResultV2>>, TError,ReportEdgeCommandResultV2MutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportEdgeCommandResultV2>>,
+        TError,
+        ReportEdgeCommandResultV2MutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportEdgeCommandResultV2MutationOptions(options));
+    }
+
+export const getListEdgeBlocksUrl = (params?: ListEdgeBlocksParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/edge-console/blocks?${stringifiedParams}` : `/api/edge-console/blocks`
+}
+
+export const listEdgeBlocks = async (params?: ListEdgeBlocksParams, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getListEdgeBlocksUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeBlocksQueryKey = (params?: ListEdgeBlocksParams,) => {
+    return [
+    `/api/edge-console/blocks`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEdgeBlocksQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeBlocks>>, TError = ErrorType<unknown>>(params?: ListEdgeBlocksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBlocks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeBlocksQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeBlocks>>> = ({ signal }) => listEdgeBlocks(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeBlocks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeBlocksQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeBlocks>>>
+export type ListEdgeBlocksQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeBlocks<TData = Awaited<ReturnType<typeof listEdgeBlocks>>, TError = ErrorType<unknown>>(
+ params?: ListEdgeBlocksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBlocks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeBlocksQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEdgeBlockUrl = () => {
+
+
+
+
+  return `/api/edge-console/blocks`
+}
+
+export const createEdgeBlock = async (edgeBlockInput: EdgeBlockInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getCreateEdgeBlockUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBlockInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEdgeBlockMutationKey = () => ['createEdgeBlock'] as const;
+
+export const getCreateEdgeBlockMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeBlock>>, TError,CreateEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEdgeBlock>>, TError,CreateEdgeBlockMutationVariables, TContext> => {
+
+const mutationKey = getCreateEdgeBlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEdgeBlock>>, CreateEdgeBlockMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEdgeBlock(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEdgeBlockMutationResult = NonNullable<Awaited<ReturnType<typeof createEdgeBlock>>>
+    export type CreateEdgeBlockMutationBody = BodyType<EdgeBlockInput>
+    export type CreateEdgeBlockMutationError = ErrorType<void>
+    export type CreateEdgeBlockMutationVariables = {data: BodyType<EdgeBlockInput>}
+
+    export const useCreateEdgeBlock = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeBlock>>, TError,CreateEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEdgeBlock>>,
+        TError,
+        CreateEdgeBlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEdgeBlockMutationOptions(options));
+    }
+
+export const getUpdateEdgeBlockUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/blocks/${id}`
+}
+
+export const updateEdgeBlock = async (id: string,
+    edgeBlockUpdate: EdgeBlockUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUpdateEdgeBlockUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBlockUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEdgeBlockMutationKey = () => ['updateEdgeBlock'] as const;
+
+export const getUpdateEdgeBlockMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBlock>>, TError,UpdateEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBlock>>, TError,UpdateEdgeBlockMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEdgeBlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEdgeBlock>>, UpdateEdgeBlockMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEdgeBlock(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEdgeBlockMutationResult = NonNullable<Awaited<ReturnType<typeof updateEdgeBlock>>>
+    export type UpdateEdgeBlockMutationBody = BodyType<EdgeBlockUpdate>
+    export type UpdateEdgeBlockMutationError = ErrorType<void>
+    export type UpdateEdgeBlockMutationVariables = {id: string;data: BodyType<EdgeBlockUpdate>}
+
+    export const useUpdateEdgeBlock = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBlock>>, TError,UpdateEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEdgeBlock>>,
+        TError,
+        UpdateEdgeBlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEdgeBlockMutationOptions(options));
+    }
+
+export const getArchiveEdgeBlockUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/blocks/${id}`
+}
+
+export const archiveEdgeBlock = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getArchiveEdgeBlockUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveEdgeBlockMutationKey = () => ['archiveEdgeBlock'] as const;
+
+export const getArchiveEdgeBlockMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeBlock>>, TError,ArchiveEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeBlock>>, TError,ArchiveEdgeBlockMutationVariables, TContext> => {
+
+const mutationKey = getArchiveEdgeBlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveEdgeBlock>>, ArchiveEdgeBlockMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveEdgeBlock(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveEdgeBlockMutationResult = NonNullable<Awaited<ReturnType<typeof archiveEdgeBlock>>>
+
+    export type ArchiveEdgeBlockMutationError = ErrorType<void>
+    export type ArchiveEdgeBlockMutationVariables = {id: string}
+
+    export const useArchiveEdgeBlock = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeBlock>>, TError,ArchiveEdgeBlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveEdgeBlock>>,
+        TError,
+        ArchiveEdgeBlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArchiveEdgeBlockMutationOptions(options));
+    }
+
+export const getRestoreEdgeBlockByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/blocks/${id}/restore`
+}
+
+export const restoreEdgeBlockById = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRestoreEdgeBlockByIdUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreEdgeBlockByIdMutationKey = () => ['restoreEdgeBlockById'] as const;
+
+export const getRestoreEdgeBlockByIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeBlockById>>, TError,RestoreEdgeBlockByIdMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeBlockById>>, TError,RestoreEdgeBlockByIdMutationVariables, TContext> => {
+
+const mutationKey = getRestoreEdgeBlockByIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreEdgeBlockById>>, RestoreEdgeBlockByIdMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreEdgeBlockById(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreEdgeBlockByIdMutationResult = NonNullable<Awaited<ReturnType<typeof restoreEdgeBlockById>>>
+
+    export type RestoreEdgeBlockByIdMutationError = ErrorType<void>
+    export type RestoreEdgeBlockByIdMutationVariables = {id: string}
+
+    export const useRestoreEdgeBlockById = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeBlockById>>, TError,RestoreEdgeBlockByIdMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreEdgeBlockById>>,
+        TError,
+        RestoreEdgeBlockByIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreEdgeBlockByIdMutationOptions(options));
+    }
+
+export const getCreateBlockEdgeBootstrapTokenUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/blocks/${id}/bootstrap-tokens`
+}
+
+export const createBlockEdgeBootstrapToken = async (id: string,
+    edgeBlockBootstrapInput: EdgeBlockBootstrapInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getCreateBlockEdgeBootstrapTokenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBlockBootstrapInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBlockEdgeBootstrapTokenMutationKey = () => ['createBlockEdgeBootstrapToken'] as const;
+
+export const getCreateBlockEdgeBootstrapTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>, TError,CreateBlockEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>, TError,CreateBlockEdgeBootstrapTokenMutationVariables, TContext> => {
+
+const mutationKey = getCreateBlockEdgeBootstrapTokenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>, CreateBlockEdgeBootstrapTokenMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createBlockEdgeBootstrapToken(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBlockEdgeBootstrapTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>>
+    export type CreateBlockEdgeBootstrapTokenMutationBody = BodyType<EdgeBlockBootstrapInput>
+    export type CreateBlockEdgeBootstrapTokenMutationError = ErrorType<void>
+    export type CreateBlockEdgeBootstrapTokenMutationVariables = {id: string;data: BodyType<EdgeBlockBootstrapInput>}
+
+    export const useCreateBlockEdgeBootstrapToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>, TError,CreateBlockEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBlockEdgeBootstrapToken>>,
+        TError,
+        CreateBlockEdgeBootstrapTokenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateBlockEdgeBootstrapTokenMutationOptions(options));
+    }
+
+export const getListEdgeBuildingsUrl = () => {
+
+
+
+
+  return `/api/edge-console/buildings`
+}
+
+export const listEdgeBuildings = async ( options?: Parameters<typeof customFetch>[1]): Promise<EdgeBuilding[]> => {
+
+  return customFetch<EdgeBuilding[]>(getListEdgeBuildingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeBuildingsQueryKey = () => {
+    return [
+    `/api/edge-console/buildings`
+    ] as const;
+    }
+
+
+export const getListEdgeBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeBuildings>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeBuildingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeBuildings>>> = ({ signal }) => listEdgeBuildings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeBuildings>>>
+export type ListEdgeBuildingsQueryError = ErrorType<void>
+
+
+
+export function useListEdgeBuildings<TData = Awaited<ReturnType<typeof listEdgeBuildings>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeBuildingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEdgeFleetUrl = (params?: GetEdgeFleetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/edge-console/fleet?${stringifiedParams}` : `/api/edge-console/fleet`
+}
+
+export const getEdgeFleet = async (params?: GetEdgeFleetParams, options?: Parameters<typeof customFetch>[1]): Promise<EdgeFleet> => {
+
+  return customFetch<EdgeFleet>(getGetEdgeFleetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEdgeFleetQueryKey = (params?: GetEdgeFleetParams,) => {
+    return [
+    `/api/edge-console/fleet`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEdgeFleetQueryOptions = <TData = Awaited<ReturnType<typeof getEdgeFleet>>, TError = ErrorType<void>>(params?: GetEdgeFleetParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeFleet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEdgeFleetQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdgeFleet>>> = ({ signal }) => getEdgeFleet(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEdgeFleet>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEdgeFleetQueryResult = NonNullable<Awaited<ReturnType<typeof getEdgeFleet>>>
+export type GetEdgeFleetQueryError = ErrorType<void>
+
+
+
+export function useGetEdgeFleet<TData = Awaited<ReturnType<typeof getEdgeFleet>>, TError = ErrorType<void>>(
+ params?: GetEdgeFleetParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeFleet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEdgeFleetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEdgeBootstrapTokensUrl = () => {
+
+
+
+
+  return `/api/edge-console/bootstrap-tokens`
+}
+
+export const listEdgeBootstrapTokens = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEdgeBootstrapTokens200> => {
+
+  return customFetch<ListEdgeBootstrapTokens200>(getListEdgeBootstrapTokensUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeBootstrapTokensQueryKey = () => {
+    return [
+    `/api/edge-console/bootstrap-tokens`
+    ] as const;
+    }
+
+
+export const getListEdgeBootstrapTokensQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeBootstrapTokens>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBootstrapTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeBootstrapTokensQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeBootstrapTokens>>> = ({ signal }) => listEdgeBootstrapTokens({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeBootstrapTokens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeBootstrapTokensQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeBootstrapTokens>>>
+export type ListEdgeBootstrapTokensQueryError = ErrorType<void>
+
+
+
+export function useListEdgeBootstrapTokens<TData = Awaited<ReturnType<typeof listEdgeBootstrapTokens>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBootstrapTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeBootstrapTokensQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEdgeBootstrapTokenUrl = () => {
+
+
+
+
+  return `/api/edge-console/bootstrap-tokens`
+}
+
+export const createEdgeBootstrapToken = async (edgeBootstrapInput: EdgeBootstrapInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeBootstrapResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeBootstrapResponse>(getCreateEdgeBootstrapTokenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBootstrapInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEdgeBootstrapTokenMutationKey = () => ['createEdgeBootstrapToken'] as const;
+
+export const getCreateEdgeBootstrapTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeBootstrapToken>>, TError,CreateEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEdgeBootstrapToken>>, TError,CreateEdgeBootstrapTokenMutationVariables, TContext> => {
+
+const mutationKey = getCreateEdgeBootstrapTokenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEdgeBootstrapToken>>, CreateEdgeBootstrapTokenMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEdgeBootstrapToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEdgeBootstrapTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createEdgeBootstrapToken>>>
+    export type CreateEdgeBootstrapTokenMutationBody = BodyType<EdgeBootstrapInput>
+    export type CreateEdgeBootstrapTokenMutationError = ErrorType<void>
+    export type CreateEdgeBootstrapTokenMutationVariables = {data: BodyType<EdgeBootstrapInput>}
+
+    export const useCreateEdgeBootstrapToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeBootstrapToken>>, TError,CreateEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEdgeBootstrapToken>>,
+        TError,
+        CreateEdgeBootstrapTokenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEdgeBootstrapTokenMutationOptions(options));
+    }
+
+export const getRevokeEdgeBootstrapTokenUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/bootstrap-tokens/${id}/revoke`
+}
+
+export const revokeEdgeBootstrapToken = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeEdgeBootstrapTokenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeEdgeBootstrapTokenMutationKey = () => ['revokeEdgeBootstrapToken'] as const;
+
+export const getRevokeEdgeBootstrapTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>, TError,RevokeEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>, TError,RevokeEdgeBootstrapTokenMutationVariables, TContext> => {
+
+const mutationKey = getRevokeEdgeBootstrapTokenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>, RevokeEdgeBootstrapTokenMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeEdgeBootstrapToken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeEdgeBootstrapTokenMutationResult = NonNullable<Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>>
+
+    export type RevokeEdgeBootstrapTokenMutationError = ErrorType<void>
+    export type RevokeEdgeBootstrapTokenMutationVariables = {id: string}
+
+    export const useRevokeEdgeBootstrapToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>, TError,RevokeEdgeBootstrapTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeEdgeBootstrapToken>>,
+        TError,
+        RevokeEdgeBootstrapTokenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeEdgeBootstrapTokenMutationOptions(options));
+    }
+
+export const getGetEdgeNodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}`
+}
+
+export const getEdgeNode = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeNodeDetail> => {
+
+  return customFetch<EdgeNodeDetail>(getGetEdgeNodeUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEdgeNodeQueryKey = (id: string,) => {
+    return [
+    `/api/edge-console/nodes/${id}`
+    ] as const;
+    }
+
+
+export const getGetEdgeNodeQueryOptions = <TData = Awaited<ReturnType<typeof getEdgeNode>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeNode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEdgeNodeQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdgeNode>>> = ({ signal }) => getEdgeNode(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEdgeNode>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEdgeNodeQueryResult = NonNullable<Awaited<ReturnType<typeof getEdgeNode>>>
+export type GetEdgeNodeQueryError = ErrorType<void>
+
+
+
+export function useGetEdgeNode<TData = Awaited<ReturnType<typeof getEdgeNode>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEdgeNode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEdgeNodeQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEdgeNodeMetadataUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}`
+}
+
+export const updateEdgeNodeMetadata = async (id: string,
+    edgeNodeUpdate: EdgeNodeUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUpdateEdgeNodeMetadataUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeNodeUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEdgeNodeMetadataMutationKey = () => ['updateEdgeNodeMetadata'] as const;
+
+export const getUpdateEdgeNodeMetadataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeNodeMetadata>>, TError,UpdateEdgeNodeMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEdgeNodeMetadata>>, TError,UpdateEdgeNodeMetadataMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEdgeNodeMetadataMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEdgeNodeMetadata>>, UpdateEdgeNodeMetadataMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEdgeNodeMetadata(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEdgeNodeMetadataMutationResult = NonNullable<Awaited<ReturnType<typeof updateEdgeNodeMetadata>>>
+    export type UpdateEdgeNodeMetadataMutationBody = BodyType<EdgeNodeUpdate>
+    export type UpdateEdgeNodeMetadataMutationError = ErrorType<void>
+    export type UpdateEdgeNodeMetadataMutationVariables = {id: string;data: BodyType<EdgeNodeUpdate>}
+
+    export const useUpdateEdgeNodeMetadata = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeNodeMetadata>>, TError,UpdateEdgeNodeMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEdgeNodeMetadata>>,
+        TError,
+        UpdateEdgeNodeMetadataMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEdgeNodeMetadataMutationOptions(options));
+    }
+
+export const getArchiveEdgeNodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}`
+}
+
+export const archiveEdgeNode = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getArchiveEdgeNodeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveEdgeNodeMutationKey = () => ['archiveEdgeNode'] as const;
+
+export const getArchiveEdgeNodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeNode>>, TError,ArchiveEdgeNodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeNode>>, TError,ArchiveEdgeNodeMutationVariables, TContext> => {
+
+const mutationKey = getArchiveEdgeNodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveEdgeNode>>, ArchiveEdgeNodeMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveEdgeNode(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveEdgeNodeMutationResult = NonNullable<Awaited<ReturnType<typeof archiveEdgeNode>>>
+
+    export type ArchiveEdgeNodeMutationError = ErrorType<void>
+    export type ArchiveEdgeNodeMutationVariables = {id: string}
+
+    export const useArchiveEdgeNode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveEdgeNode>>, TError,ArchiveEdgeNodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveEdgeNode>>,
+        TError,
+        ArchiveEdgeNodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArchiveEdgeNodeMutationOptions(options));
+    }
+
+export const getRestoreEdgeNodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/restore`
+}
+
+export const restoreEdgeNode = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRestoreEdgeNodeUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreEdgeNodeMutationKey = () => ['restoreEdgeNode'] as const;
+
+export const getRestoreEdgeNodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeNode>>, TError,RestoreEdgeNodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeNode>>, TError,RestoreEdgeNodeMutationVariables, TContext> => {
+
+const mutationKey = getRestoreEdgeNodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreEdgeNode>>, RestoreEdgeNodeMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreEdgeNode(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreEdgeNodeMutationResult = NonNullable<Awaited<ReturnType<typeof restoreEdgeNode>>>
+
+    export type RestoreEdgeNodeMutationError = ErrorType<void>
+    export type RestoreEdgeNodeMutationVariables = {id: string}
+
+    export const useRestoreEdgeNode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEdgeNode>>, TError,RestoreEdgeNodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreEdgeNode>>,
+        TError,
+        RestoreEdgeNodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreEdgeNodeMutationOptions(options));
+    }
+
+export const getCheckEdgeNodeConnectionUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/connection-check`
+}
+
+export const checkEdgeNodeConnection = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeConnectionCheck> => {
+
+  return customFetch<EdgeConnectionCheck>(getCheckEdgeNodeConnectionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckEdgeNodeConnectionQueryKey = (id: string,) => {
+    return [
+    `/api/edge-console/nodes/${id}/connection-check`
+    ] as const;
+    }
+
+
+export const getCheckEdgeNodeConnectionQueryOptions = <TData = Awaited<ReturnType<typeof checkEdgeNodeConnection>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkEdgeNodeConnection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckEdgeNodeConnectionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkEdgeNodeConnection>>> = ({ signal }) => checkEdgeNodeConnection(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkEdgeNodeConnection>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckEdgeNodeConnectionQueryResult = NonNullable<Awaited<ReturnType<typeof checkEdgeNodeConnection>>>
+export type CheckEdgeNodeConnectionQueryError = ErrorType<void>
+
+
+
+export function useCheckEdgeNodeConnection<TData = Awaited<ReturnType<typeof checkEdgeNodeConnection>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkEdgeNodeConnection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckEdgeNodeConnectionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEdgeNodeDevicesUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/devices`
+}
+
+export const listEdgeNodeDevices = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeDevice[]> => {
+
+  return customFetch<EdgeDevice[]>(getListEdgeNodeDevicesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeNodeDevicesQueryKey = (id: string,) => {
+    return [
+    `/api/edge-console/nodes/${id}/devices`
+    ] as const;
+    }
+
+
+export const getListEdgeNodeDevicesQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeNodeDevices>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeNodeDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeNodeDevicesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeNodeDevices>>> = ({ signal }) => listEdgeNodeDevices(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeNodeDevices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeNodeDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeNodeDevices>>>
+export type ListEdgeNodeDevicesQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeNodeDevices<TData = Awaited<ReturnType<typeof listEdgeNodeDevices>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeNodeDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeNodeDevicesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStageEdgeCredentialRotationUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/credentials/rotate`
+}
+
+export const stageEdgeCredentialRotation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeRotatedCredential> => {
+
+  return customFetch<EdgeRotatedCredential>(getStageEdgeCredentialRotationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStageEdgeCredentialRotationMutationKey = () => ['stageEdgeCredentialRotation'] as const;
+
+export const getStageEdgeCredentialRotationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stageEdgeCredentialRotation>>, TError,StageEdgeCredentialRotationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stageEdgeCredentialRotation>>, TError,StageEdgeCredentialRotationMutationVariables, TContext> => {
+
+const mutationKey = getStageEdgeCredentialRotationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stageEdgeCredentialRotation>>, StageEdgeCredentialRotationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  stageEdgeCredentialRotation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StageEdgeCredentialRotationMutationResult = NonNullable<Awaited<ReturnType<typeof stageEdgeCredentialRotation>>>
+
+    export type StageEdgeCredentialRotationMutationError = ErrorType<void>
+    export type StageEdgeCredentialRotationMutationVariables = {id: string}
+
+    export const useStageEdgeCredentialRotation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stageEdgeCredentialRotation>>, TError,StageEdgeCredentialRotationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stageEdgeCredentialRotation>>,
+        TError,
+        StageEdgeCredentialRotationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStageEdgeCredentialRotationMutationOptions(options));
+    }
+
+export const getRevokeEdgeCredentialsUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/credentials/revoke`
+}
+
+export const revokeEdgeCredentials = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeEdgeCredentialsUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeEdgeCredentialsMutationKey = () => ['revokeEdgeCredentials'] as const;
+
+export const getRevokeEdgeCredentialsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeCredentials>>, TError,RevokeEdgeCredentialsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeCredentials>>, TError,RevokeEdgeCredentialsMutationVariables, TContext> => {
+
+const mutationKey = getRevokeEdgeCredentialsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeEdgeCredentials>>, RevokeEdgeCredentialsMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeEdgeCredentials(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeEdgeCredentialsMutationResult = NonNullable<Awaited<ReturnType<typeof revokeEdgeCredentials>>>
+
+    export type RevokeEdgeCredentialsMutationError = ErrorType<void>
+    export type RevokeEdgeCredentialsMutationVariables = {id: string}
+
+    export const useRevokeEdgeCredentials = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeCredentials>>, TError,RevokeEdgeCredentialsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeEdgeCredentials>>,
+        TError,
+        RevokeEdgeCredentialsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeEdgeCredentialsMutationOptions(options));
+    }
+
+export const getAssignEdgeDeviceUnitAccessUrl = (deviceId: string,) => {
+
+
+
+
+  return `/api/edge-console/devices/${deviceId}/access`
+}
+
+export const assignEdgeDeviceUnitAccess = async (deviceId: string,
+    edgeDeviceAccessInput: EdgeDeviceAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAssignEdgeDeviceUnitAccessUrl(deviceId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeDeviceAccessInput)
+  }
+);}
+
+
+
+
+
+export const getAssignEdgeDeviceUnitAccessMutationKey = () => ['assignEdgeDeviceUnitAccess'] as const;
+
+export const getAssignEdgeDeviceUnitAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>, TError,AssignEdgeDeviceUnitAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>, TError,AssignEdgeDeviceUnitAccessMutationVariables, TContext> => {
+
+const mutationKey = getAssignEdgeDeviceUnitAccessMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>, AssignEdgeDeviceUnitAccessMutationVariables> = (props) => {
+          const {deviceId,data} = props ?? {};
+
+          return  assignEdgeDeviceUnitAccess(deviceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignEdgeDeviceUnitAccessMutationResult = NonNullable<Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>>
+    export type AssignEdgeDeviceUnitAccessMutationBody = BodyType<EdgeDeviceAccessInput>
+    export type AssignEdgeDeviceUnitAccessMutationError = ErrorType<void>
+    export type AssignEdgeDeviceUnitAccessMutationVariables = {deviceId: string;data: BodyType<EdgeDeviceAccessInput>}
+
+    export const useAssignEdgeDeviceUnitAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>, TError,AssignEdgeDeviceUnitAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignEdgeDeviceUnitAccess>>,
+        TError,
+        AssignEdgeDeviceUnitAccessMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAssignEdgeDeviceUnitAccessMutationOptions(options));
+    }
+
+export const getRequestBuildingEdgeCommandUrl = (buildingId: string,
+    deviceId: string,) => {
+
+
+
+
+  return `/api/buildings/${buildingId}/devices/${deviceId}/commands`
+}
+
+export const requestBuildingEdgeCommand = async (buildingId: string,
+    deviceId: string,
+    edgeStaffCommandInput: EdgeStaffCommandInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeResidentCommand> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeResidentCommand>(getRequestBuildingEdgeCommandUrl(buildingId,deviceId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeStaffCommandInput)
+  }
+);}
+
+
+
+
+
+export const getRequestBuildingEdgeCommandMutationKey = () => ['requestBuildingEdgeCommand'] as const;
+
+export const getRequestBuildingEdgeCommandMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestBuildingEdgeCommand>>, TError,RequestBuildingEdgeCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestBuildingEdgeCommand>>, TError,RequestBuildingEdgeCommandMutationVariables, TContext> => {
+
+const mutationKey = getRequestBuildingEdgeCommandMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestBuildingEdgeCommand>>, RequestBuildingEdgeCommandMutationVariables> = (props) => {
+          const {buildingId,deviceId,data} = props ?? {};
+
+          return  requestBuildingEdgeCommand(buildingId,deviceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestBuildingEdgeCommandMutationResult = NonNullable<Awaited<ReturnType<typeof requestBuildingEdgeCommand>>>
+    export type RequestBuildingEdgeCommandMutationBody = BodyType<EdgeStaffCommandInput>
+    export type RequestBuildingEdgeCommandMutationError = ErrorType<void>
+    export type RequestBuildingEdgeCommandMutationVariables = {buildingId: string;deviceId: string;data: BodyType<EdgeStaffCommandInput>}
+
+    export const useRequestBuildingEdgeCommand = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestBuildingEdgeCommand>>, TError,RequestBuildingEdgeCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestBuildingEdgeCommand>>,
+        TError,
+        RequestBuildingEdgeCommandMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestBuildingEdgeCommandMutationOptions(options));
+    }
+
+export const getRevokeEdgeDeviceUnitAccessUrl = (deviceId: string,
+    unitId: string,) => {
+
+
+
+
+  return `/api/edge-console/devices/${deviceId}/access/${unitId}`
+}
+
+export const revokeEdgeDeviceUnitAccess = async (deviceId: string,
+    unitId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeEdgeDeviceUnitAccessUrl(deviceId,unitId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeEdgeDeviceUnitAccessMutationKey = () => ['revokeEdgeDeviceUnitAccess'] as const;
+
+export const getRevokeEdgeDeviceUnitAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>, TError,RevokeEdgeDeviceUnitAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>, TError,RevokeEdgeDeviceUnitAccessMutationVariables, TContext> => {
+
+const mutationKey = getRevokeEdgeDeviceUnitAccessMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>, RevokeEdgeDeviceUnitAccessMutationVariables> = (props) => {
+          const {deviceId,unitId} = props ?? {};
+
+          return  revokeEdgeDeviceUnitAccess(deviceId,unitId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeEdgeDeviceUnitAccessMutationResult = NonNullable<Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>>
+
+    export type RevokeEdgeDeviceUnitAccessMutationError = ErrorType<void>
+    export type RevokeEdgeDeviceUnitAccessMutationVariables = {deviceId: string;unitId: string}
+
+    export const useRevokeEdgeDeviceUnitAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>, TError,RevokeEdgeDeviceUnitAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeEdgeDeviceUnitAccess>>,
+        TError,
+        RevokeEdgeDeviceUnitAccessMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeEdgeDeviceUnitAccessMutationOptions(options));
+    }
+
+export const getListEdgeAlarmsUrl = () => {
+
+
+
+
+  return `/api/edge-console/alarms`
+}
+
+export const listEdgeAlarms = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEdgeAlarms200Item[]> => {
+
+  return customFetch<ListEdgeAlarms200Item[]>(getListEdgeAlarmsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeAlarmsQueryKey = () => {
+    return [
+    `/api/edge-console/alarms`
+    ] as const;
+    }
+
+
+export const getListEdgeAlarmsQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeAlarms>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeAlarms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeAlarmsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeAlarms>>> = ({ signal }) => listEdgeAlarms({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeAlarms>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeAlarmsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeAlarms>>>
+export type ListEdgeAlarmsQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeAlarms<TData = Awaited<ReturnType<typeof listEdgeAlarms>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeAlarms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeAlarmsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEdgeEventsUrl = () => {
+
+
+
+
+  return `/api/edge-console/events`
+}
+
+export const listEdgeEvents = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEdgeEvents200Item[]> => {
+
+  return customFetch<ListEdgeEvents200Item[]>(getListEdgeEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeEventsQueryKey = () => {
+    return [
+    `/api/edge-console/events`
+    ] as const;
+    }
+
+
+export const getListEdgeEventsQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeEvents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeEvents>>> = ({ signal }) => listEdgeEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeEvents>>>
+export type ListEdgeEventsQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeEvents<TData = Awaited<ReturnType<typeof listEdgeEvents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeEventsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEdgeCommandsUrl = () => {
+
+
+
+
+  return `/api/edge-console/commands`
+}
+
+export const listEdgeCommands = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEdgeCommands200Item[]> => {
+
+  return customFetch<ListEdgeCommands200Item[]>(getListEdgeCommandsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeCommandsQueryKey = () => {
+    return [
+    `/api/edge-console/commands`
+    ] as const;
+    }
+
+
+export const getListEdgeCommandsQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeCommands>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeCommands>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeCommandsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeCommands>>> = ({ signal }) => listEdgeCommands({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeCommands>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeCommandsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeCommands>>>
+export type ListEdgeCommandsQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeCommands<TData = Awaited<ReturnType<typeof listEdgeCommands>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeCommands>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeCommandsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListMyBuildingDevicesUrl = (buildingId: string,) => {
+
+
+
+
+  return `/api/me/buildings/${buildingId}/devices`
+}
+
+export const listMyBuildingDevices = async (buildingId: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeResidentDevice[]> => {
+
+  return customFetch<EdgeResidentDevice[]>(getListMyBuildingDevicesUrl(buildingId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyBuildingDevicesQueryKey = (buildingId: string,) => {
+    return [
+    `/api/me/buildings/${buildingId}/devices`
+    ] as const;
+    }
+
+
+export const getListMyBuildingDevicesQueryOptions = <TData = Awaited<ReturnType<typeof listMyBuildingDevices>>, TError = ErrorType<void>>(buildingId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyBuildingDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyBuildingDevicesQueryKey(buildingId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyBuildingDevices>>> = ({ signal }) => listMyBuildingDevices(buildingId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: buildingId !== null && buildingId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyBuildingDevices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyBuildingDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyBuildingDevices>>>
+export type ListMyBuildingDevicesQueryError = ErrorType<void>
+
+
+
+export function useListMyBuildingDevices<TData = Awaited<ReturnType<typeof listMyBuildingDevices>>, TError = ErrorType<void>>(
+ buildingId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyBuildingDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyBuildingDevicesQueryOptions(buildingId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestMyBuildingDeviceCommandUrl = (buildingId: string,
+    deviceId: string,) => {
+
+
+
+
+  return `/api/me/buildings/${buildingId}/devices/${deviceId}/commands`
+}
+
+export const requestMyBuildingDeviceCommand = async (buildingId: string,
+    deviceId: string,
+    edgeResidentCommandInput: EdgeResidentCommandInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeResidentCommand> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeResidentCommand>(getRequestMyBuildingDeviceCommandUrl(buildingId,deviceId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeResidentCommandInput)
+  }
+);}
+
+
+
+
+
+export const getRequestMyBuildingDeviceCommandMutationKey = () => ['requestMyBuildingDeviceCommand'] as const;
+
+export const getRequestMyBuildingDeviceCommandMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>, TError,RequestMyBuildingDeviceCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>, TError,RequestMyBuildingDeviceCommandMutationVariables, TContext> => {
+
+const mutationKey = getRequestMyBuildingDeviceCommandMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>, RequestMyBuildingDeviceCommandMutationVariables> = (props) => {
+          const {buildingId,deviceId,data} = props ?? {};
+
+          return  requestMyBuildingDeviceCommand(buildingId,deviceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestMyBuildingDeviceCommandMutationResult = NonNullable<Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>>
+    export type RequestMyBuildingDeviceCommandMutationBody = BodyType<EdgeResidentCommandInput>
+    export type RequestMyBuildingDeviceCommandMutationError = ErrorType<void>
+    export type RequestMyBuildingDeviceCommandMutationVariables = {buildingId: string;deviceId: string;data: BodyType<EdgeResidentCommandInput>}
+
+    export const useRequestMyBuildingDeviceCommand = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>, TError,RequestMyBuildingDeviceCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestMyBuildingDeviceCommand>>,
+        TError,
+        RequestMyBuildingDeviceCommandMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestMyBuildingDeviceCommandMutationOptions(options));
+    }
+
+export const getGetMyEdgeCommandUrl = (commandId: string,) => {
+
+
+
+
+  return `/api/me/edge-commands/${commandId}`
+}
+
+export const getMyEdgeCommand = async (commandId: string, options?: Parameters<typeof customFetch>[1]): Promise<EdgeResidentCommand> => {
+
+  return customFetch<EdgeResidentCommand>(getGetMyEdgeCommandUrl(commandId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyEdgeCommandQueryKey = (commandId: string,) => {
+    return [
+    `/api/me/edge-commands/${commandId}`
+    ] as const;
+    }
+
+
+export const getGetMyEdgeCommandQueryOptions = <TData = Awaited<ReturnType<typeof getMyEdgeCommand>>, TError = ErrorType<void>>(commandId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyEdgeCommand>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyEdgeCommandQueryKey(commandId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyEdgeCommand>>> = ({ signal }) => getMyEdgeCommand(commandId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: commandId !== null && commandId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyEdgeCommand>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyEdgeCommandQueryResult = NonNullable<Awaited<ReturnType<typeof getMyEdgeCommand>>>
+export type GetMyEdgeCommandQueryError = ErrorType<void>
+
+
+
+export function useGetMyEdgeCommand<TData = Awaited<ReturnType<typeof getMyEdgeCommand>>, TError = ErrorType<void>>(
+ commandId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyEdgeCommand>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyEdgeCommandQueryOptions(commandId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRejectUncontractedAmeriaCallbackUrl = () => {
 

@@ -38,7 +38,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EdgeRegisterResponse' }
-        '401': { description: Bootstrap token is invalid, expired, revoked, or already used }
+        '401': { description: "Bootstrap token is invalid, expired, revoked, or already used" }
         '403': { description: Header or token tenant/building binding mismatch }
         '409': { description: Edge node or building already has a registration }
   /edge/v1/heartbeat:
@@ -140,7 +140,7 @@ paths:
       parameters:
         - { name: edgeId, in: query, required: true, schema: { type: string, minLength: 3, maxLength: 80 } }
       responses:
-        '200': { description: Tenant-bound, non-secret agent configuration, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeConfiguration' } } } }
+        '200': { description: "Tenant-bound, non-secret agent configuration", content: { application/json: { schema: { $ref: '#/components/schemas/EdgeConfiguration' } } } }
         '401': { description: Machine credential rejected }
   /edge/v1/commands/{commandId}/result:
     post:
@@ -179,7 +179,7 @@ paths:
             schema: { $ref: '#/components/schemas/EdgeV2RegisterInput' }
       responses:
         '201': { description: Registered with one-time token and authorized building IDs }
-        '401': { description: Bootstrap token invalid, expired, revoked, or used }
+        '401': { description: "Bootstrap token invalid, expired, revoked, or used" }
         '403': { description: Block or identity scope mismatch }
   /edge/v2/heartbeat:
     post:
@@ -300,8 +300,13 @@ paths:
       tags: [edge-console]
       operationId: listEdgeBlocks
       security: [{ SessionCookie: [] }]
+      parameters:
+        - name: includeArchived
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
       responses:
-        '200': { description: Organization-scoped blocks and assigned buildings }
+        '200': { description: Scoped Edge blocks and assigned buildings; archived blocks are excluded by default }
     post:
       tags: [edge-console]
       operationId: createEdgeBlock
@@ -314,6 +319,41 @@ paths:
       responses:
         '201': { description: Block created with explicit building membership }
         '409': { description: Building already assigned to a block }
+  /edge-console/blocks/{id}:
+    patch:
+      tags: [edge-console]
+      operationId: updateEdgeBlock
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBlockUpdate' }
+      responses:
+        '200': { description: Block metadata and explicitly assigned buildings updated }
+        '403': { description: Block is outside caller scope or recent authentication required }
+        '409': { description: Building assignment is locked after Edge node registration }
+    delete:
+      tags: [edge-console]
+      operationId: archiveEdgeBlock
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Block archived; historical assignments and audit records are preserved }
+        '409': { description: Archive active Edge nodes first }
+  /edge-console/blocks/{id}/restore:
+    post:
+      tags: [edge-console]
+      operationId: restoreEdgeBlockById
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Archived block restored }
+        '404': { description: Archived block not found }
   /edge-console/blocks/{id}/bootstrap-tokens:
     post:
       tags: [edge-console]
@@ -327,7 +367,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/EdgeBlockBootstrapInput' }
       responses:
-        '201': { description: Single-use v2 token shown once }
+        '201': { description: "Single-use v2 token shown once" }
         '403': { description: Block is outside caller scope }
   /edge-console/buildings:
     get:
@@ -342,10 +382,32 @@ paths:
       tags: [edge-console]
       operationId: getEdgeFleet
       security: [{ SessionCookie: [] }]
+      parameters:
+        - name: includeArchived
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
       responses:
         '200': { description: Role- and tenant-scoped Edge fleet summary, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeFleet' } } } }
         '403': { description: Edge fleet permission or organization context required }
   /edge-console/bootstrap-tokens:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeBootstrapTokens
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Scoped token metadata only; plaintext and token hashes are never returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tokens]
+                properties:
+                  tokens:
+                    type: array
+                    items: { $ref: '#/components/schemas/EdgeBootstrapToken' }
+        '403': { description: Edge provisioning permission required }
     post:
       tags: [edge-console]
       operationId: createEdgeBootstrapToken
@@ -356,8 +418,8 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/EdgeBootstrapInput' }
       responses:
-        '201': { description: Short-lived single-use token, shown once, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBootstrapResponse' } } } }
-        '403': { description: Provisioning permission, module entitlement, or recent authentication required }
+        '201': { description: "Short-lived single-use token, shown once", content: { application/json: { schema: { $ref: '#/components/schemas/EdgeBootstrapResponse' } } } }
+        '403': { description: "Provisioning permission, module entitlement, or recent authentication required" }
         '409': { description: Edge registration or unexpired bootstrap token already exists }
   /edge-console/bootstrap-tokens/{id}/revoke:
     post:
@@ -377,8 +439,52 @@ paths:
       parameters:
         - { $ref: '#/components/parameters/PlatformId' }
       responses:
-        '200': { description: Scoped node, devices, and recent alarms, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeNodeDetail' } } } }
+        '200': { description: "Scoped node, devices, and recent alarms", content: { application/json: { schema: { $ref: '#/components/schemas/EdgeNodeDetail' } } } }
         '404': { description: Node is outside the current scope }
+    patch:
+      tags: [edge-console]
+      operationId: updateEdgeNodeMetadata
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeNodeUpdate' }
+      responses:
+        '200': { description: Human-readable node name or site code updated; identity and scope remain immutable }
+        '403': { description: Edge management permission or recent authentication required }
+        '409': { description: Archived node cannot be edited }
+    delete:
+      tags: [edge-console]
+      operationId: archiveEdgeNode
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: "Node credentials revoked, active socket closed, and history preserved" }
+        '403': { description: Edge management permission or recent authentication required }
+  /edge-console/nodes/{id}/restore:
+    post:
+      tags: [edge-console]
+      operationId: restoreEdgeNode
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Node restored; a new credential must be staged before the agent reconnects }
+        '404': { description: Archived node not found }
+  /edge-console/nodes/{id}/connection-check:
+    get:
+      tags: [edge-console]
+      operationId: checkEdgeNodeConnection
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Read-only check of live WebSocket state and recent heartbeat, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeConnectionCheck' } } } }
+        '403': { description: Edge read permission required }
   /edge-console/nodes/{id}/devices:
     get:
       tags: [edge-console]
@@ -438,7 +544,7 @@ paths:
             schema: { $ref: '#/components/schemas/EdgeStaffCommandInput' }
       responses:
         '202': { description: Building-scoped command accepted, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
-        '403': { description: Role, building scope, capability, or hard safety policy denied the command }
+        '403': { description: "Role, building scope, capability, or hard safety policy denied the command" }
         '409': { description: Edge is offline or command could not be delivered }
   /edge-console/devices/{deviceId}/access/{unitId}:
     delete:
@@ -497,7 +603,7 @@ paths:
             schema: { $ref: '#/components/schemas/EdgeResidentCommandInput' }
       responses:
         '202': { description: Authorized command sent to the connected Edge Agent, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeResidentCommand' } } } }
-        '403': { description: Role, unit mapping, capability, module, or hard safety policy denied the command }
+        '403': { description: "Role, unit mapping, capability, module, or hard safety policy denied the command" }
         '409': { description: Edge is offline or command could not be delivered }
   /me/edge-commands/{commandId}:
     get:
@@ -3258,6 +3364,13 @@ components:
         code: { type: string, minLength: 1, maxLength: 80 }
         name: { type: string, minLength: 2, maxLength: 120 }
         buildingIds: { type: array, minItems: 1, maxItems: 1000, items: { type: string, format: uuid } }
+    EdgeBlockUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        code: { type: string, minLength: 1, maxLength: 80 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        buildingIds: { type: array, minItems: 1, maxItems: 1000, items: { type: string, format: uuid } }
     EdgeBlockBootstrapInput:
       type: object
       required: [edgeId, name, siteCode]
@@ -3475,14 +3588,17 @@ components:
         nodes: { type: array, items: { $ref: '#/components/schemas/EdgeNode' } }
     EdgeNode:
       type: object
-      required: [id, edge_id, organization_id, building_id, name, site_code, status, registration_state, queue_depth, device_count, active_alarms]
+      required: [id, edge_id, organization_id, name, site_code, status, registration_state, queue_depth, device_count, active_alarms]
       properties:
         id: { type: string, format: uuid }
         edge_id: { type: string }
         organization_id: { type: string, format: uuid }
-        building_id: { type: string, format: uuid }
+        building_id: { type: string, format: uuid, nullable: true }
+        block_id: { type: string, format: uuid, nullable: true }
+        protocol_version: { type: integer, enum: [1, 2] }
         name: { type: string }
         site_code: { type: string }
+        archived_at: { type: string, format: date-time, nullable: true }
         status: { type: string }
         registration_state: { type: string }
         agent_version: { type: string, nullable: true }
@@ -3494,6 +3610,7 @@ components:
         credential_version: { type: integer, nullable: true }
         organization_name: { type: string, nullable: true }
         building_name: { type: string, nullable: true }
+        block_name: { type: string, nullable: true }
         device_count: { type: integer, minimum: 0 }
         active_alarms: { type: integer, minimum: 0 }
     EdgeDevice:
@@ -3514,11 +3631,49 @@ components:
         last_telemetry_at: { type: string, format: date-time, nullable: true }
     EdgeNodeDetail:
       type: object
-      required: [node, devices, alarms]
+      required: [node, buildings, devices, alarms]
       properties:
         node: { $ref: '#/components/schemas/EdgeNode' }
+        buildings: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
         devices: { type: array, items: { $ref: '#/components/schemas/EdgeDevice' } }
         alarms: { type: array, items: { type: object, additionalProperties: true } }
+    EdgeNodeUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+    EdgeConnectionCheck:
+      type: object
+      required: [edgeId, webSocketOpen, heartbeatFresh, reachable, checkedAt, probe]
+      properties:
+        edgeId: { type: string }
+        webSocketOpen: { type: boolean }
+        heartbeatFresh: { type: boolean }
+        heartbeatAgeSeconds: { type: integer, nullable: true }
+        reachable: { type: boolean }
+        checkedAt: { type: string, format: date-time }
+        probe: { type: string, const: websocket_and_heartbeat_status }
+    EdgeBootstrapToken:
+      type: object
+      required: [id, edge_id, organization_id, protocol_version, expires_at, created_at, status]
+      properties:
+        id: { type: string, format: uuid }
+        edge_id: { type: string }
+        organization_id: { type: string, format: uuid }
+        building_id: { type: string, format: uuid, nullable: true }
+        block_id: { type: string, format: uuid, nullable: true }
+        protocol_version: { type: integer, enum: [1, 2] }
+        edge_name: { type: string }
+        site_code: { type: string }
+        expires_at: { type: string, format: date-time }
+        used_at: { type: string, format: date-time, nullable: true }
+        revoked_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        organization_name: { type: string }
+        building_name: { type: string, nullable: true }
+        block_name: { type: string, nullable: true }
+        status: { type: string, enum: [PENDING, USED, REVOKED, EXPIRED] }
     EdgeBootstrapInput:
       type: object
       required: [buildingId, edgeId, name, siteCode, expiresInMinutes]

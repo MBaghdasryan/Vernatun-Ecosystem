@@ -30,3 +30,17 @@ requests before they reached the auth router.
 
 **How to apply:** When mounting feature routers on `/api`, check their middleware
 scope against unauthenticated session bootstrap and login routes.
+
+Platform administrators need global Edge-fleet visibility and management; organization
+administrators remain limited to their own organization and assigned buildings.
+Archive Edge blocks and nodes rather than hard-deleting them: revoke credentials,
+close active sockets, preserve audit/history, and require credential rotation before
+a restored node reconnects.
+
+**Why:** The user asked to manage every organization’s Edge configuration from the
+platform admin account. Edge identities and audit history must remain recoverable
+without leaving archived credentials usable.
+
+**How to apply:** Keep UI navigation permission-gated and enforce scope again in the
+API. Treat archive/restore as lifecycle controls; never expose token hashes or recover
+consumed bootstrap-token plaintext.

@@ -259,4 +259,52 @@ test('Edge v2 registers a block node, scopes inventory to its buildings, and aut
   await new Promise(resolve=>setTimeout(resolve,25));
  }
  assert.equal(online,true,'v2 WebSocket hello should mark the block-scoped Edge node online');
+
+  const tokenList=await platform.call('/edge-console/bootstrap-tokens');
+  assert.equal(tokenList.status,200);
+  const listedToken=tokenList.data.tokens.find((item:any)=>item.edge_id===edgeId);
+  assert.ok(listedToken,'issued token metadata should be available to authorized administrators');
+  assert.equal(listedToken.token_hash,undefined,'token hashes must never be exposed');
+  assert.equal(listedToken.bootstrapToken,undefined,'consumed plaintext must never be recoverable');
+
+  const detail=await platform.call(`/edge-console/nodes/${node.id}`);
+  assert.equal(detail.status,200);
+  assert.deepEqual(detail.data.buildings.map((item:any)=>item.id).sort(),[...blockBuildingIds].sort());
+  const connection=await platform.call(`/edge-console/nodes/${node.id}/connection-check`);
+  assert.equal(connection.status,200);
+  assert.equal(connection.data.webSocketOpen,true);
+  assert.equal(connection.data.heartbeatFresh,true);
+  assert.equal(connection.data.reachable,true);
+
+  const renamed=await platform.call(`/edge-console/nodes/${node.id}`,'PATCH',{
+   name:'Renamed isolated QA node',siteCode:`EDIT-${suffix}`,
+  });
+  assert.equal(renamed.status,200,`safe node metadata update failed: ${String(renamed.data?.code??'unknown')}`);
+  assert.equal(renamed.data.edge_id,edgeId,'node identity must remain immutable');
+  assert.equal(renamed.data.block_id,block.data.id,'node block scope must remain immutable');
+
+  const changedBlock=await platform.call(`/edge-console/blocks/${block.data.id}`,'PATCH',{
+   name:'Renamed isolated QA block',
+  });
+  assert.equal(changedBlock.status,200,`block metadata update failed: ${String(changedBlock.data?.code??'unknown')}`);
+  assert.equal(changedBlock.data.code,blockCode,'block identity must remain stable');
+
+  const archivedNode=await platform.call(`/edge-console/nodes/${node.id}`,'DELETE',{});
+  assert.equal(archivedNode.status,200,`node archive failed: ${String(archivedNode.data?.code??'unknown')}`);
+  const activeFleet=await platform.call('/edge-console/fleet');
+  assert.equal(activeFleet.data.nodes.some((item:any)=>item.id===node.id),false);
+  const archivedFleet=await platform.call('/edge-console/fleet?includeArchived=true');
+  assert.equal(archivedFleet.data.nodes.some((item:any)=>item.id===node.id),true);
+  const archivedBlock=await platform.call(`/edge-console/blocks/${block.data.id}`,'DELETE',{});
+  assert.equal(archivedBlock.status,200,`block archive failed: ${String(archivedBlock.data?.code??'unknown')}`);
+  const activeBlocks=await platform.call('/edge-console/blocks');
+  assert.equal(activeBlocks.data.blocks.some((item:any)=>item.id===block.data.id),false);
+  const allBlocks=await platform.call('/edge-console/blocks?includeArchived=true');
+  assert.equal(allBlocks.data.blocks.some((item:any)=>item.id===block.data.id),true);
+  const restoredBlock=await platform.call(`/edge-console/blocks/${block.data.id}/restore`,'POST',{});
+  assert.equal(restoredBlock.status,200);
+  const restoredNode=await platform.call(`/edge-console/nodes/${node.id}/restore`,'POST',{});
+  assert.equal(restoredNode.status,200);
+  assert.equal(restoredNode.data.credentialsMustBeRotated,true);
+  assert.equal(restoredNode.data.edge_id,edgeId);
 });

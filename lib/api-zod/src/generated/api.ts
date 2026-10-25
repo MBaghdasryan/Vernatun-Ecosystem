@@ -9,6 +9,868 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Register one Edge Agent using a single-use building-bound bootstrap token
+ */
+export const registerEdgeV1BodyEdgeIdMin = 3;
+export const registerEdgeV1BodyEdgeIdMax = 80;
+
+export const registerEdgeV1BodyEdgeNameMin = 2;
+export const registerEdgeV1BodyEdgeNameMax = 120;
+
+export const registerEdgeV1BodySiteCodeMax = 100;
+
+export const registerEdgeV1BodyAgentVersionMax = 80;
+
+export const registerEdgeV1BodyPlatformMax = 60;
+
+
+
+export const RegisterEdgeV1Body = zod.object({
+  "edgeId": zod.string().min(registerEdgeV1BodyEdgeIdMin).max(registerEdgeV1BodyEdgeIdMax),
+  "edgeName": zod.string().min(registerEdgeV1BodyEdgeNameMin).max(registerEdgeV1BodyEdgeNameMax),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "siteCode": zod.string().min(1).max(registerEdgeV1BodySiteCodeMax),
+  "agentVersion": zod.string().max(registerEdgeV1BodyAgentVersionMax),
+  "platform": zod.string().max(registerEdgeV1BodyPlatformMax),
+  "connectionMode": zod.enum(['OUTBOUND']),
+  "transports": zod.array(zod.enum(['WEBSOCKET', 'HTTPS'])),
+  "capabilities": zod.record(zod.string(), zod.boolean())
+})
+
+export const RegisterEdgeV1Response = zod.object({
+  "status": zod.enum(['REGISTERED']),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "accessToken": zod.string().describe('Returned only to the registering Edge Agent. Never log or persist this value outside the Agent.'),
+  "oneTime": zod.literal(true)
+})
+
+
+export const ReportEdgeHeartbeatBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "timestamp": zod.coerce.date(),
+  "local": zod.record(zod.string(), zod.unknown())
+})
+
+export const ReportEdgeHeartbeatResponse = zod.object({
+  "accepted": zod.literal(true)
+})
+
+
+export const SyncEdgeInventoryBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "timestamp": zod.coerce.date(),
+  "devices": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+export const syncEdgeInventoryResponseTwoDevicesMin = 0;
+
+
+
+export const SyncEdgeInventoryResponse = zod.object({
+  "accepted": zod.literal(true)
+}).and(zod.object({
+  "devices": zod.number().int().min(syncEdgeInventoryResponseTwoDevicesMin)
+}))
+
+
+export const ingestEdgeTelemetryBatchBodyItemsMax = 2000;
+
+
+
+export const IngestEdgeTelemetryBatchBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "timestamp": zod.coerce.date(),
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).max(ingestEdgeTelemetryBatchBodyItemsMax)
+})
+
+export const ingestEdgeTelemetryBatchResponseTwoAcceptedCountMin = 0;
+
+
+
+export const IngestEdgeTelemetryBatchResponse = zod.object({
+  "accepted": zod.literal(true)
+}).and(zod.object({
+  "acceptedCount": zod.number().int().min(ingestEdgeTelemetryBatchResponseTwoAcceptedCountMin)
+}))
+
+
+export const ingestEdgeEventsBatchBodyItemsMax = 2000;
+
+
+
+export const IngestEdgeEventsBatchBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "timestamp": zod.coerce.date(),
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).max(ingestEdgeEventsBatchBodyItemsMax)
+})
+
+export const ingestEdgeEventsBatchResponseTwoAcceptedCountMin = 0;
+
+
+
+export const IngestEdgeEventsBatchResponse = zod.object({
+  "accepted": zod.literal(true)
+}).and(zod.object({
+  "acceptedCount": zod.number().int().min(ingestEdgeEventsBatchResponseTwoAcceptedCountMin)
+}))
+
+
+export const ingestEdgeAlarmsBatchBodyItemsMax = 2000;
+
+
+
+export const IngestEdgeAlarmsBatchBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "timestamp": zod.coerce.date(),
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).max(ingestEdgeAlarmsBatchBodyItemsMax)
+})
+
+export const ingestEdgeAlarmsBatchResponseTwoAcceptedCountMin = 0;
+
+
+
+export const IngestEdgeAlarmsBatchResponse = zod.object({
+  "accepted": zod.literal(true)
+}).and(zod.object({
+  "acceptedCount": zod.number().int().min(ingestEdgeAlarmsBatchResponseTwoAcceptedCountMin)
+}))
+
+
+export const getEdgeConfigurationQueryEdgeIdMin = 3;
+export const getEdgeConfigurationQueryEdgeIdMax = 80;
+
+
+
+export const GetEdgeConfigurationQueryParams = zod.object({
+  "edgeId": zod.coerce.string().min(getEdgeConfigurationQueryEdgeIdMin).max(getEdgeConfigurationQueryEdgeIdMax)
+})
+
+
+
+
+
+export const GetEdgeConfigurationResponse = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "heartbeatIntervalSeconds": zod.number().int().min(1),
+  "commandTimeoutSeconds": zod.number().int().min(1),
+  "commandCapabilities": zod.array(zod.string()).optional()
+})
+
+
+export const ReportEdgeCommandResultParams = zod.object({
+  "commandId": zod.coerce.string().uuid()
+})
+
+export const ReportEdgeCommandResultBody = zod.object({
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "status": zod.enum(['SUCCESS', 'REJECTED', 'FAILED', 'EXPIRED']),
+  "result": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const ReportEdgeCommandResultResponse = zod.object({
+  "accepted": zod.literal(true)
+})
+
+
+/**
+ * @summary Register a block-scoped Edge Agent
+ */
+export const registerEdgeV2BodyEdgeIdMin = 3;
+export const registerEdgeV2BodyEdgeIdMax = 80;
+
+export const registerEdgeV2BodySiteCodeMax = 100;
+
+export const registerEdgeV2BodyEdgeNameMin = 2;
+export const registerEdgeV2BodyEdgeNameMax = 120;
+
+export const registerEdgeV2BodyAgentVersionMax = 80;
+
+export const registerEdgeV2BodyPlatformMax = 60;
+
+
+
+export const RegisterEdgeV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string().min(registerEdgeV2BodyEdgeIdMin).max(registerEdgeV2BodyEdgeIdMax),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "siteCode": zod.string().min(1).max(registerEdgeV2BodySiteCodeMax),
+  "edgeName": zod.string().min(registerEdgeV2BodyEdgeNameMin).max(registerEdgeV2BodyEdgeNameMax),
+  "agentVersion": zod.string().max(registerEdgeV2BodyAgentVersionMax).optional(),
+  "platform": zod.string().max(registerEdgeV2BodyPlatformMax).optional(),
+  "capabilities": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const RegisterEdgeV2Response = zod.void()
+
+
+export const reportEdgeHeartbeatV2BodyAgentVersionMax = 80;
+
+
+
+export const ReportEdgeHeartbeatV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "timestamp": zod.coerce.date().optional(),
+  "status": zod.string().optional(),
+  "agentVersion": zod.string().max(reportEdgeHeartbeatV2BodyAgentVersionMax).optional(),
+  "local": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const ReportEdgeHeartbeatV2Response = zod.unknown()
+
+
+export const syncEdgeInventoryV2BodyDevicesItemDeviceIdMax = 200;
+
+export const syncEdgeInventoryV2BodyDevicesItemThingsboardIdMax = 200;
+
+export const syncEdgeInventoryV2BodyDevicesItemNameMax = 200;
+
+export const syncEdgeInventoryV2BodyDevicesItemProfileMax = 100;
+
+export const syncEdgeInventoryV2BodyDevicesItemLabelMax = 200;
+
+export const syncEdgeInventoryV2BodyDevicesMax = 5000;
+
+
+
+export const SyncEdgeInventoryV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "timestamp": zod.coerce.date().optional(),
+  "devices": zod.array(zod.object({
+  "buildingId": zod.string().uuid(),
+  "deviceId": zod.string().max(syncEdgeInventoryV2BodyDevicesItemDeviceIdMax),
+  "thingsboardId": zod.string().max(syncEdgeInventoryV2BodyDevicesItemThingsboardIdMax).nullish(),
+  "name": zod.string().max(syncEdgeInventoryV2BodyDevicesItemNameMax).optional(),
+  "profile": zod.string().max(syncEdgeInventoryV2BodyDevicesItemProfileMax),
+  "label": zod.string().max(syncEdgeInventoryV2BodyDevicesItemLabelMax).nullish(),
+  "active": zod.boolean().nullish()
+})).max(syncEdgeInventoryV2BodyDevicesMax)
+})
+
+export const SyncEdgeInventoryV2Response = zod.unknown()
+
+
+export const ingestEdgeTelemetryBatchV2BodyItemsItemDeviceIdMax = 200;
+
+export const ingestEdgeTelemetryBatchV2BodyItemsMax = 2000;
+
+
+
+export const IngestEdgeTelemetryBatchV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "timestamp": zod.coerce.date().optional(),
+  "items": zod.array(zod.object({
+  "buildingId": zod.string().uuid(),
+  "deviceId": zod.string().max(ingestEdgeTelemetryBatchV2BodyItemsItemDeviceIdMax)
+})).max(ingestEdgeTelemetryBatchV2BodyItemsMax)
+})
+
+export const IngestEdgeTelemetryBatchV2Response = zod.unknown()
+
+
+export const ingestEdgeEventsBatchV2BodyItemsItemDeviceIdMax = 200;
+
+export const ingestEdgeEventsBatchV2BodyItemsMax = 2000;
+
+
+
+export const IngestEdgeEventsBatchV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "timestamp": zod.coerce.date().optional(),
+  "items": zod.array(zod.object({
+  "buildingId": zod.string().uuid(),
+  "deviceId": zod.string().max(ingestEdgeEventsBatchV2BodyItemsItemDeviceIdMax)
+})).max(ingestEdgeEventsBatchV2BodyItemsMax)
+})
+
+export const IngestEdgeEventsBatchV2Response = zod.unknown()
+
+
+export const ingestEdgeAlarmsBatchV2BodyItemsItemDeviceIdMax = 200;
+
+export const ingestEdgeAlarmsBatchV2BodyItemsMax = 2000;
+
+
+
+export const IngestEdgeAlarmsBatchV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "timestamp": zod.coerce.date().optional(),
+  "items": zod.array(zod.object({
+  "buildingId": zod.string().uuid(),
+  "deviceId": zod.string().max(ingestEdgeAlarmsBatchV2BodyItemsItemDeviceIdMax)
+})).max(ingestEdgeAlarmsBatchV2BodyItemsMax)
+})
+
+export const IngestEdgeAlarmsBatchV2Response = zod.unknown()
+
+
+export const getEdgeConfigurationV2QueryEdgeIdMin = 3;
+export const getEdgeConfigurationV2QueryEdgeIdMax = 80;
+
+
+
+export const GetEdgeConfigurationV2QueryParams = zod.object({
+  "edgeId": zod.coerce.string().min(getEdgeConfigurationV2QueryEdgeIdMin).max(getEdgeConfigurationV2QueryEdgeIdMax)
+})
+
+export const GetEdgeConfigurationV2Response = zod.unknown()
+
+
+export const ReportEdgeCommandResultV2Params = zod.object({
+  "commandId": zod.coerce.string().uuid()
+})
+
+export const ReportEdgeCommandResultV2Body = zod.object({
+  "protocolVersion": zod.literal(2),
+  "edgeId": zod.string(),
+  "tenantId": zod.string().uuid(),
+  "blockId": zod.string().uuid(),
+  "buildingId": zod.string().uuid().optional(),
+  "commandId": zod.string().uuid(),
+  "status": zod.enum(['SUCCESS', 'REJECTED', 'FAILED', 'DENIED']),
+  "result": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const ReportEdgeCommandResultV2Response = zod.unknown()
+
+
+export const listEdgeBlocksQueryIncludeArchivedDefault = false;
+
+export const ListEdgeBlocksQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().default(listEdgeBlocksQueryIncludeArchivedDefault)
+})
+
+export const ListEdgeBlocksResponse = zod.unknown()
+
+
+export const createEdgeBlockBodyCodeMax = 80;
+
+export const createEdgeBlockBodyNameMin = 2;
+export const createEdgeBlockBodyNameMax = 120;
+
+export const createEdgeBlockBodyBuildingIdsMax = 1000;
+
+
+
+export const CreateEdgeBlockBody = zod.object({
+  "organizationId": zod.string().uuid().optional(),
+  "code": zod.string().min(1).max(createEdgeBlockBodyCodeMax),
+  "name": zod.string().min(createEdgeBlockBodyNameMin).max(createEdgeBlockBodyNameMax),
+  "buildingIds": zod.array(zod.string().uuid()).min(1).max(createEdgeBlockBodyBuildingIdsMax)
+})
+
+export const CreateEdgeBlockResponse = zod.void()
+
+
+export const UpdateEdgeBlockParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateEdgeBlockBodyCodeMax = 80;
+
+export const updateEdgeBlockBodyNameMin = 2;
+export const updateEdgeBlockBodyNameMax = 120;
+
+export const updateEdgeBlockBodyBuildingIdsMax = 1000;
+
+
+
+export const UpdateEdgeBlockBody = zod.object({
+  "code": zod.string().min(1).max(updateEdgeBlockBodyCodeMax).optional(),
+  "name": zod.string().min(updateEdgeBlockBodyNameMin).max(updateEdgeBlockBodyNameMax).optional(),
+  "buildingIds": zod.array(zod.string().uuid()).min(1).max(updateEdgeBlockBodyBuildingIdsMax).optional()
+})
+
+export const UpdateEdgeBlockResponse = zod.unknown()
+
+
+export const ArchiveEdgeBlockParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ArchiveEdgeBlockResponse = zod.unknown()
+
+
+export const RestoreEdgeBlockByIdParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RestoreEdgeBlockByIdResponse = zod.unknown()
+
+
+export const CreateBlockEdgeBootstrapTokenParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createBlockEdgeBootstrapTokenBodyEdgeIdMin = 3;
+export const createBlockEdgeBootstrapTokenBodyEdgeIdMax = 80;
+
+export const createBlockEdgeBootstrapTokenBodyNameMin = 2;
+export const createBlockEdgeBootstrapTokenBodyNameMax = 120;
+
+export const createBlockEdgeBootstrapTokenBodySiteCodeMax = 100;
+
+export const createBlockEdgeBootstrapTokenBodyExpiresInMinutesDefault = 30;
+export const createBlockEdgeBootstrapTokenBodyExpiresInMinutesMin = 5;
+export const createBlockEdgeBootstrapTokenBodyExpiresInMinutesMax = 120;
+
+
+
+export const CreateBlockEdgeBootstrapTokenBody = zod.object({
+  "edgeId": zod.string().min(createBlockEdgeBootstrapTokenBodyEdgeIdMin).max(createBlockEdgeBootstrapTokenBodyEdgeIdMax),
+  "name": zod.string().min(createBlockEdgeBootstrapTokenBodyNameMin).max(createBlockEdgeBootstrapTokenBodyNameMax),
+  "siteCode": zod.string().min(1).max(createBlockEdgeBootstrapTokenBodySiteCodeMax),
+  "expiresInMinutes": zod.number().int().min(createBlockEdgeBootstrapTokenBodyExpiresInMinutesMin).max(createBlockEdgeBootstrapTokenBodyExpiresInMinutesMax).default(createBlockEdgeBootstrapTokenBodyExpiresInMinutesDefault)
+})
+
+export const CreateBlockEdgeBootstrapTokenResponse = zod.void()
+
+
+export const ListEdgeBuildingsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "organization_id": zod.string().uuid(),
+  "organization_name": zod.string().nullish()
+})
+export const ListEdgeBuildingsResponse = zod.array(ListEdgeBuildingsResponseItem)
+
+
+export const getEdgeFleetQueryIncludeArchivedDefault = false;
+
+export const GetEdgeFleetQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().default(getEdgeFleetQueryIncludeArchivedDefault)
+})
+
+export const getEdgeFleetResponseSummaryTotalMin = 0;
+
+export const getEdgeFleetResponseSummaryOnlineMin = 0;
+
+export const getEdgeFleetResponseSummaryDegradedMin = 0;
+
+export const getEdgeFleetResponseSummaryOfflineMin = 0;
+
+export const getEdgeFleetResponseSummaryActiveAlarmsMin = 0;
+
+export const getEdgeFleetResponseNodesItemQueueDepthMin = 0;
+
+export const getEdgeFleetResponseNodesItemDeviceCountMin = 0;
+
+export const getEdgeFleetResponseNodesItemActiveAlarmsMin = 0;
+
+
+
+export const GetEdgeFleetResponse = zod.object({
+  "summary": zod.object({
+  "total": zod.number().int().min(getEdgeFleetResponseSummaryTotalMin),
+  "online": zod.number().int().min(getEdgeFleetResponseSummaryOnlineMin),
+  "degraded": zod.number().int().min(getEdgeFleetResponseSummaryDegradedMin),
+  "offline": zod.number().int().min(getEdgeFleetResponseSummaryOfflineMin),
+  "activeAlarms": zod.number().int().min(getEdgeFleetResponseSummaryActiveAlarmsMin)
+}),
+  "nodes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "edge_id": zod.string(),
+  "organization_id": zod.string().uuid(),
+  "building_id": zod.string().uuid().nullish(),
+  "block_id": zod.string().uuid().nullish(),
+  "protocol_version": zod.union([zod.literal(1),zod.literal(2)]).optional(),
+  "name": zod.string(),
+  "site_code": zod.string(),
+  "archived_at": zod.coerce.date().nullish(),
+  "status": zod.string(),
+  "registration_state": zod.string(),
+  "agent_version": zod.string().nullish(),
+  "local_authorization_status": zod.string().optional(),
+  "queue_depth": zod.number().int().min(getEdgeFleetResponseNodesItemQueueDepthMin),
+  "registered_at": zod.coerce.date().nullish(),
+  "last_seen_at": zod.coerce.date().nullish(),
+  "last_connected_at": zod.coerce.date().nullish(),
+  "credential_version": zod.number().int().nullish(),
+  "organization_name": zod.string().nullish(),
+  "building_name": zod.string().nullish(),
+  "block_name": zod.string().nullish(),
+  "device_count": zod.number().int().min(getEdgeFleetResponseNodesItemDeviceCountMin),
+  "active_alarms": zod.number().int().min(getEdgeFleetResponseNodesItemActiveAlarmsMin)
+}))
+})
+
+
+export const ListEdgeBootstrapTokensResponse = zod.object({
+  "tokens": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "edge_id": zod.string(),
+  "organization_id": zod.string().uuid(),
+  "building_id": zod.string().uuid().nullish(),
+  "block_id": zod.string().uuid().nullish(),
+  "protocol_version": zod.union([zod.literal(1),zod.literal(2)]),
+  "edge_name": zod.string().optional(),
+  "site_code": zod.string().optional(),
+  "expires_at": zod.coerce.date(),
+  "used_at": zod.coerce.date().nullish(),
+  "revoked_at": zod.coerce.date().nullish(),
+  "created_at": zod.coerce.date(),
+  "organization_name": zod.string().optional(),
+  "building_name": zod.string().nullish(),
+  "block_name": zod.string().nullish(),
+  "status": zod.enum(['PENDING', 'USED', 'REVOKED', 'EXPIRED'])
+}))
+})
+
+
+export const createEdgeBootstrapTokenBodyEdgeIdMin = 3;
+export const createEdgeBootstrapTokenBodyEdgeIdMax = 80;
+
+export const createEdgeBootstrapTokenBodyNameMin = 2;
+export const createEdgeBootstrapTokenBodyNameMax = 120;
+
+export const createEdgeBootstrapTokenBodySiteCodeMax = 100;
+
+export const createEdgeBootstrapTokenBodyExpiresInMinutesMin = 5;
+export const createEdgeBootstrapTokenBodyExpiresInMinutesMax = 120;
+
+
+
+export const CreateEdgeBootstrapTokenBody = zod.object({
+  "organizationId": zod.string().uuid().optional(),
+  "buildingId": zod.string().uuid(),
+  "edgeId": zod.string().min(createEdgeBootstrapTokenBodyEdgeIdMin).max(createEdgeBootstrapTokenBodyEdgeIdMax),
+  "name": zod.string().min(createEdgeBootstrapTokenBodyNameMin).max(createEdgeBootstrapTokenBodyNameMax),
+  "siteCode": zod.string().min(1).max(createEdgeBootstrapTokenBodySiteCodeMax),
+  "expiresInMinutes": zod.number().int().min(createEdgeBootstrapTokenBodyExpiresInMinutesMin).max(createEdgeBootstrapTokenBodyExpiresInMinutesMax)
+})
+
+export const CreateEdgeBootstrapTokenResponse = zod.object({
+  "id": zod.string().uuid(),
+  "edgeId": zod.string(),
+  "bootstrapToken": zod.string().describe('One-time bootstrap secret. Shown once in the authenticated UI.'),
+  "oneTime": zod.literal(true),
+  "expiresAt": zod.coerce.date()
+})
+
+
+export const RevokeEdgeBootstrapTokenParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RevokeEdgeBootstrapTokenResponse = zod.unknown()
+
+
+export const GetEdgeNodeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const getEdgeNodeResponseNodeQueueDepthMin = 0;
+
+export const getEdgeNodeResponseNodeDeviceCountMin = 0;
+
+export const getEdgeNodeResponseNodeActiveAlarmsMin = 0;
+
+
+
+export const GetEdgeNodeResponse = zod.object({
+  "node": zod.object({
+  "id": zod.string().uuid(),
+  "edge_id": zod.string(),
+  "organization_id": zod.string().uuid(),
+  "building_id": zod.string().uuid().nullish(),
+  "block_id": zod.string().uuid().nullish(),
+  "protocol_version": zod.union([zod.literal(1),zod.literal(2)]).optional(),
+  "name": zod.string(),
+  "site_code": zod.string(),
+  "archived_at": zod.coerce.date().nullish(),
+  "status": zod.string(),
+  "registration_state": zod.string(),
+  "agent_version": zod.string().nullish(),
+  "local_authorization_status": zod.string().optional(),
+  "queue_depth": zod.number().int().min(getEdgeNodeResponseNodeQueueDepthMin),
+  "registered_at": zod.coerce.date().nullish(),
+  "last_seen_at": zod.coerce.date().nullish(),
+  "last_connected_at": zod.coerce.date().nullish(),
+  "credential_version": zod.number().int().nullish(),
+  "organization_name": zod.string().nullish(),
+  "building_name": zod.string().nullish(),
+  "block_name": zod.string().nullish(),
+  "device_count": zod.number().int().min(getEdgeNodeResponseNodeDeviceCountMin),
+  "active_alarms": zod.number().int().min(getEdgeNodeResponseNodeActiveAlarmsMin)
+}),
+  "buildings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})),
+  "devices": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "edge_device_id": zod.string(),
+  "thingsboard_id": zod.string().nullish(),
+  "name": zod.string(),
+  "profile": zod.string().nullish(),
+  "device_type": zod.string().nullish(),
+  "label": zod.string().nullish(),
+  "unit_id": zod.string().uuid().nullish(),
+  "capabilities": zod.array(zod.string()).optional(),
+  "reported_online": zod.boolean().nullish(),
+  "last_seen_at": zod.coerce.date().nullish(),
+  "last_telemetry_at": zod.coerce.date().nullish()
+})),
+  "alarms": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+export const UpdateEdgeNodeMetadataParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateEdgeNodeMetadataBodyNameMin = 2;
+export const updateEdgeNodeMetadataBodyNameMax = 120;
+
+export const updateEdgeNodeMetadataBodySiteCodeMax = 100;
+
+
+
+export const UpdateEdgeNodeMetadataBody = zod.object({
+  "name": zod.string().min(updateEdgeNodeMetadataBodyNameMin).max(updateEdgeNodeMetadataBodyNameMax).optional(),
+  "siteCode": zod.string().min(1).max(updateEdgeNodeMetadataBodySiteCodeMax).optional()
+})
+
+export const UpdateEdgeNodeMetadataResponse = zod.unknown()
+
+
+export const ArchiveEdgeNodeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ArchiveEdgeNodeResponse = zod.unknown()
+
+
+export const RestoreEdgeNodeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RestoreEdgeNodeResponse = zod.unknown()
+
+
+export const CheckEdgeNodeConnectionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const CheckEdgeNodeConnectionResponse = zod.object({
+  "edgeId": zod.string(),
+  "webSocketOpen": zod.boolean(),
+  "heartbeatFresh": zod.boolean(),
+  "heartbeatAgeSeconds": zod.number().int().nullish(),
+  "reachable": zod.boolean(),
+  "checkedAt": zod.coerce.date(),
+  "probe": zod.literal("websocket_and_heartbeat_status")
+})
+
+
+export const ListEdgeNodeDevicesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListEdgeNodeDevicesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "edge_device_id": zod.string(),
+  "thingsboard_id": zod.string().nullish(),
+  "name": zod.string(),
+  "profile": zod.string().nullish(),
+  "device_type": zod.string().nullish(),
+  "label": zod.string().nullish(),
+  "unit_id": zod.string().uuid().nullish(),
+  "capabilities": zod.array(zod.string()).optional(),
+  "reported_online": zod.boolean().nullish(),
+  "last_seen_at": zod.coerce.date().nullish(),
+  "last_telemetry_at": zod.coerce.date().nullish()
+})
+export const ListEdgeNodeDevicesResponse = zod.array(ListEdgeNodeDevicesResponseItem)
+
+
+export const StageEdgeCredentialRotationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const StageEdgeCredentialRotationResponse = zod.object({
+  "accessToken": zod.string().describe('Staged credential displayed once to an authorized operator.'),
+  "version": zod.number().int().min(1),
+  "expiresAt": zod.coerce.date(),
+  "oneTime": zod.literal(true),
+  "instruction": zod.string().optional()
+})
+
+
+export const RevokeEdgeCredentialsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RevokeEdgeCredentialsResponse = zod.unknown()
+
+
+export const AssignEdgeDeviceUnitAccessParams = zod.object({
+  "deviceId": zod.coerce.string().uuid()
+})
+
+
+
+
+export const AssignEdgeDeviceUnitAccessBody = zod.object({
+  "unitId": zod.string().uuid(),
+  "allowedCapabilities": zod.array(zod.enum(['BARRIER.OPEN'])).min(1)
+})
+
+export const AssignEdgeDeviceUnitAccessResponse = zod.unknown()
+
+
+export const RequestBuildingEdgeCommandParams = zod.object({
+  "buildingId": zod.coerce.string().uuid(),
+  "deviceId": zod.coerce.string().uuid()
+})
+
+export const requestBuildingEdgeCommandBodyReasonMin = 3;
+export const requestBuildingEdgeCommandBodyReasonMax = 300;
+
+export const requestBuildingEdgeCommandBodyIdempotencyKeyMin = 8;
+export const requestBuildingEdgeCommandBodyIdempotencyKeyMax = 160;
+
+
+
+export const RequestBuildingEdgeCommandBody = zod.object({
+  "capability": zod.enum(['BARRIER.OPEN', 'BARRIER.CLOSE']),
+  "reason": zod.string().min(requestBuildingEdgeCommandBodyReasonMin).max(requestBuildingEdgeCommandBodyReasonMax),
+  "idempotencyKey": zod.string().min(requestBuildingEdgeCommandBodyIdempotencyKeyMin).max(requestBuildingEdgeCommandBodyIdempotencyKeyMax).optional()
+})
+
+export const RequestBuildingEdgeCommandResponse = zod.object({
+  "commandId": zod.string().uuid(),
+  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "capability": zod.string(),
+  "createdAt": zod.coerce.date().optional()
+})
+
+
+export const RevokeEdgeDeviceUnitAccessParams = zod.object({
+  "deviceId": zod.coerce.string().uuid(),
+  "unitId": zod.coerce.string().uuid()
+})
+
+export const RevokeEdgeDeviceUnitAccessResponse = zod.unknown()
+
+
+export const ListEdgeAlarmsResponseItem = zod.object({
+
+}).passthrough()
+export const ListEdgeAlarmsResponse = zod.array(ListEdgeAlarmsResponseItem)
+
+
+export const ListEdgeEventsResponseItem = zod.object({
+
+}).passthrough()
+export const ListEdgeEventsResponse = zod.array(ListEdgeEventsResponseItem)
+
+
+export const ListEdgeCommandsResponseItem = zod.object({
+
+}).passthrough()
+export const ListEdgeCommandsResponse = zod.array(ListEdgeCommandsResponseItem)
+
+
+export const ListMyBuildingDevicesParams = zod.object({
+  "buildingId": zod.coerce.string().uuid()
+})
+
+export const ListMyBuildingDevicesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "edge_device_id": zod.string(),
+  "thingsboard_id": zod.string().nullish(),
+  "name": zod.string(),
+  "profile": zod.string().nullish(),
+  "device_type": zod.string().nullish(),
+  "label": zod.string().nullish(),
+  "unit_id": zod.string().uuid().nullish(),
+  "capabilities": zod.array(zod.string()).optional(),
+  "reported_online": zod.boolean().nullish(),
+  "last_seen_at": zod.coerce.date().nullish(),
+  "last_telemetry_at": zod.coerce.date().nullish()
+}).and(zod.object({
+  "permittedCapabilities": zod.array(zod.enum(['BARRIER.OPEN']))
+}))
+export const ListMyBuildingDevicesResponse = zod.array(ListMyBuildingDevicesResponseItem)
+
+
+export const RequestMyBuildingDeviceCommandParams = zod.object({
+  "buildingId": zod.coerce.string().uuid(),
+  "deviceId": zod.coerce.string().uuid()
+})
+
+export const requestMyBuildingDeviceCommandBodyReasonMin = 3;
+export const requestMyBuildingDeviceCommandBodyReasonMax = 300;
+
+export const requestMyBuildingDeviceCommandBodyIdempotencyKeyMin = 8;
+export const requestMyBuildingDeviceCommandBodyIdempotencyKeyMax = 160;
+
+
+
+export const RequestMyBuildingDeviceCommandBody = zod.object({
+  "capability": zod.enum(['BARRIER.OPEN']),
+  "reason": zod.string().min(requestMyBuildingDeviceCommandBodyReasonMin).max(requestMyBuildingDeviceCommandBodyReasonMax),
+  "idempotencyKey": zod.string().min(requestMyBuildingDeviceCommandBodyIdempotencyKeyMin).max(requestMyBuildingDeviceCommandBodyIdempotencyKeyMax).optional()
+})
+
+export const RequestMyBuildingDeviceCommandResponse = zod.object({
+  "commandId": zod.string().uuid(),
+  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "capability": zod.string(),
+  "createdAt": zod.coerce.date().optional()
+})
+
+
+export const GetMyEdgeCommandParams = zod.object({
+  "commandId": zod.coerce.string().uuid()
+})
+
+export const GetMyEdgeCommandResponse = zod.object({
+  "commandId": zod.string().uuid(),
+  "status": zod.enum(['queued', 'sent', 'completed', 'failed', 'expired']),
+  "capability": zod.string(),
+  "createdAt": zod.coerce.date().optional()
+})
+
+
+/**
  * Fail-closed placeholder. No body is trusted or posted until the merchant callback contract is implemented.
  */
 export const RejectUncontractedAmeriaCallbackResponse = zod.void()
