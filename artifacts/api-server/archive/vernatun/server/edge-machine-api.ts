@@ -5,6 +5,8 @@ import {pool} from './db.js';
 import {ApiError} from './access.js';
 import {recordEdgeCommandResult} from './edge-sockets.js';
 import {authenticateEdgeToken} from './edge-auth.js';
+import {edgeTimestamp,edgeTimestampedRecord,edgeSourceTime as sourceTime} from './edge-timestamp.js';
+import {logger} from '../../../src/lib/logger.js';
 
 const digest=(token:string)=>createHash('sha256').update(token).digest('hex');
 const id=z.string().uuid();
@@ -99,7 +101,7 @@ router.post('/register',async(req,res)=>{
 
 router.post('/heartbeat',machineAuth,async(req:MachineRequest,res)=>{
  const node=await authenticatedNode(req);
- const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,timestamp:z.string().datetime().optional(),
+ const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,timestamp:edgeTimestamp.optional(),
   agentVersion:z.string().trim().max(80).optional(),
   local:z.object({commandAuthorization:z.string().trim().max(40).optional(),queueDepth:z.number().int().min(0).max(100000).optional()}).optional()
  }).parse(req.body);
@@ -109,6 +111,7 @@ router.post('/heartbeat',machineAuth,async(req:MachineRequest,res)=>{
  await pool.query(`UPDATE edge_nodes SET status=$2,last_seen_at=now(),last_heartbeat_at=now(),
   agent_version=COALESCE($3,agent_version),local_authorization_status=$4,queue_depth=$5,updated_at=now()
   WHERE id=$1`,[node.id,status,body.agentVersion??null,authStatus,body.local?.queueDepth??0]);
+ logger.info({code:'edge_heartbeat_accepted',edgeNodeId:node.id},'Edge heartbeat accepted');
  res.json({status:'ACCEPTED',serverTime:new Date().toISOString()});
 });
 
@@ -129,7 +132,7 @@ function deviceType(profile:string){
 }
 router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
  const node=await authenticatedNode(req);
- const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,timestamp:z.string().datetime().optional(),
+ const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,timestamp:edgeTimestamp.optional(),
   devices:z.array(z.object({deviceId:z.string().trim().min(1).max(200),thingsboardId:z.string().max(200).nullable().optional(),
    profile:z.string().trim().min(1).max(100),label:z.string().max(200).nullable().optional(),active:z.boolean().optional()})).max(1000)
  }).parse(req.body);
@@ -152,17 +155,18 @@ router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
   }
   await client.query(`UPDATE edge_nodes SET last_seen_at=now(),last_inventory_at=now(),status=CASE WHEN status='DISABLED' THEN status ELSE 'ONLINE' END,updated_at=now() WHERE id=$1`,[node.id]);
   await client.query('COMMIT');
+  logger.info({code:'edge_inventory_accepted',edgeNodeId:node.id,devices:body.devices.length},'Edge inventory accepted');
   res.json({status:'ACCEPTED',devices:body.devices.length});
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
 });
 
 const batchItems=(body:any)=>{
+ edgeTimestampedRecord.parse(body);
  const list=body?.items??body?.records??body?.telemetry??body?.events??body?.alarms;
  if(!Array.isArray(list)||list.length>2000)throw new ApiError(400,'invalid_edge_batch');
- return list;
+ return list.map(item=>edgeTimestampedRecord.parse(item));
 };
-const sourceTime=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;
 async function requireDevice(node:EdgeNode,externalId:string){
  const row=await pool.query(`SELECT id FROM edge_device_inventory
   WHERE edge_node_id=$1 AND edge_device_id=$2`,[node.id,externalId]);
@@ -211,7 +215,7 @@ router.post('/events/batch',machineAuth,async(req:MachineRequest,res)=>{
     ON CONFLICT(edge_node_id,building_id,external_event_id) WHERE external_event_id IS NOT NULL DO NOTHING`,
    [node.id,device,node.organization_id,node.building_id,externalId,
     String(item.type??item.eventType??'edge.event').slice(0,100),
-    ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
+    typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
@@ -236,7 +240,7 @@ router.post('/alarms/batch',machineAuth,async(req:MachineRequest,res)=>{
     ON CONFLICT(edge_node_id,building_id,external_alarm_id) DO NOTHING`,
    [node.id,device,node.organization_id,node.building_id,item.alarmId.slice(0,200),
     String(item.type??'edge.alarm').slice(0,100),
-    ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',
+    typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
@@ -261,7 +265,7 @@ router.get('/config',machineAuth,async(req:MachineRequest,res)=>{
 router.post('/commands/:commandId/result',machineAuth,async(req:MachineRequest,res)=>{
  const node=await authenticatedNode(req);
  const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,commandId:id,
-  status:z.string().trim().min(1).max(40),timestamp:z.string().datetime().optional()}).passthrough().parse(req.body);
+  status:z.string().trim().min(1).max(40),timestamp:edgeTimestamp.optional()}).passthrough().parse(req.body);
  verifyRequestIdentity(req,node,body);
  if(body.commandId!==req.params.commandId)throw new ApiError(400,'command_id_mismatch');
  res.json(await recordEdgeCommandResult(node.id,body));

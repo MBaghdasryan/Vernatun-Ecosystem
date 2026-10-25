@@ -470,3 +470,17 @@ mtime_ms = 1792874561342
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/b52f722e-21f0-4fe9-aadc-ca9a1b2342e2/bafafbeb-1d65-4cfc-b078-df62b814ae23"
 storage_version_token = "1792874677770524"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "MwiyzdRLbQCq3webPR5sE"
+uri = "file://docs/EDGE-REAL-CONNECTION-FIX.md"
+type = "text"
+title = "Vernatun Edge — исправления подключения и проверка после обновления"
+description = "Причины ошибок WSS и timestamp, результаты локальных проверок и безопасная проверка существующего Windows Agent без нового bootstrap token."
+logical_id = "04cae88e-ed9a-4365-a86f-c84b978ef2ed"
+content_hash = "sha256:6e196387c005f05f32d3744a441ebda5f5949a559aa10ce793ac53095eab954b"
+size = 5719
+mtime_ms = 1792967204221
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/04cae88e-ed9a-4365-a86f-c84b978ef2ed/fea76231-9eb4-47ce-999a-16e028334eaa"
+storage_version_token = "1792967221614180"
+content_type = "text/markdown"

@@ -2,19 +2,19 @@ import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash,randomBytes} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {createServer} from 'node:http';
 import {WebSocket} from 'ws';
-import {app} from '../app.js';
+import {createApiServer} from '../../../../src/server.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
-import {attachEdgeWebSocket} from '../edge-sockets.js';
+import {isEdgeConnected} from '../edge-sockets.js';
+import {edgeTimestamp,edgeTimestampedRecord} from '../edge-timestamp.js';
 import {normalizeEdgeStatus} from '../edge-management-policy.js';
 
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))
  throw new Error('Edge integration tests require the isolated vernatun_test database');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const account=(role:string)=>Object.values(seed.accounts).find((a:any)=>a.role===role) as any;
-const server=createServer(app);attachEdgeWebSocket(server);let base='';let agentSocket:WebSocket|undefined;let v2Socket:WebSocket|undefined;
+const {server,edgeSockets}=createApiServer();let base='';let agentSocket:WebSocket|undefined;let v2Socket:WebSocket|undefined;
 
 class Client{
  cookie='';csrf='';
@@ -61,8 +61,21 @@ after(async()=>{
  if(v2Socket?.readyState===WebSocket.OPEN){
   await new Promise<void>(resolve=>{v2Socket!.once('close',()=>resolve());v2Socket!.close()});
  }
+ edgeSockets.close();
  await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
  await pool.end();
+});
+
+test('RFC3339 Edge timestamps accept offsets and microseconds and reject invalid strings',()=>{
+ for(const timestamp of ['2026-10-25T22:00:00Z','2026-10-25T22:00:00.344Z',
+  '2026-10-25T22:00:00+00:00','2026-10-25T22:00:00.344086+00:00',
+  '2026-10-26T02:00:00.344086+04:00']){
+  assert.equal(edgeTimestamp.parse(timestamp),new Date(timestamp).toISOString());
+  assert.equal(edgeTimestampedRecord.parse({timestamp}).timestamp,new Date(timestamp).toISOString());
+ }
+ for(const timestamp of ['invalid','2026-10-25','2026-10-25T22:00:00','2026-02-30T22:00:00Z','2026-10-25T25:00:00+00:00']){
+  assert.equal(edgeTimestamp.safeParse(timestamp).success,false,timestamp);
+ }
 });
 
 test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventory, and unit isolation',async()=>{
@@ -114,7 +127,47 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  assert.equal(inventory.status,200);
  assert.equal(inventory.data.devices,1);
 
-  agentSocket=new WebSocket(`ws://127.0.0.1:${(server.address() as any).port}/api/edge/v1/connect?edgeId=${encodeURIComponent(edgeId)}`,{
+ const payload={edgeId,tenantId:organizationId,buildingId};
+ for(const timestamp of ['2026-10-25T22:00:00Z','2026-10-25T22:00:00.344Z',
+  '2026-10-25T22:00:00+00:00','2026-10-25T22:00:00.344086+00:00']){
+  assert.equal((await platform.call('/edge/v1/heartbeat','POST',{...payload,timestamp},machineHeaders)).status,200);
+  assert.equal((await platform.call('/edge/v1/inventory','POST',{...payload,timestamp,devices:[]},machineHeaders)).status,200);
+ }
+ for(const endpoint of ['heartbeat','inventory']){
+  assert.equal((await platform.call('/edge/v1/'+endpoint,'POST',{...payload,timestamp:'invalid',devices:[]},machineHeaders)).status,400);
+ }
+ for(const endpoint of ['telemetry','events','alarms']){
+  const body={...payload,items:[{deviceId:'qa-barrier-1',eventId:'qa-event-'+endpoint,alarmId:'qa-alarm',
+   timestamp:'2026-10-25T22:00:00.344086+00:00',temperature:21}]};
+  assert.equal((await platform.call('/edge/v1/'+endpoint+'/batch','POST',body,machineHeaders)).status,200,endpoint);
+  body.items[0].timestamp='invalid';
+  assert.equal((await platform.call('/edge/v1/'+endpoint+'/batch','POST',body,machineHeaders)).status,400,endpoint);
+ }
+ const wsBase=`ws://127.0.0.1:${(server.address() as any).port}/api/edge/v1/connect`;
+ const denied=async(headers:Record<string,string>,query='')=>{
+  await new Promise<void>((resolve,reject)=>{
+   const socket=new WebSocket(wsBase+query,{headers,handshakeTimeout:2500});
+   socket.on('error',()=>{});
+   socket.once('open',()=>{socket.close();reject(new Error('Unexpected machine upgrade'))});
+   socket.once('unexpected-response',(_req,res)=>{
+    res.resume();socket.terminate();
+    try{assert.equal(res.statusCode,401);resolve()}catch(error){reject(error)}
+   });
+   socket.once('error',error=>reject(error));
+  });
+ };
+ await denied({});
+ await denied({Cookie:platform.cookie});
+ await denied({...machineHeaders,Authorization:'Bearer '+randomBytes(32).toString('hex')});
+ await denied({...machineHeaders,'X-Vernatun-Edge-Id':'different-edge'});
+ await denied({...machineHeaders,'X-Vernatun-Tenant-Id':'00000000-0000-4000-8000-000000000000'});
+ await denied({...machineHeaders,'X-Vernatun-Building-Id':'00000000-0000-4000-8000-000000000000'});
+ await denied(machineHeaders,'?edgeId=different-edge');
+ await denied(machineHeaders,'?tenantId=00000000-0000-4000-8000-000000000000');
+ await denied(machineHeaders,'?buildingId=00000000-0000-4000-8000-000000000000');
+  // Existing Agent identity headers are sufficient; optional query IDs, when
+  // supplied, must match the authoritative credential binding.
+  agentSocket=new WebSocket(wsBase,{
    headers:machineHeaders,
   });
   await new Promise<void>((resolve,reject)=>{
@@ -130,6 +183,7 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
   assert.equal(online,true,'WebSocket Agent hello should mark the scoped Edge node online');
 
  const node=(await pool.query('SELECT id FROM edge_nodes WHERE edge_id=$1',[edgeId])).rows[0];
+ assert.equal(isEdgeConnected(node.id),true,'production server assembly must populate the Edge connection registry');
  const credential=(await pool.query(`SELECT credential_hash,status FROM edge_credentials
   WHERE edge_node_id=$1 ORDER BY version LIMIT 1`,[node.id])).rows[0];
  assert.equal(credential.status,'active');

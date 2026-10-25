@@ -56,3 +56,14 @@ real deployment.
 test-device policy and actual API target independent of display labels. A saved
 Cloud configuration or diagnostic result does not prove a physical Agent applied
 it; require real Agent evidence before claiming that acceptance.
+
+Verify Edge transport on the deployed server assembly, not only a legacy server
+or a test harness that installs its own upgrade listener.
+
+**Why:** Isolated tests previously attached WebSocket handling themselves while
+the production entrypoint omitted it, allowing HTTP registration to succeed and
+WebSocket connectivity to fail despite passing transport tests.
+
+**How to apply:** Exercise the same server assembly used by deployment when
+testing upgrades. Keep real Windows acceptance separate from local test results;
+never rotate an already-issued machine credential to mask a server-wiring issue.

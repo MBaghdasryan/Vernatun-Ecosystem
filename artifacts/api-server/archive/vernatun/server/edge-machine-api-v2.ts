@@ -5,6 +5,7 @@ import {pool} from './db.js';
 import {ApiError} from './access.js';
 import {recordEdgeCommandResult} from './edge-sockets.js';
 import {authenticateEdgeToken} from './edge-auth.js';
+import {edgeTimestamp,edgeTimestampedRecord,edgeSourceTime as sourceTime} from './edge-timestamp.js';
 
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 const uuid=z.string().uuid();
@@ -71,11 +72,11 @@ function capabilitiesFor(profile:string){
  return profile==='Vernatun Barrier'?['BARRIER.OPEN','BARRIER.CLOSE']:[];
 }
 const batchItems=(body:any)=>{
+ edgeTimestampedRecord.parse(body);
  const list=body?.items??body?.records??body?.telemetry??body?.events??body?.alarms;
  if(!Array.isArray(list)||list.length>2000)throw new ApiError(400,'invalid_edge_batch');
- return list;
+ return list.map(item=>edgeTimestampedRecord.parse(item));
 };
-const sourceTime=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;
 async function requireDevice(node:EdgeV2Node,buildingId:string,externalId:string,db:any=pool){
  await assertBuilding(node,buildingId,db);
  const result=await db.query(`SELECT id FROM edge_device_inventory
@@ -144,7 +145,7 @@ router.post('/register',async(req,res)=>{
 router.post('/heartbeat',machineAuth,async(req:EdgeV2Request,res)=>{
  const node=await authenticatedNode(req);
  const body=z.object({protocolVersion:z.literal(2),edgeId:edgeIdSchema,tenantId:uuid,blockId:uuid,
-  timestamp:z.string().datetime().optional(),status:z.string().max(40).optional(),
+  timestamp:edgeTimestamp.optional(),status:z.string().max(40).optional(),
   agentVersion:z.string().trim().max(80).optional(),
   local:z.object({commandAuthorization:z.string().trim().max(40).optional(),
    queueDepth:z.number().int().min(0).max(100000).optional()}).optional(),
@@ -161,7 +162,7 @@ router.post('/heartbeat',machineAuth,async(req:EdgeV2Request,res)=>{
 router.post('/inventory',machineAuth,async(req:EdgeV2Request,res)=>{
  const node=await authenticatedNode(req);
  const body=z.object({protocolVersion:z.literal(2),edgeId:edgeIdSchema,tenantId:uuid,blockId:uuid,
-  timestamp:z.string().datetime().optional(),devices:z.array(z.object({buildingId:uuid,
+  timestamp:edgeTimestamp.optional(),devices:z.array(z.object({buildingId:uuid,
    deviceId:z.string().trim().min(1).max(200),name:z.string().max(200).optional(),
    thingsboardId:z.string().max(200).nullable().optional(),
    profile:z.string().trim().min(1).max(100),label:z.string().max(200).nullable().optional(),
@@ -234,7 +235,7 @@ router.post('/events/batch',machineAuth,async(req:EdgeV2Request,res)=>{
    [node.id,device,node.organization_id,buildingId,
     typeof item.eventId==='string'?item.eventId.slice(0,200):null,
     String(item.type??item.eventType??'edge.event').slice(0,100),
-    ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
+    typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
@@ -257,7 +258,7 @@ router.post('/alarms/batch',machineAuth,async(req:EdgeV2Request,res)=>{
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(edge_node_id,building_id,external_alarm_id) DO NOTHING`,
    [node.id,device,node.organization_id,buildingId,item.alarmId.slice(0,200),
     String(item.type??'edge.alarm').slice(0,100),
-    ['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',
+    typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
@@ -286,7 +287,7 @@ router.get('/config',machineAuth,async(req:EdgeV2Request,res)=>{
 router.post('/commands/:commandId/result',machineAuth,async(req:EdgeV2Request,res)=>{
  const node=await authenticatedNode(req);
  const body=z.object({protocolVersion:z.literal(2),edgeId:edgeIdSchema,tenantId:uuid,blockId:uuid,
-  commandId:uuid,buildingId:uuid.optional(),result:z.unknown().optional(),status:z.string().optional(),
+  commandId:uuid,buildingId:uuid.optional(),result:z.unknown().optional(),status:z.string().optional(),timestamp:edgeTimestamp.optional(),
  }).passthrough().parse(req.body);
  verifyIdentity(req,node,body);
  if(body.buildingId)await assertBuilding(node,body.buildingId);

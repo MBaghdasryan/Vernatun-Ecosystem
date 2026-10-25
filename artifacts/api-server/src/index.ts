@@ -1,4 +1,4 @@
-import app from "./app";
+import {createApiServer} from "./server";
 import { logger } from "./lib/logger";
 import { startPlatformJobs } from "../archive/vernatun/server/platform-jobs";
 import {pool} from "../archive/vernatun/server/db";
@@ -18,18 +18,20 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 let stopJobs: (() => void) | undefined;
-const server=app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
+const {server,edgeSockets}=createApiServer();
+server.listen(port, () => {
   logger.info({ port }, "Server listening");
   stopJobs=startPlatformJobs();
+});
+server.on('error',err=>{
+ logger.error({err},'Error listening on port');
+ process.exit(1);
 });
 
 export async function shutdownServer(){
  stopJobs?.();
+ for(const client of edgeSockets.clients)client.terminate();
+ edgeSockets.close();
  await new Promise<void>((resolve,reject)=>server.close(err=>err?reject(err):resolve()));
  await pool.end();
 }

@@ -3,6 +3,8 @@ import {WebSocket,WebSocketServer} from 'ws';
 import {pool} from './db.js';
 import {ApiError} from './access.js';
 import {authenticateEdgeToken} from './edge-auth.js';
+import {edgeTimestampedRecord} from './edge-timestamp.js';
+import {logger} from '../../../src/lib/logger.js';
 
 const SOCKET_PATH_V1='/api/edge/v1/connect';
 const SOCKET_PATH_V2='/api/edge/v2/connect';
@@ -23,13 +25,14 @@ export function closeEdgeConnection(edgeNodeId:string,code=4001,reason='credenti
  if(socket&&socket.readyState< WebSocket.CLOSING)socket.close(code,reason);
 }
 
-async function authenticateUpgrade(token:string,edgeId:string){
+async function authenticateUpgrade(token:string,edgeId:string|null){
  const node=await authenticateEdgeToken(token);
- if(!node||node.edge_id!==edgeId)throw new ApiError(401,'edge_unauthorized');
+ if(!node||(edgeId!==null&&node.edge_id!==edgeId))throw new ApiError(401,'edge_unauthorized');
  return node;
 }
 
 export async function recordEdgeCommandResult(edgeNodeId:string,result:any){
+ result=edgeTimestampedRecord.parse(result);
  const commandId=String(result?.commandId??'');
  if(!commandId)throw new ApiError(400,'invalid_command_result');
  const status=String(result?.status??'').toUpperCase();
@@ -74,8 +77,8 @@ export function attachEdgeWebSocket(server:Server){
    try{
     const authorization=request.headers.authorization??'';
     const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
-    if(token.length<20)throw new ApiError(401,'edge_unauthorized');
-    const edgeId=url.searchParams.get('edgeId')??'';
+    if(token.length<20||token.length>256)throw new ApiError(401,'edge_unauthorized');
+    const edgeId=url.searchParams.get('edgeId');
     const node=await authenticateUpgrade(token,edgeId);
     if(node.protocol_version!==protocolVersion||
      (protocolVersion===1&&!node.building_id)||(protocolVersion===2&&!node.block_id))
@@ -88,8 +91,20 @@ export function attachEdgeWebSocket(server:Server){
      const supplied=request.headers[header];
      if(typeof supplied!=='string'||supplied.toLowerCase()!==String(expected).toLowerCase())throw new ApiError(401,'edge_identity_mismatch');
     }
-    wss.handleUpgrade(request,socket,head,client=>{upgradeNodes.set(client,node);wss.emit('connection',client,request);});
-   }catch{
+    for(const [key,expected] of [
+     ['tenantId',node.organization_id],
+     [protocolVersion===1?'buildingId':'blockId',protocolVersion===1?node.building_id:node.block_id],
+    ] as const){
+     const supplied=url.searchParams.get(key);
+     if(supplied!==null&&supplied.toLowerCase()!==String(expected).toLowerCase())throw new ApiError(401,'edge_identity_mismatch');
+    }
+    logger.info({code:'edge_authenticated',edgeNodeId:node.id,edgeId:node.edge_id},'Edge authenticated');
+    wss.handleUpgrade(request,socket,head,client=>{
+     logger.info({code:'edge_websocket_upgraded',edgeNodeId:node.id},'Edge WebSocket upgraded');
+     upgradeNodes.set(client,node);wss.emit('connection',client,request);
+    });
+   }catch(error){
+    logger.warn({code:'edge_websocket_rejected',reason:error instanceof ApiError?error.code:'edge_authentication_failed'},'Edge WebSocket rejected');
     if(!socket.destroyed){socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');socket.destroy();}
    }
   })();
@@ -100,6 +115,7 @@ export function attachEdgeWebSocket(server:Server){
   const old=connected.get(node.id);
   if(old&&old!==socket)old.close(4002,'connection_replaced');
   connected.set(node.id,socket);
+  logger.info({code:'edge_connected',edgeNodeId:node.id,edgeId:node.edge_id},'Edge connected');
   void pool.query(`UPDATE edge_nodes SET last_connected_at=now(),last_seen_at=now(),
    status=CASE WHEN local_authorization_status='OK' THEN 'ONLINE' ELSE 'DEGRADED' END,
    updated_at=now() WHERE id=$1`,[node.id]);
