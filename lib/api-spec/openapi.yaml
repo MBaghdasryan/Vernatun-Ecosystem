@@ -383,6 +383,18 @@ paths:
       operationId: getEdgeFleet
       security: [{ SessionCookie: [] }]
       parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: search, in: query, schema: { type: string, maxLength: 200 } }
+        - { name: organizationId, in: query, schema: { type: string, format: uuid } }
+        - { name: blockId, in: query, schema: { type: string, format: uuid } }
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [ONLINE, OFFLINE, DEGRADED, UNKNOWN, DISABLED] } }
+        - { name: websocket, in: query, schema: { type: string, enum: [CONNECTED, DISCONNECTED] } }
+        - { name: version, in: query, schema: { type: string } }
+        - { name: project, in: query, schema: { type: string } }
+        - { name: environment, in: query, schema: { type: string, enum: [unknown, test, staging, production] } }
+        - { name: registration, in: query, schema: { type: string, enum: [PENDING_REGISTRATION, REGISTERED, REVOKED] } }
         - name: includeArchived
           in: query
           required: false
@@ -390,6 +402,59 @@ paths:
       responses:
         '200': { description: Role- and tenant-scoped Edge fleet summary, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeFleet' } } } }
         '403': { description: Edge fleet permission or organization context required }
+  /edge-console/nodes:
+    post:
+      tags: [edge-console]
+      operationId: createEdgeDraft
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeDraftInput' }
+      responses:
+        '201': { description: Pending node with v1 building or v2 block bindings, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeDraftResult' } } } }
+        '403': { description: Permission or organization scope rejected }
+        '409': { description: Duplicate identity or immutable scope conflict }
+  /edge-console/nodes/{id}/bootstrap-token:
+    post:
+      tags: [edge-console]
+      operationId: generateEdgeDraftToken
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeTokenGenerationInput' }
+      responses:
+        '201': { description: One-time token with exact snake_case registration bindings; replaces any unconsumed token, content: { application/json: { schema: { $ref: '#/components/schemas/EdgeDraftBootstrapResult' } } } }
+        '403': { description: Bootstrap permission or recent authentication required }
+        '409': { description: Already registered or archived }
+  /edge-console/nodes/{id}/buildings:
+    get:
+      tags: [edge-console]
+      operationId: listEdgeBoundBuildings
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      responses:
+        '200': { description: Authorized node building bindings }
+    patch:
+      tags: [edge-console]
+      operationId: updateEdgeBoundBuildings
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PlatformId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EdgeBuildingBindingInput' }
+      responses:
+        '200': { description: Versioned v2 explicit block-scoped bindings saved and audited }
+        '409': { description: v1 immutable binding or building with retained device/history references }
   /edge-console/bootstrap-tokens:
     get:
       tags: [edge-console]
@@ -3586,7 +3651,20 @@ components:
             degraded: { type: integer, minimum: 0 }
             offline: { type: integer, minimum: 0 }
             activeAlarms: { type: integer, minimum: 0 }
+            waiting: { type: integer, minimum: 0 }
+            syncErrors: { type: integer, minimum: 0 }
+            devices: { type: integer, minimum: 0 }
+            lastSync: { type: [string, 'null'], format: date-time }
         nodes: { type: array, items: { $ref: '#/components/schemas/EdgeNode' } }
+        pagination:
+          type: object
+          required: [page, pageSize, total, pages]
+          properties:
+            page: { type: integer }
+            pageSize: { type: integer }
+            total: { type: integer }
+            pages: { type: integer }
+        facets: { type: object, additionalProperties: true }
     EdgeNode:
       type: object
       required: [id, edge_id, organization_id, name, site_code, status, registration_state, queue_depth, device_count, active_alarms]
@@ -3599,6 +3677,8 @@ components:
         protocol_version: { type: integer, enum: [1, 2] }
         name: { type: string }
         site_code: { type: string }
+        project_name: { type: string }
+        environment: { type: string, enum: [unknown, test, staging, production] }
         archived_at: { type: string, format: date-time, nullable: true }
         status: { type: string }
         registration_state: { type: string }
@@ -3608,6 +3688,14 @@ components:
         registered_at: { type: string, format: date-time, nullable: true }
         last_seen_at: { type: string, format: date-time, nullable: true }
         last_connected_at: { type: string, format: date-time, nullable: true }
+        last_heartbeat_at: { type: [string, 'null'], format: date-time }
+        last_inventory_at: { type: [string, 'null'], format: date-time }
+        last_telemetry_at: { type: [string, 'null'], format: date-time }
+        last_event_at: { type: [string, 'null'], format: date-time }
+        last_alarm_at: { type: [string, 'null'], format: date-time }
+        web_socket_open: { type: boolean }
+        credential_active: { type: boolean }
+        building_count: { type: integer }
         credential_version: { type: integer, nullable: true }
         organization_name: { type: string, nullable: true }
         building_name: { type: string, nullable: true }
@@ -3638,12 +3726,90 @@ components:
         buildings: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
         devices: { type: array, items: { $ref: '#/components/schemas/EdgeDevice' } }
         alarms: { type: array, items: { type: object, additionalProperties: true } }
+        telemetry: { type: array, items: { type: object, additionalProperties: true } }
+        events: { type: array, items: { type: object, additionalProperties: true } }
+        commands: { type: array, items: { type: object, additionalProperties: true } }
+        audit: { type: array, items: { type: object, additionalProperties: true } }
+        tokens: { type: array, items: { type: object, additionalProperties: true } }
+        configuration: { type: object, additionalProperties: true }
+    EdgeDraftInput:
+      type: object
+      required: [edgeId, name, siteCode]
+      additionalProperties: false
+      properties:
+        edgeId: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$' }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        siteCode: { type: string, minLength: 1, maxLength: 100 }
+        organizationId: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        blockId: { type: string, format: uuid }
+        description: { type: string, maxLength: 2000 }
+        projectName: { type: string, maxLength: 120 }
+        environment: { type: string, enum: [unknown, test, staging, production] }
+        heartbeatSeconds: { type: integer, minimum: 10, maximum: 300 }
+        inventorySeconds: { type: integer, minimum: 30, maximum: 86400 }
+        telemetrySeconds: { type: integer, minimum: 5, maximum: 3600 }
+        enabledModules: { type: array, items: { type: string, enum: [access, fire_monitoring, elevator_monitoring, metering, hvac, pumps, cameras] } }
+    EdgeTokenGenerationInput:
+      type: object
+      properties:
+        expiresInMinutes: { type: integer, minimum: 5, maximum: 120, default: 30 }
+    EdgeBoundBuilding:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        is_primary: { type: boolean }
+    EdgeDraftResult:
+      type: object
+      required: [id, edge_id, organization_id, protocol_version, name, site_code, registration_state, buildings]
+      properties:
+        id: { type: string, format: uuid }
+        edge_id: { type: string }
+        organization_id: { type: string, format: uuid }
+        building_id: { type: string, format: uuid, nullable: true }
+        block_id: { type: string, format: uuid, nullable: true }
+        protocol_version: { type: integer, enum: [1, 2] }
+        name: { type: string }
+        site_code: { type: string }
+        registration_state: { type: string }
+        buildings: { type: array, items: { $ref: '#/components/schemas/EdgeBoundBuilding' } }
+    EdgeDraftBootstrapResult:
+      type: object
+      required: [id, edge_id, organization_id, edge_name, site_code, expires_at, bootstrapToken, oneTime, buildings]
+      properties:
+        id: { type: string, format: uuid }
+        edge_id: { type: string }
+        edge_name: { type: string }
+        organization_id: { type: string, format: uuid }
+        building_id: { type: string, format: uuid, nullable: true }
+        block_id: { type: string, format: uuid, nullable: true }
+        protocol_version: { type: integer, enum: [1, 2] }
+        site_code: { type: string }
+        expires_at: { type: string, format: date-time }
+        bootstrapToken: { type: string }
+        oneTime: { type: boolean }
+        buildings: { type: array, items: { $ref: '#/components/schemas/EdgeBoundBuilding' } }
+    EdgeBuildingBindingInput:
+      type: object
+      required: [buildingIds]
+      properties:
+        buildingIds: { type: array, minItems: 1, maxItems: 1000, uniqueItems: true, items: { type: string, format: uuid } }
     EdgeNodeUpdate:
       type: object
       minProperties: 1
       properties:
         name: { type: string, minLength: 2, maxLength: 120 }
         siteCode: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 2000 }
+        projectName: { type: string, maxLength: 120 }
+        environment: { type: string, enum: [unknown, test, staging, production] }
+        heartbeatSeconds: { type: integer, minimum: 10, maximum: 300 }
+        inventorySeconds: { type: integer, minimum: 30, maximum: 86400 }
+        telemetrySeconds: { type: integer, minimum: 5, maximum: 3600 }
+        enabledModules: { type: array, items: { type: string, enum: [access, fire_monitoring, elevator_monitoring, metering, hvac, pumps, cameras] } }
     EdgeConnectionCheck:
       type: object
       required: [edgeId, webSocketOpen, heartbeatFresh, reachable, checkedAt, probe]
@@ -3654,7 +3820,9 @@ components:
         heartbeatAgeSeconds: { type: integer, nullable: true }
         reachable: { type: boolean }
         checkedAt: { type: string, format: date-time }
-        probe: { type: string, const: websocket_and_heartbeat_status }
+        probe: { type: string, const: server_observed_state_no_device_commands }
+        overallStatus: { type: string, enum: [OK, WARNING, FAILED, UNKNOWN] }
+        checks: { type: object, additionalProperties: { type: object, additionalProperties: true } }
     EdgeBootstrapToken:
       type: object
       required: [id, edge_id, organization_id, protocol_version, expires_at, created_at, status]

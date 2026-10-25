@@ -5,10 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EdgeFleetFacets } from './edgeFleetFacets';
+import type { EdgeFleetPagination } from './edgeFleetPagination';
 import type { EdgeFleetSummary } from './edgeFleetSummary';
 import type { EdgeNode } from './edgeNode';
 
 export interface EdgeFleet {
   summary: EdgeFleetSummary;
   nodes: EdgeNode[];
+  pagination?: EdgeFleetPagination;
+  facets?: EdgeFleetFacets;
 }

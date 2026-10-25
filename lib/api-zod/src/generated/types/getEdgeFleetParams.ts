@@ -5,7 +5,33 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GetEdgeFleetEnvironment } from './getEdgeFleetEnvironment';
+import type { GetEdgeFleetRegistration } from './getEdgeFleetRegistration';
+import type { GetEdgeFleetStatus } from './getEdgeFleetStatus';
+import type { GetEdgeFleetWebsocket } from './getEdgeFleetWebsocket';
 
 export type GetEdgeFleetParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+/**
+ * @maxLength 200
+ */
+search?: string;
+organizationId?: string;
+blockId?: string;
+buildingId?: string;
+status?: GetEdgeFleetStatus;
+websocket?: GetEdgeFleetWebsocket;
+version?: string;
+project?: string;
+environment?: GetEdgeFleetEnvironment;
+registration?: GetEdgeFleetRegistration;
 includeArchived?: boolean;
 };

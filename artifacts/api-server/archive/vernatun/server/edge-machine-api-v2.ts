@@ -104,18 +104,25 @@ router.post('/register',async(req,res)=>{
    token.block_id.toLowerCase()!==input.blockId.toLowerCase()||
    token.site_code!==input.siteCode||token.edge_name!==input.edgeName)
    throw new ApiError(403,'bootstrap_binding_mismatch');
-  const occupied=await client.query('SELECT id FROM edge_nodes WHERE edge_id=$1',[input.edgeId]);
-  if(occupied.rowCount)throw new ApiError(409,'edge_already_registered');
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[input.edgeId]);
+  const occupied=await client.query('SELECT * FROM edge_nodes WHERE edge_id=$1 FOR UPDATE',[input.edgeId]);
+  const draft=occupied.rows.find(n=>n.organization_id===token.organization_id&&n.block_id===token.block_id&&
+   n.protocol_version===2&&n.registration_state==='PENDING_REGISTRATION'&&!n.archived_at);
+  if(occupied.rowCount&&!draft)throw new ApiError(409,'edge_already_registered');
   const buildings=(await client.query(`SELECT building_id FROM edge_block_buildings
    WHERE block_id=$1 AND organization_id=$2 ORDER BY building_id`,[input.blockId,input.tenantId])).rows;
   if(!buildings.length)throw new ApiError(409,'edge_block_has_no_buildings');
-  const node=(await client.query(`INSERT INTO edge_nodes
+  const node=draft?(await client.query(`UPDATE edge_nodes SET registration_state='REGISTERED',registered_at=now(),
+   agent_version=$2,platform=$3,capabilities=$4,updated_at=now() WHERE id=$1
+   RETURNING id,edge_id,organization_id,block_id,name,site_code,status`,
+   [draft.id,input.agentVersion??null,input.platform??null,JSON.stringify(input.capabilities??{})])).rows[0]
+   :(await client.query(`INSERT INTO edge_nodes
    (edge_id,organization_id,building_id,block_id,protocol_version,name,site_code,agent_version,platform,capabilities)
    VALUES($1,$2,NULL,$3,2,$4,$5,$6,$7,$8)
    RETURNING id,edge_id,organization_id,block_id,name,site_code,status`,
    [input.edgeId,token.organization_id,token.block_id,input.edgeName,token.site_code,
     input.agentVersion??null,input.platform??null,JSON.stringify(input.capabilities??{})])).rows[0];
-  await client.query(`INSERT INTO edge_node_buildings(edge_node_id,organization_id,building_id,block_id)
+  if(!draft)await client.query(`INSERT INTO edge_node_buildings(edge_node_id,organization_id,building_id,block_id)
    SELECT $1,$2,building_id,$3 FROM edge_block_buildings
    WHERE block_id=$3 AND organization_id=$2`,[node.id,node.organization_id,node.block_id]);
   await client.query(`INSERT INTO edge_credentials(edge_node_id,credential_hash,version) VALUES($1,$2,1)`,
@@ -125,9 +132,10 @@ router.post('/register',async(req,res)=>{
   await client.query(`INSERT INTO audit_events(organization_id,action,entity_type,entity_id,details)
    VALUES($1,'edge.register.v2','edge_node',$2,$3)`,[node.organization_id,node.id,
     JSON.stringify({edgeId:node.edge_id,blockId:node.block_id,buildingCount:buildings.length,version:input.agentVersion??null})]);
+  const allowedBuildings=draft?(await client.query(`SELECT building_id FROM edge_node_buildings WHERE edge_node_id=$1 ORDER BY building_id`,[node.id])).rows:buildings;
   await client.query('COMMIT');
   res.status(201).json({protocolVersion:2,edgeId:node.edge_id,tenantId:node.organization_id,
-   blockId:node.block_id,buildingIds:buildings.map((row:any)=>row.building_id),status:'REGISTERED',
+   blockId:node.block_id,buildingIds:allowedBuildings.map((row:any)=>row.building_id),status:'REGISTERED',
    accessToken:credential,tokenType:'Bearer'});
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -144,7 +152,7 @@ router.post('/heartbeat',machineAuth,async(req:EdgeV2Request,res)=>{
  verifyIdentity(req,node,body);
  const authStatus=body.local?.commandAuthorization??'UNKNOWN';
  await pool.query(`UPDATE edge_nodes SET status=CASE WHEN $2='OK' THEN 'ONLINE' ELSE 'DEGRADED' END,
-  last_seen_at=now(),agent_version=COALESCE($3,agent_version),local_authorization_status=$2,
+  last_seen_at=now(),last_heartbeat_at=now(),agent_version=COALESCE($3,agent_version),local_authorization_status=$2,
   queue_depth=$4,updated_at=now() WHERE id=$1`,
  [node.id,authStatus,body.agentVersion??null,body.local?.queueDepth??0]);
  res.json({status:'ACCEPTED',serverTime:new Date().toISOString()});
@@ -178,7 +186,7 @@ router.post('/inventory',machineAuth,async(req:EdgeV2Request,res)=>{
     device.name??device.deviceId,device.profile,deviceType(device.profile),device.label??null,
     JSON.stringify(capabilities),device.active??null]);
   }
-  await client.query(`UPDATE edge_nodes SET last_seen_at=now(),status='ONLINE',updated_at=now() WHERE id=$1`,[node.id]);
+  await client.query(`UPDATE edge_nodes SET last_seen_at=now(),last_inventory_at=now(),status='ONLINE',updated_at=now() WHERE id=$1`,[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -205,7 +213,7 @@ router.post('/telemetry/batch',machineAuth,async(req:EdgeV2Request,res)=>{
    }
    await client.query('UPDATE edge_device_inventory SET last_telemetry_at=now(),last_seen_at=now() WHERE id=$1',[device]);
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_telemetry_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -230,7 +238,7 @@ router.post('/events/batch',machineAuth,async(req:EdgeV2Request,res)=>{
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_event_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -253,7 +261,7 @@ router.post('/alarms/batch',machineAuth,async(req:EdgeV2Request,res)=>{
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_alarm_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -263,12 +271,13 @@ router.post('/alarms/batch',machineAuth,async(req:EdgeV2Request,res)=>{
 router.get('/config',machineAuth,async(req:EdgeV2Request,res)=>{
  const node=await authenticatedNode(req);
  if(req.query.edgeId!==node.edge_id)throw new ApiError(403,'edge_identity_mismatch');
- const row=(await pool.query(`SELECT config_version AS "configVersion",capabilities,
+ const row=(await pool.query(`SELECT config_version AS "configVersion",capabilities,management_config,
   organization_id AS "tenantId",block_id AS "blockId" FROM edge_nodes WHERE id=$1`,[node.id])).rows[0];
  const buildingIds=(await pool.query(`SELECT building_id FROM edge_node_buildings
   WHERE edge_node_id=$1 ORDER BY building_id`,[node.id])).rows.map(r=>r.building_id);
  res.json({protocolVersion:2,edgeId:node.edge_id,...row,buildingIds,
-  heartbeatIntervalSeconds:30,inventoryIntervalSeconds:300,
+  heartbeatIntervalSeconds:row.management_config.heartbeatSeconds,inventoryIntervalSeconds:row.management_config.inventorySeconds,
+  telemetryBatchIntervalSeconds:row.management_config.telemetrySeconds,
   endpoints:{heartbeat:'/api/edge/v2/heartbeat',inventory:'/api/edge/v2/inventory',
    telemetry:'/api/edge/v2/telemetry/batch',events:'/api/edge/v2/events/batch',
    alarms:'/api/edge/v2/alarms/batch',websocket:'/api/edge/v2/connect'}});

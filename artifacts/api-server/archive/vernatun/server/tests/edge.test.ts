@@ -8,6 +8,7 @@ import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
 import {attachEdgeWebSocket} from '../edge-sockets.js';
+import {normalizeEdgeStatus} from '../edge-management-policy.js';
 
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))
  throw new Error('Edge integration tests require the isolated vernatun_test database');
@@ -153,6 +154,122 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  const removed=await platform.call(`/edge-console/devices/${device.id}/access/${unitId}`,'DELETE');
  assert.equal(removed.status,200);
  assert.equal((await owner.call(`/me/buildings/${buildingId}/devices`)).data.length,0);
+});
+
+test('Human workspace drafts, one-time tokens, real diagnostics, config and cross-tenant isolation',async()=>{
+ const suffix=randomBytes(6).toString('hex'),edgeId=`UI-${suffix}`;
+ const testBuilding=(await pool.query(`INSERT INTO buildings(organization_id,name,address)
+  VALUES($1,$2,'Isolated UI QA') RETURNING id`,[organizationId,`Workspace ${suffix}`])).rows[0].id;
+ const created=await platform.call('/edge-console/nodes','POST',{
+  organizationId,buildingId:testBuilding,edgeId,name:'Workspace draft',siteCode:`SITE-${suffix}`,
+  enabledModules:['metering'],heartbeatSeconds:40,
+ });
+ assert.equal(created.status,201,JSON.stringify(created.data));
+ const node=created.data;
+ assert.equal(node.registration_state,'PENDING_REGISTRATION');
+ const fleet=await platform.call(`/edge-console/fleet?page=1&pageSize=1&search=${edgeId}`);
+ assert.equal(fleet.status,200);
+ assert.equal(fleet.data.pagination.total,1);
+ assert.equal(fleet.data.nodes.length,1);
+ assert.equal(fleet.data.summary.waiting,1);
+ const check=await platform.call(`/edge-console/nodes/${node.id}/connection-check`);
+ assert.equal(check.status,200);
+ assert.equal(check.data.checks.inventory.status,'UNKNOWN','no invented inventory evidence');
+ assert.equal(check.data.checks.websocket.status,'FAILED');
+ assert.equal(check.data.reachable,false);
+ const first=await platform.call(`/edge-console/nodes/${node.id}/bootstrap-token`,'POST',{expiresInMinutes:30});
+ assert.equal(first.status,201,JSON.stringify(first.data));
+ const second=await platform.call(`/edge-console/nodes/${node.id}/bootstrap-token`,'POST',{expiresInMinutes:30});
+ assert.equal(second.status,201);
+ assert.notEqual(second.data.bootstrapToken,first.data.bootstrapToken);
+ const detail=await platform.call(`/edge-console/nodes/${node.id}`);
+ assert.equal(detail.status,200);
+ assert.equal(detail.data.node.credential_issued_at,null,'draft has no issued credential, not a revoked credential');
+ const publicJson=JSON.stringify(detail.data);
+ assert.equal(publicJson.includes(first.data.bootstrapToken),false);
+ assert.equal(publicJson.includes(second.data.bootstrapToken),false);
+ assert.equal(publicJson.includes('token_hash'),false);
+ assert.equal(publicJson.includes('credential_hash'),false);
+ assert.equal(detail.data.tokens.filter((t:any)=>t.status==='PENDING').length,1);
+ const identity={'X-Vernatun-Edge-Id':edgeId,'X-Vernatun-Tenant-Id':organizationId,'X-Vernatun-Building-Id':testBuilding};
+ const registration={edgeId,tenantId:organizationId,buildingId:testBuilding,siteCode:`SITE-${suffix}`,edgeName:'Workspace draft'};
+ const old=await platform.call('/edge/v1/register','POST',registration,{...identity,Authorization:`Bearer ${first.data.bootstrapToken}`});
+ assert.equal(old.status,401);
+ const registered=await platform.call('/edge/v1/register','POST',registration,{...identity,Authorization:`Bearer ${second.data.bootstrapToken}`});
+ assert.equal(registered.status,201,JSON.stringify(registered.data));
+ assert.equal((await pool.query('SELECT count(*)::int AS count FROM edge_nodes WHERE edge_id=$1',[edgeId])).rows[0].count,1);
+ assert.equal((await platform.call(`/edge-console/nodes/${node.id}/bootstrap-token`,'POST',{})).status,409);
+ const updated=await platform.call(`/edge-console/nodes/${node.id}`,'PATCH',{heartbeatSeconds:50,description:'Reviewed settings',enabledModules:['metering','cameras']});
+ assert.equal(updated.status,200);
+ const agentConfig=await platform.call(`/edge/v1/config?edgeId=${edgeId}`,'GET',undefined,
+  {...identity,Authorization:`Bearer ${registered.data.accessToken}`});
+ assert.equal(agentConfig.status,200);
+ assert.equal(agentConfig.data.heartbeatIntervalSeconds,50);
+ assert.equal((await platform.call(`/edge-console/nodes/${node.id}`,'PATCH',{capabilities:['FIRE.CONTROL']})).status,400);
+ assert.equal((await platform.call(`/edge-console/nodes/${node.id}`,'PATCH',{enabledModules:['FIRE.CONTROL']})).status,400);
+
+ const orgAdmin=await new Client().login('org_admin');
+ const orgSession=(await orgAdmin.call('/auth/session')).data;
+ const orgContext=orgSession.contexts.find((v:any)=>v.role_key==='org_admin');
+ await pool.query(`INSERT INTO module_entitlements(organization_id,module,enabled) VALUES($1,'smart_building',true)
+  ON CONFLICT(organization_id,module) DO UPDATE SET enabled=true`,[orgContext.organization_id]);
+ const foreignOrg=(await pool.query(`INSERT INTO organizations(name,currency) VALUES($1,'AMD') RETURNING id`,[`Foreign isolated ${suffix}`])).rows[0].id;
+ const foreignBuilding=(await pool.query(`INSERT INTO buildings(organization_id,name,address) VALUES($1,'Foreign Edge QA','Isolated QA') RETURNING id`,[foreignOrg])).rows[0].id;
+ const foreign=await platform.call('/edge-console/nodes','POST',{organizationId:foreignOrg,buildingId:foreignBuilding,
+  edgeId:`FOREIGN-${suffix}`,name:'Foreign draft',siteCode:'FOREIGN'});
+ assert.equal(foreign.status,201);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${foreign.data.id}`)).status,404);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${foreign.data.id}/bootstrap-token`,'POST',{})).status,404);
+ assert.equal((await orgAdmin.call(`/edge-console/fleet?organizationId=${foreignOrg}`)).status,403);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${node.id}/credentials/rotate`,'POST',{})).status,403);
+ const orgFleet=await orgAdmin.call('/edge-console/fleet');
+ assert.equal(orgFleet.status,200);
+ assert.ok(orgFleet.data.nodes.every((v:any)=>v.organization_id===orgContext.organization_id));
+ const now=Date.now(),healthy={registration_state:'REGISTERED',last_heartbeat_at:new Date(now),credential_active:true,local_authorization_status:'OK',queue_depth:0};
+ assert.equal(normalizeEdgeStatus(healthy,true,now),'ONLINE');
+ assert.equal(normalizeEdgeStatus(healthy,false,now),'OFFLINE');
+ assert.equal(normalizeEdgeStatus({...healthy,last_heartbeat_at:new Date(now-121000)},true,now),'OFFLINE');
+ assert.equal(normalizeEdgeStatus({...healthy,queue_depth:101},true,now),'DEGRADED');
+ assert.equal(normalizeEdgeStatus({...healthy,last_heartbeat_at:new Date(now-200000),
+  management_config:{heartbeatSeconds:300}},true,now),'ONLINE','custom intervals must not become stale before their scheduled heartbeat');
+
+ const blockBuildings=(await pool.query(`INSERT INTO buildings(organization_id,name,address)
+  VALUES($1,'Draft block A','Isolated QA A'),($1,'Draft block B','Isolated QA B') RETURNING id`,[organizationId])).rows.map(b=>b.id);
+ const block=await platform.call('/edge-console/blocks','POST',{organizationId,code:`DRAFT-${suffix}`,
+  name:'Draft multi-building',buildingIds:blockBuildings});
+ assert.equal(block.status,201);
+ const v2Draft=await platform.call('/edge-console/nodes','POST',{organizationId,blockId:block.data.id,
+  edgeId:`BLOCK-${suffix}`,name:'Block draft',siteCode:'DRAFT-BLOCK'});
+ assert.equal(v2Draft.status,201);
+ const bindings=await platform.call(`/edge-console/nodes/${v2Draft.data.id}/buildings`,'PATCH',{buildingIds:[blockBuildings[0]]});
+ assert.equal(bindings.status,200);
+ assert.equal((await platform.call(`/edge-console/nodes/${v2Draft.data.id}/buildings`,'PATCH',{buildingIds:[foreignBuilding]})).status,400);
+ const v2Token=await platform.call(`/edge-console/nodes/${v2Draft.data.id}/bootstrap-token`,'POST',{expiresInMinutes:30});
+ assert.equal(v2Token.status,201);
+ const v2Register=await platform.call('/edge/v2/register','POST',{protocolVersion:2,edgeId:`BLOCK-${suffix}`,
+  tenantId:organizationId,blockId:block.data.id,siteCode:'DRAFT-BLOCK',edgeName:'Block draft'},{
+  Authorization:`Bearer ${v2Token.data.bootstrapToken}`,'X-Vernatun-Edge-Id':`BLOCK-${suffix}`,
+  'X-Vernatun-Tenant-Id':organizationId,'X-Vernatun-Block-Id':block.data.id,
+ });
+ assert.equal(v2Register.status,201);
+ assert.deepEqual(v2Register.data.buildingIds,[blockBuildings[0]],'registration must retain explicit draft bindings, not expand them');
+ assert.equal((await platform.call(`/edge-console/nodes/${v2Draft.data.id}/buildings`,'PATCH',{buildingIds:blockBuildings})).status,200);
+ const blockToken=await platform.call(`/edge-console/blocks/${block.data.id}/bootstrap-tokens`,'POST',{
+  edgeId:`SCOPE-${suffix}`,name:'Scoped token QA',siteCode:'SCOPE-QA'});
+ assert.equal(blockToken.status,201);
+ await pool.query('UPDATE role_assignments SET building_id=$2 WHERE id=$1',[orgContext.id,blockBuildings[0]]);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${v2Draft.data.id}`)).status,403);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${v2Draft.data.id}/devices`)).status,404);
+ assert.equal((await orgAdmin.call(`/edge-console/nodes/${v2Draft.data.id}`,'DELETE')).status,404);
+ assert.equal((await orgAdmin.call(`/edge-console/blocks/${block.data.id}`,'PATCH',{name:'Not allowed'})).status,404);
+ const scopedBlocks=await orgAdmin.call('/edge-console/blocks');
+ assert.equal(scopedBlocks.status,200);
+ assert.ok(!scopedBlocks.data.blocks.some((b:any)=>b.id===block.data.id));
+ const scopedTokens=await orgAdmin.call('/edge-console/bootstrap-tokens');
+ assert.equal(scopedTokens.status,200);
+ assert.ok(!scopedTokens.data.tokens.some((t:any)=>t.id===blockToken.data.id));
+ assert.equal((await orgAdmin.call(`/edge-console/bootstrap-tokens/${blockToken.data.id}/revoke`,'POST')).status,404);
+ await pool.query('UPDATE role_assignments SET building_id=NULL WHERE id=$1',[orgContext.id]);
 });
 
 test('Edge v2 registers a block node, scopes inventory to its buildings, and authenticates the v2 socket',async()=>{

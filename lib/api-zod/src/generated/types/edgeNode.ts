@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EdgeNodeEnvironment } from './edgeNodeEnvironment';
 import type { EdgeNodeProtocolVersion } from './edgeNodeProtocolVersion';
 
 export interface EdgeNode {
@@ -16,6 +17,8 @@ export interface EdgeNode {
   protocol_version?: EdgeNodeProtocolVersion;
   name: string;
   site_code: string;
+  project_name?: string;
+  environment?: EdgeNodeEnvironment;
   archived_at?: Date | null;
   status: string;
   registration_state: string;
@@ -26,6 +29,19 @@ export interface EdgeNode {
   registered_at?: Date | null;
   last_seen_at?: Date | null;
   last_connected_at?: Date | null;
+  /** @nullable */
+  last_heartbeat_at?: Date | null;
+  /** @nullable */
+  last_inventory_at?: Date | null;
+  /** @nullable */
+  last_telemetry_at?: Date | null;
+  /** @nullable */
+  last_event_at?: Date | null;
+  /** @nullable */
+  last_alarm_at?: Date | null;
+  web_socket_open?: boolean;
+  credential_active?: boolean;
+  building_count?: number;
   credential_version?: number | null;
   organization_name?: string | null;
   building_name?: string | null;

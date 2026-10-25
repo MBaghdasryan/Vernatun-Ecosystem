@@ -17,4 +17,12 @@ export type EdgeFleetSummary = {
   offline: number;
   /** @minimum 0 */
   activeAlarms: number;
+  /** @minimum 0 */
+  waiting?: number;
+  /** @minimum 0 */
+  syncErrors?: number;
+  /** @minimum 0 */
+  devices?: number;
+  /** @nullable */
+  lastSync?: Date | null;
 };

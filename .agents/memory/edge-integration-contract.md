@@ -44,3 +44,15 @@ without leaving archived credentials usable.
 **How to apply:** Keep UI navigation permission-gated and enforce scope again in the
 API. Treat archive/restore as lifecycle controls; never expose token hashes or recover
 consumed bootstrap-token plaintext.
+
+Edge project/environment labels are descriptive operator metadata, not routing,
+deployment switches, or evidence that devices are safe test fixtures.
+
+**Why:** The requested fleet filters need those labels, but treating a label such
+as `test` as an isolation boundary could permit physical operations against a
+real deployment.
+
+**How to apply:** Keep authorization, organization/building scope, explicit
+test-device policy and actual API target independent of display labels. A saved
+Cloud configuration or diagnostic result does not prove a physical Agent applied
+it; require real Agent evidence before claiming that acceptance.

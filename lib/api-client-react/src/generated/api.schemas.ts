@@ -357,7 +357,24 @@ export type EdgeFleetSummary = {
   offline: number;
   /** @minimum 0 */
   activeAlarms: number;
+  /** @minimum 0 */
+  waiting?: number;
+  /** @minimum 0 */
+  syncErrors?: number;
+  /** @minimum 0 */
+  devices?: number;
+  /** @nullable */
+  lastSync?: string | null;
 };
+
+export type EdgeFleetPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+};
+
+export type EdgeFleetFacets = { [key: string]: unknown };
 
 export type EdgeNodeProtocolVersion = typeof EdgeNodeProtocolVersion[keyof typeof EdgeNodeProtocolVersion];
 
@@ -365,6 +382,16 @@ export type EdgeNodeProtocolVersion = typeof EdgeNodeProtocolVersion[keyof typeo
 export const EdgeNodeProtocolVersion = {
   NUMBER_1: 1,
   NUMBER_2: 2,
+} as const;
+
+export type EdgeNodeEnvironment = typeof EdgeNodeEnvironment[keyof typeof EdgeNodeEnvironment];
+
+
+export const EdgeNodeEnvironment = {
+  unknown: 'unknown',
+  test: 'test',
+  staging: 'staging',
+  production: 'production',
 } as const;
 
 export interface EdgeNode {
@@ -376,6 +403,8 @@ export interface EdgeNode {
   protocol_version?: EdgeNodeProtocolVersion;
   name: string;
   site_code: string;
+  project_name?: string;
+  environment?: EdgeNodeEnvironment;
   archived_at?: string | null;
   status: string;
   registration_state: string;
@@ -386,6 +415,19 @@ export interface EdgeNode {
   registered_at?: string | null;
   last_seen_at?: string | null;
   last_connected_at?: string | null;
+  /** @nullable */
+  last_heartbeat_at?: string | null;
+  /** @nullable */
+  last_inventory_at?: string | null;
+  /** @nullable */
+  last_telemetry_at?: string | null;
+  /** @nullable */
+  last_event_at?: string | null;
+  /** @nullable */
+  last_alarm_at?: string | null;
+  web_socket_open?: boolean;
+  credential_active?: boolean;
+  building_count?: number;
   credential_version?: number | null;
   organization_name?: string | null;
   building_name?: string | null;
@@ -399,6 +441,8 @@ export interface EdgeNode {
 export interface EdgeFleet {
   summary: EdgeFleetSummary;
   nodes: EdgeNode[];
+  pagination?: EdgeFleetPagination;
+  facets?: EdgeFleetFacets;
 }
 
 export interface EdgeDevice {
@@ -423,12 +467,182 @@ export type EdgeNodeDetailBuildingsItem = {
 
 export type EdgeNodeDetailAlarmsItem = { [key: string]: unknown };
 
+export type EdgeNodeDetailTelemetryItem = { [key: string]: unknown };
+
+export type EdgeNodeDetailEventsItem = { [key: string]: unknown };
+
+export type EdgeNodeDetailCommandsItem = { [key: string]: unknown };
+
+export type EdgeNodeDetailAuditItem = { [key: string]: unknown };
+
+export type EdgeNodeDetailTokensItem = { [key: string]: unknown };
+
+export type EdgeNodeDetailConfiguration = { [key: string]: unknown };
+
 export interface EdgeNodeDetail {
   node: EdgeNode;
   buildings: EdgeNodeDetailBuildingsItem[];
   devices: EdgeDevice[];
   alarms: EdgeNodeDetailAlarmsItem[];
+  telemetry?: EdgeNodeDetailTelemetryItem[];
+  events?: EdgeNodeDetailEventsItem[];
+  commands?: EdgeNodeDetailCommandsItem[];
+  audit?: EdgeNodeDetailAuditItem[];
+  tokens?: EdgeNodeDetailTokensItem[];
+  configuration?: EdgeNodeDetailConfiguration;
 }
+
+export type EdgeDraftInputEnvironment = typeof EdgeDraftInputEnvironment[keyof typeof EdgeDraftInputEnvironment];
+
+
+export const EdgeDraftInputEnvironment = {
+  unknown: 'unknown',
+  test: 'test',
+  staging: 'staging',
+  production: 'production',
+} as const;
+
+export type EdgeDraftInputEnabledModulesItem = typeof EdgeDraftInputEnabledModulesItem[keyof typeof EdgeDraftInputEnabledModulesItem];
+
+
+export const EdgeDraftInputEnabledModulesItem = {
+  access: 'access',
+  fire_monitoring: 'fire_monitoring',
+  elevator_monitoring: 'elevator_monitoring',
+  metering: 'metering',
+  hvac: 'hvac',
+  pumps: 'pumps',
+  cameras: 'cameras',
+} as const;
+
+export interface EdgeDraftInput {
+  /** @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$ */
+  edgeId: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  siteCode: string;
+  organizationId?: string;
+  buildingId?: string;
+  blockId?: string;
+  /** @maxLength 2000 */
+  description?: string;
+  /** @maxLength 120 */
+  projectName?: string;
+  environment?: EdgeDraftInputEnvironment;
+  /**
+     * @minimum 10
+     * @maximum 300
+     */
+  heartbeatSeconds?: number;
+  /**
+     * @minimum 30
+     * @maximum 86400
+     */
+  inventorySeconds?: number;
+  /**
+     * @minimum 5
+     * @maximum 3600
+     */
+  telemetrySeconds?: number;
+  enabledModules?: EdgeDraftInputEnabledModulesItem[];
+}
+
+export interface EdgeTokenGenerationInput {
+  /**
+     * @minimum 5
+     * @maximum 120
+     */
+  expiresInMinutes?: number;
+}
+
+export interface EdgeBoundBuilding {
+  id: string;
+  name: string;
+  address?: string | null;
+  is_primary?: boolean;
+}
+
+export type EdgeDraftResultProtocolVersion = typeof EdgeDraftResultProtocolVersion[keyof typeof EdgeDraftResultProtocolVersion];
+
+
+export const EdgeDraftResultProtocolVersion = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export interface EdgeDraftResult {
+  id: string;
+  edge_id: string;
+  organization_id: string;
+  building_id?: string | null;
+  block_id?: string | null;
+  protocol_version: EdgeDraftResultProtocolVersion;
+  name: string;
+  site_code: string;
+  registration_state: string;
+  buildings: EdgeBoundBuilding[];
+}
+
+export type EdgeDraftBootstrapResultProtocolVersion = typeof EdgeDraftBootstrapResultProtocolVersion[keyof typeof EdgeDraftBootstrapResultProtocolVersion];
+
+
+export const EdgeDraftBootstrapResultProtocolVersion = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export interface EdgeDraftBootstrapResult {
+  id: string;
+  edge_id: string;
+  edge_name: string;
+  organization_id: string;
+  building_id?: string | null;
+  block_id?: string | null;
+  protocol_version?: EdgeDraftBootstrapResultProtocolVersion;
+  site_code: string;
+  expires_at: string;
+  bootstrapToken: string;
+  oneTime: boolean;
+  buildings: EdgeBoundBuilding[];
+}
+
+export interface EdgeBuildingBindingInput {
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  buildingIds: string[];
+}
+
+export type EdgeNodeUpdateEnvironment = typeof EdgeNodeUpdateEnvironment[keyof typeof EdgeNodeUpdateEnvironment];
+
+
+export const EdgeNodeUpdateEnvironment = {
+  unknown: 'unknown',
+  test: 'test',
+  staging: 'staging',
+  production: 'production',
+} as const;
+
+export type EdgeNodeUpdateEnabledModulesItem = typeof EdgeNodeUpdateEnabledModulesItem[keyof typeof EdgeNodeUpdateEnabledModulesItem];
+
+
+export const EdgeNodeUpdateEnabledModulesItem = {
+  access: 'access',
+  fire_monitoring: 'fire_monitoring',
+  elevator_monitoring: 'elevator_monitoring',
+  metering: 'metering',
+  hvac: 'hvac',
+  pumps: 'pumps',
+  cameras: 'cameras',
+} as const;
 
 export interface EdgeNodeUpdate {
   /**
@@ -441,7 +655,40 @@ export interface EdgeNodeUpdate {
      * @maxLength 100
      */
   siteCode?: string;
+  /** @maxLength 2000 */
+  description?: string;
+  /** @maxLength 120 */
+  projectName?: string;
+  environment?: EdgeNodeUpdateEnvironment;
+  /**
+     * @minimum 10
+     * @maximum 300
+     */
+  heartbeatSeconds?: number;
+  /**
+     * @minimum 30
+     * @maximum 86400
+     */
+  inventorySeconds?: number;
+  /**
+     * @minimum 5
+     * @maximum 3600
+     */
+  telemetrySeconds?: number;
+  enabledModules?: EdgeNodeUpdateEnabledModulesItem[];
 }
+
+export type EdgeConnectionCheckOverallStatus = typeof EdgeConnectionCheckOverallStatus[keyof typeof EdgeConnectionCheckOverallStatus];
+
+
+export const EdgeConnectionCheckOverallStatus = {
+  OK: 'OK',
+  WARNING: 'WARNING',
+  FAILED: 'FAILED',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type EdgeConnectionCheckChecks = {[key: string]: { [key: string]: unknown }};
 
 export interface EdgeConnectionCheck {
   edgeId: string;
@@ -450,7 +697,9 @@ export interface EdgeConnectionCheck {
   heartbeatAgeSeconds?: number | null;
   reachable: boolean;
   checkedAt: string;
-  probe: 'websocket_and_heartbeat_status';
+  probe: 'server_observed_state_no_device_commands';
+  overallStatus?: EdgeConnectionCheckOverallStatus;
+  checks?: EdgeConnectionCheckChecks;
 }
 
 export type EdgeBootstrapTokenProtocolVersion = typeof EdgeBootstrapTokenProtocolVersion[keyof typeof EdgeBootstrapTokenProtocolVersion];
@@ -3508,8 +3757,68 @@ includeArchived?: boolean;
 };
 
 export type GetEdgeFleetParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+/**
+ * @maxLength 200
+ */
+search?: string;
+organizationId?: string;
+blockId?: string;
+buildingId?: string;
+status?: GetEdgeFleetStatus;
+websocket?: GetEdgeFleetWebsocket;
+version?: string;
+project?: string;
+environment?: GetEdgeFleetEnvironment;
+registration?: GetEdgeFleetRegistration;
 includeArchived?: boolean;
 };
+
+export type GetEdgeFleetStatus = typeof GetEdgeFleetStatus[keyof typeof GetEdgeFleetStatus];
+
+
+export const GetEdgeFleetStatus = {
+  ONLINE: 'ONLINE',
+  OFFLINE: 'OFFLINE',
+  DEGRADED: 'DEGRADED',
+  UNKNOWN: 'UNKNOWN',
+  DISABLED: 'DISABLED',
+} as const;
+
+export type GetEdgeFleetWebsocket = typeof GetEdgeFleetWebsocket[keyof typeof GetEdgeFleetWebsocket];
+
+
+export const GetEdgeFleetWebsocket = {
+  CONNECTED: 'CONNECTED',
+  DISCONNECTED: 'DISCONNECTED',
+} as const;
+
+export type GetEdgeFleetEnvironment = typeof GetEdgeFleetEnvironment[keyof typeof GetEdgeFleetEnvironment];
+
+
+export const GetEdgeFleetEnvironment = {
+  unknown: 'unknown',
+  test: 'test',
+  staging: 'staging',
+  production: 'production',
+} as const;
+
+export type GetEdgeFleetRegistration = typeof GetEdgeFleetRegistration[keyof typeof GetEdgeFleetRegistration];
+
+
+export const GetEdgeFleetRegistration = {
+  PENDING_REGISTRATION: 'PENDING_REGISTRATION',
+  REGISTERED: 'REGISTERED',
+  REVOKED: 'REVOKED',
+} as const;
 
 export type ListEdgeBootstrapTokens200 = {
   tokens: EdgeBootstrapToken[];

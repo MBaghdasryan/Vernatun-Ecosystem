@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EdgeNodeUpdateEnabledModulesItem } from './edgeNodeUpdateEnabledModulesItem';
+import type { EdgeNodeUpdateEnvironment } from './edgeNodeUpdateEnvironment';
 
 export interface EdgeNodeUpdate {
   /**
@@ -17,4 +19,25 @@ export interface EdgeNodeUpdate {
      * @maxLength 100
      */
   siteCode?: string;
+  /** @maxLength 2000 */
+  description?: string;
+  /** @maxLength 120 */
+  projectName?: string;
+  environment?: EdgeNodeUpdateEnvironment;
+  /**
+     * @minimum 10
+     * @maximum 300
+     */
+  heartbeatSeconds?: number;
+  /**
+     * @minimum 30
+     * @maximum 86400
+     */
+  inventorySeconds?: number;
+  /**
+     * @minimum 5
+     * @maximum 3600
+     */
+  telemetrySeconds?: number;
+  enabledModules?: EdgeNodeUpdateEnabledModulesItem[];
 }

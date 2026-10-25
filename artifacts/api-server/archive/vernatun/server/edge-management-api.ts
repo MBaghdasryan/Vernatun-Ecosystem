@@ -5,10 +5,12 @@ import {pool} from './db.js';
 import {ApiError,context,requireAuth,requirePermission} from './access.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {transaction,record} from './operations.js';
-import {closeEdgeConnection,isEdgeConnected} from './edge-sockets.js';
+import {closeEdgeConnection} from './edge-sockets.js';
 import {requestEdgeCommand} from './edge-command-service.js';
+import edgeWorkspaceRouter from './edge-workspace-api.js';
 
 const router=Router();
+router.use(edgeWorkspaceRouter);
 const uuid=z.string().uuid();
 const edgeId=z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/);
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
@@ -29,10 +31,6 @@ const blockUpdateSchema=z.object({
  name:z.string().trim().min(2).max(120).optional(),
  buildingIds:z.array(uuid).min(1).max(1000).optional()
 }).strict().refine(value=>Object.keys(value).length>0);
-const nodeUpdateSchema=z.object({
- name:z.string().trim().min(2).max(120).optional(),
- siteCode:z.string().trim().min(1).max(100).optional()
-}).strict().refine(value=>Object.keys(value).length>0);
 const capabilitySchema=z.array(z.enum(['BARRIER.OPEN'])).min(1).max(1);
 
 async function organizationScope(req:Request,permission:string){
@@ -51,17 +49,11 @@ async function nodeInScope(req:Request,id:string,permission:string){
    AND scope.organization_id=n.organization_id AND scope.building_id=$${params.length})`}
  const result=await pool.query(`SELECT n.* FROM edge_nodes n WHERE ${where}`,params);
  if(!result.rowCount)throw new ApiError(404,'edge_not_found');
+ if(c.building_id&&(await pool.query(`SELECT 1 FROM edge_node_buildings
+  WHERE edge_node_id=$1 AND building_id<>$2 LIMIT 1`,[id,c.building_id])).rowCount)
+  throw new ApiError(404,'edge_not_found');
  return {context:c,node:result.rows[0]};
 }
-async function readableEdgeScope(req:Request){
- const identity=await context(req);
- const permission=['edge.read','edge.inventory.read','edge.health.read'].find(key=>identity.permissions.includes(key));
- if(!permission)throw new ApiError(403,'edge_read_required');
- return organizationScope(req,permission);
-}
-const edgeStatusSql=`CASE WHEN n.status='DISABLED' THEN 'DISABLED'
- WHEN n.last_seen_at IS NULL THEN 'UNKNOWN'
- WHEN n.last_seen_at<now()-interval '90 seconds' THEN 'OFFLINE' ELSE n.status END`;
 
 router.get('/edge-console/buildings',async(req,res)=>{
  const c=await requirePermission(req,'edge.bootstrap.create');
@@ -78,6 +70,9 @@ router.get('/edge-console/blocks',async(req,res)=>{
  if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const values:any[]=[];let where='TRUE';
  if(c.organization_id){values.push(c.organization_id);where=`b.organization_id=$${values.length}`}
+ if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
+  SELECT 1 FROM edge_block_buildings allowed WHERE allowed.block_id=b.id AND allowed.building_id=$${values.length})
+  AND NOT EXISTS(SELECT 1 FROM edge_block_buildings other WHERE other.block_id=b.id AND other.building_id<>$${values.length})`}
  if(req.query.includeArchived!=='true')where+=` AND b.archived_at IS NULL`;
  const result=await pool.query(`SELECT b.id,b.organization_id,b.code,b.name,b.created_at,
   b.archived_at,
@@ -124,11 +119,14 @@ router.patch('/edge-console/blocks/:id',async(req,res)=>{
  const c=await requirePermission(req,'edge.manage');requireRecentAuthentication(req);
  if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const blockId=uuid.parse(req.params.id),input=blockUpdateSchema.parse(req.body);
+ if(c.building_id&&input.buildingIds?.some(id=>id!==c.building_id))throw new ApiError(403,'building_scope_mismatch');
  const values:any[]=[blockId];let where='id=$1';
  if(c.organization_id){values.push(c.organization_id);where+=` AND organization_id=$${values.length}`}
  if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
    SELECT 1 FROM edge_block_buildings scope WHERE scope.block_id=edge_blocks.id
     AND scope.organization_id=edge_blocks.organization_id AND scope.building_id=$${values.length})`}
+ if(c.building_id)where+=` AND NOT EXISTS(SELECT 1 FROM edge_block_buildings other
+  WHERE other.block_id=edge_blocks.id AND other.building_id<>$${values.length})`;
  const result=await transaction(async db=>{
   const locked=await db.query(`SELECT id,organization_id,code,name,archived_at FROM edge_blocks
    WHERE ${where} FOR UPDATE`,values);
@@ -176,6 +174,8 @@ router.delete('/edge-console/blocks/:id',async(req,res)=>{
  if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
   SELECT 1 FROM edge_block_buildings scope WHERE scope.block_id=edge_blocks.id
    AND scope.organization_id=edge_blocks.organization_id AND scope.building_id=$${values.length})`}
+ if(c.building_id)where+=` AND NOT EXISTS(SELECT 1 FROM edge_block_buildings other
+  WHERE other.block_id=edge_blocks.id AND other.building_id<>$${values.length})`;
  const result=await transaction(async db=>{
   const locked=await db.query(`SELECT id,organization_id,archived_at FROM edge_blocks WHERE ${where} FOR UPDATE`,values);
   if(!locked.rowCount)throw new ApiError(404,'edge_block_not_found');
@@ -200,6 +200,8 @@ router.post('/edge-console/blocks/:id/restore',async(req,res)=>{
  if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
   SELECT 1 FROM edge_block_buildings scope WHERE scope.block_id=edge_blocks.id
    AND scope.organization_id=edge_blocks.organization_id AND scope.building_id=$${values.length})`}
+ if(c.building_id)where+=` AND NOT EXISTS(SELECT 1 FROM edge_block_buildings other
+  WHERE other.block_id=edge_blocks.id AND other.building_id<>$${values.length})`;
  const result=await transaction(async db=>{
   const row=await db.query(`UPDATE edge_blocks SET archived_at=NULL WHERE ${where} AND archived_at IS NOT NULL
    RETURNING id,organization_id,code,name,created_at,archived_at`,values);
@@ -214,9 +216,10 @@ router.get('/edge-console/bootstrap-tokens',async(req,res)=>{
  if(!c.organization_id&&!c.permissions.includes('edge.fleet.read'))throw new ApiError(403,'organization_scope_required');
  const values:any[]=[];let where='TRUE';
  if(c.organization_id){values.push(c.organization_id);where=`t.organization_id=$${values.length}`}
- if(c.building_id){values.push(c.building_id);where+=` AND (t.building_id=$${values.length} OR EXISTS(
+  if(c.building_id){values.push(c.building_id);where+=` AND (t.building_id=$${values.length} OR (EXISTS(
   SELECT 1 FROM edge_block_buildings bb WHERE bb.block_id=t.block_id AND bb.organization_id=t.organization_id
-   AND bb.building_id=$${values.length}))`}
+    AND bb.building_id=$${values.length}) AND NOT EXISTS(
+     SELECT 1 FROM edge_block_buildings other WHERE other.block_id=t.block_id AND other.building_id<>$${values.length})))`}
  const rows=await pool.query(`SELECT t.id,t.edge_id,t.organization_id,t.building_id,t.block_id,t.protocol_version,
   t.edge_name,t.site_code,t.expires_at,t.used_at,t.revoked_at,t.created_at,o.name AS organization_name,
   b.name AS building_name,bl.name AS block_name,
@@ -226,29 +229,6 @@ router.get('/edge-console/bootstrap-tokens',async(req,res)=>{
   LEFT JOIN buildings b ON b.id=t.building_id LEFT JOIN edge_blocks bl ON bl.id=t.block_id
   WHERE ${where} ORDER BY t.created_at DESC LIMIT 500`,values);
  res.json({tokens:rows.rows});
-});
-router.get('/edge-console/nodes/:id/connection-check',async(req,res)=>{
- const {node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.read');
- const checkedAt=new Date();
- const webSocketOpen=isEdgeConnected(node.id);
- const heartbeatAgeSeconds=node.last_seen_at?Math.max(0,Math.floor((checkedAt.getTime()-new Date(node.last_seen_at).getTime())/1000)):null;
- const heartbeatFresh=heartbeatAgeSeconds!==null&&heartbeatAgeSeconds<=90;
- res.json({edgeId:node.edge_id,webSocketOpen,heartbeatFresh,heartbeatAgeSeconds,
-  reachable:webSocketOpen||heartbeatFresh,checkedAt:checkedAt.toISOString(),probe:'websocket_and_heartbeat_status'});
-});
-router.patch('/edge-console/nodes/:id',async(req,res)=>{
- const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.manage');
- requireRecentAuthentication(req);
- if(node.archived_at)throw new ApiError(409,'edge_node_archived');
- const input=nodeUpdateSchema.parse(req.body);
- const result=await transaction(async db=>{
-  const updated=(await db.query(`UPDATE edge_nodes SET name=$2,site_code=$3,config_version=config_version+1,updated_at=now()
-   WHERE id=$1 RETURNING id,edge_id,organization_id,building_id,block_id,protocol_version,name,site_code`,
-   [node.id,input.name??node.name,input.siteCode??node.site_code])).rows[0];
-  await record(db,req,{...c,organization_id:node.organization_id},'edge.node.update','edge_node',node.id,{name:updated.name,siteCode:updated.site_code});
-  return updated;
- });
- res.json(result);
 });
 router.delete('/edge-console/nodes/:id',async(req,res)=>{
  const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.manage');
@@ -310,58 +290,6 @@ router.post('/edge-console/blocks/:id/bootstrap-tokens',async(req,res)=>{
   return row;
  });
  res.status(201).json({...token,bootstrapToken:plaintext,oneTime:true});
-});
-router.get('/edge-console/fleet',async(req,res)=>{
- const c=await readableEdgeScope(req);
- const global=c.permissions.includes('edge.fleet.read')&&!c.organization_id;
- if(!global&&!c.organization_id)throw new ApiError(403,'organization_scope_required');
- const values:any[]=[];let where='TRUE';
- if(!global){values.push(c.organization_id);where=`n.organization_id=$${values.length}`}
- const includeArchived=req.query.includeArchived==='true';
- if(!includeArchived)where+=` AND n.archived_at IS NULL`;
- if(c.building_id){values.push(c.building_id);where+=` AND EXISTS(
-  SELECT 1 FROM edge_node_buildings scope WHERE scope.edge_node_id=n.id
-   AND scope.organization_id=n.organization_id AND scope.building_id=$${values.length})`}
- const result=await pool.query(`SELECT n.id,n.edge_id,n.organization_id,n.building_id,n.block_id,n.protocol_version,n.name,n.site_code,n.archived_at,
-  ${edgeStatusSql} AS status,n.registration_state,n.agent_version,n.local_authorization_status,n.queue_depth,
-  n.registered_at,n.last_seen_at,n.last_connected_at,n.credential_version,o.name AS organization_name,
-  b.name AS building_name,bl.name AS block_name,
-  (SELECT count(*)::int FROM edge_node_buildings nb WHERE nb.edge_node_id=n.id) AS building_count,
-  (SELECT count(*)::int FROM edge_device_inventory d WHERE d.edge_node_id=n.id) AS device_count,
-  (SELECT count(*)::int FROM edge_alarms a WHERE a.edge_node_id=n.id AND a.status='active') AS active_alarms
-  FROM edge_nodes n JOIN organizations o ON o.id=n.organization_id
-  LEFT JOIN buildings b ON b.id=n.building_id LEFT JOIN edge_blocks bl ON bl.id=n.block_id
-  WHERE ${where} ORDER BY n.last_seen_at DESC NULLS LAST,n.name`,values);
- const rows=result.rows.map(row=>c.permissions.includes('edge.alarms.read')||c.permissions.includes('edge.read')
-  ?row:{...row,active_alarms:0});
-  const activeRows=rows.filter(row=>!row.archived_at);
-  res.json({summary:{total:activeRows.length,online:activeRows.filter(r=>r.status==='ONLINE').length,
-   degraded:activeRows.filter(r=>r.status==='DEGRADED').length,offline:activeRows.filter(r=>r.status==='OFFLINE').length,
-   activeAlarms:activeRows.reduce((sum,r)=>sum+Number(r.active_alarms),0)},nodes:rows});
-});
-router.get('/edge-console/nodes/:id',async(req,res)=>{
- const identity=await context(req);
- const permission=['edge.read','edge.inventory.read','edge.health.read'].find(key=>identity.permissions.includes(key));
- if(!permission)throw new ApiError(403,'edge_read_required');
- const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),permission);
- const devices=c.permissions.includes('edge.inventory.read')||c.permissions.includes('edge.read')
-  ?await pool.query(`SELECT d.id,d.edge_device_id,d.thingsboard_id,d.building_id,b.name AS building_name,
-    d.name,d.profile,d.device_type,d.label,d.unit_id,
-    d.capabilities,d.reported_online,d.last_seen_at,d.last_telemetry_at,
-    COALESCE((SELECT jsonb_agg(jsonb_build_object('unitId',a.unit_id,'allowedCapabilities',a.allowed_capabilities))
-     FROM edge_device_access a WHERE a.device_id=d.id),'[]'::jsonb) AS access_units
-    FROM edge_device_inventory d LEFT JOIN buildings b ON b.id=d.building_id
-    WHERE d.edge_node_id=$1 ORDER BY b.name,d.name`,[node.id])
-  :{rows:[]};
- const alarms=c.permissions.includes('edge.alarms.read')||c.permissions.includes('edge.read')
-  ?await pool.query(`SELECT id,external_alarm_id,alarm_type,severity,status,received_at,acknowledged_at,resolved_at
-    FROM edge_alarms WHERE edge_node_id=$1 ORDER BY received_at DESC LIMIT 100`,[node.id])
-  :{rows:[]};
- const buildings=await pool.query(`SELECT b.id,b.name FROM edge_node_buildings nb
-  JOIN buildings b ON b.id=nb.building_id AND b.organization_id=nb.organization_id
-  WHERE nb.edge_node_id=$1 ORDER BY b.name`,[node.id]);
- res.json({node:{...node,status:node.status==='ONLINE'&&node.last_seen_at&&
-  Date.now()-new Date(node.last_seen_at).getTime()>90_000?'OFFLINE':node.status},buildings:buildings.rows,devices:devices.rows,alarms:alarms.rows});
 });
 router.get('/edge-console/nodes/:id/devices',async(req,res)=>{
  const {node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.inventory.read');
@@ -437,9 +365,10 @@ router.post('/edge-console/bootstrap-tokens/:id/revoke',async(req,res)=>{
  const result=await transaction(async db=>{
   const row=await db.query(`UPDATE edge_bootstrap_tokens SET revoked_at=COALESCE(revoked_at,now())
    WHERE id=$1 AND used_at IS NULL AND ($2::uuid IS NULL OR organization_id=$2)
-    AND ($3::uuid IS NULL OR building_id=$3 OR EXISTS(
+     AND ($3::uuid IS NULL OR building_id=$3 OR (EXISTS(
      SELECT 1 FROM edge_block_buildings bb WHERE bb.block_id=edge_bootstrap_tokens.block_id
-      AND bb.organization_id=edge_bootstrap_tokens.organization_id AND bb.building_id=$3))
+       AND bb.organization_id=edge_bootstrap_tokens.organization_id AND bb.building_id=$3) AND NOT EXISTS(
+        SELECT 1 FROM edge_block_buildings other WHERE other.block_id=edge_bootstrap_tokens.block_id AND other.building_id<>$3)))
    RETURNING id,organization_id,edge_id`,[tokenId,c.organization_id,c.building_id]);
   if(!row.rowCount)throw new ApiError(404,'bootstrap_token_not_found');
   await record(db,req,{...c,organization_id:row.rows[0].organization_id},'edge.bootstrap.revoke','edge_bootstrap_token',row.rows[0].id,{edgeId:row.rows[0].edge_id});
@@ -448,6 +377,8 @@ router.post('/edge-console/bootstrap-tokens/:id/revoke',async(req,res)=>{
  res.json({status:'REVOKED',id:result.id});
 });
 router.post('/edge-console/nodes/:id/credentials/rotate',async(req,res)=>{
+ const actor=await context(req);
+ if(actor.role_key!=='platform_admin'||actor.organization_id)throw new ApiError(403,'platform_edge_security_required');
  const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.credentials.rotate');
  requireRecentAuthentication(req);
  const plaintext=`vne_${randomBytes(32).toString('base64url')}`;
@@ -465,6 +396,8 @@ router.post('/edge-console/nodes/:id/credentials/rotate',async(req,res)=>{
   instruction:'Update the Edge Agent secret. The current credential remains valid until this new credential is used or its 30-minute expiry.'});
 });
 router.post('/edge-console/nodes/:id/credentials/revoke',async(req,res)=>{
+ const actor=await context(req);
+ if(actor.role_key!=='platform_admin'||actor.organization_id)throw new ApiError(403,'platform_edge_security_required');
  const {context:c,node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.credentials.revoke');
  requireRecentAuthentication(req);
  await transaction(async db=>{

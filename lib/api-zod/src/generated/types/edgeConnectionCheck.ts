@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EdgeConnectionCheckChecks } from './edgeConnectionCheckChecks';
+import type { EdgeConnectionCheckOverallStatus } from './edgeConnectionCheckOverallStatus';
 
 export interface EdgeConnectionCheck {
   edgeId: string;
@@ -13,5 +15,7 @@ export interface EdgeConnectionCheck {
   heartbeatAgeSeconds?: number | null;
   reachable: boolean;
   checkedAt: Date;
-  probe: 'websocket_and_heartbeat_status';
+  probe: 'server_observed_state_no_device_commands';
+  overallStatus?: EdgeConnectionCheckOverallStatus;
+  checks?: EdgeConnectionCheckChecks;
 }

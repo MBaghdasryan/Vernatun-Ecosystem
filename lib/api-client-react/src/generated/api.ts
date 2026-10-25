@@ -68,12 +68,16 @@ import type {
   EdgeBootstrapInput,
   EdgeBootstrapResponse,
   EdgeBuilding,
+  EdgeBuildingBindingInput,
   EdgeCommandResult,
   EdgeCommandResultResponse,
   EdgeConfiguration,
   EdgeConnectionCheck,
   EdgeDevice,
   EdgeDeviceAccessInput,
+  EdgeDraftBootstrapResult,
+  EdgeDraftInput,
+  EdgeDraftResult,
   EdgeFleet,
   EdgeHeartbeatInput,
   EdgeInventoryAccepted,
@@ -87,6 +91,7 @@ import type {
   EdgeResidentDevice,
   EdgeRotatedCredential,
   EdgeStaffCommandInput,
+  EdgeTokenGenerationInput,
   EdgeV2BatchInput,
   EdgeV2CommandResult,
   EdgeV2HeartbeatInput,
@@ -2254,6 +2259,325 @@ export function useGetEdgeFleet<TData = Awaited<ReturnType<typeof getEdgeFleet>>
 
 
 
+
+export const getCreateEdgeDraftUrl = () => {
+
+
+
+
+  return `/api/edge-console/nodes`
+}
+
+export const createEdgeDraft = async (edgeDraftInput: EdgeDraftInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeDraftResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeDraftResult>(getCreateEdgeDraftUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeDraftInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEdgeDraftMutationKey = () => ['createEdgeDraft'] as const;
+
+export const getCreateEdgeDraftMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeDraft>>, TError,CreateEdgeDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEdgeDraft>>, TError,CreateEdgeDraftMutationVariables, TContext> => {
+
+const mutationKey = getCreateEdgeDraftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEdgeDraft>>, CreateEdgeDraftMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEdgeDraft(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEdgeDraftMutationResult = NonNullable<Awaited<ReturnType<typeof createEdgeDraft>>>
+    export type CreateEdgeDraftMutationBody = BodyType<EdgeDraftInput>
+    export type CreateEdgeDraftMutationError = ErrorType<void>
+    export type CreateEdgeDraftMutationVariables = {data: BodyType<EdgeDraftInput>}
+
+    export const useCreateEdgeDraft = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEdgeDraft>>, TError,CreateEdgeDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEdgeDraft>>,
+        TError,
+        CreateEdgeDraftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEdgeDraftMutationOptions(options));
+    }
+
+export const getGenerateEdgeDraftTokenUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/bootstrap-token`
+}
+
+export const generateEdgeDraftToken = async (id: string,
+    edgeTokenGenerationInput: EdgeTokenGenerationInput, options?: Parameters<typeof customFetch>[1]): Promise<EdgeDraftBootstrapResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EdgeDraftBootstrapResult>(getGenerateEdgeDraftTokenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeTokenGenerationInput)
+  }
+);}
+
+
+
+
+
+export const getGenerateEdgeDraftTokenMutationKey = () => ['generateEdgeDraftToken'] as const;
+
+export const getGenerateEdgeDraftTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateEdgeDraftToken>>, TError,GenerateEdgeDraftTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateEdgeDraftToken>>, TError,GenerateEdgeDraftTokenMutationVariables, TContext> => {
+
+const mutationKey = getGenerateEdgeDraftTokenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateEdgeDraftToken>>, GenerateEdgeDraftTokenMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  generateEdgeDraftToken(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateEdgeDraftTokenMutationResult = NonNullable<Awaited<ReturnType<typeof generateEdgeDraftToken>>>
+    export type GenerateEdgeDraftTokenMutationBody = BodyType<EdgeTokenGenerationInput>
+    export type GenerateEdgeDraftTokenMutationError = ErrorType<void>
+    export type GenerateEdgeDraftTokenMutationVariables = {id: string;data: BodyType<EdgeTokenGenerationInput>}
+
+    export const useGenerateEdgeDraftToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateEdgeDraftToken>>, TError,GenerateEdgeDraftTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateEdgeDraftToken>>,
+        TError,
+        GenerateEdgeDraftTokenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getGenerateEdgeDraftTokenMutationOptions(options));
+    }
+
+export const getListEdgeBoundBuildingsUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/buildings`
+}
+
+export const listEdgeBoundBuildings = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getListEdgeBoundBuildingsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEdgeBoundBuildingsQueryKey = (id: string,) => {
+    return [
+    `/api/edge-console/nodes/${id}/buildings`
+    ] as const;
+    }
+
+
+export const getListEdgeBoundBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listEdgeBoundBuildings>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBoundBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEdgeBoundBuildingsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdgeBoundBuildings>>> = ({ signal }) => listEdgeBoundBuildings(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEdgeBoundBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEdgeBoundBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdgeBoundBuildings>>>
+export type ListEdgeBoundBuildingsQueryError = ErrorType<unknown>
+
+
+
+export function useListEdgeBoundBuildings<TData = Awaited<ReturnType<typeof listEdgeBoundBuildings>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEdgeBoundBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEdgeBoundBuildingsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEdgeBoundBuildingsUrl = (id: string,) => {
+
+
+
+
+  return `/api/edge-console/nodes/${id}/buildings`
+}
+
+export const updateEdgeBoundBuildings = async (id: string,
+    edgeBuildingBindingInput: EdgeBuildingBindingInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUpdateEdgeBoundBuildingsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(edgeBuildingBindingInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateEdgeBoundBuildingsMutationKey = () => ['updateEdgeBoundBuildings'] as const;
+
+export const getUpdateEdgeBoundBuildingsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBoundBuildings>>, TError,UpdateEdgeBoundBuildingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBoundBuildings>>, TError,UpdateEdgeBoundBuildingsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEdgeBoundBuildingsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEdgeBoundBuildings>>, UpdateEdgeBoundBuildingsMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEdgeBoundBuildings(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEdgeBoundBuildingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateEdgeBoundBuildings>>>
+    export type UpdateEdgeBoundBuildingsMutationBody = BodyType<EdgeBuildingBindingInput>
+    export type UpdateEdgeBoundBuildingsMutationError = ErrorType<void>
+    export type UpdateEdgeBoundBuildingsMutationVariables = {id: string;data: BodyType<EdgeBuildingBindingInput>}
+
+    export const useUpdateEdgeBoundBuildings = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEdgeBoundBuildings>>, TError,UpdateEdgeBoundBuildingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEdgeBoundBuildings>>,
+        TError,
+        UpdateEdgeBoundBuildingsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEdgeBoundBuildingsMutationOptions(options));
+    }
 
 export const getListEdgeBootstrapTokensUrl = () => {
 

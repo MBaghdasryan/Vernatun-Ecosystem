@@ -8,11 +8,23 @@
 import type { EdgeDevice } from './edgeDevice';
 import type { EdgeNode } from './edgeNode';
 import type { EdgeNodeDetailAlarmsItem } from './edgeNodeDetailAlarmsItem';
+import type { EdgeNodeDetailAuditItem } from './edgeNodeDetailAuditItem';
 import type { EdgeNodeDetailBuildingsItem } from './edgeNodeDetailBuildingsItem';
+import type { EdgeNodeDetailCommandsItem } from './edgeNodeDetailCommandsItem';
+import type { EdgeNodeDetailConfiguration } from './edgeNodeDetailConfiguration';
+import type { EdgeNodeDetailEventsItem } from './edgeNodeDetailEventsItem';
+import type { EdgeNodeDetailTelemetryItem } from './edgeNodeDetailTelemetryItem';
+import type { EdgeNodeDetailTokensItem } from './edgeNodeDetailTokensItem';
 
 export interface EdgeNodeDetail {
   node: EdgeNode;
   buildings: EdgeNodeDetailBuildingsItem[];
   devices: EdgeDevice[];
   alarms: EdgeNodeDetailAlarmsItem[];
+  telemetry?: EdgeNodeDetailTelemetryItem[];
+  events?: EdgeNodeDetailEventsItem[];
+  commands?: EdgeNodeDetailCommandsItem[];
+  audit?: EdgeNodeDetailAuditItem[];
+  tokens?: EdgeNodeDetailTokensItem[];
+  configuration?: EdgeNodeDetailConfiguration;
 }

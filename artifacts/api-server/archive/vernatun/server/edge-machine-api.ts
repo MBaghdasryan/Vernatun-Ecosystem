@@ -62,20 +62,27 @@ router.post('/register',async(req,res)=>{
    WHERE token_hash=$1 FOR UPDATE`,[tokenHash])).rows[0];
   if(!token||token.used_at||token.revoked_at||new Date(token.expires_at).getTime()<=Date.now())
    throw new ApiError(401,'bootstrap_token_invalid_or_used');
-  if(token.edge_id!==input.edgeId||token.organization_id.toLowerCase()!==input.tenantId.toLowerCase()||
-   token.building_id.toLowerCase()!==input.buildingId.toLowerCase()||token.site_code!==input.siteCode||
+  if(token.protocol_version!==1||token.edge_id!==input.edgeId||token.organization_id.toLowerCase()!==input.tenantId.toLowerCase()||
+   token.building_id?.toLowerCase()!==input.buildingId.toLowerCase()||token.site_code!==input.siteCode||
    token.edge_name!==input.edgeName)
    throw new ApiError(403,'bootstrap_binding_mismatch');
-  const occupied=await client.query(`SELECT id FROM edge_nodes
-   WHERE edge_id=$1 OR building_id=$2`,[input.edgeId,input.buildingId]);
-  if(occupied.rowCount)throw new ApiError(409,'edge_already_registered');
-  const node=(await client.query(`INSERT INTO edge_nodes
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[input.edgeId]);
+  const occupied=await client.query(`SELECT * FROM edge_nodes
+   WHERE edge_id=$1 OR building_id=$2 FOR UPDATE`,[input.edgeId,input.buildingId]);
+  const draft=occupied.rows.find(n=>n.edge_id===input.edgeId&&n.organization_id===token.organization_id&&
+   n.building_id===token.building_id&&n.protocol_version===1&&n.registration_state==='PENDING_REGISTRATION'&&!n.archived_at);
+  if(occupied.rowCount&&(!draft||occupied.rowCount!==1))throw new ApiError(409,'edge_already_registered');
+  const node=draft?(await client.query(`UPDATE edge_nodes SET registration_state='REGISTERED',registered_at=now(),
+   agent_version=$2,platform=$3,capabilities=$4,updated_at=now() WHERE id=$1
+   RETURNING id,edge_id,organization_id,building_id,name,status`,
+   [draft.id,input.agentVersion??null,input.platform??null,JSON.stringify(input.capabilities??{})])).rows[0]
+   :(await client.query(`INSERT INTO edge_nodes
    (edge_id,organization_id,building_id,name,site_code,agent_version,platform,capabilities)
    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,edge_id,organization_id,building_id,name,status`,
    [input.edgeId,token.organization_id,token.building_id,input.edgeName,token.site_code,
     input.agentVersion??null,input.platform??null,JSON.stringify(input.capabilities??{})])).rows[0];
   await client.query(`INSERT INTO edge_node_buildings(edge_node_id,organization_id,building_id)
-   VALUES($1,$2,$3)`,[node.id,node.organization_id,node.building_id]);
+   VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[node.id,node.organization_id,node.building_id]);
   await client.query(`INSERT INTO edge_credentials(edge_node_id,credential_hash,version)
    VALUES($1,$2,1)`,[node.id,credentialHash]);
   await client.query(`UPDATE edge_bootstrap_tokens SET used_at=now(),used_by_edge_node_id=$2 WHERE id=$1`,
@@ -99,7 +106,7 @@ router.post('/heartbeat',machineAuth,async(req:MachineRequest,res)=>{
  verifyRequestIdentity(req,node,body);
  const authStatus=body.local?.commandAuthorization??'UNKNOWN';
  const status=authStatus==='OK'?'ONLINE':'DEGRADED';
- await pool.query(`UPDATE edge_nodes SET status=$2,last_seen_at=now(),
+ await pool.query(`UPDATE edge_nodes SET status=$2,last_seen_at=now(),last_heartbeat_at=now(),
   agent_version=COALESCE($3,agent_version),local_authorization_status=$4,queue_depth=$5,updated_at=now()
   WHERE id=$1`,[node.id,status,body.agentVersion??null,authStatus,body.local?.queueDepth??0]);
  res.json({status:'ACCEPTED',serverTime:new Date().toISOString()});
@@ -143,7 +150,7 @@ router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
    [node.id,node.organization_id,node.building_id,device.deviceId,device.thingsboardId??null,
     device.profile,deviceType(device.profile),device.label??null,JSON.stringify(capabilities),device.active??null]);
   }
-  await client.query(`UPDATE edge_nodes SET last_seen_at=now(),status=CASE WHEN status='DISABLED' THEN status ELSE 'ONLINE' END,updated_at=now() WHERE id=$1`,[node.id]);
+  await client.query(`UPDATE edge_nodes SET last_seen_at=now(),last_inventory_at=now(),status=CASE WHEN status='DISABLED' THEN status ELSE 'ONLINE' END,updated_at=now() WHERE id=$1`,[node.id]);
   await client.query('COMMIT');
   res.json({status:'ACCEPTED',devices:body.devices.length});
  }catch(error){await client.query('ROLLBACK');throw error}
@@ -182,7 +189,7 @@ router.post('/telemetry/batch',machineAuth,async(req:MachineRequest,res)=>{
    }
    await client.query('UPDATE edge_device_inventory SET last_telemetry_at=now(),last_seen_at=now() WHERE id=$1',[device]);
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_telemetry_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -208,7 +215,7 @@ router.post('/events/batch',machineAuth,async(req:MachineRequest,res)=>{
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_event_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -233,7 +240,7 @@ router.post('/alarms/batch',machineAuth,async(req:MachineRequest,res)=>{
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
   }
-  await client.query('UPDATE edge_nodes SET last_seen_at=now(),updated_at=now() WHERE id=$1',[node.id]);
+  await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_alarm_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error}
  finally{client.release()}
@@ -243,9 +250,10 @@ router.post('/alarms/batch',machineAuth,async(req:MachineRequest,res)=>{
 router.get('/config',machineAuth,async(req:MachineRequest,res)=>{
  const node=await authenticatedNode(req);
  if(req.query.edgeId!==node.edge_id)throw new ApiError(403,'edge_identity_mismatch');
- const row=(await pool.query(`SELECT config_version AS "configVersion",capabilities,
+ const row=(await pool.query(`SELECT config_version AS "configVersion",capabilities,management_config,
   organization_id AS "tenantId",building_id AS "buildingId" FROM edge_nodes WHERE id=$1`,[node.id])).rows[0];
- res.json({edgeId:node.edge_id,...row,heartbeatIntervalSeconds:30,inventoryIntervalSeconds:300,
+ res.json({edgeId:node.edge_id,...row,heartbeatIntervalSeconds:row.management_config.heartbeatSeconds,
+  inventoryIntervalSeconds:row.management_config.inventorySeconds,telemetryBatchIntervalSeconds:row.management_config.telemetrySeconds,
   endpoints:{heartbeat:'/api/edge/v1/heartbeat',inventory:'/api/edge/v1/inventory',
    telemetry:'/api/edge/v1/telemetry/batch',events:'/api/edge/v1/events/batch',
    alarms:'/api/edge/v1/alarms/batch',websocket:'/api/edge/v1/connect'}});
