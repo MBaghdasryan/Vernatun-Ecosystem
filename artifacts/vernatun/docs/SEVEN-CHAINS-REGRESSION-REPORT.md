@@ -1,11 +1,11 @@
 # Seven-chain isolated regression report
 
-- Run: 2026-10-23T21:44:08.159Z
+- Run: 2026-10-25T08:01:21.886Z
 - Result: PASS
-- Target: isolated database `vernatun_test`, seven random temporary schemas; production database was not used.
-- External services: no live mail, payment, or banking calls; provider integrations use existing isolated test modes.
-- Tests: 43 passed; 0 failed.
-- QA cleanup: PASS — all seven runner-owned schemas removed and absence verified
+- Target: isolated database `vernatun_test`; each journey receives its own random schema. CI supplies disposable PostgreSQL and configures no production credentials.
+- External services: `NODE_ENV=test` selects the development outbox; this CI job does not provide mail, payment, banking, or production secrets.
+- Tests: 43 passed; 0 failed; 0 chains not run.
+- QA cleanup: PASS — database schemas 7/7 removed and absence verified; private files cleaned.
 - Repeat from workspace root: `corepack pnpm --filter @workspace/api-server run test:seven-chains`.
 
 | # | User journey | Result | Passed | Failed |

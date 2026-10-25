@@ -152,37 +152,43 @@ try{
   const child=spawnSync(process.execPath,[cli,...args],{env,stdio:'inherit'});
   if(child.status!==0){status=child.status??1;break}
  }
-}catch(error){status=1;throw error}finally{
+}catch(error){status=1;if(isSevenChains)process.stderr.write('Seven-chain runner failed before completion; owned-schema cleanup will continue.\n');else throw error}finally{
  let cleanupOk=true;
+ let privateFilesCleaned=true;
+ const removedSchemas:string[]=[];
  // Only the random schemas created by this runner in vernatun_test are removed.
  for(const name of createdSchemas){
   const schemaEnv={...env,DATABASE_URL:urlForSchema(name),PRIVATE_FILES_TEST_RUN:name};
-  const cleanup=spawnSync(process.execPath,[cli,'server/tests/storage-cleanup.ts'],{env:schemaEnv,stdio:'inherit'});
-  if(cleanup.status!==0){cleanupOk=false;status=cleanup.status??1}
+  try{
+   const cleanup=spawnSync(process.execPath,[cli,'server/tests/storage-cleanup.ts'],{env:schemaEnv,stdio:'inherit'});
+   if(cleanup.status!==0){cleanupOk=false;privateFilesCleaned=false;status=cleanup.status??1}
+  }catch{cleanupOk=false;privateFilesCleaned=false;status=1}
   try{
    await testAdmin.query(`DROP SCHEMA IF EXISTS "${name}" CASCADE`);
    const exists=(await testAdmin.query('SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name=$1) AS exists',[name])).rows[0].exists;
    cleanupOk=cleanupOk&&!exists;
    if(exists)status=1;
+   else removedSchemas.push(name);
   }catch(error){cleanupOk=false;status=1;process.stderr.write(`QA schema cleanup failed (${name}): ${error instanceof Error?error.message:'unknown'}\n`)}
  }
- await testAdmin.end();
+ try{await testAdmin.end()}catch{cleanupOk=false;status=1}
  if(isSevenChains){
   const totals=chainResults.reduce((sum,chain)=>({passed:sum.passed+chain.passed,failed:sum.failed+chain.failed}),{passed:0,failed:0});
+  const notRun=sevenChains.length-chainResults.length;
   const report=[
    '# Seven-chain isolated regression report',
    '',
    `- Run: ${new Date().toISOString()}`,
    `- Result: ${status===0&&cleanupOk?'PASS':'FAIL'}`,
-   '- Target: isolated database `vernatun_test`, seven random temporary schemas; production database was not used.',
-   `- External services: no live mail, payment, or banking calls; provider integrations use existing isolated test modes.`,
-   `- Tests: ${totals.passed} passed; ${totals.failed} failed.`,
-   `- QA cleanup: ${cleanupOk?'PASS — all seven runner-owned schemas removed and absence verified':'FAIL — cleanup error; see test output.'}`,
+   '- Target: isolated database `vernatun_test`; each journey receives its own random schema. CI supplies disposable PostgreSQL and configures no production credentials.',
+   '- External services: `NODE_ENV=test` selects the development outbox; this CI job does not provide mail, payment, banking, or production secrets.',
+   `- Tests: ${totals.passed} passed; ${totals.failed} failed; ${notRun} chains not run.`,
+   `- QA cleanup: ${cleanupOk?'PASS':'FAIL'} — database schemas ${removedSchemas.length}/${createdSchemas.length} removed and absence verified; private files ${privateFilesCleaned?'cleaned':'not fully cleaned'}.`,
    '- Repeat from workspace root: `corepack pnpm --filter @workspace/api-server run test:seven-chains`.',
    '',
    '| # | User journey | Result | Passed | Failed |',
    '|---|---|---:|---:|---:|',
-   ...chainResults.map((chain,index)=>`| ${index+1} | ${chain.name} | ${chain.exitCodes.every(code=>code===0)&&chain.failed===0?'PASS':'FAIL'} | ${chain.passed} | ${chain.failed} |`),
+   ...sevenChains.map((chain,index)=>{const result=chainResults[index];const state=!result?'NOT RUN':!result.finishedAt?'FAIL':result.exitCodes.every(code=>code===0)&&result.failed===0?'PASS':'FAIL';return `| ${index+1} | ${chain.name} | ${state} | ${result?.passed??0} | ${result?.failed??0} |`}),
    '',
    '## Executed coverage',
    '',
@@ -192,7 +198,7 @@ try{
    '',
   ].join('\n');
   await writeFile('../../../vernatun/docs/SEVEN-CHAINS-REGRESSION-REPORT.md',report,'utf8');
-  process.stdout.write(`\nSeven-chain regression: ${status===0&&cleanupOk?'PASS':'FAIL'}; ${totals.passed} passed, ${totals.failed} failed; cleanup ${cleanupOk?'PASS':'FAIL'}.\n`);
+  process.stdout.write(`\nSeven-chain regression: ${status===0&&cleanupOk?'PASS':'FAIL'}; ${totals.passed} passed, ${totals.failed} failed, ${notRun} chains not run; cleanup ${cleanupOk?'PASS':'FAIL'} (${createdSchemas.length}/${createdSchemas.length} owned schemas removed and verified).\n`);
  }
 }
 process.exitCode=status;

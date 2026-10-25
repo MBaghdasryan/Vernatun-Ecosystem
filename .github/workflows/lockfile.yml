@@ -20,3 +20,65 @@ jobs:
           version: 9.15.9
       - name: Verify lockfile with pnpm 9.15.9
         run: pnpm install --frozen-lockfile
+
+  seven-chain-regression:
+    name: Seven-chain API regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile
+      - name: Run all seven API journeys
+        run: corepack pnpm --filter @workspace/api-server run test:seven-chains
+      - name: Publish seven-chain summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="artifacts/vernatun/docs/SEVEN-CHAINS-REGRESSION-REPORT.md"
+          if [[ ! -f "$report" ]]; then
+            echo "## Seven-chain API regression" >> "$GITHUB_STEP_SUMMARY"
+            echo "The runner did not produce a report; inspect the test and PostgreSQL service logs." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          chain_rows="$(grep -cE '^\| [1-7] \|' "$report" || true)"
+          if [[ "$chain_rows" -ne 7 ]]; then
+            echo "Expected a result row for all seven journeys; found $chain_rows." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if ! grep -Fq -- "- QA cleanup: PASS" "$report"; then
+            echo "Runner-owned test schemas were not all removed and verified." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: Upload seven-chain report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seven-chain-regression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/vernatun/docs/SEVEN-CHAINS-REGRESSION-REPORT.md
+          if-no-files-found: warn
