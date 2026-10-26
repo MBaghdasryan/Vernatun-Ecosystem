@@ -63,6 +63,7 @@ test('BusinessTable keeps discussion-title search through status and priority fi
   await page.getByRole('button',{name:'Next'}).click();
   assert.match(await pagination.innerText(),/10 · 2\/2$/);
   await page.getByRole('combobox',{name:'Priority'}).selectOption('');
+   await page.waitForFunction(()=>document.querySelector('.p-pagination span')?.textContent?.endsWith('1/2'));
   assert.match(await pagination.innerText(),/11 · 1\/2$/);
   await page.getByRole('combobox',{name:'Priority'}).selectOption('urgent');
   assert.match(await pagination.innerText(),/10 · 1\/2$/);
@@ -74,6 +75,23 @@ test('BusinessTable keeps discussion-title search through status and priority fi
   assert.match(await page.locator('tbody tr').innerText(),/Independent plumbing issue/);
   await search.fill('');
   assert.match(await pagination.innerText(),/10 · 1\/2$/);
+
+   await search.fill('priority recovery');
+   await page.getByRole('combobox',{name:'Status'}).selectOption('in_progress');
+   await page.getByRole('combobox',{name:'Priority'}).selectOption('urgent');
+   assert.match(await pagination.innerText(),/0 · 1\/1$/);
+   assert.equal(await page.locator('option[value="in_progress"]').count(),1);
+   await page.getByRole('combobox',{name:'Priority'}).selectOption('normal');
+   assert.match(await pagination.innerText(),/1 · 1\/1$/);
+   assert.equal(await page.locator('tbody tr').count(),1);
+   assert.equal(await search.inputValue(),'priority recovery');
+
+   await page.getByRole('combobox',{name:'Status'}).selectOption('new');
+   assert.match(await pagination.innerText(),/0 · 1\/1$/);
+   await page.getByRole('combobox',{name:'Status'}).selectOption('in_progress');
+   assert.match(await pagination.innerText(),/1 · 1\/1$/);
+   assert.equal(await page.locator('tbody tr').count(),1);
+   assert.equal(await search.inputValue(),'priority recovery');
  }finally{
   await browser?.close();
   if(web&&!web.killed)web.kill('SIGTERM');
