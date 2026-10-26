@@ -51,6 +51,11 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   const visibleNotice=(await f.family.call('/notifications')).data.find((n:any)=>n.id===notice.id);
   assert.equal(visibleNotice.access_denied,false);assert.equal(visibleNotice.category,'finance');
   assert.equal(Object.hasOwn(visibleNotice,'entity_id'),false);
+  const unreadBefore=(await f.family.call('/notifications/unread-count')).data.unread;
+  const marked=await f.family.call('/notifications/'+notice.id+'/read','POST',{});
+  assert.equal(marked.status,200,JSON.stringify(marked.data));
+  assert.ok((await pool.query('SELECT read_at FROM notifications WHERE id=$1',[notice.id])).rows[0].read_at);
+  assert.equal((await f.family.call('/notifications/unread-count')).data.unread,unreadBefore-1);
   const destination=await f.family.call('/notifications/'+notice.id+'/destination');
   assert.equal(destination.status,200);assert.equal(destination.data.destination,'/imtun/preferences');
   const replay=await f.owner.call('/resident/payer-responsibilities','POST',body);assert.equal(replay.data.id,proposed.data.id);
@@ -106,7 +111,10 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   try{
    const pendingNoticeId=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_id=$2
     AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,proposed.data.id])).rows[0].id;
+   const readAtBefore=(await pool.query('SELECT read_at FROM notifications WHERE id=$1',[pendingNoticeId])).rows[0].read_at;
    assert.equal((await f.family.call('/notifications/'+pendingNoticeId+'/destination')).status,403);
+   const readAtAfter=(await pool.query('SELECT read_at FROM notifications WHERE id=$1',[pendingNoticeId])).rows[0].read_at;
+   assert.equal(readAtAfter?.getTime(),readAtBefore?.getTime());
   }finally{
    await pool.query('UPDATE role_assignments SET active=true WHERE id=$1',[familyAssignment.id]);
   }

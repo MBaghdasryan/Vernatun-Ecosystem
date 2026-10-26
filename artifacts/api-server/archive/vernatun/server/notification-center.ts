@@ -102,7 +102,14 @@ notificationCenter.get('/notifications/:id/destination',async(req,res)=>{const e
    entry.n.entity_type==='resident_conversation'?`?recordKind=conversations&recordId=${entry.n.entity_id}`:'';
  res.json({targetContextId:c.id,requiresSwitch:c.id!==req.session.contextId,destination:`/${product}/${view}${query}`});
 });
-notificationCenter.post('/notifications/:id/read',async(req,res)=>{const r=await pool.query('UPDATE notifications SET read_at=COALESCE(read_at,now()) WHERE id=$1 AND user_id=$2 RETURNING id',[uuid.parse(req.params.id),req.user!.id]);if(!r.rowCount)throw new ApiError(404,'not_found');res.json(r.rows[0])});
+notificationCenter.post('/notifications/:id/read',async(req,res)=>{
+ const id=uuid.parse(req.params.id);
+ const r=await pool.query(`UPDATE notifications SET read_at=COALESCE(read_at,now())
+  WHERE id=$1 AND user_id=$2 AND in_app_enabled AND (visible_after IS NULL OR visible_after<=now())
+  RETURNING id,read_at`,[id,req.user!.id]);
+ if(!r.rowCount)throw new ApiError(404,'not_found');
+ res.json(r.rows[0]);
+});
 // Explicit maintenance command, safe/idempotent; no email sending side effect.
 notificationCenter.post('/notifications/due',async(req,res)=>{const c=await requirePermission(req,'organization.settings');if(!c.organization_id)throw new ApiError(403,'forbidden');
  res.json(await transaction(async db=>{
