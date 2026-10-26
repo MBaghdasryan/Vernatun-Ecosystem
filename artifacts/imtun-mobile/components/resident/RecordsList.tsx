@@ -7,6 +7,8 @@ import { useRecords, useResidentRefresh, useWorkspace } from '@/lib/resident/hoo
 import { Btn, Card, Empty, ErrorBox, Field, Skeleton } from './Ui';
 import RecordCard from './RecordCard';
 import RecordForm from './RecordForm';
+import ListingForm from './ListingForm';
+import ListingFilters, { emptyLF, lfParams } from './ListingFilters';
 import DeviceRegister from './DeviceRegister';
 import ServiceOrder from './ServiceOrder';
 export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: Language }) {
@@ -14,7 +16,8 @@ export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: 
   const caps = ws.data?.capabilities;
   const enabled = always.includes(kind) || caps?.[kind] === true;
   const [search, setSearch] = useState(''); const [adding, setAdding] = useState(false);
-  const q = useRecords(kind, enabled && !!ws.data, search);
+  const [lf, setLf] = useState(emptyLF); const fp = kind === 'listings' ? lfParams(lf) : undefined;
+  const q = useRecords(kind, enabled && !!ws.data, search, fp);
   return <View style={{ gap: 12 }}>
     <Text style={st.h}>{L(l, kindName[kind])}</Text>
     {ws.isPending && <Skeleton />}
@@ -23,7 +26,8 @@ export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: 
     {ws.data && enabled && <>
       {!['contacts', 'help', 'agreements', 'mobile-devices'].includes(kind) && <Field label={L(l, S.search)} value={search} onChange={setSearch} />}
       {kind === 'mobile-devices' && <DeviceRegister l={l} after={refresh} />}
-      {creatable.includes(kind) && kind !== 'subscriptions' && kind !== 'mobile-devices' && (adding ? <Card><RecordForm kind={kind} l={l} after={refresh} onDone={() => setAdding(false)} /></Card> : <Btn label={L(l, S.add)} onPress={() => setAdding(true)} />)}
+      {kind === 'listings' && <ListingFilters f={lf} set={setLf} l={l} />}
+      {creatable.includes(kind) && kind !== 'subscriptions' && kind !== 'mobile-devices' && (kind !== 'listings' || ws.data.building.role === 'unit_owner') && (adding ? <Card>{kind === 'listings' ? <ListingForm l={l} after={refresh} onDone={() => setAdding(false)} /> : <RecordForm kind={kind} l={l} after={refresh} onDone={() => setAdding(false)} />}</Card> : <Btn label={L(l, S.add)} onPress={() => setAdding(true)} />)}
       {q.isPending && <Skeleton />}
       {q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}
       {q.data && !q.data.items.length && <Empty text={L(l, S.empty)} />}

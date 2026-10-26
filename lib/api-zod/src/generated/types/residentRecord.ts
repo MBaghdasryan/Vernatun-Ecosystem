@@ -25,4 +25,5 @@ export interface ResidentRecord {
   saved?: boolean;
   supported?: boolean;
   supportCount?: number;
+  photos?: string[];
 }

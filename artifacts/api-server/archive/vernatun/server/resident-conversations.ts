@@ -9,12 +9,18 @@ residentConversations.use(requireAuth);
 const uuid=z.string().uuid();
 residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
  const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);writable(s);
- const b=z.object({action:z.enum(['accept','withdraw','submit','approve','reject','activate','cancel','close','reopen','freeze','support','unsupport','read','save','unsave','report','request','proposal']),
+ const b=z.object({action:z.enum(['accept','withdraw','submit','approve','reject','activate','cancel','close','reopen','freeze','support','unsupport','read','save','unsave','report','request','proposal','confirm_viewing','decline_viewing','cancel_viewing']),
   version:z.number().int().positive(),reason:z.string().trim().max(2000).optional()}).strict().parse(req.body);
  res.json(await transaction(async db=>{
   const row=await readRecord(db,s,kind,uuid.parse(req.params.id),req.user!.id,true);
   if(!actionsFor(row,s,req.user!.id).includes(b.action))throw new ApiError(403,'forbidden');
   if(row.version!==b.version)throw new ApiError(409,'stale_version');
+  if(['confirm_viewing','decline_viewing'].includes(b.action)){
+   // Lock the listing as well: closure/moderation must not race confirmation.
+   const listing=await readRecord(db,s,'listings',row.parent_id,req.user!.id,true);
+   if(b.action!=='cancel_viewing'&&(listing.status!=='active'||listing.owner_user_id!==req.user!.id))throw new ApiError(403,'forbidden');
+   if(b.action==='confirm_viewing'&&Date.parse(row.data.viewingAt)<=Date.now())throw new ApiError(409,'invalid_viewing_time');
+  }
   const mark:{[key:string]:string}={accept:'accepted',withdraw:'withdrawn',save:'saved',unsave:'saved',support:'supported',unsupport:'supported',read:'read',report:'reported'};
   const m=mark[b.action];
   if(m){
@@ -37,9 +43,14 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
     case 'reopen':status='open';break;
     case 'freeze':status='frozen';break;
     case 'proposal':status=row.status;break; // Agenda proposal is not an ownership vote or official meeting.
+    case 'confirm_viewing':case 'decline_viewing':case 'cancel_viewing':status=row.status;break;
     default:throw new ApiError(409,'invalid_transition');
    }
    const data={...row.data,...(b.reason?{decisionReason:b.reason}:{}),
+    ...(['confirm_viewing','decline_viewing','cancel_viewing'].includes(b.action)?{
+     viewingStatus:b.action==='confirm_viewing'?'confirmed':b.action==='decline_viewing'?'declined':'cancelled',
+     viewingUpdatedAt:new Date().toISOString(),
+    }:{}),
     ...(b.action==='proposal'?{proposalState:'reviewed',reviewedAt:new Date().toISOString()}:{}),
     ...(b.action==='approve'?{approvedAt:new Date().toISOString()}:{}),
    };

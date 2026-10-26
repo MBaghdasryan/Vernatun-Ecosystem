@@ -83,6 +83,10 @@ paths:
     $ref: './resident.yaml#/paths/~1resident~1profile'
   /resident/records/{kind}:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}'
+  /resident/listings/{id}/photos:
+    $ref: './resident.yaml#/paths/~1resident~1listings~1{id}~1photos'
+  /resident/listings/{id}/photos/{photoId}:
+    $ref: './resident.yaml#/paths/~1resident~1listings~1{id}~1photos~1{photoId}'
   /resident/records/{kind}/{id}:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}'
   /resident/records/{kind}/{id}/actions:

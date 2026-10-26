@@ -5,7 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GetResidentRecordsCurrency } from './getResidentRecordsCurrency';
 import type { GetResidentRecordsOfferType } from './getResidentRecordsOfferType';
+import type { GetResidentRecordsSaleType } from './getResidentRecordsSaleType';
 
 export type GetResidentRecordsParams = {
 /**
@@ -16,6 +18,21 @@ buildingId?: string;
  * Exact record deep link, still subject to the same visibility policy.
  */
 recordId?: string;
+saleType?: GetResidentRecordsSaleType;
+currency?: GetResidentRecordsCurrency;
+/**
+ * @pattern ^\d{1,14}$
+ */
+minPrice?: string;
+/**
+ * @pattern ^\d{1,14}$
+ */
+maxPrice?: string;
+/**
+ * @minimum 0
+ * @maximum 100
+ */
+rooms?: number;
 /**
  * @maxLength 200
  */

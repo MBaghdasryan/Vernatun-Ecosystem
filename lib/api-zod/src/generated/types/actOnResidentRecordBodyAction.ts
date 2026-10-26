@@ -28,4 +28,7 @@ export const ActOnResidentRecordBodyAction = {
   report: 'report',
   request: 'request',
   proposal: 'proposal',
+  confirm_viewing: 'confirm_viewing',
+  decline_viewing: 'decline_viewing',
+  cancel_viewing: 'cancel_viewing',
 } as const;

@@ -70,8 +70,9 @@ workspaceSearch.get('/workspace-search',async(req,res)=>{
        WHERE p.id=r.parent_id AND p.kind='listings' AND p.owner_user_id=$4 AND p.unit_id=$5 AND p.deleted_at IS NULL))
      OR (r.kind IN('contacts','services','help','listings') AND r.status='active')
      OR (r.kind='discussions' AND r.status IN('open','closed','frozen')))
-    AND (r.kind<>'help' OR r.data->>'category'=$6)`,
-   args:[resident.organizationId,resident.buildingId,kind,req.user!.id,resident.unitId,req.user!.locale]});
+    AND (r.kind<>'help' OR r.data->>'category'=$6)
+    AND (r.kind<>'conversations' OR r.parent_id IS NULL OR $7)`,
+   args:[resident.organizationId,resident.buildingId,kind,req.user!.id,resident.unitId,req.user!.locale,resident.settings.marketplace]});
  }
  const groups=[];
  for(const source of sources){

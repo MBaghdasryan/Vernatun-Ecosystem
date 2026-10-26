@@ -69,6 +69,7 @@ import type {
   DelegationResendInput,
   DeleteEmptyPortfolioObject200,
   DeleteEmptyPortfolioObjectParams,
+  DeleteResidentListingPhotoParams,
   DeviceActionAvailability,
   DeviceCapabilityPolicyInput,
   DownloadPlatformCaseAttachmentParams,
@@ -150,9 +151,11 @@ import type {
   GetResidentContinuityParams,
   GetResidentDirectMessages200,
   GetResidentDirectMessagesParams,
+  GetResidentListingPhotoParams,
   GetResidentMessagesParams,
   GetResidentPropertyComparison200Item,
   GetResidentPropertyComparisonParams,
+  GetResidentRecordParams,
   GetResidentRecords200,
   GetResidentRecordsParams,
   GetResidentServiceBookingOptions200,
@@ -363,6 +366,7 @@ import type {
   UploadDocumentVersionParams,
   UploadOperationalPhotoParams,
   UploadOrganizationLogoParams,
+  UploadResidentListingPhotoParams,
   UploadSystemUpdate201,
   UploadUnitPlanParams,
   UtilityBillingWorkspace,
@@ -3498,6 +3502,353 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCreateResidentRecordMutationOptions(options));
     }
+
+export const getUploadResidentListingPhotoUrl = (id: string,
+    params: UploadResidentListingPhotoParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/listings/${id}/photos?${stringifiedParams}` : `/api/resident/listings/${id}/photos`
+}
+
+export const uploadResidentListingPhoto = async (id: string,
+    uploadResidentListingPhotoBody: Blob,
+    params: UploadResidentListingPhotoParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentRecord>(getUploadResidentListingPhotoUrl(id,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
+    body: uploadResidentListingPhotoBody
+  }
+);}
+
+
+
+
+
+export const getUploadResidentListingPhotoMutationKey = () => ['uploadResidentListingPhoto'] as const;
+
+export const getUploadResidentListingPhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadResidentListingPhoto>>, TError,UploadResidentListingPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadResidentListingPhoto>>, TError,UploadResidentListingPhotoMutationVariables, TContext> => {
+
+const mutationKey = getUploadResidentListingPhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadResidentListingPhoto>>, UploadResidentListingPhotoMutationVariables> = (props) => {
+          const {id,data,params} = props ?? {};
+
+          return  uploadResidentListingPhoto(id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadResidentListingPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadResidentListingPhoto>>>
+    export type UploadResidentListingPhotoMutationBody = BodyType<Blob>
+    export type UploadResidentListingPhotoMutationError = ErrorType<unknown>
+    export type UploadResidentListingPhotoMutationVariables = {id: string;data: BodyType<Blob>;params: UploadResidentListingPhotoParams}
+
+    export const useUploadResidentListingPhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadResidentListingPhoto>>, TError,UploadResidentListingPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadResidentListingPhoto>>,
+        TError,
+        UploadResidentListingPhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadResidentListingPhotoMutationOptions(options));
+    }
+
+export const getGetResidentListingPhotoUrl = (id: string,
+    photoId: string,
+    params?: GetResidentListingPhotoParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/listings/${id}/photos/${photoId}?${stringifiedParams}` : `/api/resident/listings/${id}/photos/${photoId}`
+}
+
+export const getResidentListingPhoto = async (id: string,
+    photoId: string,
+    params?: GetResidentListingPhotoParams, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetResidentListingPhotoUrl(id,photoId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentListingPhotoQueryKey = (id: string,
+    photoId: string,
+    params?: GetResidentListingPhotoParams,) => {
+    return [
+    `/api/resident/listings/${id}/photos/${photoId}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentListingPhotoQueryOptions = <TData = Awaited<ReturnType<typeof getResidentListingPhoto>>, TError = ErrorType<unknown>>(id: string,
+    photoId: string,
+    params?: GetResidentListingPhotoParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentListingPhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentListingPhotoQueryKey(id,photoId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentListingPhoto>>> = ({ signal }) => getResidentListingPhoto(id,photoId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && photoId !== null && photoId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentListingPhoto>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentListingPhotoQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentListingPhoto>>>
+export type GetResidentListingPhotoQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentListingPhoto<TData = Awaited<ReturnType<typeof getResidentListingPhoto>>, TError = ErrorType<unknown>>(
+ id: string,
+    photoId: string,
+    params?: GetResidentListingPhotoParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentListingPhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentListingPhotoQueryOptions(id,photoId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteResidentListingPhotoUrl = (id: string,
+    photoId: string,
+    params: DeleteResidentListingPhotoParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/listings/${id}/photos/${photoId}?${stringifiedParams}` : `/api/resident/listings/${id}/photos/${photoId}`
+}
+
+export const deleteResidentListingPhoto = async (id: string,
+    photoId: string,
+    params: DeleteResidentListingPhotoParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+  return customFetch<ResidentRecord>(getDeleteResidentListingPhotoUrl(id,photoId,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteResidentListingPhotoMutationKey = () => ['deleteResidentListingPhoto'] as const;
+
+export const getDeleteResidentListingPhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentListingPhoto>>, TError,DeleteResidentListingPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResidentListingPhoto>>, TError,DeleteResidentListingPhotoMutationVariables, TContext> => {
+
+const mutationKey = getDeleteResidentListingPhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResidentListingPhoto>>, DeleteResidentListingPhotoMutationVariables> = (props) => {
+          const {id,photoId,params} = props ?? {};
+
+          return  deleteResidentListingPhoto(id,photoId,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResidentListingPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResidentListingPhoto>>>
+
+    export type DeleteResidentListingPhotoMutationError = ErrorType<unknown>
+    export type DeleteResidentListingPhotoMutationVariables = {id: string;photoId: string;params: DeleteResidentListingPhotoParams}
+
+    export const useDeleteResidentListingPhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentListingPhoto>>, TError,DeleteResidentListingPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResidentListingPhoto>>,
+        TError,
+        DeleteResidentListingPhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteResidentListingPhotoMutationOptions(options));
+    }
+
+export const getGetResidentRecordUrl = (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}?${stringifiedParams}` : `/api/resident/records/${kind}/${id}`
+}
+
+export const getResidentRecord = async (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+  return customFetch<ResidentRecord>(getGetResidentRecordUrl(kind,id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentRecordQueryKey = (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentRecordParams,) => {
+    return [
+    `/api/resident/records/${kind}/${id}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentRecordQueryOptions = <TData = Awaited<ReturnType<typeof getResidentRecord>>, TError = ErrorType<unknown>>(kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentRecordQueryKey(kind,id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentRecord>>> = ({ signal }) => getResidentRecord(kind,id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: kind !== null && kind !== undefined && id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentRecord>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentRecordQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentRecord>>>
+export type GetResidentRecordQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentRecord<TData = Awaited<ReturnType<typeof getResidentRecord>>, TError = ErrorType<unknown>>(
+ kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentRecordQueryOptions(kind,id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getUpdateResidentRecordUrl = (kind: ResidentRecordKind,
     id: string,

@@ -7,12 +7,14 @@ import type {Language} from '../../portal/i18n';
 import {L,S,kindName,always,creatable} from './text';
 import RecordCard from './RecordCard';
 import CreateForm from './CreateForm';
+import ListingForm from './ListingForm';
+import ListingFilters,{emptyLF,lfParams} from './ListingFilters';
 export default function Records({kind,l,c,caps}:{kind:ResidentRecordKind;l:Language;c:RoleContext;caps?:Record<string,boolean>}){
  const selected=new URLSearchParams(location.search),recordId=selected.get('recordKind')===kind?selected.get('recordId')??undefined:undefined;
- const offer=selected.get('offerType'),offerType=kind==='listings'&&(offer==='sale'||offer==='rent')?offer:'all';
- const qc=useQueryClient(),[search,setSearch]=useState(selected.get('search')??''),key=['resident-rec',c.id,kind,search,recordId??'',offerType];
- useEffect(()=>setSearch(new URLSearchParams(location.search).get('search')??''),[location.search]);
- const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{}),offerType})});
+ const offer=selected.get('offerType'),initialSaleType=kind==='listings'&&(offer==='sale'||offer==='rent')?offer:'';
+ const qc=useQueryClient(),[search,setSearch]=useState(selected.get('search')??''),[lf,setLf]=useState({...emptyLF,saleType:initialSaleType}),fp=kind==='listings'?lfParams(lf):{},key=['resident-rec',c.id,kind,search,recordId??'',fp];
+ useEffect(()=>{setSearch(new URLSearchParams(location.search).get('search')??'');setLf(f=>({...f,saleType:initialSaleType}))},[location.search,initialSaleType]);
+ const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,refetchOnMount:'always',refetchInterval:['listings','conversations'].includes(kind)?30000:false,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{}),...fp})});
  useEffect(()=>{if(recordId&&q.data?.items.some(r=>r.id===recordId)){
   const node=document.getElementById('resident-record-'+recordId);node?.focus({preventScroll:true});node?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
  }},[recordId,q.data]);
@@ -21,7 +23,9 @@ export default function Records({kind,l,c,caps}:{kind:ResidentRecordKind;l:Langu
  {recordId&&<a className="sx-link" href={location.pathname}>{L(l,['Բոլոր գրառումները','Все записи','All records'])}</a>}
  {!enabled&&<div className="im-card im-empty"><p>{L(l,S.off)}</p></div>}
  {enabled&&<>{!['contacts','help','agreements'].includes(kind)&&<input className="sx-search" aria-label={L(l,S.search)} placeholder={L(l,S.search)} value={search} onChange={e=>setSearch(e.target.value)}/>}
- {creatable.includes(kind)&&kind!=='subscriptions'&&<CreateForm kind={kind} l={l} refresh={refresh}/>}
+ {kind==='listings'&&<ListingFilters f={lf} set={setLf} l={l}/>}
+  {kind==='listings'&&c.role_key==='unit_owner'&&<ListingForm l={l} refresh={refresh}/>}
+  {creatable.includes(kind)&&kind!=='subscriptions'&&kind!=='listings'&&<CreateForm kind={kind} l={l} refresh={refresh}/>}
  {q.isPending&&<div className="im-card sx-skel" aria-busy="true">{L(l,S.loading)}</div>}
  {q.isError&&<div className="im-notice" role="alert">{L(l,S.fail)} <button onClick={()=>q.refetch()}>{L(l,S.retry)}</button></div>}
  {q.data&&!q.data.items.length&&<div className="im-card im-empty"><p>{L(l,S.empty)}</p></div>}

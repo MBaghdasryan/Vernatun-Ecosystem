@@ -17,9 +17,9 @@ export function useLang(): Language {
   const ws = useWorkspace();
   return ws.data?.profile.language ?? 'hy';
 }
-export function useRecords(kind: ResidentRecordKind, enabled: boolean, search = '') {
+export function useRecords(kind: ResidentRecordKind, enabled: boolean, search = '', filters?: Record<string, unknown>) {
   const ctx = useContextId();
-  return useQuery({ queryKey: ['resident-rec', ctx, kind, search], enabled: enabled && !!ctx, queryFn: () => getResidentRecords(kind, search ? { search } : undefined) });
+  return useQuery({ queryKey: ['resident-rec', ctx, kind, search, filters ?? {}], enabled: enabled && !!ctx, refetchOnMount: 'always', refetchInterval: kind === 'listings' || kind === 'conversations' ? 30000 : false, queryFn: () => getResidentRecords(kind, (search || (filters && Object.keys(filters).length) ? { ...(search ? { search } : {}), ...filters } : undefined) as never) });
 }
 export function useMessages(kind: ResidentRecordKind, id: string) {
   const ctx = useContextId();

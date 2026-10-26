@@ -22,6 +22,7 @@ export type {
   ActOnResidentRecordBody, ActOnResidentRecordParams, CreateResidentRecordParams,
   GetResidentWorkspaceParams, GetResidentRecordsParams, GetResidentMessagesParams, PostResidentMessageBody,
   PostResidentMessageParams, RemoveResidentRecordParams, UpdateResidentRecordParams,
+  DeleteResidentListingPhotoParams, GetResidentListingPhotoParams, GetResidentRecordParams, UploadResidentListingPhotoParams,
 } from "./generated/types";
 // Keep the operation-based public aliases alongside their Zod schemas.
 export type { IntegrationInstanceActionInput as ActIntegrationInstanceBody } from "./generated/types/integrationInstanceActionInput";

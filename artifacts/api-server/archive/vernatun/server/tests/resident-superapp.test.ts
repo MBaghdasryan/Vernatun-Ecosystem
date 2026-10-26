@@ -2,6 +2,8 @@ import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
+import sharp from 'sharp';
+import {readPrivateFile,deletePrivateFile} from '../private-files.js';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
@@ -29,6 +31,7 @@ class Client{
  }
 }
 let owner:Client,family:Client,admin:Client,manager:Client,buildingId:string,query:string;
+const photoKeys:string[]=[];
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
  base='http://127.0.0.1:'+(server.address() as {port:number}).port;
@@ -36,7 +39,7 @@ before(async()=>{
  owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');
  buildingId=seed.fixtures.ba;query='?buildingId='+buildingId;
 });
-after(async()=>{server.close();server.closeAllConnections();await pool.end()});
+after(async()=>{try{for(const key of photoKeys)await deletePrivateFile('photos',key)}finally{server.close();server.closeAllConnections();await pool.end()}});
 const vehicle={title:'Car',body:'',plate:'TEST101',country:'AM',vehicleType:'car'};
 test('migration numbering preserves GitHub 047 and resident schema is 048',async()=>{
  const names=(await pool.query('SELECT name FROM schema_migrations ORDER BY name')).rows.map(r=>r.name);
@@ -126,6 +129,92 @@ test('marketplace requires explicit owner draft, submission and staff approval',
  assert.equal((await admin.call('/resident/records/listings/'+listing.data.id+'/actions'+query,'POST',{action:'approve',version:2})).data.status,'active');
  assert.equal((await family.call('/resident/records/listings')).data.items.length,1);
  assert.equal((await family.call('/resident/records/listings/'+listing.data.id+'/messages')).status,405);
+});
+test('listing photos are sanitized, scoped, versioned and immutable after submission',async()=>{
+ const payload={title:'Apartment with terrace',body:'Private viewing only',saleType:'sale',priceMinor:'22000000',currency:'USD',area:82.5,rooms:3,floor:4};
+ const draft=(await owner.call('/resident/records/listings','POST',payload)).data;
+ const path='/resident/listings/'+draft.id+'/photos';
+ const photo=await sharp({create:{width:12,height:9,channels:3,background:'#cc9922'}}).png().withMetadata().toBuffer();
+ const upload=async(c:Client,version:number,body=photo)=>fetch(base+'/api'+path+'?version='+version,{method:'POST',headers:{'Content-Type':'application/octet-stream',Cookie:c.cookie,'X-CSRF-Token':c.csrf},body:new Uint8Array(body)});
+ assert.equal((await upload(family,1)).status,404);
+ assert.equal((await upload(owner,1,Buffer.from('<svg/>'))).status,400);
+ const added=await upload(owner,1);assert.equal(added.status,201);
+ const row=await added.json();assert.equal(row.status,'draft');assert.equal(row.version,2);assert.equal(row.photos.length,1);
+ const key=(await pool.query('SELECT storage_key FROM resident_listing_photos WHERE listing_id=$1',[draft.id])).rows[0].storage_key;photoKeys.push(key);
+ assert.ok(!JSON.stringify(row).includes(key));
+ const metadata=await sharp(await readPrivateFile('photos',key)).metadata();
+ assert.equal(metadata.format,'jpeg');assert.equal(metadata.exif,undefined);
+ const image=path+'/'+row.photos[0];
+ assert.equal((await fetch(base+'/api'+image)).status,401);
+ assert.equal((await family.call(image)).status,404);
+ const bytes=await fetch(base+'/api'+image,{headers:{Cookie:owner.cookie}});
+ assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),'image/jpeg');
+ assert.match(bytes.headers.get('cache-control')! ,/no-store/);
+ assert.equal((await upload(owner,1)).status,409);
+ // Detach uses the record version, never deletes bytes as part of the mutation.
+ assert.equal((await owner.call(image+'?version=1','DELETE')).status,409);
+ assert.equal((await owner.call(image+'?version=2','DELETE')).data.version,3);
+ assert.ok((await readPrivateFile('photos',key)).length>0);
+ assert.equal((await owner.call(image)).status,404);
+ const again=await upload(owner,3);assert.equal(again.status,201);
+ const updated=await again.json();
+ photoKeys.push((await pool.query('SELECT storage_key FROM resident_listing_photos WHERE listing_id=$1',[draft.id])).rows[0].storage_key);
+ const saved=await owner.call('/resident/records/listings/'+draft.id,'PATCH',{...payload,version:4,rooms:2});assert.equal(saved.status,200);
+ assert.equal((await owner.call('/resident/records/listings/'+draft.id+'/actions','POST',{action:'submit',version:5})).data.status,'submitted');
+ assert.equal((await upload(owner,6)).status,403);
+ assert.equal((await admin.call('/resident/records/listings/'+draft.id+'/actions'+query,'POST',{action:'approve',version:6})).data.status,'active');
+ const activeBytes=await fetch(base+'/api'+path+'/'+updated.photos[0],{headers:{Cookie:family.cookie}});assert.equal(activeBytes.status,200);await activeBytes.arrayBuffer();
+ assert.equal((await family.call('/resident/records/listings?search=terrace&saleType=sale&currency=USD&minPrice=20000000&maxPrice=25000000&rooms=2')).data.items.length,1);
+ assert.equal((await family.call('/resident/records/listings?currency=AMD&minPrice=20000000')).data.items.length,0);
+ assert.equal((await family.call('/resident/records/listings?minPrice=1')).status,400);
+ assert.equal((await family.call('/resident/records/listings?currency=USD&minPrice=5&maxPrice=1')).status,400);
+ assert.equal((await family.call('/resident/records/listings?rooms=101')).status,400);
+ // A photo id from a different listing cannot be substituted under this URL.
+ const other=(await owner.call('/resident/records/listings','POST',payload)).data;
+ assert.equal((await owner.call('/resident/listings/'+other.id+'/photos/'+updated.photos[0])).status,404);
+});
+test('viewings persist explicit requests and only the listing owner can confirm or decline',async()=>{
+ const listing=(await family.call('/resident/records/listings?search=terrace')).data.items[0];
+ const payload={title:'Viewing request',body:'Please confirm',parentId:listing.id,viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true};
+ assert.equal((await family.call('/resident/records/conversations','POST',{...payload,viewingConsent:false})).status,400);
+ assert.equal((await family.call('/resident/records/conversations','POST',{...payload,viewingAt:new Date(Date.now()-10000).toISOString()})).status,400);
+ assert.equal((await family.call('/resident/records/conversations','POST',{...payload,viewingStatus:'confirmed'})).status,400);
+ const response=await family.call('/resident/records/conversations','POST',payload);assert.equal(response.status,201);
+ const request=response.data,path='/resident/records/conversations/'+request.id;
+ assert.equal(request.data.viewingStatus,'requested');
+ assert.ok(request.actions.includes('cancel_viewing'));assert.ok(!request.actions.includes('confirm_viewing'));
+ assert.equal((await family.call(path+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
+ assert.equal((await admin.call(path+'/actions'+query,'POST',{action:'confirm_viewing',version:1})).status,403);
+ const stranger=await new Client().login('renter');
+ assert.equal((await stranger.call(path)).status,404);
+ assert.equal((await stranger.call(path+'/messages')).status,404);
+ const owned=(await owner.call(path)).data;
+ assert.ok(owned.actions.includes('confirm_viewing'));
+ assert.equal(owned.data.phone,undefined);assert.equal(owned.data.email,undefined);
+ const confirm=await owner.call(path+'/actions','POST',{action:'confirm_viewing',version:1});assert.equal(confirm.status,200);
+ assert.equal(confirm.data.data.viewingStatus,'confirmed');
+ assert.equal((await family.call(path)).data.data.viewingStatus,'confirmed');
+ assert.equal((await family.call(path+'/actions','POST',{action:'cancel_viewing',version:1})).status,409);
+ assert.equal((await family.call(path+'/actions','POST',{action:'cancel_viewing',version:2})).data.data.viewingStatus,'cancelled');
+ assert.equal((await owner.call(path+'/actions','POST',{action:'confirm_viewing',version:3})).status,403);
+ const next=(await family.call('/resident/records/conversations','POST',payload)).data;
+ assert.equal((await owner.call('/resident/records/conversations/'+next.id+'/actions','POST',{action:'decline_viewing',version:1})).data.data.viewingStatus,'declined');
+ const pending=(await family.call('/resident/records/conversations','POST',payload)).data;
+ await owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'close',version:listing.version});
+ assert.equal((await owner.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
+ assert.equal((await family.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'cancel_viewing',version:1})).data.data.viewingStatus,'cancelled');
+});
+test('disabling the building marketplace revokes listings, photos and linked inquiry access',async()=>{
+ const listing=(await owner.call('/resident/records/listings?search=terrace')).data.items.find((r:any)=>r.photos.length>0);
+ const settings={directory:true,discussions:true,chat:true,marketplace:false,services:true};
+ assert.equal((await admin.call('/resident/settings'+query,'PUT',settings)).status,200);
+ assert.equal((await family.call('/resident/records/listings')).status,403);
+ assert.equal((await owner.call('/resident/records/listings/'+listing.id)).status,403);
+ assert.equal((await owner.call('/resident/listings/'+listing.id+'/photos/'+listing.photos[0])).status,403);
+ assert.equal((await family.call('/resident/records/conversations')).data.items.length,0);
+ const inquiry=(await pool.query("SELECT id FROM resident_product_records WHERE kind='conversations' AND parent_id=$1 LIMIT 1",[listing.id])).rows[0];
+ assert.equal((await family.call('/resident/records/conversations/'+inquiry.id)).status,404);
+ await admin.call('/resident/settings'+query,'PUT',{...settings,marketplace:true});
 });
 test('mobile installation registration is idempotent and revocation invalidates its session only',async()=>{
  const other=await new Client().login('unit_owner');

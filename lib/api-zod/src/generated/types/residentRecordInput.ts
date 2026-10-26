@@ -73,4 +73,21 @@ export interface ResidentRecordInput {
      * @maximum 180
      */
   longitude?: number;
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  area?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  rooms?: number;
+  /**
+     * @minimum -10
+     * @maximum 300
+     */
+  floor?: number;
+  viewingAt?: Date;
+  viewingConsent?: boolean;
 }

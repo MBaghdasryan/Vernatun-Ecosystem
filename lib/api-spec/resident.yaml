@@ -1,6 +1,48 @@
 openapi: 3.1.0
 info: {title: Resident product extension, version: 1.0.0}
 paths:
+  /resident/listings/{id}/photos:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+    post:
+      operationId: uploadResidentListingPhoto
+      parameters:
+        - {in: query, name: version, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '201':
+          description: Sanitized private image added to an editable owner draft; never publishes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
+  /resident/listings/{id}/photos/{photoId}:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+      - {in: path, name: photoId, required: true, schema: {type: string, format: uuid}}
+    get:
+      operationId: getResidentListingPhoto
+      responses:
+        '200':
+          description: Currently authorized private image bytes; no storage URL or key.
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
+    delete:
+      operationId: deleteResidentListingPhoto
+      parameters:
+        - {in: query, name: version, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200':
+          description: Detached from editable draft; physical bytes retained for safe cleanup.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
   /meters:
     get:
       operationId: listResidentMeters
@@ -260,6 +302,11 @@ paths:
       operationId: getResidentRecords
       parameters:
         - {in: query, name: recordId, schema: {type: string, format: uuid}, description: "Exact record deep link, still subject to the same visibility policy."}
+        - {in: query, name: saleType, schema: {type: string, enum: [sale, rent]}}
+        - {in: query, name: currency, schema: {type: string, enum: [AMD, RUB, USD]}}
+        - {in: query, name: minPrice, schema: {type: string, pattern: '^\d{1,14}$'}}
+        - {in: query, name: maxPrice, schema: {type: string, pattern: '^\d{1,14}$'}}
+        - {in: query, name: rooms, schema: {type: integer, minimum: 0, maximum: 100}}
         - {in: query, name: search, schema: {type: string, maxLength: 200}}
         - {in: query, name: offerType, schema: {type: string, enum: [all, sale, rent], default: all}}
       responses:
@@ -291,6 +338,14 @@ paths:
       - {$ref: '#/components/parameters/Kind'}
       - {$ref: '#/components/parameters/Id'}
       - {$ref: '#/components/parameters/Building'}
+    get:
+      operationId: getResidentRecord
+      responses:
+        '200':
+          description: Record under the identical current scope and privacy policy as the list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
     patch:
       operationId: updateResidentRecord
       requestBody:
@@ -325,7 +380,7 @@ paths:
               type: object
               required: [action, version]
               properties:
-                action: {type: string, enum: [accept, withdraw, submit, approve, reject, activate, cancel, close, reopen, freeze, support, unsupport, read, save, unsave, report, request, proposal]}
+                action: {type: string, enum: [accept, withdraw, submit, approve, reject, activate, cancel, close, reopen, freeze, support, unsupport, read, save, unsave, report, request, proposal, confirm_viewing, decline_viewing, cancel_viewing]}
                 version: {type: integer, minimum: 1}
                 reason: {type: string, maxLength: 2000}
       responses:
@@ -477,6 +532,11 @@ components:
         saleType: {type: string, enum: [sale, rent]}
         latitude: {type: number, minimum: -90, maximum: 90}
         longitude: {type: number, minimum: -180, maximum: 180}
+        area: {type: number, minimum: 1, maximum: 100000}
+        rooms: {type: integer, minimum: 0, maximum: 100}
+        floor: {type: integer, minimum: -10, maximum: 300}
+        viewingAt: {type: string, format: date-time}
+        viewingConsent: {type: boolean}
     ResidentRecord:
       type: object
       required: [id, kind, title, body, status, version, createdAt, own, actions, data]
@@ -496,6 +556,7 @@ components:
         saved: {type: boolean}
         supported: {type: boolean}
         supportCount: {type: integer}
+        photos: {type: array, items: {type: string, format: uuid}}
     ResidentMessage:
       type: object
       required: [id, body, own, createdAt, sender]

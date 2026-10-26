@@ -51,9 +51,10 @@ export const payloadSchemas={
  contacts:z.object({...common,category:z.enum(['management','security','concierge','technician','cleaning','emergency','other']),phone:z.string().regex(/^\+?[0-9 ()-]{3,30}$/),email:z.union([z.string().email().max(254),z.literal('')]).optional(),hours:text(200).optional()}).strict(),
  services:z.object({...common,category:text(80).min(1),priceMinor:price,currency,mandatory:z.boolean().optional()}).strict(),
  subscriptions:z.object({...common,parentId:z.string().uuid(),quantity:z.number().int().min(1).max(1000)}).strict(),
- conversations:z.object({...common,parentId:z.string().uuid().optional()}).strict(),
+ conversations:z.object({...common,parentId:z.string().uuid().optional(),viewingAt:z.string().datetime({offset:true}).optional(),viewingConsent:z.boolean().optional()}).strict(),
  discussions:z.object({...common,category:text(80).min(1)}).strict(),
  listings:z.object({...common,saleType:z.enum(['sale','rent']),priceMinor:price,currency,
+  area:z.number().min(1).max(100000).optional(),rooms:z.number().int().min(0).max(100).optional(),floor:z.number().int().min(-10).max(300).optional(),
   latitude:z.number().finite().min(-90).max(90).optional(),longitude:z.number().finite().min(-180).max(180).optional()
  }).strict().refine(v=>(v.latitude===undefined)===(v.longitude===undefined),{message:'coordinates_pair_required'}),
  help:z.object({...common,category:z.enum(['hy','ru','en'])}).strict(),
@@ -81,12 +82,16 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
   if(kind==='discussions'&&row.status==='open')a.push('support','unsupport','report');
   if(kind==='listings'){
    a.push('save','unsave','report');
-   if(!own&&row.status==='active')a.push('inquire');
-   if(own&&['draft','rejected'].includes(row.status))a.push('edit','submit','delete');
-   if(own&&row.status==='active')a.push('close');
+   if(!own&&row.status==='active'&&enabled(s,'conversations'))a.push('inquire');
+   if(own&&s.c.role_key==='unit_owner'&&['draft','rejected'].includes(row.status))a.push('edit','submit','delete');
+   if(own&&s.c.role_key==='unit_owner'&&row.status==='active')a.push('close');
   }
  }
  if((kind==='conversations'||kind==='discussions')&&!['closed','frozen','rejected','draft','submitted'].includes(row.status))a.push('message');
+ if(kind==='conversations'&&row.parent_id&&s.settings.marketplace&&row.status==='open'){
+  if(own&&['requested','confirmed'].includes(row.data.viewingStatus))a.push('cancel_viewing');
+  if(!own&&!s.administrative&&s.c.role_key==='unit_owner'&&row.data.viewingStatus==='requested')a.push('confirm_viewing','decline_viewing');
+ }
  if(kind==='conversations'&&!s.administrative)a.push('read');
  return a;
 }
@@ -95,7 +100,8 @@ export function publicRecord(row:any,s:ResidentScope,userId:string){
  if(row.kind==='mobile-devices')data.pushRegistered=!!row.data?.pushToken;
  return {id:row.id,kind:row.kind,title:row.title,body:row.body,status:row.status,version:row.version,createdAt:new Date(row.created_at).toISOString(),
   own:row.owner_user_id===userId,data,actions:actionsFor(row,s,userId),linkedRequestId:row.linked_request_id??null,
-  accepted:row.accepted??false,saved:row.saved??false,supported:row.supported??false,supportCount:Number(row.support_count??0)};
+  accepted:row.accepted??false,saved:row.saved??false,supported:row.supported??false,supportCount:Number(row.support_count??0),
+  ...(row.kind==='listings'?{photos:row.photos??[]}: {})};
 }
 // Privacy predicates are identical for list, detail, actions and messages.
 export async function readRecord(db:PoolClient|typeof pool,s:ResidentScope,kind:ResidentKind,id:string,userId:string,lock=false){
@@ -104,14 +110,18 @@ export async function readRecord(db:PoolClient|typeof pool,s:ResidentScope,kind:
    AND owner_user_id=$2 AND deleted_at IS NULL ${lock?'FOR UPDATE':''}`,[id,userId])).rows[0];
   if(!device)throw new ApiError(404,'not_found');return device;
  }
- const row=(await db.query(`SELECT r.* FROM resident_product_records r WHERE r.id=$1 AND r.organization_id=$2 AND r.building_id=$3
+ const row=(await db.query(`SELECT r.*,
+  ARRAY(SELECT p.id FROM resident_listing_photos p WHERE p.listing_id=r.id ORDER BY p.created_at,p.id) AS photos
+  FROM resident_product_records r WHERE r.id=$1 AND r.organization_id=$2 AND r.building_id=$3
   AND r.kind=$4 AND r.deleted_at IS NULL AND
+  (r.kind<>'conversations' OR r.parent_id IS NULL OR $8)
+  AND
   ($5 OR (r.owner_user_id=$6 AND (r.unit_id IS NULL OR r.unit_id=$7)) OR
    (r.kind='conversations' AND EXISTS(SELECT 1 FROM resident_product_records p WHERE p.id=r.parent_id
      AND p.kind='listings' AND p.owner_user_id=$6 AND p.unit_id=$7 AND p.deleted_at IS NULL)) OR
    (r.kind IN('contacts','agreements','services','help') AND r.status='active') OR
    (r.kind='discussions' AND r.status IN('open','closed','frozen')) OR
    (r.kind='listings' AND r.status='active'))
-  ${lock?'FOR UPDATE':''}`,[id,s.organizationId,s.buildingId,kind,s.administrative,userId,s.unitId])).rows[0];
+  ${lock?'FOR UPDATE OF r':''}`,[id,s.organizationId,s.buildingId,kind,s.administrative,userId,s.unitId,s.settings.marketplace||s.administrative])).rows[0];
  if(!row)throw new ApiError(404,'not_found');return row;
 }

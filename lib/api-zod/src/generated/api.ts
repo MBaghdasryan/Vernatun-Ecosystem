@@ -759,6 +759,11 @@ export const GetResidentRecordsParams = zod.object({
   "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback'])
 })
 
+export const getResidentRecordsQueryMinPriceRegExp = new RegExp('^\\d{1,14}$');
+export const getResidentRecordsQueryMaxPriceRegExp = new RegExp('^\\d{1,14}$');
+export const getResidentRecordsQueryRoomsMin = 0;
+export const getResidentRecordsQueryRoomsMax = 100;
+
 export const getResidentRecordsQuerySearchMax = 200;
 
 export const getResidentRecordsQueryOfferTypeDefault = `all`;
@@ -766,6 +771,11 @@ export const getResidentRecordsQueryOfferTypeDefault = `all`;
 export const GetResidentRecordsQueryParams = zod.object({
   "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
   "recordId": zod.coerce.string().uuid().optional().describe('Exact record deep link, still subject to the same visibility policy.'),
+  "saleType": zod.enum(['sale', 'rent']).optional(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "minPrice": zod.coerce.string().regex(getResidentRecordsQueryMinPriceRegExp).optional(),
+  "maxPrice": zod.coerce.string().regex(getResidentRecordsQueryMaxPriceRegExp).optional(),
+  "rooms": zod.coerce.number().int().min(getResidentRecordsQueryRoomsMin).max(getResidentRecordsQueryRoomsMax).optional(),
   "search": zod.coerce.string().max(getResidentRecordsQuerySearchMax).optional(),
   "offerType": zod.enum(['all', 'sale', 'rent']).default(getResidentRecordsQueryOfferTypeDefault)
 })
@@ -786,7 +796,8 @@ export const GetResidentRecordsResponse = zod.object({
   "accepted": zod.boolean().optional(),
   "saved": zod.boolean().optional(),
   "supported": zod.boolean().optional(),
-  "supportCount": zod.number().int().optional()
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
 })),
   "hasMore": zod.boolean()
 })
@@ -838,6 +849,14 @@ export const createResidentRecordBodyLatitudeMax = 90;
 export const createResidentRecordBodyLongitudeMin = -180;
 export const createResidentRecordBodyLongitudeMax = 180;
 
+export const createResidentRecordBodyAreaMax = 100000;
+
+export const createResidentRecordBodyRoomsMin = 0;
+export const createResidentRecordBodyRoomsMax = 100;
+
+export const createResidentRecordBodyFloorMin = -10;
+export const createResidentRecordBodyFloorMax = 300;
+
 
 
 export const CreateResidentRecordBody = zod.object({
@@ -868,7 +887,12 @@ export const CreateResidentRecordBody = zod.object({
   "withdrawable": zod.boolean().optional(),
   "saleType": zod.enum(['sale', 'rent']).optional(),
   "latitude": zod.number().min(createResidentRecordBodyLatitudeMin).max(createResidentRecordBodyLatitudeMax).optional(),
-  "longitude": zod.number().min(createResidentRecordBodyLongitudeMin).max(createResidentRecordBodyLongitudeMax).optional()
+  "longitude": zod.number().min(createResidentRecordBodyLongitudeMin).max(createResidentRecordBodyLongitudeMax).optional(),
+  "area": zod.number().min(1).max(createResidentRecordBodyAreaMax).optional(),
+  "rooms": zod.number().int().min(createResidentRecordBodyRoomsMin).max(createResidentRecordBodyRoomsMax).optional(),
+  "floor": zod.number().int().min(createResidentRecordBodyFloorMin).max(createResidentRecordBodyFloorMax).optional(),
+  "viewingAt": zod.coerce.date().optional(),
+  "viewingConsent": zod.boolean().optional()
 }).describe('Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.')
 
 export const CreateResidentRecordResponse = zod.object({
@@ -886,7 +910,114 @@ export const CreateResidentRecordResponse = zod.object({
   "accepted": zod.boolean().optional(),
   "saved": zod.boolean().optional(),
   "supported": zod.boolean().optional(),
-  "supportCount": zod.number().int().optional()
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
+})
+
+
+export const UploadResidentListingPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const UploadResidentListingPhotoQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
+  "version": zod.coerce.number().int().min(1)
+})
+
+export const UploadResidentListingPhotoResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
+})
+
+
+export const GetResidentListingPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "photoId": zod.coerce.string().uuid()
+})
+
+export const GetResidentListingPhotoQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const GetResidentListingPhotoResponse = zod.unknown()
+
+
+export const DeleteResidentListingPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "photoId": zod.coerce.string().uuid()
+})
+
+
+
+
+export const DeleteResidentListingPhotoQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
+  "version": zod.coerce.number().int().min(1)
+})
+
+export const DeleteResidentListingPhotoResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
+})
+
+
+export const GetResidentRecordParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetResidentRecordQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const GetResidentRecordResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
 })
 
 
@@ -937,6 +1068,14 @@ export const updateResidentRecordBodyLatitudeMax = 90;
 export const updateResidentRecordBodyLongitudeMin = -180;
 export const updateResidentRecordBodyLongitudeMax = 180;
 
+export const updateResidentRecordBodyAreaMax = 100000;
+
+export const updateResidentRecordBodyRoomsMin = 0;
+export const updateResidentRecordBodyRoomsMax = 100;
+
+export const updateResidentRecordBodyFloorMin = -10;
+export const updateResidentRecordBodyFloorMax = 300;
+
 
 
 export const UpdateResidentRecordBody = zod.object({
@@ -967,7 +1106,12 @@ export const UpdateResidentRecordBody = zod.object({
   "withdrawable": zod.boolean().optional(),
   "saleType": zod.enum(['sale', 'rent']).optional(),
   "latitude": zod.number().min(updateResidentRecordBodyLatitudeMin).max(updateResidentRecordBodyLatitudeMax).optional(),
-  "longitude": zod.number().min(updateResidentRecordBodyLongitudeMin).max(updateResidentRecordBodyLongitudeMax).optional()
+  "longitude": zod.number().min(updateResidentRecordBodyLongitudeMin).max(updateResidentRecordBodyLongitudeMax).optional(),
+  "area": zod.number().min(1).max(updateResidentRecordBodyAreaMax).optional(),
+  "rooms": zod.number().int().min(updateResidentRecordBodyRoomsMin).max(updateResidentRecordBodyRoomsMax).optional(),
+  "floor": zod.number().int().min(updateResidentRecordBodyFloorMin).max(updateResidentRecordBodyFloorMax).optional(),
+  "viewingAt": zod.coerce.date().optional(),
+  "viewingConsent": zod.boolean().optional()
 }).describe('Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.')
 
 export const UpdateResidentRecordResponse = zod.object({
@@ -985,7 +1129,8 @@ export const UpdateResidentRecordResponse = zod.object({
   "accepted": zod.boolean().optional(),
   "saved": zod.boolean().optional(),
   "supported": zod.boolean().optional(),
-  "supportCount": zod.number().int().optional()
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
 })
 
 
@@ -1020,7 +1165,7 @@ export const actOnResidentRecordBodyReasonMax = 2000;
 
 
 export const ActOnResidentRecordBody = zod.object({
-  "action": zod.enum(['accept', 'withdraw', 'submit', 'approve', 'reject', 'activate', 'cancel', 'close', 'reopen', 'freeze', 'support', 'unsupport', 'read', 'save', 'unsave', 'report', 'request', 'proposal']),
+  "action": zod.enum(['accept', 'withdraw', 'submit', 'approve', 'reject', 'activate', 'cancel', 'close', 'reopen', 'freeze', 'support', 'unsupport', 'read', 'save', 'unsave', 'report', 'request', 'proposal', 'confirm_viewing', 'decline_viewing', 'cancel_viewing']),
   "version": zod.number().int().min(1),
   "reason": zod.string().max(actOnResidentRecordBodyReasonMax).optional()
 })
@@ -1040,7 +1185,8 @@ export const ActOnResidentRecordResponse = zod.object({
   "accepted": zod.boolean().optional(),
   "saved": zod.boolean().optional(),
   "supported": zod.boolean().optional(),
-  "supportCount": zod.number().int().optional()
+  "supportCount": zod.number().int().optional(),
+  "photos": zod.array(zod.string().uuid()).optional()
 })
 
 

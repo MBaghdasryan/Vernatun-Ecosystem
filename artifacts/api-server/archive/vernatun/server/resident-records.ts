@@ -38,7 +38,15 @@ residentRecords.get('/records/:kind',async(req,res)=>{
   res.json({items:rows.slice(0,100).map(r=>({id:r.id,kind,title:r.name,body:r.show_unit?r.number:'',status:'active',version:1,createdAt:'',own:r.id===req.user!.id,actions:[],
    data:{phone:r.show_phone?r.phone:undefined,allowMessages:r.allow_messages}})),hasMore:rows.length>100});return;
  }
+ const filters=kind==='listings'?z.object({
+  saleType:z.enum(['sale','rent']).optional(),currency:z.enum(['AMD','RUB','USD']).optional(),
+  minPrice:z.string().regex(/^\d{1,14}$/).optional(),maxPrice:z.string().regex(/^\d{1,14}$/).optional(),
+  rooms:z.coerce.number().int().min(0).max(100).optional(),
+ }).parse(req.query):{};
+ if((filters.minPrice||filters.maxPrice)&&!filters.currency)throw new ApiError(400,'currency_required');
+ if(filters.minPrice&&filters.maxPrice&&BigInt(filters.minPrice)>BigInt(filters.maxPrice))throw new ApiError(400,'validation_error');
  const rows=(await pool.query(`SELECT r.*,
+  ARRAY(SELECT p.id FROM resident_listing_photos p WHERE p.listing_id=r.id ORDER BY p.created_at,p.id) AS photos,
   EXISTS(SELECT 1 FROM resident_record_marks m WHERE m.record_id=r.id AND m.user_id=$6 AND m.mark='accepted')
    AND NOT EXISTS(SELECT 1 FROM resident_record_marks m WHERE m.record_id=r.id AND m.user_id=$6 AND m.mark='withdrawn') AS accepted,
   EXISTS(SELECT 1 FROM resident_record_marks m WHERE m.record_id=r.id AND m.user_id=$6 AND m.mark='saved') AS saved,
@@ -52,10 +60,22 @@ residentRecords.get('/records/:kind',async(req,res)=>{
    (r.kind='discussions' AND r.status IN('open','closed','frozen')) OR (r.kind='listings' AND r.status='active'))
   AND ($7='' OR strpos(lower(r.title||' '||r.body),lower($7))>0)
   AND (r.kind<>'help' OR $4 OR r.data->>'category'=$8)
-  AND ($9::uuid IS NULL OR r.id=$9)
-  AND ($10='all' OR (r.kind='listings' AND r.data->>'saleType'=$10))
-  ORDER BY created_at DESC,id LIMIT 101`,[s.organizationId,s.buildingId,kind,s.administrative,s.unitId,req.user!.id,search,req.user!.locale,recordId,offerType])).rows;
+  AND (r.kind<>'conversations' OR r.parent_id IS NULL OR $4 OR $9)
+  AND ($10::text IS NULL OR r.data->>'saleType'=$10)
+  AND ($11::text IS NULL OR r.data->>'currency'=$11)
+  AND ($12::numeric IS NULL OR (r.data->>'priceMinor')::numeric >= $12)
+  AND ($13::numeric IS NULL OR (r.data->>'priceMinor')::numeric <= $13)
+  AND ($14::text IS NULL OR r.data->>'rooms'=$14)
+  AND ($15::uuid IS NULL OR r.id=$15)
+  AND ($16='all' OR (r.kind='listings' AND r.data->>'saleType'=$16))
+  ORDER BY created_at DESC,id LIMIT 101`,[s.organizationId,s.buildingId,kind,s.administrative,s.unitId,req.user!.id,search,req.user!.locale,
+   s.settings.marketplace,filters.saleType??null,filters.currency??null,filters.minPrice??null,filters.maxPrice??null,filters.rooms?.toString()??null,recordId,offerType])).rows;
  res.json({items:rows.slice(0,100).map(r=>publicRecord(r,s,req.user!.id)),hasMore:rows.length>100});
+});
+
+residentRecords.get('/records/:kind/:id',async(req,res)=>{
+ const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);
+ res.json(await transaction(async db=>publicRecord(await readRecord(db,s,kind,id.parse(req.params.id),req.user!.id),s,req.user!.id)));
 });
 
 residentRecords.post('/records/:kind',async(req,res)=>{
@@ -74,9 +94,18 @@ residentRecords.post('/records/:kind',async(req,res)=>{
    Object.assign(data,{priceMinor:service.data.priceMinor,currency:service.data.currency,serviceTitle:service.title});
   }
   if(kind==='conversations'&&parentId){
+   assertEnabled(s,'listings');
    const listing=await readRecord(db,s,'listings',parentId,req.user!.id,true);
    if(listing.status!=='active')throw new ApiError(409,'invalid_transition');
+   if(listing.owner_user_id===req.user!.id)throw new ApiError(400,'validation_error');
+   if('viewingAt' in data&&data.viewingAt){
+    if(!('viewingConsent' in data)||data.viewingConsent!==true)throw new ApiError(400,'consent_required');
+    const at=Date.parse(data.viewingAt);
+    if(at<=Date.now()||at>Date.now()+366*86400000)throw new ApiError(400,'invalid_viewing_time');
+    Object.assign(data,{viewingAt:new Date(at).toISOString(),viewingStatus:'requested'});
+   }
   }
+  if(kind==='conversations'&&'viewingAt' in data&&data.viewingAt&&!parentId)throw new ApiError(400,'validation_error');
   if(kind==='mobile-devices'){
    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`resident-installation:${req.user!.id}:${'installationId' in data?data.installationId:''}`]);
    const prior=(await db.query(`SELECT * FROM resident_product_records WHERE owner_user_id=$1 AND kind=$2

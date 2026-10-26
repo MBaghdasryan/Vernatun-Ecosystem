@@ -6,6 +6,8 @@ import type {Language} from '../../portal/i18n';
 import {L,S,actLabel,statusLabel,contactCats,agreementCats,helpLangs,reasonNeeded,type T} from './text';
 import {A,staffCreate} from './adminText';
 import {useAct} from './useAct';
+import ListingPhotos from './ListingPhotos';
+import {listingSummary,fmtView} from './listingText';
 type P={kind:ResidentRecordKind;l:Language;scope:string;buildingId:string};
 const reasonActs=['approve','reject','freeze','close','reopen','report'];
 function AdminThread({kind,rec,l,scope,buildingId}:P&{rec:ResidentRecord}){
@@ -21,6 +23,8 @@ function AdminCard({kind,rec,l,scope,buildingId,refresh}:P&{rec:ResidentRecord;r
  const go=(x:string)=>{if(x==='delete'){if(!confirm(L(l,S.confirm)))return;return void a.run(()=>removeResidentRecord(kind,rec.id,{version:rec.version,buildingId}))}
   void a.run(async()=>{await actOnResidentRecord(kind,rec.id,{action:x as any,version:rec.version,...(reason.trim()?{reason:reason.trim()}:{})},{buildingId});setReason('')})};
  return <article className="im-card sx-rec"><div className="im-card-top"><span className="im-chip im-warning">{statusLabel[rec.status]?L(l,statusLabel[rec.status]):'·'}</span></div><h3>{rec.title}</h3>{rec.body&&<p className="sx-body">{rec.body}</p>}
+ {kind==='listings'&&<><p className="sx-meta">{listingSummary(rec.data as Record<string,unknown>,l)}</p><ListingPhotos rec={rec} c={{id:scope}} l={l} buildingId={buildingId} refresh={refresh}/></>}
+ {kind==='conversations'&&<p className="sx-meta">{fmtView(rec.data as Record<string,unknown>,l)}</p>}
  {acts.some(x=>reasonActs.includes(x)||reasonNeeded.includes(x))&&<input className="sx-search" aria-label={L(l,A.reason)} placeholder={L(l,A.reason)} maxLength={2000} value={reason} onChange={e=>setReason(e.target.value)}/>}
  <div className="sx-row">{acts.map(x=><button key={x} disabled={a.busy||(reasonNeeded.includes(x)&&!reason.trim())} className="im-button im-secondary" onClick={()=>go(x)}>{actLabel[x]?L(l,actLabel[x]):L(l,S.open2)}</button>)}{canEdit&&<button className="im-button im-secondary" onClick={()=>setEdit(true)}>{L(l,actLabel.edit)}</button>}{hasMsg&&<button className="im-button im-secondary" onClick={()=>setOpen(!open)}>{L(l,S.msgs)}</button>}</div>
  {edit&&<StaffForm kind={kind} l={l} buildingId={buildingId} refresh={refresh} rec={rec} onDone={()=>setEdit(false)}/>}{a.err&&<p role="alert" className="sx-err">{a.err}</p>}{open&&hasMsg&&<AdminThread kind={kind} rec={rec} l={l} scope={scope} buildingId={buildingId}/>}</article>}

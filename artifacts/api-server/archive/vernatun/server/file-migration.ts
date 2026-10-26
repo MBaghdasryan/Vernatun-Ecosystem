@@ -10,6 +10,7 @@ export async function storedFiles():Promise<{kind:FileKind;key:string;media_type
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM resident_avatars
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM file_attachments
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM incident_attachments
+    UNION SELECT 'photos',storage_key,'image/jpeg' FROM resident_listing_photos
     UNION SELECT 'documents',storage_key,media_type FROM documents
     UNION SELECT 'documents',storage_key,media_type FROM document_versions
     UNION SELECT 'photos',web_branding->>'logo_key','image/jpeg' FROM organizations WHERE web_branding->>'logo_key' IS NOT NULL

@@ -3979,6 +3979,23 @@ export interface ResidentRecordInput {
      * @maximum 180
      */
   longitude?: number;
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  area?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  rooms?: number;
+  /**
+     * @minimum -10
+     * @maximum 300
+     */
+  floor?: number;
+  viewingAt?: string;
+  viewingConsent?: boolean;
 }
 
 export type ResidentRecordData = { [key: string]: unknown };
@@ -4000,6 +4017,7 @@ export interface ResidentRecord {
   saved?: boolean;
   supported?: boolean;
   supportCount?: number;
+  photos?: string[];
 }
 
 export interface ResidentMessage {
@@ -4691,12 +4709,44 @@ buildingId?: string;
  * Exact record deep link, still subject to the same visibility policy.
  */
 recordId?: string;
+saleType?: GetResidentRecordsSaleType;
+currency?: GetResidentRecordsCurrency;
+/**
+ * @pattern ^\d{1,14}$
+ */
+minPrice?: string;
+/**
+ * @pattern ^\d{1,14}$
+ */
+maxPrice?: string;
+/**
+ * @minimum 0
+ * @maximum 100
+ */
+rooms?: number;
 /**
  * @maxLength 200
  */
 search?: string;
 offerType?: GetResidentRecordsOfferType;
 };
+
+export type GetResidentRecordsSaleType = typeof GetResidentRecordsSaleType[keyof typeof GetResidentRecordsSaleType];
+
+
+export const GetResidentRecordsSaleType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export type GetResidentRecordsCurrency = typeof GetResidentRecordsCurrency[keyof typeof GetResidentRecordsCurrency];
+
+
+export const GetResidentRecordsCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
 
 export type GetResidentRecordsOfferType = typeof GetResidentRecordsOfferType[keyof typeof GetResidentRecordsOfferType];
 
@@ -4713,6 +4763,42 @@ export type GetResidentRecords200 = {
 };
 
 export type CreateResidentRecordParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type UploadResidentListingPhotoParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+/**
+ * @minimum 1
+ */
+version: number;
+};
+
+export type GetResidentListingPhotoParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type DeleteResidentListingPhotoParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+/**
+ * @minimum 1
+ */
+version: number;
+};
+
+export type GetResidentRecordParams = {
 /**
  * Only administrators can choose a building; residents always use their authenticated context.
  */
@@ -4766,6 +4852,9 @@ export const ActOnResidentRecordBodyAction = {
   report: 'report',
   request: 'request',
   proposal: 'proposal',
+  confirm_viewing: 'confirm_viewing',
+  decline_viewing: 'decline_viewing',
+  cancel_viewing: 'cancel_viewing',
 } as const;
 
 export type ActOnResidentRecordBody = {
