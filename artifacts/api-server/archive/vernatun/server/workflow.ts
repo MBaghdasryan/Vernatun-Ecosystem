@@ -10,6 +10,14 @@ export const workflow=Router();workflow.use(requireAuth);
 const uuid=z.string().uuid();
 async function scope(req:Request){const c=await context(req);await requirePermission(req,c.permissions.includes('requests.read')?'requests.read':c.permissions.includes('requests.own')?'requests.own':'workorders.assigned');return c}
 async function rows(req:Request,id?:string,client?:PoolClient,lock=false){const c=await scope(req);const db=client??pool;const result=await db.query(`SELECT r.*,u.number,COALESCE(r.building_id,u.building_id) AS building_id,b.name AS building_name,w.id AS work_order_id,w.technician_id,w.status AS work_status,w.version AS work_version,w.checklist,w.report,w.accepted_at,w.paused_at,w.blocked_reason,t.name AS technician_name,cat.name AS category_name,
+ CASE WHEN $5::boolean AND NOT $6::boolean THEN (
+  SELECT d.title FROM resident_discussion_lineage l
+  JOIN resident_product_records d ON d.id=l.discussion_id AND d.kind='discussions'
+   AND d.organization_id=l.organization_id AND d.building_id=l.building_id AND d.deleted_at IS NULL
+  WHERE l.link_type='request' AND l.request_id=r.id
+   AND l.organization_id=r.organization_id AND l.building_id=COALESCE(r.building_id,u.building_id)
+  LIMIT 1
+ ) END AS origin_discussion_title,
  (SELECT min(due_at) FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AS due_at,
  EXISTS(SELECT 1 FROM request_sla_deadlines d WHERE d.request_id=r.id AND d.satisfied_at IS NULL AND d.due_at<now() AND NOT(d.kind='resolution' AND w.paused_at IS NOT NULL AND COALESCE((r.sla_snapshot->>'pause_resolution')::boolean,false))) AND r.status<>'closed' AS overdue
  FROM resident_requests r LEFT JOIN units u ON u.id=r.unit_id JOIN buildings b ON b.id=COALESCE(r.building_id,u.building_id) LEFT JOIN work_orders w ON w.request_id=r.id LEFT JOIN users t ON t.id=w.technician_id LEFT JOIN request_categories cat ON cat.id=r.category_id

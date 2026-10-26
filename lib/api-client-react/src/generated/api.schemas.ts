@@ -2925,7 +2925,14 @@ export interface IncidentTransitionInput {
   note: string;
 }
 
-export interface OperationalRow { [key: string]: unknown }
+export interface OperationalRow {
+  /**
+     * Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.
+     * @nullable
+     */
+  origin_discussion_title?: string | null;
+  [key: string]: unknown;
+ }
 
 export type EmailStatus = typeof EmailStatus[keyof typeof EmailStatus];
 

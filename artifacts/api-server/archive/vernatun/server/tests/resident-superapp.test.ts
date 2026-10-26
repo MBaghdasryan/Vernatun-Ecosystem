@@ -144,6 +144,10 @@ test('staff request details expose a scoped discussion source and staff can open
  const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:text,clientId:randomUUID()});assert.equal(message.status,201);
  const created=await owner.call(`/resident/records/discussions/${topic.data.id}/requests`,'POST',{key:randomUUID(),sourceMessageId:message.data.id,subject:'Repair lobby door',description:'Please inspect the entrance door.'});assert.equal(created.status,201,JSON.stringify(created.data));
  for(const staff of [dispatcher,manager]){
+  const list=await staff.call('/requests');assert.equal(list.status,200);
+  const row=list.data.find((r:any)=>r.id===created.data.requestId);
+  assert.equal(row.origin_discussion_title,'Lobby door repair source');
+  assert.ok(Object.values(row).join(' ').toLowerCase().includes('door repair source'));
   const detail=await staff.call('/requests/'+created.data.requestId);assert.equal(detail.status,200,JSON.stringify(detail.data));
   assert.equal(detail.data.originDiscussion.discussionId,topic.data.id);
   assert.equal(detail.data.originDiscussion.sourceMessageId,message.data.id);
@@ -154,8 +158,29 @@ test('staff request details expose a scoped discussion source and staff can open
   assert.ok(thread.data.messages.some((m:any)=>m.id===message.data.id&&m.body===text.trim()));
  }
  assert.equal((await owner.call('/requests/'+created.data.requestId)).data.originDiscussion,null);
+ assert.equal((await owner.call('/requests/'+created.data.requestId)).data.origin_discussion_title,null);
  assert.equal((await owner.call('/requests/'+created.data.requestId+'/origin-discussion')).status,403);
  assert.equal((await secondOrg.call('/requests/'+created.data.requestId+'/origin-discussion')).status,403);
+ assert.equal((await secondOrg.call('/requests')).status,403);
+ // A regular request remains in the list and matches the same all-field search.
+ const plain=await owner.call('/requests','POST',{unitId:seed.fixtures.ua,subject:'Independent plumbing issue',description:'Not created from a discussion.'});
+ assert.equal(plain.status,201,JSON.stringify(plain.data));
+ const regular=(await dispatcher.call('/requests')).data.find((r:any)=>r.id===plain.data.id);
+ assert.ok(regular);assert.equal(regular.origin_discussion_title,null);
+ assert.ok(Object.values(regular).join(' ').toLowerCase().includes('independent plumbing'));
+ // A request may never acquire a discussion title from a different building.
+ const otherBuilding=(await pool.query("INSERT INTO buildings(organization_id,name,address) SELECT organization_id,'Other request search building','QA' FROM buildings WHERE id=$1 RETURNING id",[buildingId])).rows[0].id;
+ await pool.query('UPDATE resident_requests SET building_id=$2 WHERE id=$1',[created.data.requestId,otherBuilding]);
+ try{
+  const scoped=(await dispatcher.call('/requests')).data.find((r:any)=>r.id===created.data.requestId);
+  assert.equal(scoped.origin_discussion_title,null);
+  await pool.query('UPDATE role_assignments SET building_id=$2 WHERE id=$1',[dispatcher.contextId,buildingId]);
+  const buildingDispatcher=await new Client().login('dispatcher');
+  assert.ok(!(await buildingDispatcher.call('/requests')).data.some((r:any)=>r.id===created.data.requestId));
+ }finally{
+  await pool.query('UPDATE resident_requests SET building_id=$2 WHERE id=$1',[created.data.requestId,buildingId]);
+  await pool.query('UPDATE role_assignments SET building_id=NULL WHERE id=$1',[dispatcher.contextId]);
+ }
 });
 test('marketplace requires explicit owner draft, submission and staff approval',async()=>{
  const payload={title:'Parking rent',body:'Contact through this app',saleType:'rent',priceMinor:'10000',currency:'AMD'};

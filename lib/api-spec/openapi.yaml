@@ -5500,6 +5500,10 @@ components:
     OperationalRow:
       type: object
       additionalProperties: true
+      properties:
+        origin_discussion_title:
+          type: [string, "null"]
+          description: Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.
     RequestPriority:
       type: string
       enum: [low, normal, high, urgent, emergency]

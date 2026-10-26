@@ -5909,7 +5909,9 @@ export const HealthCheckResponse = zod.object({
 })
 
 
-export const GetRequestCategoriesResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetRequestCategoriesResponseItem = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 export const GetRequestCategoriesResponse = zod.array(GetRequestCategoriesResponseItem)
 
 
@@ -5945,7 +5947,9 @@ export const UpdateRequestCategoryBody = zod.object({
 export const UpdateRequestCategoryResponse = zod.unknown()
 
 
-export const GetSlaPoliciesResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetSlaPoliciesResponseItem = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 export const GetSlaPoliciesResponse = zod.array(GetSlaPoliciesResponseItem)
 
 
@@ -5979,10 +5983,14 @@ export const GetDispatcherSetupQueryParams = zod.object({
   "unitId": zod.coerce.string().uuid().optional()
 })
 
-export const GetDispatcherSetupResponse = zod.record(zod.string(), zod.unknown())
+export const GetDispatcherSetupResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
-export const GetOperationalRequestsResponseItem = zod.record(zod.string(), zod.unknown())
+export const GetOperationalRequestsResponseItem = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 export const GetOperationalRequestsResponse = zod.array(GetOperationalRequestsResponseItem)
 
 
@@ -6011,14 +6019,18 @@ export const CreateOperationalRequestBody = zod.object({
   "assetId": zod.string().uuid().optional()
 })
 
-export const CreateOperationalRequestResponse = zod.record(zod.string(), zod.unknown())
+export const CreateOperationalRequestResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const GetOperationalRequestParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
-export const GetOperationalRequestResponse = zod.record(zod.string(), zod.unknown())
+export const GetOperationalRequestResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const TransitionOperationalRequestParams = zod.object({
@@ -6311,14 +6323,18 @@ export const LookupEquipmentQueryParams = zod.object({
   "identifier": zod.coerce.string().max(lookupEquipmentQueryIdentifierMax)
 })
 
-export const LookupEquipmentResponse = zod.record(zod.string(), zod.unknown())
+export const LookupEquipmentResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const GetOperationalIncidentParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
-export const GetOperationalIncidentResponse = zod.record(zod.string(), zod.unknown())
+export const GetOperationalIncidentResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const TransitionIncidentParams = zod.object({
@@ -6347,7 +6363,9 @@ export const ListOperationalVisitsQueryParams = zod.object({
   "to": zod.date()
 })
 
-export const ListOperationalVisitsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOperationalVisitsResponseItem = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 export const ListOperationalVisitsResponse = zod.array(ListOperationalVisitsResponseItem)
 
 
@@ -6374,10 +6392,14 @@ export const UploadOperationalPhotoHeader = zod.object({
   "X-Work-Version": zod.number().int().min(1).optional()
 })
 
-export const UploadOperationalPhotoResponse = zod.record(zod.string(), zod.unknown())
+export const UploadOperationalPhotoResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
-export const ListOperationalIncidentsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListOperationalIncidentsResponseItem = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 export const ListOperationalIncidentsResponse = zod.array(ListOperationalIncidentsResponseItem)
 
 
@@ -6393,7 +6415,9 @@ export const CreateOperationalIncidentBody = zod.object({
   "severity": zod.enum(['low', 'normal', 'high', 'critical']).optional()
 })
 
-export const CreateOperationalIncidentResponse = zod.record(zod.string(), zod.unknown())
+export const CreateOperationalIncidentResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const UploadIncidentEvidenceParams = zod.object({
@@ -6408,7 +6432,9 @@ export const UploadIncidentEvidenceHeader = zod.object({
   "X-Work-Version": zod.number().int().min(1).optional()
 })
 
-export const UploadIncidentEvidenceResponse = zod.record(zod.string(), zod.unknown())
+export const UploadIncidentEvidenceResponse = zod.object({
+  "origin_discussion_title": zod.string().nullish().describe('Source discussion title for staff request search; null for resident contexts, missing/deleted discussions, or mismatched organization/building.')
+})
 
 
 export const GetIncidentEvidenceParams = zod.object({
