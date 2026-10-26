@@ -8,6 +8,7 @@ import {L,S} from './text';
 import {A,settingKeys,staffKinds} from './adminText';
 import {useAct} from './useAct';
 import AdminRecords from './AdminRecords';
+import {StaffBookings} from '../continuity/Bookings';
 import './admin.css';
 function Settings({value,l,buildingId,refresh}:{value:ResidentBuildingSettings;l:Language;buildingId:string;refresh:()=>void}){
  const [s,setS]=useState(value),[ok,setOk]=useState(false),a=useAct(l,refresh);
@@ -28,4 +29,5 @@ export default function ResidentAdministration({c,language:l}:{c:RoleContext;lan
  {ws.data&&!ws.data.administrative&&<div className="im-card im-empty"><p>{L(l,A.denied)}</p></div>}
   {ws.data?.administrative&&<><Settings key={scope} value={ws.data.settings} l={l} buildingId={buildingId} refresh={()=>{void qc.invalidateQueries({queryKey:['resident-admin-ws',scope]})}}/>
  <div className="sx-hub im-quick" role="tablist" aria-label={L(l,A.tabs)}>{staffKinds.map(([k,lab])=><button key={k} role="tab" aria-selected={kind===k} className={kind===k?'active':''} onClick={()=>setKind(k)}>{L(l,[...lab] as any)}</button>)}</div>
- <AdminRecords key={scope+kind} kind={kind} l={l} scope={scope} buildingId={buildingId}/></>}</>}</div>}
+ <AdminRecords key={scope+kind} kind={kind} l={l} scope={scope} buildingId={buildingId}/>
+ {c.permissions.includes('requests.assign')?<StaffBookings key={scope} l={l} buildingId={buildingId} scope={scope}/>:<div className="im-card"><p>{L(l,['Ամրագրումների հերթը հասանելի չէ․ պակասում է հայտերի նշանակման իրավունքը։','Очередь записей недоступна: нет права назначать заявки.','The booking queue is not available: this role cannot assign requests.'])}</p></div>}</>}</>}</div>}

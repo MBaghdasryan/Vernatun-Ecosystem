@@ -17,6 +17,44 @@ tags:
   - name: edge-resident
     description: Devices explicitly mapped to the current resident unit.
 paths:
+  /resident/household:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1household'
+  /delegations/{id}/revoke:
+    $ref: './resident-continuity.yaml#/paths/~1delegations~1{id}~1revoke'
+  /resident/service-bookings/{id}/options:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1service-bookings~1{id}~1options'
+  /resident/avatar:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1avatar'
+  /resident/building-finance:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1building-finance'
+  /resident/continuity:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1continuity'
+  /resident/email-verification:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1email-verification'
+  /resident/notification-settings:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1notification-settings'
+  /resident/direct-chats:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1direct-chats'
+  /resident/direct-chats/{id}/messages:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1direct-chats~1{id}~1messages'
+  /resident/direct-chats/{id}/state:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1direct-chats~1{id}~1state'
+  /resident/saved-searches:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1saved-searches'
+  /resident/saved-searches/{id}:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1saved-searches~1{id}'
+  /resident/property-comparison:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1property-comparison'
+  /resident/platform-tickets:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1platform-tickets'
+  /resident/ai-history:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1ai-history'
+  /resident/ai-history/{id}:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1ai-history~1{id}'
+  /resident/service-bookings:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1service-bookings'
+  /resident/service-bookings/{id}:
+    $ref: './resident-continuity.yaml#/paths/~1resident~1service-bookings~1{id}'
   /meters:
     $ref: './resident.yaml#/paths/~1meters'
   /meters/{id}/readings:

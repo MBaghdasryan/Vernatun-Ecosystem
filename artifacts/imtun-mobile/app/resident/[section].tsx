@@ -19,6 +19,7 @@ import Meters from '@/components/resident/domain/Meters';
 import Announcements from '@/components/resident/domain/Announcements';
 import Documents from '@/components/resident/domain/Documents';
 import Passes from '@/components/resident/domain/Passes';
+import Continuity, { continuitySections } from '@/components/resident/continuity/Gate';
 function DomainSection({ view, l }: { view: DomainView; l: ReturnType<typeof useLang> }) {
   const acc = useDomainAccess(view);
   if (acc.loading) return <Skeleton />;
@@ -33,6 +34,7 @@ export default function ResidentSection() {
     <Pressable accessibilityRole="button" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>
     {/* key by context so forms and lists reset when the home changes */}
     <View key={(ctx ?? 'none') + section} style={{ gap: 16 }}>
+      {continuitySections.includes(section ?? '') && <Continuity section={section ?? ''} l={l} />}
       {section === 'building' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <BuildingInfo ws={ws.data} l={l} />}<RecordsList kind="contacts" l={l} /></>}
       {section === 'preferences' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <PrefsForm key={JSON.stringify(ws.data.profile)} profile={ws.data.profile} l={l} />}</>}
       {(domainViews as readonly string[]).includes(section ?? '') && <DomainSection view={section as DomainView} l={l} />}

@@ -1,5 +1,9 @@
 # ImTun Resident Super App — отчёт о реализации
 
+Последующее расширение внутреннего контура и актуальные ограничения:
+[IMTUN-CONTINUITY-ACCEPTANCE.md](IMTUN-CONTINUITY-ACCEPTANCE.md).
+Приведённые ниже 15 сценариев относятся к предыдущему этапу, не ко всему master prompt.
+
 Дата: 2026-10-26.
 
 ## Вердикт

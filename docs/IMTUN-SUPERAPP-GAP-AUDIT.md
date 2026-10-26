@@ -1,5 +1,8 @@
 # ImTun Super App — исходный аудит
 
+Продолжение реализации и проверки новых внутренних функций:
+[IMTUN-CONTINUITY-ACCEPTANCE.md](IMTUN-CONTINUITY-ACCEPTANCE.md).
+
 Эта таблица фиксирует состояние **до** текущей реализации. Итоги изменений, доказательства проверок и незакрытые требования: [IMTUN-SUPERAPP-PLATFORM-REPORT.md](IMTUN-SUPERAPP-PLATFORM-REPORT.md). Весь мастер-промпт пока имеет статус PARTIAL.
 
 Источник требований: `attached_assets/Pasted--VERNATUN-IMTUN-RESIDENT-SUPER-APP-PLATFORM-CLOUD-BACKE_1793001035566.txt`.

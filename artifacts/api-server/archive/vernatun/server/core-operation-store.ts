@@ -28,17 +28,22 @@ export async function eligiblePeople(db:PoolClient|typeof pool,org:string,buildi
  [org,building,unit,role,id??null])).rows;
 }
 
-export async function createOperationalRequest(req:Request,appendHistory:(db:PoolClient,req:Request,row:any,action:string,to:string,note?:string)=>Promise<void>){
- const b=operationalInput.parse(req.body),c=await context(req);
+export async function prepareOperationalRequest(req:Request,trustedInput?:unknown){
+ const b=operationalInput.parse(trustedInput??req.body),c=await context(req);
  const staff=c.permissions.includes('requests.assign');
  const equipmentTech=c.role_key==='technician'&&!!b.assetId;
  await requirePermission(req,staff?'requests.assign':equipmentTech?'workorders.execute':'requests.create');
  const unit=await scopedUnit(c,b.unitId);
  if((staff||equipmentTech)&&(!b.categoryId||!b.key))throw new ApiError(400,'category_and_key_required');
  if(!staff&&(b.reportedForUserId||b.technicianId))throw new ApiError(403,'forbidden');
- return transaction(async db=>{
-  const tech=equipmentTech?req.user!.id:b.technicianId;
   if(b.assetId)await requirePermission(req,'assets.read');
+  return {b,c,staff,equipmentTech,unit};
+}
+type PreparedRequest=Awaited<ReturnType<typeof prepareOperationalRequest>>;
+type RequestHistory=(db:PoolClient,req:Request,row:any,action:string,to:string,note?:string)=>Promise<void>;
+export async function commitPreparedRequest(db:PoolClient,req:Request,prepared:PreparedRequest,appendHistory:RequestHistory){
+   const {b,c,staff,equipmentTech,unit}=prepared;
+  const tech=equipmentTech?req.user!.id:b.technicianId;
   const run=async()=>{
    // Actor/unit permission is fresh on every retry. Mutable availability belongs
    // inside the new-write branch: an expired visit window or retired category
@@ -66,7 +71,10 @@ export async function createOperationalRequest(req:Request,appendHistory:(db:Poo
    return row;
   };
   return b.key?idempotent(db,req,b.key,b,run):run();
- });
+}
+export async function createOperationalRequest(req:Request,appendHistory:RequestHistory,trustedInput?:unknown){
+ const prepared=await prepareOperationalRequest(req,trustedInput);
+ return transaction(db=>commitPreparedRequest(db,req,prepared,appendHistory));
 }
 
 export async function requestExtras(id:string,db:PoolClient|typeof pool=pool){

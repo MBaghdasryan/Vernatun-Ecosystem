@@ -7,6 +7,7 @@ import {privateFileExists,readPrivateFile,saveAndCommitPrivateFile,type FileKind
 export async function storedFiles():Promise<{kind:FileKind;key:string;media_type:string}[]>{
   return (await pool.query(`
     SELECT 'photos' AS kind,storage_key AS key,'image/jpeg' AS media_type FROM request_photos
+    UNION SELECT 'photos',storage_key,'image/jpeg' FROM resident_avatars
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM file_attachments
     UNION SELECT 'photos',storage_key,'image/jpeg' FROM incident_attachments
     UNION SELECT 'documents',storage_key,media_type FROM documents

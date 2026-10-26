@@ -53,6 +53,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-build-properties": "~57.0.22"
+    "expo-build-properties": "~57.0.22",
+    "expo-image-picker": "~57.0.20"
   }
 }

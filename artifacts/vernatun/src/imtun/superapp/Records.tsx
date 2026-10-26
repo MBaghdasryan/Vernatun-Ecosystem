@@ -9,8 +9,10 @@ import RecordCard from './RecordCard';
 import CreateForm from './CreateForm';
 export default function Records({kind,l,c,caps}:{kind:ResidentRecordKind;l:Language;c:RoleContext;caps?:Record<string,boolean>}){
  const selected=new URLSearchParams(location.search),recordId=selected.get('recordKind')===kind?selected.get('recordId')??undefined:undefined;
- const qc=useQueryClient(),[search,setSearch]=useState(''),key=['resident-rec',c.id,kind,search,recordId??''];
- const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{})})});
+ const offer=selected.get('offerType'),offerType=kind==='listings'&&(offer==='sale'||offer==='rent')?offer:'all';
+ const qc=useQueryClient(),[search,setSearch]=useState(selected.get('search')??''),key=['resident-rec',c.id,kind,search,recordId??'',offerType];
+ useEffect(()=>setSearch(new URLSearchParams(location.search).get('search')??''),[location.search]);
+ const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{}),offerType})});
  useEffect(()=>{if(recordId&&q.data?.items.some(r=>r.id===recordId)){
   const node=document.getElementById('resident-record-'+recordId);node?.focus({preventScroll:true});node?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
  }},[recordId,q.data]);

@@ -1,4 +1,11 @@
 export * from "./generated/api";
+export type {
+ ConfirmResidentEmailVerificationBody,CreateResidentAiHistoryBody,CreateResidentDirectChatBody,
+ CreateResidentPlatformTicketBody,CreateResidentServiceBookingBody,GetResidentDirectMessagesParams,
+ PostResidentDirectMessageBody,PostResidentDirectMessageParams,ReviewResidentServiceBookingBody,
+ ReviewResidentServiceBookingParams,UpdateResidentDirectChatStateBody,
+ GetResidentServiceBookingOptionsParams,
+} from "./generated/types";
 export * from "./device-actions";
 export type { UploadUnitPlanParams } from "./generated/types/uploadUnitPlanParams";
 export type { GetDefectCollaborationParams } from "./generated/types/getDefectCollaborationParams";

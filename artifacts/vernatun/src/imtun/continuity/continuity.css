@@ -1,0 +1,9 @@
+.cx button,.cx input,.cx select,.cx textarea{min-height:44px}
+.cx textarea{width:100%;font:inherit;color:inherit;background:transparent;padding:10px;border:1px solid var(--im-border,#d7dfe3);border-radius:10px}
+.cx :focus-visible{outline:3px solid #147795;outline-offset:2px}
+.cx-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cx-list{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.cx-msg{max-width:85%;padding:9px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;background:color-mix(in srgb,currentColor 8%,transparent);color:inherit}.cx-msg.own{margin-left:auto;background:color-mix(in srgb,#f7770b 18%,transparent)}
+.cx-badge{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800;background:#fff0e4;color:#a64100}
+.cx-badge.ok{background:#e8f1eb;color:#28634b}
+.cx-fin{width:100%;border-collapse:collapse}.cx-fin th,.cx-fin td{text-align:left;padding:8px;border-bottom:1px solid #d7dfe3}

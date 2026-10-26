@@ -1,6 +1,7 @@
 import {allowedProducts,primaryProduct,startRoute} from '../shared/products.js';
 import type {Request,Response,NextFunction} from 'express';
 import {pool} from './db.js';
+import {activationExempt,residentActivation} from './resident-activation.js';
 import {moduleForPermission} from './roles.js';
 import {subscriptionPolicy} from './subscription-policy.js';
 import {activeLeasePredicate} from './lease-policy.js';
@@ -30,7 +31,10 @@ export function requireAuth(req:Request,_res:Response,next:NextFunction){
  next();
 }
 export async function context(req:Request):Promise<Context>{if(!req.user)throw new ApiError(401,'unauthenticated');const available=await contexts(req.user.id);const c=available.find(c=>c.id===req.session.contextId);if(!c)throw new ApiError(403,'context_required');await assertMfaContext(req,c);return c;}
-export async function requirePermission(req:Request,permission:string){const c=await context(req);const decision=await permissionDecision(c,permission,req.method);if(!decision.allowed)throw new ApiError(403,decision.reason);return c;}
+export async function requirePermission(req:Request,permission:string){const c=await context(req);const decision=await permissionDecision(c,permission,req.method);if(!decision.allowed)throw new ApiError(403,decision.reason);
+ if(c.shell==='home'&&c.building_id&&c.organization_id&&!activationExempt(req)&&
+  !(await residentActivation(req.user!.id,c.building_id,c.organization_id)).ready)throw new ApiError(403,'resident_activation_required');
+ return c;}
 export async function scopedUnit(c:Context,id:string){if(!c.organization_id)throw new ApiError(403,'forbidden');const unit=await scopedUnitRow(c,id);if(!unit)throw new ApiError(404,'not_found');return unit;}
 export async function requireUnitRead(req:Request,id:string){
  const result=await unitReadDecision(await context(req),id);

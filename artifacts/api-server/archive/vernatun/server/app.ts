@@ -28,6 +28,12 @@ import {residentLifecycle} from './resident-lifecycle.js';
 import {residentWorkspace,residentContexts} from './resident-workspace.js';
 import {residentRecords} from './resident-records.js';
 import {residentConversations} from './resident-conversations.js';
+import {residentContinuity} from './resident-continuity.js';
+import {residentDirectChat} from './resident-direct-chat.js';
+import {residentBookings} from './resident-bookings.js';
+import {residentFinanceTransparency} from './resident-finance-transparency.js';
+import {residentAvatar} from './resident-avatar.js';
+import {residentHousehold} from './resident-household.js';
 import {notificationLinks} from './notification-links.js';
 import {imports} from './imports.js';
 import {mfa} from './mfa.js';
@@ -111,7 +117,7 @@ app.use('/api',edgeManagementApi);
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});
 app.use('/api/auth',auth);app.use('/api/mfa',mfaPolicy);app.use('/api/mfa',mfa);
 app.use('/api/me',residentContexts);
-app.use('/api/resident',residentWorkspace,residentRecords,residentConversations);
+app.use('/api/resident',residentWorkspace,residentRecords,residentConversations,residentContinuity,residentDirectChat,residentBookings,residentFinanceTransparency,residentAvatar,residentHousehold);
 app.use('/api',leads);
 // External v1 uses scoped API keys instead of browser sessions. Mount it before
 // routers with router-wide requireAuth middleware so those guards cannot consume

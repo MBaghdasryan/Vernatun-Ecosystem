@@ -5,6 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
+import {registerResidentContinuityTests} from './resident-continuity.cases.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='';
@@ -21,8 +22,13 @@ class Client{
   this.contextId=result.data.contexts.find((c:any)=>c.role_key===a.role).id;
   assert.equal((await this.call('/auth/context','POST',{id:this.contextId})).status,200);return this;
  }
+ async bytes(path:string,method='GET',body?:Buffer){
+  const r=await fetch(base+'/api'+path,{method,headers:{Cookie:this.cookie,'X-CSRF-Token':this.csrf,'Content-Type':'application/octet-stream'},
+   ...(body?{body:new Uint8Array(body)}:{})});
+  return {status:r.status,body:Buffer.from(await r.arrayBuffer()),type:r.headers.get('content-type'),cache:r.headers.get('cache-control')};
+ }
 }
-let owner:Client,family:Client,admin:Client,buildingId:string,query:string;
+let owner:Client,family:Client,admin:Client,manager:Client,buildingId:string,query:string;
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
  base='http://127.0.0.1:'+(server.address() as {port:number}).port;
@@ -205,3 +211,4 @@ test('search separates resident kinds and exact record links preserve ownership 
   await pool.query('UPDATE resident_building_settings SET chat=true WHERE building_id=$1 AND organization_id=$2',[buildingId,org]);
  }
 });
+registerResidentContinuityTests(()=>({owner,family,admin,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));

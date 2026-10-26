@@ -44,15 +44,21 @@ import type {
   ChangeGovernanceMeeting200,
   ChangeGovernanceMeetingBody,
   ClearSystemCache200,
+  ConfirmResidentEmailVerificationBody,
   CreateApiClientBody,
   CreateGovernanceMeeting201,
   CreateGovernanceMeetingBody,
   CreateManagedApiKeyBody,
   CreateOwnership201,
   CreateOwnershipBody,
+  CreateResidentAiHistoryBody,
+  CreateResidentDirectChatBody,
   CreateResidentPass201,
   CreateResidentPassBody,
+  CreateResidentPlatformTicketBody,
   CreateResidentRecordParams,
+  CreateResidentServiceBookingBody,
+  CreateResidentServiceBookingParams,
   CreateSystemBackup202,
   CreditAllocationInput,
   DefectCollaboration,
@@ -139,10 +145,19 @@ import type {
   GetPrivateBrandLogoParams,
   GetPrivateStorageStatus200,
   GetResidentAdminBuildings200Item,
+  GetResidentBuildingFinance200Item,
   GetResidentContexts200Item,
+  GetResidentContinuityParams,
+  GetResidentDirectMessages200,
+  GetResidentDirectMessagesParams,
   GetResidentMessagesParams,
+  GetResidentPropertyComparison200Item,
+  GetResidentPropertyComparisonParams,
   GetResidentRecords200,
   GetResidentRecordsParams,
+  GetResidentServiceBookingOptions200,
+  GetResidentServiceBookingOptionsParams,
+  GetResidentServiceBookingsParams,
   GetResidentWorkspaceParams,
   GetRoleInsights200,
   GetRoleInsightsParams,
@@ -265,6 +280,8 @@ import type {
   PlatformVersionIntent,
   PortfolioObject,
   PortfolioObjectInput,
+  PostResidentDirectMessageBody,
+  PostResidentDirectMessageParams,
   PostResidentMessageBody,
   PostResidentMessageParams,
   RecentAuthenticationInput,
@@ -273,16 +290,29 @@ import type {
   RemoveResidentRecordParams,
   ReplacePortfolioBuildingsBody,
   ResendDeliveryInput,
+  ResidentAiHistory,
   ResidentBuildingSettings,
+  ResidentContinuity,
   ResidentDelegationInput,
+  ResidentDirectChat,
+  ResidentDirectMessage,
+  ResidentHousehold,
   ResidentIdResult,
   ResidentMessage,
+  ResidentNotificationSettings,
+  ResidentPlatformTicket,
   ResidentProfileInput,
   ResidentRecord,
   ResidentRecordInput,
   ResidentRecordKind,
+  ResidentSavedSearch,
+  ResidentSearchInput,
+  ResidentServiceBooking,
   ResidentWorkspace,
   ResolveNotificationDestinationParams,
+  ReviewResidentServiceBookingBody,
+  ReviewResidentServiceBookingParams,
+  RevokeResidentDelegation200,
   RevokeSystemSessions200,
   RollbackSystemUpdate202,
   RollbackSystemUpdate409,
@@ -297,6 +327,7 @@ import type {
   StaffAvailability,
   StageSystemUpdate200,
   StageSystemUpdateBody,
+  StartResidentEmailVerification202,
   SubmitResidentMeterReadingBody,
   SuggestBankMatchesParams,
   SupportKnowledgeArticle,
@@ -326,6 +357,7 @@ import type {
   UpdateOrganizationModuleBody,
   UpdatePortfolioObjectBody,
   UpdateResidentBuildingSettingsParams,
+  UpdateResidentDirectChatStateBody,
   UpdateResidentRecordParams,
   UploadDocumentVersion201,
   UploadDocumentVersionParams,
@@ -371,6 +403,1890 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetResidentHouseholdUrl = () => {
+
+
+
+
+  return `/api/resident/household`
+}
+
+export const getResidentHousehold = async ( options?: Parameters<typeof customFetch>[1]): Promise<ResidentHousehold> => {
+
+  return customFetch<ResidentHousehold>(getGetResidentHouseholdUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentHouseholdQueryKey = () => {
+    return [
+    `/api/resident/household`
+    ] as const;
+    }
+
+
+export const getGetResidentHouseholdQueryOptions = <TData = Awaited<ReturnType<typeof getResidentHousehold>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentHousehold>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentHouseholdQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentHousehold>>> = ({ signal }) => getResidentHousehold({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentHousehold>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentHouseholdQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentHousehold>>>
+export type GetResidentHouseholdQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentHousehold<TData = Awaited<ReturnType<typeof getResidentHousehold>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentHousehold>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentHouseholdQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRevokeResidentDelegationUrl = (id: string,) => {
+
+
+
+
+  return `/api/delegations/${id}/revoke`
+}
+
+export const revokeResidentDelegation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RevokeResidentDelegation200> => {
+
+  return customFetch<RevokeResidentDelegation200>(getRevokeResidentDelegationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeResidentDelegationMutationKey = () => ['revokeResidentDelegation'] as const;
+
+export const getRevokeResidentDelegationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeResidentDelegation>>, TError,RevokeResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeResidentDelegation>>, TError,RevokeResidentDelegationMutationVariables, TContext> => {
+
+const mutationKey = getRevokeResidentDelegationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeResidentDelegation>>, RevokeResidentDelegationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeResidentDelegation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeResidentDelegationMutationResult = NonNullable<Awaited<ReturnType<typeof revokeResidentDelegation>>>
+
+    export type RevokeResidentDelegationMutationError = ErrorType<unknown>
+    export type RevokeResidentDelegationMutationVariables = {id: string}
+
+    export const useRevokeResidentDelegation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeResidentDelegation>>, TError,RevokeResidentDelegationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeResidentDelegation>>,
+        TError,
+        RevokeResidentDelegationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeResidentDelegationMutationOptions(options));
+    }
+
+export const getGetResidentServiceBookingOptionsUrl = (id: string,
+    params: GetResidentServiceBookingOptionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/service-bookings/${id}/options?${stringifiedParams}` : `/api/resident/service-bookings/${id}/options`
+}
+
+export const getResidentServiceBookingOptions = async (id: string,
+    params: GetResidentServiceBookingOptionsParams, options?: Parameters<typeof customFetch>[1]): Promise<GetResidentServiceBookingOptions200> => {
+
+  return customFetch<GetResidentServiceBookingOptions200>(getGetResidentServiceBookingOptionsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentServiceBookingOptionsQueryKey = (id: string,
+    params?: GetResidentServiceBookingOptionsParams,) => {
+    return [
+    `/api/resident/service-bookings/${id}/options`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentServiceBookingOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getResidentServiceBookingOptions>>, TError = ErrorType<unknown>>(id: string,
+    params: GetResidentServiceBookingOptionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookingOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentServiceBookingOptionsQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentServiceBookingOptions>>> = ({ signal }) => getResidentServiceBookingOptions(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookingOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentServiceBookingOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentServiceBookingOptions>>>
+export type GetResidentServiceBookingOptionsQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentServiceBookingOptions<TData = Awaited<ReturnType<typeof getResidentServiceBookingOptions>>, TError = ErrorType<unknown>>(
+ id: string,
+    params: GetResidentServiceBookingOptionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookingOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentServiceBookingOptionsQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetResidentAvatarUrl = () => {
+
+
+
+
+  return `/api/resident/avatar`
+}
+
+export const getResidentAvatar = async ( options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetResidentAvatarUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentAvatarQueryKey = () => {
+    return [
+    `/api/resident/avatar`
+    ] as const;
+    }
+
+
+export const getGetResidentAvatarQueryOptions = <TData = Awaited<ReturnType<typeof getResidentAvatar>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentAvatar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentAvatarQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentAvatar>>> = ({ signal }) => getResidentAvatar({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentAvatar>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentAvatarQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentAvatar>>>
+export type GetResidentAvatarQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentAvatar<TData = Awaited<ReturnType<typeof getResidentAvatar>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentAvatar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentAvatarQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUploadResidentAvatarUrl = () => {
+
+
+
+
+  return `/api/resident/avatar`
+}
+
+export const uploadResidentAvatar = async (uploadResidentAvatarBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUploadResidentAvatarUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
+    body: uploadResidentAvatarBody
+  }
+);}
+
+
+
+
+
+export const getUploadResidentAvatarMutationKey = () => ['uploadResidentAvatar'] as const;
+
+export const getUploadResidentAvatarMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadResidentAvatar>>, TError,UploadResidentAvatarMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadResidentAvatar>>, TError,UploadResidentAvatarMutationVariables, TContext> => {
+
+const mutationKey = getUploadResidentAvatarMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadResidentAvatar>>, UploadResidentAvatarMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadResidentAvatar(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadResidentAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof uploadResidentAvatar>>>
+    export type UploadResidentAvatarMutationBody = BodyType<Blob>
+    export type UploadResidentAvatarMutationError = ErrorType<unknown>
+    export type UploadResidentAvatarMutationVariables = {data: BodyType<Blob>}
+
+    export const useUploadResidentAvatar = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadResidentAvatar>>, TError,UploadResidentAvatarMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadResidentAvatar>>,
+        TError,
+        UploadResidentAvatarMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadResidentAvatarMutationOptions(options));
+    }
+
+export const getDeleteResidentAvatarUrl = () => {
+
+
+
+
+  return `/api/resident/avatar`
+}
+
+export const deleteResidentAvatar = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteResidentAvatarUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteResidentAvatarMutationKey = () => ['deleteResidentAvatar'] as const;
+
+export const getDeleteResidentAvatarMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAvatar>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAvatar>>, TError,void, TContext> => {
+
+const mutationKey = getDeleteResidentAvatarMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResidentAvatar>>, void> = () => {
+
+
+          return  deleteResidentAvatar(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResidentAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResidentAvatar>>>
+
+    export type DeleteResidentAvatarMutationError = ErrorType<unknown>
+
+
+    export const useDeleteResidentAvatar = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAvatar>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResidentAvatar>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteResidentAvatarMutationOptions(options));
+    }
+
+export const getGetResidentBuildingFinanceUrl = () => {
+
+
+
+
+  return `/api/resident/building-finance`
+}
+
+export const getResidentBuildingFinance = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetResidentBuildingFinance200Item[]> => {
+
+  return customFetch<GetResidentBuildingFinance200Item[]>(getGetResidentBuildingFinanceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentBuildingFinanceQueryKey = () => {
+    return [
+    `/api/resident/building-finance`
+    ] as const;
+    }
+
+
+export const getGetResidentBuildingFinanceQueryOptions = <TData = Awaited<ReturnType<typeof getResidentBuildingFinance>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentBuildingFinance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentBuildingFinanceQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentBuildingFinance>>> = ({ signal }) => getResidentBuildingFinance({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentBuildingFinance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentBuildingFinanceQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentBuildingFinance>>>
+export type GetResidentBuildingFinanceQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentBuildingFinance<TData = Awaited<ReturnType<typeof getResidentBuildingFinance>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentBuildingFinance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentBuildingFinanceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetResidentContinuityUrl = (params?: GetResidentContinuityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/continuity?${stringifiedParams}` : `/api/resident/continuity`
+}
+
+export const getResidentContinuity = async (params?: GetResidentContinuityParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentContinuity> => {
+
+  return customFetch<ResidentContinuity>(getGetResidentContinuityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentContinuityQueryKey = (params?: GetResidentContinuityParams,) => {
+    return [
+    `/api/resident/continuity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentContinuityQueryOptions = <TData = Awaited<ReturnType<typeof getResidentContinuity>>, TError = ErrorType<unknown>>(params?: GetResidentContinuityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentContinuity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentContinuityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentContinuity>>> = ({ signal }) => getResidentContinuity(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentContinuity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentContinuityQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentContinuity>>>
+export type GetResidentContinuityQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentContinuity<TData = Awaited<ReturnType<typeof getResidentContinuity>>, TError = ErrorType<unknown>>(
+ params?: GetResidentContinuityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentContinuity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentContinuityQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartResidentEmailVerificationUrl = () => {
+
+
+
+
+  return `/api/resident/email-verification`
+}
+
+export const startResidentEmailVerification = async ( options?: Parameters<typeof customFetch>[1]): Promise<StartResidentEmailVerification202> => {
+
+  return customFetch<StartResidentEmailVerification202>(getStartResidentEmailVerificationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartResidentEmailVerificationMutationKey = () => ['startResidentEmailVerification'] as const;
+
+export const getStartResidentEmailVerificationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startResidentEmailVerification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startResidentEmailVerification>>, TError,void, TContext> => {
+
+const mutationKey = getStartResidentEmailVerificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startResidentEmailVerification>>, void> = () => {
+
+
+          return  startResidentEmailVerification(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartResidentEmailVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof startResidentEmailVerification>>>
+
+    export type StartResidentEmailVerificationMutationError = ErrorType<unknown>
+
+
+    export const useStartResidentEmailVerification = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startResidentEmailVerification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startResidentEmailVerification>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartResidentEmailVerificationMutationOptions(options));
+    }
+
+export const getConfirmResidentEmailVerificationUrl = () => {
+
+
+
+
+  return `/api/resident/email-verification`
+}
+
+export const confirmResidentEmailVerification = async (confirmResidentEmailVerificationBody: ConfirmResidentEmailVerificationBody, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getConfirmResidentEmailVerificationUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(confirmResidentEmailVerificationBody)
+  }
+);}
+
+
+
+
+
+export const getConfirmResidentEmailVerificationMutationKey = () => ['confirmResidentEmailVerification'] as const;
+
+export const getConfirmResidentEmailVerificationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmResidentEmailVerification>>, TError,ConfirmResidentEmailVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmResidentEmailVerification>>, TError,ConfirmResidentEmailVerificationMutationVariables, TContext> => {
+
+const mutationKey = getConfirmResidentEmailVerificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmResidentEmailVerification>>, ConfirmResidentEmailVerificationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmResidentEmailVerification(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmResidentEmailVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof confirmResidentEmailVerification>>>
+    export type ConfirmResidentEmailVerificationMutationBody = BodyType<ConfirmResidentEmailVerificationBody>
+    export type ConfirmResidentEmailVerificationMutationError = ErrorType<unknown>
+    export type ConfirmResidentEmailVerificationMutationVariables = {data: BodyType<ConfirmResidentEmailVerificationBody>}
+
+    export const useConfirmResidentEmailVerification = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmResidentEmailVerification>>, TError,ConfirmResidentEmailVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmResidentEmailVerification>>,
+        TError,
+        ConfirmResidentEmailVerificationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmResidentEmailVerificationMutationOptions(options));
+    }
+
+export const getUpdateResidentNotificationSettingsUrl = () => {
+
+
+
+
+  return `/api/resident/notification-settings`
+}
+
+export const updateResidentNotificationSettings = async (residentNotificationSettings: ResidentNotificationSettings, options?: Parameters<typeof customFetch>[1]): Promise<ResidentNotificationSettings> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentNotificationSettings>(getUpdateResidentNotificationSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentNotificationSettings)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentNotificationSettingsMutationKey = () => ['updateResidentNotificationSettings'] as const;
+
+export const getUpdateResidentNotificationSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentNotificationSettings>>, TError,UpdateResidentNotificationSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentNotificationSettings>>, TError,UpdateResidentNotificationSettingsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentNotificationSettingsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentNotificationSettings>>, UpdateResidentNotificationSettingsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateResidentNotificationSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentNotificationSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentNotificationSettings>>>
+    export type UpdateResidentNotificationSettingsMutationBody = BodyType<ResidentNotificationSettings>
+    export type UpdateResidentNotificationSettingsMutationError = ErrorType<unknown>
+    export type UpdateResidentNotificationSettingsMutationVariables = {data: BodyType<ResidentNotificationSettings>}
+
+    export const useUpdateResidentNotificationSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentNotificationSettings>>, TError,UpdateResidentNotificationSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentNotificationSettings>>,
+        TError,
+        UpdateResidentNotificationSettingsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentNotificationSettingsMutationOptions(options));
+    }
+
+export const getCreateResidentDirectChatUrl = () => {
+
+
+
+
+  return `/api/resident/direct-chats`
+}
+
+export const createResidentDirectChat = async (createResidentDirectChatBody: CreateResidentDirectChatBody, options?: Parameters<typeof customFetch>[1]): Promise<ResidentDirectChat> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentDirectChat>(getCreateResidentDirectChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResidentDirectChatBody)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentDirectChatMutationKey = () => ['createResidentDirectChat'] as const;
+
+export const getCreateResidentDirectChatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentDirectChat>>, TError,CreateResidentDirectChatMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentDirectChat>>, TError,CreateResidentDirectChatMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentDirectChatMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentDirectChat>>, CreateResidentDirectChatMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentDirectChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentDirectChatMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentDirectChat>>>
+    export type CreateResidentDirectChatMutationBody = BodyType<CreateResidentDirectChatBody>
+    export type CreateResidentDirectChatMutationError = ErrorType<unknown>
+    export type CreateResidentDirectChatMutationVariables = {data: BodyType<CreateResidentDirectChatBody>}
+
+    export const useCreateResidentDirectChat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentDirectChat>>, TError,CreateResidentDirectChatMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentDirectChat>>,
+        TError,
+        CreateResidentDirectChatMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentDirectChatMutationOptions(options));
+    }
+
+export const getGetResidentDirectMessagesUrl = (id: string,
+    params?: GetResidentDirectMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/direct-chats/${id}/messages?${stringifiedParams}` : `/api/resident/direct-chats/${id}/messages`
+}
+
+export const getResidentDirectMessages = async (id: string,
+    params?: GetResidentDirectMessagesParams, options?: Parameters<typeof customFetch>[1]): Promise<GetResidentDirectMessages200> => {
+
+  return customFetch<GetResidentDirectMessages200>(getGetResidentDirectMessagesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentDirectMessagesQueryKey = (id: string,
+    params?: GetResidentDirectMessagesParams,) => {
+    return [
+    `/api/resident/direct-chats/${id}/messages`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentDirectMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getResidentDirectMessages>>, TError = ErrorType<unknown>>(id: string,
+    params?: GetResidentDirectMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentDirectMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentDirectMessagesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentDirectMessages>>> = ({ signal }) => getResidentDirectMessages(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentDirectMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentDirectMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentDirectMessages>>>
+export type GetResidentDirectMessagesQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentDirectMessages<TData = Awaited<ReturnType<typeof getResidentDirectMessages>>, TError = ErrorType<unknown>>(
+ id: string,
+    params?: GetResidentDirectMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentDirectMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentDirectMessagesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostResidentDirectMessageUrl = (id: string,
+    params?: PostResidentDirectMessageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/direct-chats/${id}/messages?${stringifiedParams}` : `/api/resident/direct-chats/${id}/messages`
+}
+
+export const postResidentDirectMessage = async (id: string,
+    postResidentDirectMessageBody: PostResidentDirectMessageBody,
+    params?: PostResidentDirectMessageParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentDirectMessage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentDirectMessage>(getPostResidentDirectMessageUrl(id,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(postResidentDirectMessageBody)
+  }
+);}
+
+
+
+
+
+export const getPostResidentDirectMessageMutationKey = () => ['postResidentDirectMessage'] as const;
+
+export const getPostResidentDirectMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postResidentDirectMessage>>, TError,PostResidentDirectMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postResidentDirectMessage>>, TError,PostResidentDirectMessageMutationVariables, TContext> => {
+
+const mutationKey = getPostResidentDirectMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postResidentDirectMessage>>, PostResidentDirectMessageMutationVariables> = (props) => {
+          const {id,data,params} = props ?? {};
+
+          return  postResidentDirectMessage(id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostResidentDirectMessageMutationResult = NonNullable<Awaited<ReturnType<typeof postResidentDirectMessage>>>
+    export type PostResidentDirectMessageMutationBody = BodyType<PostResidentDirectMessageBody>
+    export type PostResidentDirectMessageMutationError = ErrorType<unknown>
+    export type PostResidentDirectMessageMutationVariables = {id: string;data: BodyType<PostResidentDirectMessageBody>;params?: PostResidentDirectMessageParams}
+
+    export const usePostResidentDirectMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postResidentDirectMessage>>, TError,PostResidentDirectMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postResidentDirectMessage>>,
+        TError,
+        PostResidentDirectMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostResidentDirectMessageMutationOptions(options));
+    }
+
+export const getUpdateResidentDirectChatStateUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/direct-chats/${id}/state`
+}
+
+export const updateResidentDirectChatState = async (id: string,
+    updateResidentDirectChatStateBody: UpdateResidentDirectChatStateBody, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUpdateResidentDirectChatStateUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateResidentDirectChatStateBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentDirectChatStateMutationKey = () => ['updateResidentDirectChatState'] as const;
+
+export const getUpdateResidentDirectChatStateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentDirectChatState>>, TError,UpdateResidentDirectChatStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentDirectChatState>>, TError,UpdateResidentDirectChatStateMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentDirectChatStateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentDirectChatState>>, UpdateResidentDirectChatStateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateResidentDirectChatState(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentDirectChatStateMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentDirectChatState>>>
+    export type UpdateResidentDirectChatStateMutationBody = BodyType<UpdateResidentDirectChatStateBody>
+    export type UpdateResidentDirectChatStateMutationError = ErrorType<unknown>
+    export type UpdateResidentDirectChatStateMutationVariables = {id: string;data: BodyType<UpdateResidentDirectChatStateBody>}
+
+    export const useUpdateResidentDirectChatState = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentDirectChatState>>, TError,UpdateResidentDirectChatStateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentDirectChatState>>,
+        TError,
+        UpdateResidentDirectChatStateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentDirectChatStateMutationOptions(options));
+    }
+
+export const getCreateResidentSavedSearchUrl = () => {
+
+
+
+
+  return `/api/resident/saved-searches`
+}
+
+export const createResidentSavedSearch = async (residentSearchInput: ResidentSearchInput, options?: Parameters<typeof customFetch>[1]): Promise<ResidentSavedSearch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentSavedSearch>(getCreateResidentSavedSearchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentSearchInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentSavedSearchMutationKey = () => ['createResidentSavedSearch'] as const;
+
+export const getCreateResidentSavedSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentSavedSearch>>, TError,CreateResidentSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentSavedSearch>>, TError,CreateResidentSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentSavedSearch>>, CreateResidentSavedSearchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentSavedSearch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentSavedSearch>>>
+    export type CreateResidentSavedSearchMutationBody = BodyType<ResidentSearchInput>
+    export type CreateResidentSavedSearchMutationError = ErrorType<unknown>
+    export type CreateResidentSavedSearchMutationVariables = {data: BodyType<ResidentSearchInput>}
+
+    export const useCreateResidentSavedSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentSavedSearch>>, TError,CreateResidentSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentSavedSearch>>,
+        TError,
+        CreateResidentSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentSavedSearchMutationOptions(options));
+    }
+
+export const getDeleteResidentSavedSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/saved-searches/${id}`
+}
+
+export const deleteResidentSavedSearch = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteResidentSavedSearchUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteResidentSavedSearchMutationKey = () => ['deleteResidentSavedSearch'] as const;
+
+export const getDeleteResidentSavedSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentSavedSearch>>, TError,DeleteResidentSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResidentSavedSearch>>, TError,DeleteResidentSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getDeleteResidentSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResidentSavedSearch>>, DeleteResidentSavedSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteResidentSavedSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResidentSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResidentSavedSearch>>>
+
+    export type DeleteResidentSavedSearchMutationError = ErrorType<unknown>
+    export type DeleteResidentSavedSearchMutationVariables = {id: string}
+
+    export const useDeleteResidentSavedSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentSavedSearch>>, TError,DeleteResidentSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResidentSavedSearch>>,
+        TError,
+        DeleteResidentSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteResidentSavedSearchMutationOptions(options));
+    }
+
+export const getGetResidentPropertyComparisonUrl = (params: GetResidentPropertyComparisonParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/property-comparison?${stringifiedParams}` : `/api/resident/property-comparison`
+}
+
+export const getResidentPropertyComparison = async (params: GetResidentPropertyComparisonParams, options?: Parameters<typeof customFetch>[1]): Promise<GetResidentPropertyComparison200Item[]> => {
+
+  return customFetch<GetResidentPropertyComparison200Item[]>(getGetResidentPropertyComparisonUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentPropertyComparisonQueryKey = (params?: GetResidentPropertyComparisonParams,) => {
+    return [
+    `/api/resident/property-comparison`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentPropertyComparisonQueryOptions = <TData = Awaited<ReturnType<typeof getResidentPropertyComparison>>, TError = ErrorType<unknown>>(params: GetResidentPropertyComparisonParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentPropertyComparison>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentPropertyComparisonQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentPropertyComparison>>> = ({ signal }) => getResidentPropertyComparison(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentPropertyComparison>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentPropertyComparisonQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentPropertyComparison>>>
+export type GetResidentPropertyComparisonQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentPropertyComparison<TData = Awaited<ReturnType<typeof getResidentPropertyComparison>>, TError = ErrorType<unknown>>(
+ params: GetResidentPropertyComparisonParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentPropertyComparison>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentPropertyComparisonQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResidentPlatformTicketUrl = () => {
+
+
+
+
+  return `/api/resident/platform-tickets`
+}
+
+export const createResidentPlatformTicket = async (createResidentPlatformTicketBody: CreateResidentPlatformTicketBody, options?: Parameters<typeof customFetch>[1]): Promise<ResidentPlatformTicket> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentPlatformTicket>(getCreateResidentPlatformTicketUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResidentPlatformTicketBody)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentPlatformTicketMutationKey = () => ['createResidentPlatformTicket'] as const;
+
+export const getCreateResidentPlatformTicketMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentPlatformTicket>>, TError,CreateResidentPlatformTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentPlatformTicket>>, TError,CreateResidentPlatformTicketMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentPlatformTicketMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentPlatformTicket>>, CreateResidentPlatformTicketMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentPlatformTicket(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentPlatformTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentPlatformTicket>>>
+    export type CreateResidentPlatformTicketMutationBody = BodyType<CreateResidentPlatformTicketBody>
+    export type CreateResidentPlatformTicketMutationError = ErrorType<unknown>
+    export type CreateResidentPlatformTicketMutationVariables = {data: BodyType<CreateResidentPlatformTicketBody>}
+
+    export const useCreateResidentPlatformTicket = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentPlatformTicket>>, TError,CreateResidentPlatformTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentPlatformTicket>>,
+        TError,
+        CreateResidentPlatformTicketMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentPlatformTicketMutationOptions(options));
+    }
+
+export const getCreateResidentAiHistoryUrl = () => {
+
+
+
+
+  return `/api/resident/ai-history`
+}
+
+export const createResidentAiHistory = async (createResidentAiHistoryBody: CreateResidentAiHistoryBody, options?: Parameters<typeof customFetch>[1]): Promise<ResidentAiHistory> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentAiHistory>(getCreateResidentAiHistoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResidentAiHistoryBody)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentAiHistoryMutationKey = () => ['createResidentAiHistory'] as const;
+
+export const getCreateResidentAiHistoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentAiHistory>>, TError,CreateResidentAiHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentAiHistory>>, TError,CreateResidentAiHistoryMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentAiHistoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentAiHistory>>, CreateResidentAiHistoryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentAiHistory(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentAiHistoryMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentAiHistory>>>
+    export type CreateResidentAiHistoryMutationBody = BodyType<CreateResidentAiHistoryBody>
+    export type CreateResidentAiHistoryMutationError = ErrorType<unknown>
+    export type CreateResidentAiHistoryMutationVariables = {data: BodyType<CreateResidentAiHistoryBody>}
+
+    export const useCreateResidentAiHistory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentAiHistory>>, TError,CreateResidentAiHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentAiHistory>>,
+        TError,
+        CreateResidentAiHistoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentAiHistoryMutationOptions(options));
+    }
+
+export const getDeleteResidentAiHistoryUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/ai-history/${id}`
+}
+
+export const deleteResidentAiHistory = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteResidentAiHistoryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteResidentAiHistoryMutationKey = () => ['deleteResidentAiHistory'] as const;
+
+export const getDeleteResidentAiHistoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAiHistory>>, TError,DeleteResidentAiHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAiHistory>>, TError,DeleteResidentAiHistoryMutationVariables, TContext> => {
+
+const mutationKey = getDeleteResidentAiHistoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResidentAiHistory>>, DeleteResidentAiHistoryMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteResidentAiHistory(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResidentAiHistoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResidentAiHistory>>>
+
+    export type DeleteResidentAiHistoryMutationError = ErrorType<unknown>
+    export type DeleteResidentAiHistoryMutationVariables = {id: string}
+
+    export const useDeleteResidentAiHistory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResidentAiHistory>>, TError,DeleteResidentAiHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResidentAiHistory>>,
+        TError,
+        DeleteResidentAiHistoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteResidentAiHistoryMutationOptions(options));
+    }
+
+export const getGetResidentServiceBookingsUrl = (params?: GetResidentServiceBookingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/service-bookings?${stringifiedParams}` : `/api/resident/service-bookings`
+}
+
+export const getResidentServiceBookings = async (params?: GetResidentServiceBookingsParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentServiceBooking[]> => {
+
+  return customFetch<ResidentServiceBooking[]>(getGetResidentServiceBookingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentServiceBookingsQueryKey = (params?: GetResidentServiceBookingsParams,) => {
+    return [
+    `/api/resident/service-bookings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentServiceBookingsQueryOptions = <TData = Awaited<ReturnType<typeof getResidentServiceBookings>>, TError = ErrorType<unknown>>(params?: GetResidentServiceBookingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentServiceBookingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentServiceBookings>>> = ({ signal }) => getResidentServiceBookings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentServiceBookingsQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentServiceBookings>>>
+export type GetResidentServiceBookingsQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentServiceBookings<TData = Awaited<ReturnType<typeof getResidentServiceBookings>>, TError = ErrorType<unknown>>(
+ params?: GetResidentServiceBookingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentServiceBookings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentServiceBookingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResidentServiceBookingUrl = (params?: CreateResidentServiceBookingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/service-bookings?${stringifiedParams}` : `/api/resident/service-bookings`
+}
+
+export const createResidentServiceBooking = async (createResidentServiceBookingBody: CreateResidentServiceBookingBody,
+    params?: CreateResidentServiceBookingParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentServiceBooking> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentServiceBooking>(getCreateResidentServiceBookingUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResidentServiceBookingBody)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentServiceBookingMutationKey = () => ['createResidentServiceBooking'] as const;
+
+export const getCreateResidentServiceBookingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentServiceBooking>>, TError,CreateResidentServiceBookingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentServiceBooking>>, TError,CreateResidentServiceBookingMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentServiceBookingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentServiceBooking>>, CreateResidentServiceBookingMutationVariables> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  createResidentServiceBooking(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentServiceBookingMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentServiceBooking>>>
+    export type CreateResidentServiceBookingMutationBody = BodyType<CreateResidentServiceBookingBody>
+    export type CreateResidentServiceBookingMutationError = ErrorType<unknown>
+    export type CreateResidentServiceBookingMutationVariables = {data: BodyType<CreateResidentServiceBookingBody>;params?: CreateResidentServiceBookingParams}
+
+    export const useCreateResidentServiceBooking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentServiceBooking>>, TError,CreateResidentServiceBookingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentServiceBooking>>,
+        TError,
+        CreateResidentServiceBookingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentServiceBookingMutationOptions(options));
+    }
+
+export const getReviewResidentServiceBookingUrl = (id: string,
+    params?: ReviewResidentServiceBookingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/service-bookings/${id}?${stringifiedParams}` : `/api/resident/service-bookings/${id}`
+}
+
+export const reviewResidentServiceBooking = async (id: string,
+    reviewResidentServiceBookingBody: ReviewResidentServiceBookingBody,
+    params?: ReviewResidentServiceBookingParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentServiceBooking> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentServiceBooking>(getReviewResidentServiceBookingUrl(id,params),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewResidentServiceBookingBody)
+  }
+);}
+
+
+
+
+
+export const getReviewResidentServiceBookingMutationKey = () => ['reviewResidentServiceBooking'] as const;
+
+export const getReviewResidentServiceBookingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewResidentServiceBooking>>, TError,ReviewResidentServiceBookingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewResidentServiceBooking>>, TError,ReviewResidentServiceBookingMutationVariables, TContext> => {
+
+const mutationKey = getReviewResidentServiceBookingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewResidentServiceBooking>>, ReviewResidentServiceBookingMutationVariables> = (props) => {
+          const {id,data,params} = props ?? {};
+
+          return  reviewResidentServiceBooking(id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewResidentServiceBookingMutationResult = NonNullable<Awaited<ReturnType<typeof reviewResidentServiceBooking>>>
+    export type ReviewResidentServiceBookingMutationBody = BodyType<ReviewResidentServiceBookingBody>
+    export type ReviewResidentServiceBookingMutationError = ErrorType<unknown>
+    export type ReviewResidentServiceBookingMutationVariables = {id: string;data: BodyType<ReviewResidentServiceBookingBody>;params?: ReviewResidentServiceBookingParams}
+
+    export const useReviewResidentServiceBooking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewResidentServiceBooking>>, TError,ReviewResidentServiceBookingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewResidentServiceBooking>>,
+        TError,
+        ReviewResidentServiceBookingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewResidentServiceBookingMutationOptions(options));
+    }
 
 export const getListResidentMetersUrl = () => {
 

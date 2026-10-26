@@ -7,6 +7,8 @@
  */
 
 export interface ResidentBuildingSettings {
+  activationRequired?: boolean;
+  financeTransparency?: boolean;
   directory: boolean;
   discussions: boolean;
   chat: boolean;

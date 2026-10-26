@@ -3635,6 +3635,176 @@ export interface WorkspaceSearchResult {
   groups: WorkspaceSearchGroup[];
 }
 
+export type ResidentHouseholdMembersItem = {
+  id: string;
+  userId: string;
+  name: string;
+  role: string;
+  /** @nullable */
+  expiresAt: string | null;
+};
+
+export type ResidentHouseholdLeasesItem = {
+  id: string;
+  renterId: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  cancelled: boolean;
+  version: number;
+};
+
+export interface ResidentHousehold {
+  unitId: string;
+  canManageDelegations: boolean;
+  canManageLeases: boolean;
+  members: ResidentHouseholdMembersItem[];
+  leases: ResidentHouseholdLeasesItem[];
+}
+
+export interface ResidentBookingOption {
+  id: string;
+  name: string;
+}
+
+export interface ResidentNotificationSettings {
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  quietEnabled: boolean;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  quietStart: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  quietEnd: string;
+  timezone: string;
+  /** @minimum 0 */
+  version: number;
+}
+
+export interface ResidentDirectChat {
+  id: string;
+  name: string;
+  blocked: boolean;
+  blockedByMe: boolean;
+  unread: number;
+}
+
+export interface ResidentDirectMessage {
+  id: string;
+  body: string;
+  own: boolean;
+  createdAt: string;
+}
+
+export type ResidentSearchInputOfferType = typeof ResidentSearchInputOfferType[keyof typeof ResidentSearchInputOfferType];
+
+
+export const ResidentSearchInputOfferType = {
+  all: 'all',
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+export interface ResidentSearchInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 200 */
+  query: string;
+  offerType: ResidentSearchInputOfferType;
+}
+
+export type ResidentSavedSearch = ResidentSearchInput & {
+  id: string;
+};
+
+export interface ResidentPlatformTicket {
+  id: string;
+  subject: string;
+  body: string;
+  status: string;
+  reply: string;
+  createdAt: string;
+}
+
+export type ResidentAiHistoryProviderStatus = typeof ResidentAiHistoryProviderStatus[keyof typeof ResidentAiHistoryProviderStatus];
+
+
+export const ResidentAiHistoryProviderStatus = {
+  NOT_CONFIGURED: 'NOT_CONFIGURED',
+} as const;
+
+export interface ResidentAiHistory {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  providerStatus: ResidentAiHistoryProviderStatus;
+}
+
+export type ResidentServiceBookingStatus = typeof ResidentServiceBookingStatus[keyof typeof ResidentServiceBookingStatus];
+
+
+export const ResidentServiceBookingStatus = {
+  requested: 'requested',
+  confirming: 'confirming',
+  confirmed: 'confirmed',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ResidentServiceBooking {
+  id: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  note: string;
+  status: ResidentServiceBookingStatus;
+  version: number;
+  /** @nullable */
+  requestId: string | null;
+}
+
+export type ResidentContinuityActivation = {
+  required: boolean;
+  ready: boolean;
+  emailVerified: boolean;
+  missingAgreements: number;
+};
+
+export type ResidentContinuityPhoneVerification = typeof ResidentContinuityPhoneVerification[keyof typeof ResidentContinuityPhoneVerification];
+
+
+export const ResidentContinuityPhoneVerification = {
+  PROVIDER_REQUIRED: 'PROVIDER_REQUIRED',
+} as const;
+
+export type ResidentContinuityNeighborsItem = {
+  id: string;
+  name: string;
+};
+
+export interface ResidentContinuity {
+  avatarAvailable?: boolean;
+  organizationTimezone?: string;
+  activation?: ResidentContinuityActivation;
+  email: string;
+  emailVerified: boolean;
+  phoneVerification: ResidentContinuityPhoneVerification;
+  administrative: boolean;
+  canChat: boolean;
+  canMarketplace: boolean;
+  canBook: boolean;
+  notificationSettings: ResidentNotificationSettings;
+  neighbors: ResidentContinuityNeighborsItem[];
+  chats: ResidentDirectChat[];
+  savedSearches: ResidentSavedSearch[];
+  tickets: ResidentPlatformTicket[];
+  aiHistory: ResidentAiHistory[];
+  bookings: ResidentServiceBooking[];
+}
+
 export interface ResidentIdResult {
   id: string;
 }
@@ -3701,6 +3871,8 @@ export interface ResidentProfileInput {
 }
 
 export interface ResidentBuildingSettings {
+  activationRequired?: boolean;
+  financeTransparency?: boolean;
   directory: boolean;
   discussions: boolean;
   chat: boolean;
@@ -3797,6 +3969,16 @@ export interface ResidentRecordInput {
   mandatory?: boolean;
   withdrawable?: boolean;
   saleType?: ResidentRecordInputSaleType;
+  /**
+     * @minimum -90
+     * @maximum 90
+     */
+  latitude?: number;
+  /**
+     * @minimum -180
+     * @maximum 180
+     */
+  longitude?: number;
 }
 
 export type ResidentRecordData = { [key: string]: unknown };
@@ -4198,6 +4380,190 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
 
+export type RevokeResidentDelegation200 = {
+  id: string;
+};
+
+export type GetResidentServiceBookingOptionsParams = {
+buildingId: string;
+};
+
+export type GetResidentServiceBookingOptions200 = {
+  categories: ResidentBookingOption[];
+  technicians: ResidentBookingOption[];
+};
+
+export type GetResidentBuildingFinance200ItemStatus = typeof GetResidentBuildingFinance200ItemStatus[keyof typeof GetResidentBuildingFinance200ItemStatus];
+
+
+export const GetResidentBuildingFinance200ItemStatus = {
+  AVAILABLE: 'AVAILABLE',
+  INSUFFICIENT_COHORT: 'INSUFFICIENT_COHORT',
+} as const;
+
+export type GetResidentBuildingFinance200Item = {
+  period: string;
+  currency: string;
+  /** @nullable */
+  publishedMinor: string | null;
+  /** @nullable */
+  allocatedMinor: string | null;
+  status: GetResidentBuildingFinance200ItemStatus;
+};
+
+export type GetResidentContinuityParams = {
+buildingId?: string;
+};
+
+export type StartResidentEmailVerification202Status = typeof StartResidentEmailVerification202Status[keyof typeof StartResidentEmailVerification202Status];
+
+
+export const StartResidentEmailVerification202Status = {
+  accepted: 'accepted',
+} as const;
+
+export type StartResidentEmailVerification202 = {
+  status: StartResidentEmailVerification202Status;
+};
+
+export type ConfirmResidentEmailVerificationBody = {
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+};
+
+export type CreateResidentDirectChatBody = {
+  recipientId: string;
+};
+
+export type GetResidentDirectMessagesParams = {
+before?: string;
+};
+
+export type GetResidentDirectMessages200 = {
+  hasMore: boolean;
+  items: ResidentDirectMessage[];
+};
+
+export type PostResidentDirectMessageParams = {
+before?: string;
+};
+
+export type PostResidentDirectMessageBody = {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  body: string;
+  clientId: string;
+};
+
+export type UpdateResidentDirectChatStateBodyAction = typeof UpdateResidentDirectChatStateBodyAction[keyof typeof UpdateResidentDirectChatStateBodyAction];
+
+
+export const UpdateResidentDirectChatStateBodyAction = {
+  read: 'read',
+  block: 'block',
+  unblock: 'unblock',
+} as const;
+
+export type UpdateResidentDirectChatStateBody = {
+  action: UpdateResidentDirectChatStateBodyAction;
+};
+
+export type GetResidentPropertyComparisonParams = {
+/**
+ * @maxLength 150
+ */
+ids: string;
+};
+
+export type GetResidentPropertyComparison200Item = {
+  id: string;
+  title: string;
+  description: string;
+  /** @nullable */
+  priceMinor: string | null;
+  /** @nullable */
+  currency: string | null;
+  address: string;
+  /**
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  latitude?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  longitude?: number | null;
+};
+
+export type CreateResidentPlatformTicketBody = {
+  /**
+     * @minLength 3
+     * @maxLength 160
+     */
+  subject: string;
+  /**
+     * @minLength 3
+     * @maxLength 4000
+     */
+  body: string;
+};
+
+export type CreateResidentAiHistoryBody = {
+  /**
+     * @minLength 3
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  body: string;
+  clientId: string;
+};
+
+export type GetResidentServiceBookingsParams = {
+buildingId?: string;
+};
+
+export type CreateResidentServiceBookingParams = {
+buildingId?: string;
+};
+
+export type CreateResidentServiceBookingBody = {
+  serviceId: string;
+  startsAt: string;
+  endsAt: string;
+  /** @maxLength 1000 */
+  note: string;
+};
+
+export type ReviewResidentServiceBookingParams = {
+buildingId?: string;
+};
+
+export type ReviewResidentServiceBookingBodyAction = typeof ReviewResidentServiceBookingBodyAction[keyof typeof ReviewResidentServiceBookingBodyAction];
+
+
+export const ReviewResidentServiceBookingBodyAction = {
+  confirm: 'confirm',
+  reject: 'reject',
+  cancel: 'cancel',
+} as const;
+
+export type ReviewResidentServiceBookingBody = {
+  action: ReviewResidentServiceBookingBodyAction;
+  /** @minimum 1 */
+  version: number;
+  categoryId?: string;
+  technicianId?: string;
+};
+
 export type ListResidentMeters200ItemReadingsItem = {
   id: string;
   period: string;
@@ -4329,7 +4695,17 @@ recordId?: string;
  * @maxLength 200
  */
 search?: string;
+offerType?: GetResidentRecordsOfferType;
 };
+
+export type GetResidentRecordsOfferType = typeof GetResidentRecordsOfferType[keyof typeof GetResidentRecordsOfferType];
+
+
+export const GetResidentRecordsOfferType = {
+  all: 'all',
+  sale: 'sale',
+  rent: 'rent',
+} as const;
 
 export type GetResidentRecords200 = {
   items: ResidentRecord[];

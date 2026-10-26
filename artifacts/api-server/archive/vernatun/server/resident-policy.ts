@@ -6,15 +6,16 @@ import {ApiError,context,requirePermission,type Context} from './access.js';
 
 export const residentKinds=z.enum(['vehicles','mobile-devices','agreements','contacts','directory','services','subscriptions','conversations','discussions','listings','help','feedback']);
 export type ResidentKind=z.infer<typeof residentKinds>;
-export const residentSettings=z.object({directory:z.boolean(),discussions:z.boolean(),chat:z.boolean(),marketplace:z.boolean(),services:z.boolean()}).strict();
-export const defaults={directory:false,discussions:false,chat:false,marketplace:false,services:false};
+export const residentSettings=z.object({directory:z.boolean(),discussions:z.boolean(),chat:z.boolean(),marketplace:z.boolean(),services:z.boolean(),
+ activationRequired:z.boolean().default(false),financeTransparency:z.boolean().default(false)}).strict();
+export const defaults={directory:false,discussions:false,chat:false,marketplace:false,services:false,activationRequired:false,financeTransparency:false};
 export type ResidentScope={c:Context;organizationId:string;buildingId:string;unitId:string|null;administrative:boolean;settings:typeof defaults};
 
-export async function residentScope(req:Request):Promise<ResidentScope>{
+export async function residentScope(req:Request,operationalPermission?:'requests.assign'):Promise<ResidentScope>{
  const c=await context(req),administrative=c.shell!=='home';
  let buildingId=c.building_id,organizationId=c.organization_id;
  if(administrative){
-  await requirePermission(req,c.organization_id?'organization.settings':'organizations.manage');
+  await requirePermission(req,operationalPermission??(c.organization_id?'organization.settings':'organizations.manage'));
   buildingId=z.string().uuid().parse(req.query.buildingId);
   const row=(await pool.query(`SELECT organization_id FROM buildings WHERE id=$1 AND ($2::uuid IS NULL OR organization_id=$2)
    AND ($3::uuid IS NULL OR id=$3)`,[buildingId,c.organization_id,c.building_id])).rows[0];
@@ -24,7 +25,7 @@ export async function residentScope(req:Request):Promise<ResidentScope>{
   if(req.query.buildingId&&req.query.buildingId!==buildingId)throw new ApiError(403,'forbidden');
   await requirePermission(req,'properties.own');
  }
- const row=(await pool.query('SELECT directory,discussions,chat,marketplace,services FROM resident_building_settings WHERE building_id=$1 AND organization_id=$2',[buildingId,organizationId])).rows[0];
+ const row=(await pool.query('SELECT directory,discussions,chat,marketplace,services,activation_required AS "activationRequired",finance_transparency AS "financeTransparency" FROM resident_building_settings WHERE building_id=$1 AND organization_id=$2',[buildingId,organizationId])).rows[0];
  return {c,organizationId:organizationId!,buildingId:buildingId!,unitId:administrative?null:c.unit_id,administrative,settings:row??defaults};
 }
 export function enabled(s:ResidentScope,kind:ResidentKind){
@@ -52,7 +53,9 @@ export const payloadSchemas={
  subscriptions:z.object({...common,parentId:z.string().uuid(),quantity:z.number().int().min(1).max(1000)}).strict(),
  conversations:z.object({...common,parentId:z.string().uuid().optional()}).strict(),
  discussions:z.object({...common,category:text(80).min(1)}).strict(),
- listings:z.object({...common,saleType:z.enum(['sale','rent']),priceMinor:price,currency}).strict(),
+ listings:z.object({...common,saleType:z.enum(['sale','rent']),priceMinor:price,currency,
+  latitude:z.number().finite().min(-90).max(90).optional(),longitude:z.number().finite().min(-180).max(180).optional()
+ }).strict().refine(v=>(v.latitude===undefined)===(v.longitude===undefined),{message:'coordinates_pair_required'}),
  help:z.object({...common,category:z.enum(['hy','ru','en'])}).strict(),
  feedback:z.object({...common,category:z.enum(['idea','improvement','problem'])}).strict(),
 };
@@ -95,7 +98,7 @@ export function publicRecord(row:any,s:ResidentScope,userId:string){
   accepted:row.accepted??false,saved:row.saved??false,supported:row.supported??false,supportCount:Number(row.support_count??0)};
 }
 // Privacy predicates are identical for list, detail, actions and messages.
-export async function readRecord(db:PoolClient,s:ResidentScope,kind:ResidentKind,id:string,userId:string,lock=false){
+export async function readRecord(db:PoolClient|typeof pool,s:ResidentScope,kind:ResidentKind,id:string,userId:string,lock=false){
  if(kind==='mobile-devices'&&!s.administrative){
   const device=(await db.query(`SELECT * FROM resident_product_records WHERE id=$1 AND kind='mobile-devices'
    AND owner_user_id=$2 AND deleted_at IS NULL ${lock?'FOR UPDATE':''}`,[id,userId])).rows[0];

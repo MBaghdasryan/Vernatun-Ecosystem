@@ -32,3 +32,4 @@
 - [Browser QA origin](browser-qa-origin.md) — authenticated browser tests must use the same local origin configured as the API's test APP_ORIGIN.
 - [Zero-count filter options](zero-count-filter-options.md) — keep URL-selected status choices available even when the current result count is zero.
 - [Migration lineage](migration-lineage.md) — compare GitHub deployment history before numbering migrations; preserve upstream bytes and never silently rewrite production history.
+- [Resident route registration](resident-route-registration.md) — imports and section registries do not prove that web/native renderers mount a feature.

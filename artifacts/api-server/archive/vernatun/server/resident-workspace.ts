@@ -17,7 +17,7 @@ const profileInput=z.object({
 residentWorkspace.get('/admin/buildings',async(req,res)=>{
  const all=await contexts(req.user!.id),c=all.find(x=>x.id===req.session.contextId);
  if(!c||c.shell==='home')throw new ApiError(403,'forbidden');
- await requirePermission(req,c.organization_id?'organization.settings':'organizations.manage');
+ await requirePermission(req,c.organization_id?(c.permissions.includes('requests.assign')?'requests.assign':'organization.settings'):'organizations.manage');
  res.json((await pool.query(`SELECT b.id,b.name,o.name AS organization FROM buildings b JOIN organizations o ON o.id=b.organization_id
   WHERE ($1::uuid IS NULL OR b.organization_id=$1) AND ($2::uuid IS NULL OR b.id=$2) ORDER BY o.name,b.name,b.id LIMIT 500`,
   [c.organization_id,c.building_id])).rows);
@@ -26,11 +26,12 @@ residentWorkspace.put('/settings',async(req,res)=>{
  const s=await residentScope(req);if(!s.administrative)throw new ApiError(403,'forbidden');writable(s);
  const b=residentSettings.parse(req.body);
  await transaction(async db=>{
-  await db.query(`INSERT INTO resident_building_settings(building_id,organization_id,directory,discussions,chat,marketplace,services,updated_by)
-   VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(building_id) DO UPDATE SET
+  await db.query(`INSERT INTO resident_building_settings(building_id,organization_id,directory,discussions,chat,marketplace,services,updated_by,activation_required,finance_transparency)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(building_id) DO UPDATE SET
+   activation_required=excluded.activation_required,finance_transparency=excluded.finance_transparency,
    directory=excluded.directory,discussions=excluded.discussions,chat=excluded.chat,marketplace=excluded.marketplace,
    services=excluded.services,updated_by=excluded.updated_by,updated_at=now()`,
-   [s.buildingId,s.organizationId,b.directory,b.discussions,b.chat,b.marketplace,b.services,req.user!.id]);
+   [s.buildingId,s.organizationId,b.directory,b.discussions,b.chat,b.marketplace,b.services,req.user!.id,b.activationRequired,b.financeTransparency]);
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.settings.update','building',s.buildingId,{settings:b});
  });res.json(b);
 });
@@ -78,7 +79,7 @@ residentWorkspace.get('/workspace',async(req,res)=>{
    [s.organizationId,s.unitId,user.id,user.currency,building.timezone])).rows[0].amount;
  }
  const unreadNotifications=s.administrative?null:Number((await pool.query(`SELECT count(*) FROM notifications WHERE user_id=$1
-  AND organization_id=$2 AND read_at IS NULL AND in_app_enabled`,[user.id,s.organizationId])).rows[0].count);
+  AND organization_id=$2 AND read_at IS NULL AND in_app_enabled AND (visible_after IS NULL OR visible_after<=now())`,[user.id,s.organizationId])).rows[0].count);
  let openRequests:number|null=null;
  if(!s.administrative&&s.c.modules?.includes('requests')&&s.c.permissions.includes('requests.own')){
   await requirePermission(req,'requests.own');

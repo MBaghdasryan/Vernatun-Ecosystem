@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info: {title: Resident continuity, version: 1.0.0}
+paths:
+  /delegations/{id}/revoke:
+    post:
+      operationId: revokeResidentDelegation
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Existing owner-scoped canonical revocation; recent authentication required, no parallel delegation engine.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: {type: string, format: uuid}
+  /resident/household:
+    get:
+      operationId: getResidentHousehold
+      responses:
+        '200':
+          description: Current unit household. Other household members and leases are exposed only to authorized household managers.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentHousehold'}
+  /resident/service-bookings/{id}/options:
+    get:
+      operationId: getResidentServiceBookingOptions
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: buildingId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Actual eligible operational categories and technicians for this scoped booking.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [categories, technicians]
+                properties:
+                  categories:
+                    type: array
+                    items: {$ref: '#/components/schemas/ResidentBookingOption'}
+                  technicians:
+                    type: array
+                    items: {$ref: '#/components/schemas/ResidentBookingOption'}
+  /resident/avatar:
+    get:
+      operationId: getResidentAvatar
+      responses:
+        '200':
+          description: Current user's private sanitized JPEG, never a public storage URL.
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
+    put:
+      operationId: uploadResidentAvatar
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '204': {description: Sanitized private avatar saved; EXIF removed.}
+    delete:
+      operationId: deleteResidentAvatar
+      responses:
+        '204': {description: Profile image removed; historical bytes retain existing recovery protections.}
+  /resident/building-finance:
+    get:
+      operationId: getResidentBuildingFinance
+      responses:
+        '200':
+          description: Opt-in building totals. Five-unit minimum cohort, no resident identities, unit IDs or individual debts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [period, currency, publishedMinor, allocatedMinor, status]
+                  properties:
+                    period: {type: string}
+                    currency: {type: string}
+                    publishedMinor: {type: [string, 'null']}
+                    allocatedMinor: {type: [string, 'null']}
+                    status: {type: string, enum: [AVAILABLE, INSUFFICIENT_COHORT]}
+  /resident/continuity:
+    parameters:
+      - {$ref: '#/components/parameters/Building'}
+    get:
+      operationId: getResidentContinuity
+      responses:
+        '200':
+          description: Authorized resident tools and capability states. No provider readiness is inferred.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentContinuity'}
+  /resident/email-verification:
+    post:
+      operationId: startResidentEmailVerification
+      responses:
+        '202':
+          description: Challenge accepted by configured transport; not proof of delivery.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties: {status: {type: string, enum: [accepted]}}
+    put:
+      operationId: confirmResidentEmailVerification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties: {code: {type: string, pattern: '^[0-9]{6}$'}}
+      responses:
+        '204': {description: Existing account email verified; email address was not changed.}
+  /resident/notification-settings:
+    put:
+      operationId: updateResidentNotificationSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentNotificationSettings'}
+      responses:
+        '200':
+          description: Versioned canonical notification preferences.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentNotificationSettings'}
+  /resident/direct-chats:
+    post:
+      operationId: createResidentDirectChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientId]
+              properties: {recipientId: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Existing or newly created private two-person conversation.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentDirectChat'}
+  /resident/direct-chats/{id}/messages:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+      - {in: query, name: before, schema: {type: string, format: uuid}}
+    get:
+      operationId: getResidentDirectMessages
+      responses:
+        '200':
+          description: At most 50 messages; participant and active building scope rechecked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, hasMore]
+                properties:
+                  hasMore: {type: boolean}
+                  items: {type: array, items: {$ref: '#/components/schemas/ResidentDirectMessage'}}
+    post:
+      operationId: postResidentDirectMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body, clientId]
+              properties:
+                body: {type: string, minLength: 1, maxLength: 4000}
+                clientId: {type: string, format: uuid}
+      responses:
+        '201':
+          description: Idempotent message; conflicting reuse of clientId rejected.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentDirectMessage'}
+  /resident/direct-chats/{id}/state:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+    put:
+      operationId: updateResidentDirectChatState
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: {type: string, enum: [read, block, unblock]}
+      responses:
+        '204': {description: Only the actor's own read/block state changed.}
+  /resident/saved-searches:
+    post:
+      operationId: createResidentSavedSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentSearchInput'}
+      responses:
+        '201':
+          description: Private saved query for the current building.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentSavedSearch'}
+  /resident/saved-searches/{id}:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+    delete:
+      operationId: deleteResidentSavedSearch
+      responses:
+        '204': {description: Only the actor's own saved query removed.}
+  /resident/property-comparison:
+    get:
+      operationId: getResidentPropertyComparison
+      parameters:
+        - {in: query, name: ids, required: true, schema: {type: string, maxLength: 150}}
+      responses:
+        '200':
+          description: Up to four currently visible listings; no assumed map coordinates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, title, description, priceMinor, currency, address]
+                  properties:
+                    id: {type: string}
+                    title: {type: string}
+                    description: {type: string}
+                    priceMinor: {type: [string, 'null']}
+                    currency: {type: [string, 'null']}
+                    address: {type: string}
+                    latitude: {type: [number, 'null'], minimum: -90, maximum: 90}
+                    longitude: {type: [number, 'null'], minimum: -180, maximum: 180}
+  /resident/platform-tickets:
+    post:
+      operationId: createResidentPlatformTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                subject: {type: string, minLength: 3, maxLength: 160}
+                body: {type: string, minLength: 3, maxLength: 4000}
+      responses:
+        '201':
+          description: Real canonical support case, not a building repair request.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentPlatformTicket'}
+  /resident/ai-history:
+    post:
+      operationId: createResidentAiHistory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body, clientId]
+              properties:
+                title: {type: string, minLength: 3, maxLength: 160}
+                body: {type: string, minLength: 1, maxLength: 4000}
+                clientId: {type: string, format: uuid}
+      responses:
+        '201':
+          description: User question persisted privately. No simulated assistant response.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentAiHistory'}
+  /resident/ai-history/{id}:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+    delete:
+      operationId: deleteResidentAiHistory
+      responses:
+        '204': {description: Actor's own conversation deleted.}
+  /resident/service-bookings:
+    parameters:
+      - {$ref: '#/components/parameters/Building'}
+    get:
+      operationId: getResidentServiceBookings
+      responses:
+        '200':
+          description: Own resident bookings or scoped authorized staff queue.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/ResidentServiceBooking'}}
+    post:
+      operationId: createResidentServiceBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serviceId, startsAt, endsAt, note]
+              properties:
+                serviceId: {type: string, format: uuid}
+                startsAt: {type: string, format: date-time}
+                endsAt: {type: string, format: date-time}
+                note: {type: string, maxLength: 1000}
+      responses:
+        '201':
+          description: Requested slot, not yet a confirmed appointment or charge.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentServiceBooking'}
+  /resident/service-bookings/{id}:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+    put:
+      operationId: reviewResidentServiceBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, version]
+              properties:
+                action: {type: string, enum: [confirm, reject, cancel]}
+                version: {type: integer, minimum: 1}
+                categoryId: {type: string, format: uuid}
+                technicianId: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Confirm creates one canonical operational request and work order via the existing engine.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentServiceBooking'}
+components:
+  parameters:
+    Id: {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+    Building: {in: query, name: buildingId, schema: {type: string, format: uuid}}
+  schemas:
+    ResidentHousehold:
+      type: object
+      required: [unitId, canManageDelegations, canManageLeases, members, leases]
+      properties:
+        unitId: {type: string, format: uuid}
+        canManageDelegations: {type: boolean}
+        canManageLeases: {type: boolean}
+        members:
+          type: array
+          items:
+            type: object
+            required: [id, userId, name, role, expiresAt]
+            properties:
+              id: {type: string, format: uuid}
+              userId: {type: string, format: uuid}
+              name: {type: string}
+              role: {type: string}
+              expiresAt: {type: [string, 'null'], format: date-time}
+        leases:
+          type: array
+          items:
+            type: object
+            required: [id, renterId, name, startsOn, endsOn, cancelled, version]
+            properties:
+              id: {type: string, format: uuid}
+              renterId: {type: string, format: uuid}
+              name: {type: string}
+              startsOn: {type: string, format: date}
+              endsOn: {type: string, format: date}
+              cancelled: {type: boolean}
+              version: {type: integer}
+    ResidentBookingOption:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+    ResidentNotificationSettings:
+      type: object
+      required: [emailEnabled, inAppEnabled, quietEnabled, quietStart, quietEnd, timezone, version]
+      properties:
+        emailEnabled: {type: boolean}
+        inAppEnabled: {type: boolean}
+        quietEnabled: {type: boolean}
+        quietStart: {type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}
+        quietEnd: {type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}
+        timezone: {type: string}
+        version: {type: integer, minimum: 0}
+    ResidentDirectChat:
+      type: object
+      required: [id, name, blocked, blockedByMe, unread]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        blocked: {type: boolean}
+        blockedByMe: {type: boolean}
+        unread: {type: integer}
+    ResidentDirectMessage:
+      type: object
+      required: [id, body, own, createdAt]
+      properties:
+        id: {type: string}
+        body: {type: string}
+        own: {type: boolean}
+        createdAt: {type: string}
+    ResidentSearchInput:
+      type: object
+      required: [name, query, offerType]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 100}
+        query: {type: string, maxLength: 200}
+        offerType: {type: string, enum: [all, sale, rent]}
+    ResidentSavedSearch:
+      allOf:
+        - {$ref: '#/components/schemas/ResidentSearchInput'}
+        - type: object
+          required: [id]
+          properties: {id: {type: string}}
+    ResidentPlatformTicket:
+      type: object
+      required: [id, subject, body, status, reply, createdAt]
+      properties:
+        id: {type: string}
+        subject: {type: string}
+        body: {type: string}
+        status: {type: string}
+        reply: {type: string}
+        createdAt: {type: string}
+    ResidentAiHistory:
+      type: object
+      required: [id, title, body, createdAt, providerStatus]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        body: {type: string}
+        createdAt: {type: string}
+        providerStatus: {type: string, enum: [NOT_CONFIGURED]}
+    ResidentServiceBooking:
+      type: object
+      required: [id, title, startsAt, endsAt, note, status, version, requestId]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        startsAt: {type: string}
+        endsAt: {type: string}
+        note: {type: string}
+        status: {type: string, enum: [requested, confirming, confirmed, rejected, cancelled]}
+        version: {type: integer}
+        requestId: {type: [string, 'null']}
+    ResidentContinuity:
+      type: object
+      required: [email, emailVerified, phoneVerification, notificationSettings, neighbors, chats, savedSearches, tickets, aiHistory, bookings, administrative, canChat, canMarketplace, canBook]
+      properties:
+        avatarAvailable: {type: boolean}
+        organizationTimezone: {type: string}
+        activation:
+          type: object
+          required: [required, ready, emailVerified, missingAgreements]
+          properties:
+            required: {type: boolean}
+            ready: {type: boolean}
+            emailVerified: {type: boolean}
+            missingAgreements: {type: integer}
+        email: {type: string}
+        emailVerified: {type: boolean}
+        phoneVerification: {type: string, enum: [PROVIDER_REQUIRED]}
+        administrative: {type: boolean}
+        canChat: {type: boolean}
+        canMarketplace: {type: boolean}
+        canBook: {type: boolean}
+        notificationSettings: {$ref: '#/components/schemas/ResidentNotificationSettings'}
+        neighbors:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties: {id: {type: string}, name: {type: string}}
+        chats: {type: array, items: {$ref: '#/components/schemas/ResidentDirectChat'}}
+        savedSearches: {type: array, items: {$ref: '#/components/schemas/ResidentSavedSearch'}}
+        tickets: {type: array, items: {$ref: '#/components/schemas/ResidentPlatformTicket'}}
+        aiHistory: {type: array, items: {$ref: '#/components/schemas/ResidentAiHistory'}}
+        bookings: {type: array, items: {$ref: '#/components/schemas/ResidentServiceBooking'}}

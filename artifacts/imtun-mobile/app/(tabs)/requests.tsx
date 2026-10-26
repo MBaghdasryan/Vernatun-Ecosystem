@@ -4,6 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateOperationalRequest, useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
 import { palette } from '@/constants/colors';
+import { useLocalSearchParams } from 'expo-router';
+import RequestPhoto from '@/components/resident/continuity/RequestPhoto';
 import { csrfSessionRef } from '../_layout';
 import { useColors } from '@/hooks/useColors';
 import { formatArmenianDate, friendlyError, isCompletedRequestStatus, localizeRequestStatus } from '@/constants/armenian';
@@ -34,7 +36,8 @@ export default function RequestsScreen() {
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState('');
   csrfSessionRef.current = session.data?.csrf ?? csrfSessionRef.current;
-  const records = useMemo(() => normalizeRequests(requests.data), [requests.data]);
+  const { requestId: selectedId } = useLocalSearchParams<{ requestId?: string }>();
+  const records = useMemo(() => { const all = normalizeRequests(requests.data); return selectedId ? [...all.filter(r => r.id === selectedId), ...all.filter(r => r.id !== selectedId)] : all; }, [requests.data, selectedId]);
   const active = session.data?.contexts.find((context) => context.id === session.data?.contextId);
   const unitId = active?.unit_id;
 
@@ -68,7 +71,7 @@ export default function RequestsScreen() {
           <View style={styles.listHeading}><Text style={styles.sectionTitle}>Պատմություն</Text><Text style={styles.countLabel}>{records.length ? `ԸՆԴԱՄԵՆԸ՝ ${records.length}` : 'ԸՆԹԱՑԻԿ ՑԱՆԿԸ'}</Text></View>
         </View>}
         ListEmptyComponent={requests.isLoading ? <View style={styles.loadingCard}><View style={styles.shimmer} /><View style={[styles.shimmer, { width: '65%' }]} /><View style={[styles.shimmer, { height: 70 }]} /></View> : requests.isError ? <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="wifi-off" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Չհաջողվեց բեռնել ցանկը</Text><Text style={styles.emptyBody}>Կրկին փորձեք։ Ճշտված տվյալների աղբյուրը սերվերն է։</Text><Pressable accessibilityRole="button" testID="requests-retry" onPress={() => requests.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին բեռնել</Text></Pressable></View> : <View style={styles.empty}><View style={styles.emptyIcon}><Feather name="inbox" size={21} color={palette.accentForeground} /></View><Text style={styles.emptyTitle}>Դեռ հայտեր չկան</Text><Text style={styles.emptyBody}>Ստեղծեք հայտ, եթե տան որևէ հարց ուշադրության կարիք ունի։</Text></View>}
-        renderItem={({ item }) => <RequestRow item={item} />}
+        renderItem={({ item }) => <RequestRow item={item} selected={item.id === selectedId} />}
         ListFooterComponent={<View style={{ height: 100 }} />}
       />
       <Pressable accessibilityRole="button" testID="create-request-open" disabled={!unitId} onPress={() => { setFormError(''); setComposerOpen(true); }} style={[styles.fab, !unitId && styles.fabDisabled]}><Feather name="plus" size={20} color={palette.foreground} /><Text style={styles.fabText}>Նոր հայտ</Text></Pressable>
@@ -90,12 +93,13 @@ export default function RequestsScreen() {
   );
 }
 
-function RequestRow({ item }: { item: RequestCard }) {
+function RequestRow({ item, selected }: { item: RequestCard; selected: boolean }) {
   const isDone = isCompletedRequestStatus(item.statusCode);
-  return <View style={styles.rowCard}>
+  return <View style={[styles.rowCard, selected && { borderColor: palette.primary, borderWidth: 2 }]}>
     <View style={styles.rowTop}><View style={[styles.statusDot, isDone && { backgroundColor: palette.success }]} /><Text style={[styles.status, isDone && { color: palette.successStrong }]} numberOfLines={1}>{item.status}</Text><Text style={styles.date}>{item.date}</Text></View>
     <Text style={styles.rowTitle}>{item.subject}</Text>{item.description ? <Text style={styles.rowDescription} numberOfLines={3}>{item.description}</Text> : null}
     <View style={styles.rowBottom}><Text style={styles.recordRef}>IMTUN · ՀԱՅՏ</Text><Feather name="arrow-up-right" size={15} color={palette.accentForeground} /></View>
+    {item.id.startsWith('request-') ? null : <RequestPhoto requestId={item.id} />}
   </View>;
 }
 

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GetResidentRecordsOfferType } from './getResidentRecordsOfferType';
 
 export type GetResidentRecordsParams = {
 /**
@@ -19,4 +20,5 @@ recordId?: string;
  * @maxLength 200
  */
 search?: string;
+offerType?: GetResidentRecordsOfferType;
 };
