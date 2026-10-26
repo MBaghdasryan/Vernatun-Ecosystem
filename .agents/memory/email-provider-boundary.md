@@ -26,3 +26,9 @@ description: User-required provider-independent email architecture and initial c
 **Why:** Пользователь подтвердил разделение исходящей и входящей почты, сохранение Hostinger для входящих сообщений и запрет на пересоздание существующих webhook.
 
 **How to apply:** Проверять фактическое состояние Resend и Coolify отдельно. Любую пересылку поддержки на Resend Receiving настраивать через Hostinger без переноса MX.
+
+Resend email-delivery webhook is a separate integration from Vernatun Edge webhooks and transport. Keep their endpoints, event contracts, signatures, and credentials isolated; never reuse one webhook as the other.
+
+**Why:** Пользователь прямо уточнил, что работающий Resend webhook должен оставаться отдельным от Vernatun Edge webhook.
+
+**How to apply:** Email events belong to the Resend handler; Edge registration, connection, heartbeat, inventory, and commands use the Edge contract. Diagnose and report each independently.
