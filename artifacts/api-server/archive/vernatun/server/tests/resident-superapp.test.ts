@@ -32,7 +32,7 @@ class Client{
   return {status:r.status,body:Buffer.from(await r.arrayBuffer()),type:r.headers.get('content-type'),cache:r.headers.get('cache-control')};
  }
 }
-let owner:Client,family:Client,admin:Client,manager:Client,ops:Client,buildingId:string,query:string;
+let owner:Client,family:Client,admin:Client,manager:Client,ops:Client,dispatcher:Client,secondOrg:Client,buildingId:string,query:string;
 const photoKeys:string[]=[];
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
@@ -40,7 +40,7 @@ before(async()=>{
  const schema=(await pool.query('SELECT current_schema() AS name')).rows[0].name;
  assert.match(schema,/^qa_[a-f0-9]{20}$/);assert.equal(schema,process.env.PRIVATE_FILES_TEST_RUN);
  await pool.query('DELETE FROM auth_rate_limits');
- owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');ops=await new Client().login('manager');
+ owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');manager=await new Client().login('manager');ops=await new Client().login('manager');dispatcher=await new Client().login('dispatcher');secondOrg=await new Client().login('second_org');
  buildingId=seed.fixtures.ba;query='?buildingId='+buildingId;
 });
 after(async()=>{try{for(const key of photoKeys)await deletePrivateFile('photos',key)}finally{server.close();server.closeAllConnections();await pool.end()}});
@@ -137,6 +137,25 @@ test('discussion-to-request preserves the selected message and does not create a
  assert.equal(links.data[0].workOrderId,null);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_agenda_proposals WHERE id IN (SELECT proposal_id FROM resident_discussion_lineage WHERE discussion_id=$1)',[topic.data.id])).rows[0].n,0);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM work_orders WHERE request_id=$1',[created.data.requestId])).rows[0].n,0);
+});
+test('staff request details expose a scoped discussion source and staff can open its thread',async()=>{
+ const topic=await owner.call('/resident/records/discussions','POST',{title:'Lobby door repair source',body:'Original discussion body.',category:'building'});assert.equal(topic.status,201,JSON.stringify(topic.data));
+ const text='The entry door has not latched correctly since the repair. '.repeat(12);
+ const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:text,clientId:randomUUID()});assert.equal(message.status,201);
+ const created=await owner.call(`/resident/records/discussions/${topic.data.id}/requests`,'POST',{key:randomUUID(),sourceMessageId:message.data.id,subject:'Repair lobby door',description:'Please inspect the entrance door.'});assert.equal(created.status,201,JSON.stringify(created.data));
+ for(const staff of [dispatcher,manager]){
+  const detail=await staff.call('/requests/'+created.data.requestId);assert.equal(detail.status,200,JSON.stringify(detail.data));
+  assert.equal(detail.data.originDiscussion.discussionId,topic.data.id);
+  assert.equal(detail.data.originDiscussion.sourceMessageId,message.data.id);
+  assert.ok(detail.data.originDiscussion.sourceExcerpt.length<=280);
+  assert.ok(detail.data.originDiscussion.sourceExcerpt.startsWith('The entry door'));
+  const thread=await staff.call('/requests/'+created.data.requestId+'/origin-discussion');assert.equal(thread.status,200,JSON.stringify(thread.data));
+  assert.equal(thread.data.title,'Lobby door repair source');
+  assert.ok(thread.data.messages.some((m:any)=>m.id===message.data.id&&m.body===text.trim()));
+ }
+ assert.equal((await owner.call('/requests/'+created.data.requestId)).data.originDiscussion,null);
+ assert.equal((await owner.call('/requests/'+created.data.requestId+'/origin-discussion')).status,403);
+ assert.equal((await secondOrg.call('/requests/'+created.data.requestId+'/origin-discussion')).status,403);
 });
 test('marketplace requires explicit owner draft, submission and staff approval',async()=>{
  const payload={title:'Parking rent',body:'Contact through this app',saleType:'rent',priceMinor:'10000',currency:'AMD'};

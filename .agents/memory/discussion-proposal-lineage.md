@@ -13,3 +13,9 @@ Discussion conversions are separate workflows:
 **Why:** the user asked to see a verifiable lifecycle from resident discussion through proposal, meeting, vote, decision, and possible work—or a direct discussion-to-request path without an unnecessary meeting.
 
 **How to apply:** keep each conversion endpoint and UI action independent, enforce building/organization scope server-side, and add trace links transactionally when requests, proposals, agenda items, or ballots are created.
+
+Staff views of request lineage must reuse the operational request authorization and organization/building scope; do not route dispatchers through resident-administration endpoints, which require separate administrative permissions. Return only a bounded, text-safe excerpt in request details and load the discussion thread through the same request scope.
+
+**Why:** dispatchers can read building requests without organization-settings access, and exposing a discussion through broader resident APIs would either deny valid staff or grant the wrong scope.
+
+**How to apply:** when adding lineage links to a staff workflow, first authorize the linked request, then constrain the lineage and discussion records to its organization and building.

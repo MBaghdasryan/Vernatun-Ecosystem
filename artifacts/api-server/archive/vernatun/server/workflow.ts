@@ -19,7 +19,33 @@ async function rows(req:Request,id?:string,client?:PoolClient,lock=false){const 
 export async function requestHistory(db:PoolClient,req:Request,r:any,action:string,to:string,note=''){return requestHistoryWithContext(await context(req))(db,req,r,action,to,note)}
 workflow.get('/requests',async(req,res)=>res.json(await rows(req)));
 workflow.post('/requests',async(req,res)=>res.status(201).json(await createOperationalRequest(req,requestHistory)));
-workflow.get('/requests/:id',async(req,res)=>{const id=uuid.parse(req.params.id);const r=(await rows(req,id))[0];const c=await context(req);const staff=!c.permissions.includes('requests.own');const extras=await requestExtras(id);if(r.paused_at&&r.sla_snapshot?.pause_resolution)extras.sla=extras.sla.map(d=>d.kind==='resolution'?{...d,paused:true,overdue:false}:d);res.json({...r,...extras,history:(await pool.query("SELECT h.*,COALESCE(u.name,'System') AS actor FROM request_history h LEFT JOIN users u ON u.id=h.actor_id WHERE request_id=$1 ORDER BY created_at",[id])).rows,messages:(await pool.query('SELECT m.*,u.name AS author FROM request_messages m JOIN users u ON u.id=m.author_id WHERE request_id=$1 AND (NOT internal OR $2) ORDER BY created_at',[id,staff])).rows,photos:(await pool.query('SELECT id,created_at,photo_type FROM request_photos WHERE request_id=$1 ORDER BY created_at',[id])).rows})});
+async function discussionOrigin(r:any){
+ const row=(await pool.query(`SELECT l.discussion_id,l.source_message_id,l.source_text,d.title,d.body
+  FROM resident_discussion_lineage l
+  JOIN resident_product_records d ON d.id=l.discussion_id AND d.kind='discussions'
+   AND d.organization_id=l.organization_id AND d.building_id=l.building_id AND d.deleted_at IS NULL
+  WHERE l.link_type='request' AND l.request_id=$1
+   AND l.organization_id=$2 AND l.building_id=$3`,[r.id,r.organization_id,r.building_id])).rows[0];
+ if(!row)return null;
+ const sourceText=String(row.source_text??'').replace(/[\u0000-\u001f\u007f-\u009f]+/g,' ').replace(/\s+/g,' ').trim();
+ const maxExcerpt=280;
+ const sourceExcerpt=sourceText.length>maxExcerpt?sourceText.slice(0,maxExcerpt-1).trimEnd()+'…':sourceText;
+ return {discussionId:row.discussion_id,title:row.title,sourceMessageId:row.source_message_id??null,sourceExcerpt};
+}
+workflow.get('/requests/:id',async(req,res)=>{const id=uuid.parse(req.params.id);const r=(await rows(req,id))[0];const c=await context(req);const staff=!c.permissions.includes('requests.own');const extras=await requestExtras(id);if(r.paused_at&&r.sla_snapshot?.pause_resolution)extras.sla=extras.sla.map(d=>d.kind==='resolution'?{...d,paused:true,overdue:false}:d);res.json({...r,...extras,originDiscussion:staff?await discussionOrigin(r):null,history:(await pool.query("SELECT h.*,COALESCE(u.name,'System') AS actor FROM request_history h LEFT JOIN users u ON u.id=h.actor_id WHERE request_id=$1 ORDER BY created_at",[id])).rows,messages:(await pool.query('SELECT m.*,u.name AS author FROM request_messages m JOIN users u ON u.id=m.author_id WHERE request_id=$1 AND (NOT internal OR $2) ORDER BY created_at',[id,staff])).rows,photos:(await pool.query('SELECT id,created_at,photo_type FROM request_photos WHERE request_id=$1 ORDER BY created_at',[id])).rows})});
+workflow.get('/requests/:id/origin-discussion',async(req,res)=>{
+ const id=uuid.parse(req.params.id),r=(await rows(req,id))[0],c=await context(req);
+ if(c.permissions.includes('requests.own'))throw new ApiError(403,'forbidden');
+ const origin=await discussionOrigin(r);if(!origin)throw new ApiError(404,'not_found');
+ const discussion=(await pool.query(`SELECT title,body,status FROM resident_product_records
+  WHERE id=$1 AND kind='discussions' AND organization_id=$2 AND building_id=$3 AND deleted_at IS NULL`,
+  [origin.discussionId,r.organization_id,r.building_id])).rows[0];
+ if(!discussion)throw new ApiError(404,'not_found');
+ const messages=(await pool.query(`SELECT m.id,m.body,m.created_at,u.name AS sender
+  FROM resident_product_messages m JOIN users u ON u.id=m.sender_id
+  WHERE m.record_id=$1 ORDER BY m.created_at,m.id LIMIT 100`,[origin.discussionId])).rows;
+ res.json({...origin,...discussion,messages});
+});
 workflow.get('/requests/:id/technicians',async(req,res)=>{await requirePermission(req,'requests.assign');const r=(await rows(req,uuid.parse(req.params.id)))[0];res.json((await pool.query(`SELECT DISTINCT u.id,u.name FROM users u JOIN role_assignments a ON a.user_id=u.id JOIN memberships m ON m.user_id=u.id AND m.organization_id=a.organization_id WHERE a.organization_id=$1 AND a.role_key='technician' AND a.active AND m.active AND NOT u.blocked AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) AND (a.building_id IS NULL OR a.building_id=$2) AND (a.unit_id IS NULL OR a.unit_id=$3)`,[r.organization_id,r.building_id,r.unit_id])).rows)});
 workflow.post('/requests/:id/transition',async(req,res)=>{const id=uuid.parse(req.params.id);const b=z.object({key:uuid.optional(),action:z.enum(['assign','start','report','approve','reject','confirm','reopen','accept','cannot_perform','pause','resume']),version:z.number().int().positive(),technicianId:uuid.optional(),note:z.string().trim().max(4000).default(''),reason:z.enum(['resident_unavailable','no_access','missing_material','requires_specialist','unsafe_condition','wrong_category','other']).optional(),checklist:z.array(z.object({text:z.string().trim().min(1).max(200),done:z.boolean()})).max(30).optional()}).strict().parse(req.body);const db=await pool.connect();try{await db.query('BEGIN');const r=(await rows(req,id,db,true))[0];const c=await context(req);
 // A stored receipt is not a permission grant. Revalidate the action even when

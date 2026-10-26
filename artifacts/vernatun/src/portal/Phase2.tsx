@@ -93,6 +93,19 @@ export function OperationsSettings({c,language:l}:{c:RoleContext;language:Langua
    {([['r','response'],['a','assignment'],['v','arrival'],['s','resolution']] as const).map(([k,lab])=><label key={k}>{p2(l,lab)}<input type="number" required min={1} max={43200} step={1} value={m[k]} onChange={e=>setM({...m,[k]:e.target.value})}/></label>)}
    <label className="p-check-item"><input type="checkbox" checked={m.p} onChange={e=>setM({...m,p:e.target.checked})}/>{p2(l,'pauseResolution')}</label><button className="p-button orange" disabled={op.busy||!!stale.sla||!polsOk}>{p2(l,'save')}</button></fieldset></form></fieldset></section>}
 
+const originLabels={title:['Քննարկման սկզբնաղբյուր','Источник обсуждения','Discussion source'],source:['Աղբյուրի հաղորդագրություն','Исходное сообщение','Source message'],open:['Բացել քննարկումը','Открыть обсуждение','Open discussion'],close:['Փակել քննարկումը','Скрыть обсуждение','Close discussion'],failed:['Չհաջողվեց բեռնել քննարկումը։','Не удалось загрузить обсуждение.','Could not load the discussion.'],loading:['Բեռնվում է…','Загрузка…','Loading…']} as const;
+function RequestOriginPanel({id,origin,language:l}:{id:string;origin:Row;language:Language}){
+ const [open,setOpen]=useState(false),[loading,setLoading]=useState(false),[discussion,setDiscussion]=useState<Row>(),[error,setError]=useState(false),i=l==='hy'?0:l==='ru'?1:2;
+ async function toggle(){if(open){setOpen(false);return}setOpen(true);if(discussion)return;setLoading(true);setError(false);try{setDiscussion(await request<Row>('/requests/'+id+'/origin-discussion'))}catch{setError(true)}finally{setLoading(false)}}
+ return <section className="p-origin-discussion" data-testid={'origin-discussion-'+id}>
+  <h3>{originLabels.title[i]}</h3><p data-testid={'discussion-source-title-'+id}><strong>{origin.title}</strong></p><blockquote data-testid={'discussion-source-excerpt-'+id}>{origin.sourceExcerpt}</blockquote>
+  <button type="button" className="p-button small" data-testid={'open-origin-discussion-'+id} aria-expanded={open} onClick={()=>void toggle()}>{open?originLabels.close[i]:originLabels.open[i]}</button>
+  {open&&(loading?<p role="status">{originLabels.loading[i]}</p>:error?<p className="p-error" role="alert">{originLabels.failed[i]}</p>:discussion&&<div className="p-origin-thread">
+   <h4>{discussion.title}</h4><p className="p-prewrap">{discussion.body}</p>
+   {discussion.messages?.map((m:Row)=><article className="p-message" key={m.id} data-testid={'discussion-message-'+m.id}><strong>{m.sender}</strong>{m.id===origin.sourceMessageId&&<small> · {originLabels.source[i]}</small>}<p className="p-prewrap">{m.body}</p></article>)}
+  </div>)}
+ </section>
+}
 export function RequestOps({id,c,language:l,onChanged}:{id:string;c:RoleContext;language:Language;onChanged?:()=>void}){
  const can=(p:string)=>c.permissions.includes(p);const opStale=useRef<()=>void>(()=>{});const op=useOp(l,()=>opStale.current(),c.id+id);const [d,setD]=useState<Row>();const [techs,setTechs]=useState<Row[]>([]);
  const [reason,setReason]=useState('no_access'),[note,setNote]=useState(''),[vs,setVs]=useState(''),[ve,setVe]=useState(''),[vnote,setVnote]=useState(''),[tech,setTech]=useState(''),[pt,setPt]=useState('evidence');
@@ -105,6 +118,7 @@ export function RequestOps({id,c,language:l,onChanged}:{id:string;c:RoleContext;
  const ws=d.work_status??d.status,exec=can('workorders.execute');const enhanced=!!d.category_id;
  const tr=(name:string,action:string,extra:Row={})=>op.run(name,key=>request('/requests/'+id+'/transition','POST',{key,version:d.version,action,...extra}),()=>{setNote('');done()});
  return <div className="p-ops">
+  {d.originDiscussion&&<RequestOriginPanel id={id} origin={d.originDiscussion} language={l}/>}
   {op.msg}<fieldset disabled={!!op.pending} style={FS}>
    {!!d.sla?.length&&<><h3>{p2(l,'sla')}{d.priority?' · '+p2(l,d.priority):''}</h3>{d.sla.map((s:Row)=><p key={s.kind}><strong>{s.kind}</strong> · {p2(l,'due')}: {fmt(l,s.due_at)} {s.satisfied_at?<span className="p-badge green">{p2(l,'satisfied')}</span>:s.overdue&&<span className="p-badge red">{p2(l,'overdue')}</span>}</p>)}</>}
   {d.blocked_reason&&<p className="p-info">{p2(l,'blocked')}: {p2(l,d.blocked_reason)}</p>}
