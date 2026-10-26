@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { setCsrfTokenGetter, useGetMobileAuthSession } from '@workspace/api-client-react';
 import { csrfSessionRef } from '../_layout';
-import { L, S, kinds, superTitle } from '@/lib/resident/text';
+import { L, S, kinds, superTitle, integrationsTitle } from '@/lib/resident/text';
 import { useLang, useWorkspace } from '@/lib/resident/hooks';
 import RecordsList from '@/components/resident/RecordsList';
 import PrefsForm from '@/components/resident/PrefsForm';
@@ -24,6 +24,7 @@ import Passes from '@/components/resident/domain/Passes';
 import LocalSecurity from '@/components/security/LocalSecurity';
 import Access from '@/components/resident/Access';
 import Continuity, { continuitySections } from '@/components/resident/continuity/Gate';
+import IntegrationsOverview from '@/components/resident/IntegrationsOverview';
 function DomainSection({ view, l }: { view: DomainView; l: ReturnType<typeof useLang> }) {
   const acc = useDomainAccess(view);
   if (acc.loading) return <Skeleton />;
@@ -39,13 +40,14 @@ export default function ResidentSection() { const palette = useAppPalette(); con
   }, [session.data?.csrf]);
   const list = kinds[section ?? ''] ?? [];
   return <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={st.content} keyboardShouldPersistTaps="handled">
-    <Pressable accessibilityRole="button" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{section === 'security' ? L(l, ['Անվտանգություն', 'Безопасность', 'Security']) : section === 'access' ? L(l, ['Մուտք', 'Доступ', 'Access']) : superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={L(l, ['Հետ', 'Назад', 'Back'])} testID="resident-section-back" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{section === 'integrations' ? L(l, integrationsTitle) : section === 'security' ? L(l, ['Անվտանգություն', 'Безопасность', 'Security']) : section === 'access' ? L(l, ['Մուտք', 'Доступ', 'Access']) : superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>
     {/* key by context so forms and lists reset when the home changes */}
     <View key={(ctx ?? 'none') + section} style={{ gap: 16 }}>
       {continuitySections.includes(section ?? '') && <Continuity section={section ?? ''} l={l} />}
       {section === 'building' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <BuildingInfo ws={ws.data} l={l} />}<RecordsList kind="contacts" l={l} /></>}
       {section === 'security' && <LocalSecurity />}
       {section === 'access' && <Access l={l} />}
+      {section === 'integrations' && <IntegrationsOverview l={l} />}
       {section === 'preferences' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <PrefsForm key={JSON.stringify(ws.data.profile)} profile={ws.data.profile} l={l} />}</>}
       {(domainViews as readonly string[]).includes(section ?? '') && <DomainSection view={section as DomainView} l={l} />}
       {list.map(k => <RecordsList key={k} kind={k} l={l} />)}

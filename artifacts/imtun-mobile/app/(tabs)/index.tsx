@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const meetings = useDomainAccess('meetings');
   const go = (section: string) => router.push({ pathname: '/resident/[section]', params: { section } });
   const home = ws.data?.home;
+  const availableHomes = session.data?.contexts.length ?? 0;
   const summary = home?.summary;
   const payable = money(home?.payableMinor, home?.currency);
   const overdue = money(home?.overdueMinor, home?.currency);
@@ -113,12 +114,21 @@ export default function HomeScreen() {
     </View>
     <Text style={st.hello}>{tr(l, ['Բարի օր', 'Добрый день', 'Good day'])}{firstName ? `, ${firstName}` : ''}</Text>
     <Text style={st.sub}>{roleGreeting}</Text>
-    <View style={st.prop}>
+    {active ? <View style={st.prop}>
       <View style={st.propIcon}><Feather name="home" size={22} color={palette.primary} /></View>
-      <View style={{ flex: 1 }}><Text style={st.propT} numberOfLines={1}>{ws.data?.building.name || active?.building_name || active?.organization_name || '—'}</Text><Text style={st.propS} numberOfLines={2}>{[ws.data?.building.unit || active?.unit_number ? `${tr(l, ['Բն.', 'Кв.', 'Apt'])} ${ws.data?.building.unit || active?.unit_number}` : null, ws.data?.building.address].filter(Boolean).join(' · ')}</Text></View>
-    </View>
-    {ws.isPending ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : null}
-    {role === 'owner' ? <>
+      <View style={{ flex: 1 }}><Text style={st.propT} numberOfLines={1}>{ws.data?.building.name || active.building_name || active.organization_name || '—'}</Text><Text style={st.propS} numberOfLines={2}>{[ws.data?.building.unit || active.unit_number ? `${tr(l, ['Բն.', 'Кв.', 'Apt'])} ${ws.data?.building.unit || active.unit_number}` : null, ws.data?.building.address].filter(Boolean).join(' · ')}</Text></View>
+      <Feather name="chevron-right" size={18} color={palette.mutedForeground} />
+    </View> : <Pressable accessibilityRole="button" accessibilityLabel={tr(l, ['Ընտրել տունը', 'Выбрать дом', 'Choose a home'])} testID="home-select-context" onPress={() => router.push('/(tabs)/profile')} style={st.prop}>
+      <View style={st.propIcon}><Feather name="home" size={22} color={palette.primary} /></View>
+      <View style={{ flex: 1 }}><Text style={st.propT}>{tr(l, ['Ընտրեք ձեր տունը', 'Выберите свой дом', 'Choose your home'])}</Text><Text style={st.propS}>{availableHomes ? tr(l, [`Հասանելի է ${availableHomes} տուն`, `Доступно домов: ${availableHomes}`, `${availableHomes} home${availableHomes === 1 ? '' : 's'} available`]) : tr(l, ['Տան հասանելիություն դեռ նշանակված չէ', 'Доступ к дому пока не назначен', 'No home access is assigned yet'])}</Text></View>
+      <Feather name="chevron-right" size={18} color={palette.mutedForeground} />
+    </Pressable>}
+    {active && ws.isPending ? <Skeleton /> : null}
+    {active && ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : null}
+    {!active ? <View style={st.noHome}>
+      <EmptyState icon="home" title={tr(l, ['Ձեր տան տվյալները դեռ ընտրված չեն', 'Дом ещё не выбран', 'No home selected yet'])} text={availableHomes ? tr(l, ['Ընտրեք հասանելի տունը՝ վճարումները, մուտքը և հայտերը տեսնելու համար։', 'Выберите доступный дом, чтобы увидеть платежи, доступ, объявления и заявки.', 'Select an available home to see payments, access, notices, and requests.']) : tr(l, ['Եթե տունը պետք է լինի հասանելի, դիմեք ձեր управляющей компании։', 'Если доступ к дому должен быть, обратитесь в управляющую компанию.', 'If you should have home access, contact your management company.'])} />
+      {availableHomes ? <Pressable accessibilityRole="button" testID="home-select-context-cta" onPress={() => router.push('/(tabs)/profile')} style={st.selectHomeButton}><Text style={st.selectHomeText}>{tr(l, ['Ընտրել տունը', 'Выбрать дом', 'Choose a home'])}</Text><Feather name="arrow-right" size={16} color={palette.surface} /></Pressable> : null}
+    </View> : role === 'owner' ? <>
       {finance.allowed ? financeCard ?? (!ws.isPending && !ws.isError ? <EmptyState icon="credit-card" title={tr(l, ['Վճարման տվյալներ դեռ չկան', 'Данные о платежах пока недоступны', 'No payment details available yet'])} /> : null) : null}
       {actions}
       {family.allowed ? <Row icon="users" title={tr(l, ['Իմ ընտանիքը', 'Моя семья', 'My household'])} subtitle={tr(l, ['Անդամներ և հրավերներ', 'Участники и приглашения', 'Members and invitations'])} onPress={() => go('family')} testID="home-household" /> : null}
@@ -138,7 +148,7 @@ export default function HomeScreen() {
       {passes.allowed ? <Row icon="key" title={tr(l, ['Հյուրի անցաթուղթ', 'Гостевой пропуск', 'Guest pass'])} onPress={() => go('passes')} /> : null}
       {household}{emergency}
     </> : <>{actions}{financeCard}{requestBlock}{notices}{chat}{events}{emergency}</>}
-  </ScrollView>;
+    </ScrollView>;
 }
 
 const make_st = (palette: Palette) => StyleSheet.create({
@@ -150,6 +160,7 @@ const make_st = (palette: Palette) => StyleSheet.create({
   hello: { fontSize: 25, fontWeight: '800', color: palette.foreground, letterSpacing: -0.6, marginTop: 6 }, sub: { fontSize: 13, color: palette.mutedForeground, marginTop: -6 },
   prop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border },
   propIcon: { width: 52, height: 52, borderRadius: 14, backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center' }, propT: { fontSize: 15, fontWeight: '800', color: palette.foreground }, propS: { fontSize: 12, color: palette.mutedForeground, marginTop: 3 },
+  noHome: { gap: 12 }, selectHomeButton: { minHeight: 48, borderRadius: 12, backgroundColor: palette.primary, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, selectHomeText: { color: palette.surface, fontWeight: '800', fontSize: 14 },
   fin: { backgroundColor: palette.foreground, borderRadius: 18, padding: 18, gap: 4 }, finK: { color: palette.heroMuted, fontSize: 10, letterSpacing: 1.3, fontWeight: '800' }, finA: { color: palette.surface, fontSize: 30, fontWeight: '800', letterSpacing: -0.8 }, finO: { color: palette.selectedBorder, fontSize: 12, fontWeight: '700' },
   finRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }, finNote: { color: palette.heroMuted, fontSize: 12, flex: 1 },
   pay: { backgroundColor: palette.primary, minHeight: 44, borderRadius: 12, paddingHorizontal: 22, justifyContent: 'center' }, payT: { color: palette.surface, fontWeight: '800', fontSize: 14 },
