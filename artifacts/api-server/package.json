@@ -11,6 +11,7 @@
     "test:availability": "cd archive/vernatun && node --import tsx server/tests/run.ts --availability-only",
     "test:phase8": "cd archive/vernatun && tsx server/tests/run.ts --phase8-only",
     "test:phase7": "cd archive/vernatun && tsx server/tests/run.ts --phase7-only",
+    "test:notifications": "cd archive/vernatun && tsx server/tests/run.ts --notifications-only",
     "test:phase6-files": "cd archive/vernatun && tsx server/tests/run.ts --phase6-files-only",
     "test:core": "cd archive/vernatun && tsx server/tests/run.ts --core-only",
     "test:phase6": "cd archive/vernatun && tsx server/tests/run.ts --phase6-only",

@@ -15,7 +15,11 @@ const schemas=Array.from({length:isSevenChains?7:1},()=>`qa_${randomBytes(10).to
 const schema=schemas[0];
 const urlForSchema=(name:string)=>{const target=new URL(url);target.searchParams.set('options',`-c search_path=${name},public`);return target.toString()};
 const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin.connect();
-const browserEnv=process.argv.includes('--phase6-only')?{APP_ORIGIN:'http://127.0.0.1:4191'}:{};
+const browserEnv=process.argv.includes('--phase6-only')
+ ? {APP_ORIGIN:'http://127.0.0.1:4191'}
+ : process.argv.includes('--notifications-only')
+ ? {APP_ORIGIN:'http://127.0.0.1:4192'}
+ : {};
 const createdSchemas:string[]=[];
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:urlForSchema(schema),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema,...browserEnv};
 // Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
@@ -69,6 +73,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/offline.test.ts']]
  : process.argv.includes('--phase7-only')
  ? [['--test','server/tests/phase7.test.ts']]
+ : process.argv.includes('--notifications-only')
+ ? [['--test','server/tests/notification-center.test.ts']]
  : process.argv.includes('--inventory-only')
  ? [['--test','server/tests/storage-inventory.test.ts']]
  : process.argv.includes('--delivery-only')
