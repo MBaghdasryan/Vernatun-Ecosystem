@@ -11,12 +11,13 @@ import {bt} from './business-i18n';
 import type {RoleContext} from './types';
 type Row=Record<string,any>;type Props={c:RoleContext;language:Language;currency:Currency;view:string};
 function minor(value:string){if(!/^-?\d+(\.\d{1,2})?$/.test(value))throw new Error('amount');const negative=value.startsWith('-');const [whole,fraction='']=value.replace('-','').split('.');return ((BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0')))*(negative?-1n:1n)).toString()}
+export function businessRowMatchesSearch(row:Row,search:string){return Object.values(row).join(' ').toLowerCase().includes(search.toLowerCase())}
 export function BusinessTable({rows,columns,language,onSelect,initialFilter=location.pathname.endsWith('/defects')?(new URLSearchParams(location.search).get('status')??''):''}:{rows:Row[];columns:[string,string][];language:Language;onSelect?:(r:Row)=>void;initialFilter?:string}){
  const [search,setSearch]=useState(''),[sort,setSort]=useState(columns[0]?.[0]??'id'),[ascending,setAscending]=useState(true),[page,setPage]=useState(0),[filter,setFilter]=useState(initialFilter);
  const statusOptions=new Set<string>(rows.map(r=>String(r.status??'')).filter(Boolean));
  if(location.pathname.endsWith('/defects'))['assigned','in_progress','review','accepted'].forEach(s=>statusOptions.add(s));
  if(initialFilter)statusOptions.add(initialFilter);
- const filtered=rows.filter(r=>(!filter||r.status===filter)&&Object.values(r).join(' ').toLowerCase().includes(search.toLowerCase())).sort((a,b)=>String(a[sort]??'').localeCompare(String(b[sort]??''),undefined,{numeric:true})*(ascending?1:-1));
+  const filtered=rows.filter(r=>(!filter||r.status===filter)&&businessRowMatchesSearch(r,search)).sort((a,b)=>String(a[sort]??'').localeCompare(String(b[sort]??''),undefined,{numeric:true})*(ascending?1:-1));
  const pages=Math.max(1,Math.ceil(filtered.length/8)),current=Math.min(page,pages-1);
  const discussionSearch=rows.some(r=>'origin_discussion_title' in r);
  const searchHint=language==='hy'?'Որոնումը ներառում է սկզբնական քննարկման վերնագիրը։':language==='ru'?'Поиск также по названию исходного обсуждения.':'Search also includes the source discussion title.';
