@@ -13,7 +13,9 @@ async function calculate(db:PoolClient,c:Context,b:z.infer<typeof input>,lock=fa
  if(!building||c.building_id&&c.building_id!==building.id||c.unit_id)throw new ApiError(404,'not_found');
  const tariff=(await db.query('SELECT t.*,s.name FROM tariffs t JOIN services s ON s.id=t.service_id WHERE t.id=$1 AND t.organization_id=$2'+(lock?' FOR SHARE OF t':''),[b.tariffId,c.organization_id])).rows[0];
  if(!tariff)throw new ApiError(404,'not_found');
- const units=(await db.query('SELECT id,number,area::text FROM units WHERE building_id=$1 AND organization_id=$2 ORDER BY id LIMIT 1001'+(lock?' FOR SHARE':''),[building.id,c.organization_id])).rows;
+  // Lock units in id order before payer assignments; lease changes and direct
+  // billing use the same unit-first serialization boundary.
+  const units=(await db.query('SELECT id,number,area::text FROM units WHERE building_id=$1 AND organization_id=$2 ORDER BY id LIMIT 1001'+(lock?' FOR SHARE':''),[building.id,c.organization_id])).rows;
  if(units.length>1000)throw new ApiError(400,'batch_too_large');
  if(lock)for(const unit of units)await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[unit.id+tariff.service_id]);
  const payers=(await db.query(`SELECT p.*,p.starts_on::text,p.ends_on::text FROM payer_assignments p JOIN units u ON u.id=p.unit_id

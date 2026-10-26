@@ -461,4 +461,4 @@ test('search separates resident kinds and exact record links preserve ownership 
  }
 });
 registerResidentContinuityTests(()=>({owner,family,admin,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));
-registerPayerResponsibilityTests(()=>({owner,family,admin,accountant:()=>new Client().login('accountant'),buildingId,query,seed}));
+registerPayerResponsibilityTests(()=>({owner,family,admin,accountant:()=>new Client().login('accountant'),manager:()=>new Client().login('manager'),renter:()=>new Client().login('renter'),buildingId,query,seed}));

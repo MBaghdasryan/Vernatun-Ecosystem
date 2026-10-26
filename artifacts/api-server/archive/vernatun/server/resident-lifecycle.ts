@@ -65,12 +65,17 @@ residentLifecycle.post('/leases/:id/:action',async(req,res)=>{
  const action=z.enum(['extend','cancel']).parse(req.params.action);
  const b=z.object({version,endsOn:z.string().date().optional(),reason:z.string().trim().min(3).max(1000).optional()}).strict().parse(req.body);
  res.json(await transaction(async db=>{
+   // All period-changing operations take the unit lock before lease rows,
+   // matching billing's unit -> payer-assignment lock order.
+   const ref=(await db.query(`SELECT l.unit_id FROM leases l JOIN units u ON u.id=l.unit_id
+    WHERE l.id=$1 AND l.organization_id=$2 AND ($3::uuid IS NULL OR u.building_id=$3)
+    AND ($4::uuid IS NULL OR u.id=$4)`,[uuid.parse(req.params.id),c.organization_id,c.building_id,c.unit_id])).rows[0];
+   if(!ref)throw new ApiError(404,'not_found');
+   await db.query('SELECT id FROM units WHERE id=$1 FOR UPDATE',[ref.unit_id]);
   const l=(await db.query('SELECT l.*,l.ends_on::text AS ends_on FROM leases l JOIN units u ON u.id=l.unit_id WHERE l.id=$1 AND l.organization_id=$2 AND ($3::uuid IS NULL OR u.building_id=$3) AND ($4::uuid IS NULL OR u.id=$4) FOR UPDATE OF l',[uuid.parse(req.params.id),c.organization_id,c.building_id,c.unit_id])).rows[0];
   if(!l)throw new ApiError(404,'not_found');
   if(l.version!==b.version)throw new ApiError(409,'stale_version');
   if(l.cancelled_at)throw new ApiError(409,'invalid_transition');
-  // Serialize period changes with creation for the same unit.
-  await db.query('SELECT id FROM units WHERE id=$1 FOR UPDATE',[l.unit_id]);
   if(action==='extend'){
    if(!b.endsOn||b.endsOn<=l.ends_on)throw new ApiError(400,'invalid_dates');
    if((await db.query('SELECT id FROM leases WHERE id<>$1 AND unit_id=$2 AND cancelled_at IS NULL AND starts_on<=$3 AND ends_on>=$4',[l.id,l.unit_id,b.endsOn,l.starts_on])).rowCount)throw new ApiError(409,'lease_overlap');

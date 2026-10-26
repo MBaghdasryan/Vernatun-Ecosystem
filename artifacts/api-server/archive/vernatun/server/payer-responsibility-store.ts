@@ -1,8 +1,9 @@
 import type {PoolClient} from 'pg';
 
-// Call only after locking canonical payer assignments during posting. A separate
-// statement is essential: a SELECT projection evaluated before waiting for a row
-// lock could otherwise retain the pre-acceptance READ COMMITTED snapshot.
+// Call only after locking units and then canonical payer assignments during
+// posting. Policy rows are last in that order. A separate statement is essential:
+// a projection evaluated before waiting for a row lock could retain a stale
+// READ COMMITTED snapshot.
 export async function resolvePayers(db:PoolClient,ids:string[],period:string,lock=false){
  if(lock)await db.query(`SELECT pol.building_id FROM resident_payer_policy pol WHERE EXISTS(
   SELECT 1 FROM payer_assignments p JOIN units u ON u.id=p.unit_id

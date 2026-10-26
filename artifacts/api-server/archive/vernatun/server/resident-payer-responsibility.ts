@@ -23,6 +23,8 @@ async function assertFuture(db:Parameters<Parameters<typeof transaction>[0]>[0],
  if(starts<=(await currentDate(db,s)).today)throw new ApiError(409,'future_period_required');
 }
 async function lockSource(db:Parameters<Parameters<typeof transaction>[0]>[0],s:ResidentScope,id:string){
+  // Match billing's canonical order: unit first, then payer assignment.
+  await db.query('SELECT id FROM units WHERE id=$1 AND organization_id=$2 FOR SHARE',[s.unitId,s.organizationId]);
  const p=(await db.query(`SELECT p.*,p.starts_on::text,p.ends_on::text FROM payer_assignments p
  WHERE p.id=$1 AND p.organization_id=$2 AND p.unit_id=$3 FOR UPDATE`,[id,s.organizationId,s.unitId])).rows[0];
  if(!p)throw new ApiError(404,'not_found');return p;

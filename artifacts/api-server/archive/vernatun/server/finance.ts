@@ -24,7 +24,8 @@ finance.post('/finance/calculate',async(req,res)=>{
  const c=await requirePermission(req,'billing.calculate');
  const b=z.object({payerAssignmentId:uuid,tariffId:uuid,period:day.refine(v=>v.endsWith('-01'))}).strict().parse(req.body);
  res.status(201).json(await transaction(async db=>{
-  // Same unit -> payer lock order as batch posting and lease mutations.
+   // Keep unit -> payer assignment order; batch posting and lease mutations
+   // reserve the unit first as well.
   await db.query(`SELECT u.id FROM units u JOIN payer_assignments p ON p.unit_id=u.id
    WHERE p.id=$1 AND p.organization_id=$2 FOR SHARE OF u`,[b.payerAssignmentId,c.organization_id]);
   const p=(await db.query(`SELECT p.*,u.area::text,u.building_id FROM payer_assignments p JOIN units u ON u.id=p.unit_id
