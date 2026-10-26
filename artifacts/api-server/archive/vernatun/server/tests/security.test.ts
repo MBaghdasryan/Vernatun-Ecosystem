@@ -1,8 +1,11 @@
 import {contexts} from '../access.js';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,rm} from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {authenticator} from 'otplib';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
@@ -69,4 +72,91 @@ test('Revoked invitation cannot be accepted',async()=>{const invite=await org.ca
 test('Every required role exists as a separate account with server-resolved context',async()=>{const r=await pool.query('SELECT count(DISTINCT user_id)::int AS total,count(DISTINCT role_key)::int AS roles FROM role_assignments');assert.ok(r.rows[0].total>=15);assert.equal(r.rows[0].roles,14)});
 test('Expired invitation is rejected',async()=>{const r=await org.call('/invitations','POST',{email:randomBytes(5).toString('hex')+'@vernatun.test',role:'technician'});assert.equal(r.status,201);await pool.query("UPDATE invitations SET expires_at=now()-interval '1 day' WHERE id=$1",[r.data.id]);const guest=new Client();await guest.call('/auth/session');assert.equal((await guest.call('/auth/accept-invitation','POST',{token:new URL(r.data.url).searchParams.get('token'),name:'Test person',password:randomBytes(18).toString('base64url')})).status,400)});
 test('Password reset token is single-use and revokes existing sessions',async()=>{const user=seeded.accounts.family;const oldHash=(await pool.query('SELECT password_hash FROM users WHERE id=$1',[user.id])).rows[0].password_hash;const guest=new Client();await guest.call('/auth/session');try{assert.equal((await guest.call('/auth/forgot-password','POST',{email:user.email})).status,200);const file=JSON.parse(await readFile(`.local/test/outbox/reset-${user.id}.json`,'utf8'));const token=new URL(file.url).searchParams.get('token');const password=randomBytes(18).toString('base64url');assert.equal((await guest.call('/auth/reset-password','POST',{token,password})).status,204);assert.equal((await family.call('/properties')).status,401);assert.equal((await guest.call('/auth/reset-password','POST',{token,password})).status,400)}finally{await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2',[oldHash,user.id])}});
+test('CLI-recovered account must pass MFA and change its password before using Vernatun',async()=>{
+ const account=seeded.accounts.support;
+ const original=(await pool.query('SELECT password_hash,must_change_password FROM users WHERE id=$1',[account.id])).rows[0];
+ const originalMfa=(await pool.query('SELECT * FROM mfa_credentials WHERE user_id=$1',[account.id])).rows[0];
+ if(originalMfa?.enabled)return;
+ const script=fileURLToPath(new URL('../scripts/recover-global-account.mjs',import.meta.url));
+ let credentialFile='';
+ try{
+  const setup=await support.call('/mfa/setup','POST',{password:account.password});
+  assert.equal(setup.status,200);
+  const enabled=await support.call('/mfa/enable','POST',{code:authenticator.generate(setup.data.secret)});
+  assert.equal(enabled.status,200);
+  const priorSession=(await pool.query(`SELECT sid,sess,expire FROM session
+   WHERE sess->'passport'->>'user'=$1 AND expire>now() LIMIT 1`,[account.id])).rows[0];
+  assert.ok(priorSession);
+
+  const recovered=spawnSync(process.execPath,[script,`--email=${account.email}`,'--role=support',
+   '--confirm-production-account-recovery'],{
+   encoding:'utf8',maxBuffer:1024*1024,
+   env:{...process.env,NODE_ENV:'test',DATABASE_URL:config.DATABASE_URL,VERNATUN_ACCOUNT_RECOVERY_TEST_MODE:'1'},
+  });
+  assert.equal(recovered.status,0,recovered.stderr);
+  const summary=JSON.parse(recovered.stdout);
+  credentialFile=summary.privateCredentialsFile;
+  const credential=JSON.parse(await readFile(credentialFile,'utf8'));
+  const temporaryPassword=credential.password as string;
+  assert.equal(summary.passwordPrinted,false);
+  assert.equal(recovered.stdout.includes(temporaryPassword),false);
+  assert.equal(recovered.stderr.includes(temporaryPassword),false);
+  assert.equal((await pool.query('SELECT must_change_password FROM users WHERE id=$1',[account.id])).rows[0].must_change_password,true);
+  assert.equal((await pool.query('SELECT enabled FROM mfa_credentials WHERE user_id=$1',[account.id])).rows[0].enabled,true);
+
+  // Simulate an in-flight old session saving after the CLI's DELETE: the tombstone must still win.
+  await pool.query(`INSERT INTO session(sid,sess,expire) VALUES($1,$2::json,$3)
+   ON CONFLICT(sid) DO UPDATE SET sess=EXCLUDED.sess,expire=EXCLUDED.expire`,
+   [priorSession.sid,JSON.stringify(priorSession.sess),priorSession.expire]);
+  const replayed=await support.call('/auth/session');
+  assert.equal(replayed.status,200);
+  assert.equal(replayed.data.user,null);
+
+  const fresh=new Client();
+  await fresh.call('/auth/session');
+  const withoutMfa=await fresh.call('/auth/login','POST',{email:account.email,password:temporaryPassword});
+  assert.equal(withoutMfa.status,401);
+  assert.equal(withoutMfa.data.error,'mfa_required');
+  const login=await fresh.call('/auth/login','POST',{
+   email:account.email,password:temporaryPassword,code:enabled.data.recoveryCodes[0],
+  });
+  assert.equal(login.status,200);
+  assert.equal(login.data.user.mustChangePassword,true);
+  assert.deepEqual(login.data.contexts,[]);
+  const forcedSession=await fresh.call('/auth/session');
+  assert.equal(forcedSession.data.user.mustChangePassword,true);
+  assert.deepEqual(forcedSession.data.contexts,[]);
+  assert.equal((await fresh.call('/properties')).data.error,'password_change_required');
+  assert.equal((await fresh.call('/auth/preferences','PATCH',{locale:'en',currency:'USD'})).data.error,'password_change_required');
+  await pool.query('DELETE FROM auth_rate_limits');
+  assert.equal((await fresh.call('/auth/first-login-password','POST',{
+   currentPassword:'wrong temporary password',password:randomBytes(24).toString('base64url'),
+  })).data.error,'invalid_credentials');
+  const newPassword=randomBytes(24).toString('base64url');
+  assert.equal((await fresh.call('/auth/first-login-password','POST',{
+   currentPassword:temporaryPassword,password:newPassword,
+  })).status,204);
+  const completed=await fresh.call('/auth/session');
+  assert.equal(completed.data.user.mustChangePassword,false);
+  assert.ok(completed.data.contexts.some((c:any)=>c.role_key==='support'));
+  const audit=await pool.query(`SELECT details FROM audit_events WHERE actor_user_id=$1
+   AND action='auth.password.first_login.change' ORDER BY id DESC LIMIT 1`,[account.id]);
+  assert.equal(JSON.stringify(audit.rows).includes(temporaryPassword),false);
+  assert.equal(JSON.stringify(audit.rows).includes(newPassword),false);
+ }finally{
+  await pool.query('UPDATE users SET password_hash=$1,must_change_password=$2 WHERE id=$3',
+   [original.password_hash,original.must_change_password,account.id]);
+  await pool.query('DELETE FROM mfa_credentials WHERE user_id=$1',[account.id]);
+  if(originalMfa)await pool.query(`INSERT INTO mfa_credentials
+   (user_id,secret_encrypted,pending_secret,pending_until,enabled,last_counter,recovery_hashes)
+   VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(user_id) DO UPDATE SET
+   secret_encrypted=EXCLUDED.secret_encrypted,pending_secret=EXCLUDED.pending_secret,
+   pending_until=EXCLUDED.pending_until,enabled=EXCLUDED.enabled,last_counter=EXCLUDED.last_counter,
+   recovery_hashes=EXCLUDED.recovery_hashes`,
+   [account.id,originalMfa.secret_encrypted,originalMfa.pending_secret,originalMfa.pending_until,
+    originalMfa.enabled,originalMfa.last_counter,originalMfa.recovery_hashes]);
+  await pool.query(`DELETE FROM session WHERE sess->'passport'->>'user'=$1`,[account.id]);
+  if(credentialFile)await rm(credentialFile,{force:true});
+ }
+});
 test('Login attempts are rate limited',async()=>{const guest=new Client();await guest.call('/auth/session');let blocked=false;for(let i=0;i<21;i++){const r=await guest.call('/auth/login','POST',{email:'missing@vernatun.test',password:'not-a-real-password'});if(r.status===429){blocked=true;break}assert.equal(r.status,401)}assert.ok(blocked)});

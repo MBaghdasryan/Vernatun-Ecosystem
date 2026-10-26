@@ -44,7 +44,9 @@ async function managed<T>(path:string,method:string,body?:unknown):Promise<T>{
   const result=await send<T>(path,method,body);
   if(path==='/auth/logout'||path==='/auth/login')storage?.removeItem(logoutKey);
   if(path==='/auth/session'||path==='/auth/login'){
-   if(!storage?.getItem(logoutKey))await rememberSession(result as AuthState).catch(()=>{});
+    const authState=result as AuthState;
+    if(authState.user?.mustChangePassword)forgetSession();
+    else if(!storage?.getItem(logoutKey))await rememberSession(authState).catch(()=>{});
   }else if(path==='/auth/context'){
    // Re-read server identity after a successful context switch.
    const session=await send<AuthState>('/auth/session','GET');

@@ -92,6 +92,14 @@ app.use('/api/edge/v2',edgeMachineApiV2);
 app.use(session({name:'vernatun.sid',secret:config.SESSION_SECRET,store:new (pgSession(session))({pool,tableName:'session'}),resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(sessionRevocationGuard);
 app.use(passport.initialize());app.use(passport.session());
+app.use('/api',(req,_res,next)=>{
+ if(!req.user?.mustChangePassword)return next();
+ const path=req.path.replace(/\/+$/,'')||'/';
+ const allowed=(req.method==='GET'&&(path==='/auth/session'||path==='/health'))||
+  (req.method==='POST'&&(path==='/auth/first-login-password'||path==='/auth/logout'));
+ if(allowed)return next();
+ next(new ApiError(403,'password_change_required'));
+});
 // Update callbacks authenticate with a per-release bearer token, not a browser session.
 // Keep the exception path-scoped; all other mutating API routes retain CSRF protection.
 app.use('/api/system/updates',systemUpdateCallbacks);

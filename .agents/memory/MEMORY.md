@@ -21,6 +21,7 @@
 - [Accessible table overflow](accessible-table-overflow.md) — hidden labels can escape a scrolling table unless their positioned ancestor is inside its scroll container.
 - [Operations error lifecycle](operations-error-lifecycle.md) — resolved acknowledges observed events; recurrence and future retention must respect concurrent-event watermarks.
 - [Operations safety](operations-safety.md) — revocation must survive late session saves; encryption keys need an independent recovery lifecycle.
+- [Recovery password policy](recovery-password-policy.md) — CLI recovery keeps MFA and requires password replacement before any other API access.
 - [Corepack version pinning](pnpm-corepack-pinning.md) — use Corepack to exercise the repository's packageManager pin instead of relying on a conflicting global pnpm.
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.

@@ -29,6 +29,7 @@
     "test:edge": "cd archive/vernatun && tsx server/tests/run.ts --edge-only",
     "test:global-account-provisioning": "cd archive/vernatun && tsx server/tests/run.ts --global-account-provisioning-only",
     "test:global-account-recovery": "cd archive/vernatun && tsx server/tests/run.ts --global-account-recovery-only",
+    "test:security": "cd archive/vernatun && tsx server/tests/run.ts --security-only",
     "test:global-account-verification": "node --test archive/vernatun/server/tests/global-account-verification.test.mjs",
     "db:migrate:coolify:plan": "node dist/migrate.mjs --coolify-plan",
     "db:migrate:coolify:apply": "node dist/migrate.mjs --coolify-apply",

@@ -59,6 +59,8 @@ const checks=process.argv.includes('--browser-only')
   ? [['--test','server/tests/global-account-provisioning.test.mjs']]
   : process.argv.includes('--global-account-recovery-only')
   ? [['--test','server/tests/global-account-recovery.test.mjs']]
+  : process.argv.includes('--security-only')
+  ? [['--test','server/tests/security.test.ts']]
  : process.argv.includes('--edge-only')
  ? [['--test','server/tests/edge.test.ts']]
  : process.argv.includes('--phase8-only')
@@ -98,7 +100,7 @@ if(checks.some(args=>args.includes('server/tests/phase1.test.ts'))){
  if(!checks.some(args=>args.includes('server/tests/email-providers.test.ts')))checks.splice(1,0,['--test','server/tests/email-providers.test.ts']);
  if(!checks.some(args=>args.includes('server/tests/email-delivery.test.ts')))checks.splice(2,0,['--test','server/tests/email-delivery.test.ts']);
 }
-if(checks.some(args=>args.includes('server/tests/security.test.ts'))){
+if(checks.some(args=>args.includes('server/tests/security.test.ts'))&&!process.argv.includes('--security-only')){
   checks.push(['--test','server/tests/payments.test.ts']);
  checks.push(['--test','server/tests/system-center.test.ts']);
  checks.push(['--test','server/tests/handover-readiness.test.ts']);

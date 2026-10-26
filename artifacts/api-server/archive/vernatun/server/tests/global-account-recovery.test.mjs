@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile,rm,stat} from 'node:fs/promises';
-import {randomBytes,randomUUID} from 'node:crypto';
+import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
@@ -28,7 +28,7 @@ const users={
 };
 
 async function snapshot(userId){
- const user=await client.query('SELECT id,email,password_hash,blocked,account_status FROM users WHERE id=$1',[userId]);
+ const user=await client.query('SELECT id,email,password_hash,blocked,account_status,must_change_password FROM users WHERE id=$1',[userId]);
  const assignments=await client.query(`SELECT role_key,organization_id,active,assignment_status FROM role_assignments
   WHERE user_id=$1 ORDER BY role_key,organization_id NULLS FIRST`,[userId]);
  const mfa=await client.query('SELECT secret_encrypted,enabled,last_counter,recovery_hashes FROM mfa_credentials WHERE user_id=$1',[userId]);
@@ -124,9 +124,13 @@ try{
      const after=await snapshot(selected.id);
      assert.notEqual(after.user[0].password_hash,selected.password_hash);
      assert.equal(await bcrypt.compare(credential.password,after.user[0].password_hash),true);
+      assert.equal(after.user[0].must_change_password,true,'recovered accounts must be blocked until the password is changed');
      assert.deepEqual(after.mfa,before.mfa,'recovery must leave the enabled MFA secret and counters unchanged');
      assert.equal(after.sessions.length,0);
      assert.equal(before.sessions.length,selected===users.admin?2:1);
+      const revokedRefs=before.sessions.map(row=>createHash('sha256').update(row.sid).digest('hex'));
+      const revocations=await client.query('SELECT ref FROM system_revoked_sessions WHERE ref=ANY($1::text[])',[revokedRefs]);
+      assert.equal(revocations.rowCount,revokedRefs.length,'every pre-recovery session must have a tombstone against late saves');
      assert.equal(after.resets.length,before.resets.length);
      assert.ok(after.resets.every(row=>row.used_at!==null),'outstanding reset links must be invalidated');
      assert.equal(after.audit.length,before.audit.length+1);

@@ -70,6 +70,62 @@ function DataTable({rows,columns,actions}:{rows:Row[];columns:Column[];actions?:
  return <><div className="p-table-tools"><label className="p-search"><Search size={17}/><input aria-label={t('search')} value={search} placeholder={t('search')} onChange={e=>{setSearch(e.target.value);setPage(0)}}/></label>{safeRows.some(r=>r.active!==undefined)&&<select aria-label={t('status')} value={filter} onChange={e=>{setFilter(e.target.value);setPage(0)}}><option value="all">{t('all')}</option><option value="true">{t('active')}</option><option value="false">{t('revoked')}</option></select>}<select className="p-mobile-sort" aria-label={t('sort')} value={sort.key} onChange={e=>setSort({key:e.target.value,ascending:true})}>{columns.map(c=><option key={c.key} value={c.key}>{t(c.title)}</option>)}</select></div>{shown.length?<div className="p-table-wrap"><table><thead><tr>{columns.map(c=><th key={c.key} aria-sort={sort.key===c.key?(sort.ascending?'ascending':'descending'):'none'}><button onClick={()=>setSort({key:c.key,ascending:sort.key===c.key?!sort.ascending:true})}>{t(c.title)} {sort.key===c.key?(sort.ascending?'↑':'↓'):''}</button></th>)}{actions&&<th>{t('actions')}</th>}</tr></thead><tbody>{shown.map((r,i)=><tr key={r.id??r.module??i}>{columns.map(c=><td data-label={t(c.title)} key={c.key}>{c.render?c.render(r):String(r[c.key]??'—')}</td>)}{actions&&<td data-label={t('actions')}>{actions(r)}</td>}</tr>)}</tbody></table></div>:<EmptyState/>}<div className="p-pagination"><span>{filtered.length} · {Math.min(page,pages-1)+1} / {pages}</span><button className="p-icon" disabled={page===0} onClick={()=>setPage(p=>p-1)} aria-label={t('previous')}><ChevronLeft size={17}/></button><button className="p-icon" disabled={page+1>=pages} onClick={()=>setPage(p=>p+1)} aria-label={t('next')}><ChevronRight size={17}/></button></div></>
 }
 function AuthPage({mode,onSession}:{mode:string;onSession:(s:AuthState)=>void}){const {t,language}=usePreferences();const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>();const [message,setMessage]=useState<TextKey>();const [fields,setFields]=useState({email:'',password:'',name:'',code:''});const forgot=mode==='forgot-password',reset=mode==='reset-password',accept=mode==='accept-invitation';const title=forgot||reset?'resetPassword':accept?'acceptInvite':'loginTitle';async function submit(e:FormEvent){e.preventDefault();if(busy)return;setBusy(true);setError(undefined);try{if(forgot){await request('/auth/forgot-password','POST',{email:fields.email});setMessage('resetAcknowledged')}else if(reset){await request('/auth/reset-password','POST',{token:new URLSearchParams(location.search).get('token'),password:fields.password});setMessage('passwordChanged')}else if(accept){await request('/auth/accept-invitation','POST',{token:new URLSearchParams(location.search).get('token'),password:fields.password,name:fields.name});setMessage('inviteAccepted')}else{const result=await request<AuthState>('/auth/login','POST',{email:fields.email,password:fields.password,...(fields.code?{code:fields.code}:{})});onSession(result)}}catch(e){setError(e)}finally{setBusy(false)}}return <div className="p-auth"><div className="p-auth-story"><Brand/><div><span className="p-kicker">Vernatun / {t('localOnly')}</span><h1>{t('welcome')}</h1><p>{t('loginSubtitle')}</p><div className="p-auth-benefits"><span><ShieldCheck/>{t('verifiedAccess')}</span><span><Building2/>{t('properties')}</span><span><Users/>{t('people')}</span></div></div><small>{t('demo')}</small></div><div className="p-auth-side"><Selectors/><div className="p-auth-form"><span className="p-icon-circle"><LockKeyhole/></span><h2>{t(title)}</h2><p>{t('loginHint')}</p><form onSubmit={submit}>{accept&&<label>{t('name')}<input name="name" autoComplete="name" minLength={2} maxLength={100} required value={fields.name} onChange={e=>setFields({...fields,name:e.target.value})}/></label>}{!reset&&!accept&&<label>{t('emailLabel')}<input type="email" name="email" autoComplete="username" required value={fields.email} onChange={e=>setFields({...fields,email:e.target.value})}/></label>}{!forgot&&<label>{t('password')}<input type="password" name="password" autoComplete={reset||accept?'new-password':'current-password'} required minLength={reset||accept?12:1} maxLength={72} value={fields.password} onChange={e=>setFields({...fields,password:e.target.value})}/>{(reset||accept)&&<small>{t('passwordHint')}</small>}</label>}{!forgot&&!reset&&!accept&&<label>{securityStrings.mfaCode[language==='hy'?0:language==='ru'?1:2]}<input name="code" autoComplete="one-time-code" maxLength={30} value={fields.code} onChange={e=>setFields({...fields,code:e.target.value})}/></label>}{!!error&&<ErrorNotice error={error}/>}<button className="p-button orange" disabled={busy}>{busy?t('saving'):t(forgot?'resetRequest':reset?'resetPassword':accept?'acceptInvite':'signIn')}<ArrowRight size={18}/></button></form>{message&&<p className="p-success" role="status">{t(message)}</p>}<a className="p-text-link" href={forgot||reset||accept?'/login':'/forgot-password'}>{t(forgot||reset||accept?'backLogin':'forgot')}</a><div className="p-auth-demo"><Info size={18}/><p>{t('demoHint')}</p></div><a className="p-text-link muted" href="/">{t('site')} <ArrowUpRight size={14}/></a></div></div></div>}
+function FirstLoginPassword({onChanged}:{onChanged:()=>Promise<void>}){
+ const {language}=usePreferences();
+ const [currentPassword,setCurrentPassword]=useState('');
+ const [password,setPassword]=useState('');
+ const [confirmation,setConfirmation]=useState('');
+ const [error,setError]=useState('');
+ const [busy,setBusy]=useState(false);
+ const i=language==='hy'?0:language==='ru'?1:2;
+ const copy={
+  title:['Սահմանեք նոր գաղտնաբառ','Задайте новый пароль','Set a new password'],
+  description:['Անվտանգության համար մինչև գաղտնաբառի փոփոխությունը մուտքը սահմանափակված է։','В целях безопасности доступ ограничен, пока вы не смените пароль.','Access is restricted until you replace the recovery password.'],
+  current:['Ժամանակավոր գաղտնաբառ','Временный пароль','Temporary password'],
+  next:['Նոր գաղտնաբառ','Новый пароль','New password'],
+  confirm:['Կրկնեք նոր գաղտնաբառը','Повторите новый пароль','Confirm new password'],
+  hint:['Օգտագործեք առնվազն 12 նիշ։','Используйте не менее 12 символов.','Use at least 12 characters.'],
+  mismatch:['Գաղտնաբառերը չեն համընկնում։','Пароли не совпадают.','The passwords do not match.'],
+  same:['Նոր գաղտնաբառը պետք է տարբերվի ժամանակավորից։','Новый пароль должен отличаться от временного.','The new password must differ from the temporary password.'],
+  invalid:['Ժամանակավոր գաղտնաբառը սխալ է։','Временный пароль неверен.','The temporary password is incorrect.'],
+  mfa:['Սեանսի MFA հաստատումն այլևս վավեր չէ։ Դուրս եկեք և կրկին մուտք գործեք MFA-ով։','Подтверждение MFA для сеанса устарело. Выйдите и войдите снова с MFA.','MFA verification has expired. Sign out and sign in again with MFA.'],
+  retry:['Չհաջողվեց փոխել գաղտնաբառը։ Կրկին փորձեք։','Не удалось сменить пароль. Попробуйте ещё раз.','Password change failed. Please try again.'],
+  submit:['Փոխել գաղտնաբառը','Сменить пароль','Change password'],
+  logout:['Դուրս գալ','Выйти','Sign out'],
+ } as const;
+ const messages:Record<string,string>={
+  invalid_credentials:copy.invalid[i],
+  password_must_differ:copy.same[i],
+  recent_mfa_required:copy.mfa[i],
+ };
+ async function submit(e:FormEvent){
+  e.preventDefault();if(busy)return;setError('');
+  if(password!==confirmation){setError(copy.mismatch[i]);return}
+  if(password===currentPassword){setError(copy.same[i]);return}
+  setBusy(true);
+  try{
+   await request('/auth/first-login-password','POST',{currentPassword,password});
+   await onChanged();
+  }catch(e){
+   setError(e instanceof ApiClientError?messages[e.code]??copy.retry[i]:copy.retry[i]);
+  }finally{setBusy(false)}
+ }
+ async function logout(){try{await request('/auth/logout','POST')}finally{location.assign('/login')}}
+ return <div className="p-auth">
+  <div className="p-auth-story"><Brand/><div><span className="p-kicker">Vernatun</span><h1>{copy.title[i]}</h1><p>{copy.description[i]}</p></div></div>
+  <div className="p-auth-side"><Selectors/><div className="p-auth-form">
+   <span className="p-icon-circle"><LockKeyhole/></span><h2>{copy.title[i]}</h2><p>{copy.description[i]}</p>
+   <form onSubmit={submit}>
+    <label>{copy.current[i]}<input type="password" autoComplete="current-password" required maxLength={72} value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/></label>
+    <label>{copy.next[i]}<input type="password" autoComplete="new-password" required minLength={12} maxLength={72} aria-describedby="first-password-hint" value={password} onChange={e=>setPassword(e.target.value)}/><small id="first-password-hint">{copy.hint[i]}</small></label>
+    <label>{copy.confirm[i]}<input type="password" autoComplete="new-password" required minLength={12} maxLength={72} value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label>
+    {error&&<p className="p-error" role="alert">{error}</p>}
+    <button className="p-button orange" disabled={busy}>{busy?'…':copy.submit[i]}<ArrowRight size={18}/></button>
+   </form>
+   <button className="p-text-link" type="button" onClick={()=>void logout()}>{copy.logout[i]}</button>
+  </div></div>
+ </div>;
+}
 function ContextPicker({session,onChoose}:{session:AuthState;onChoose:(id:string)=>Promise<void>}){const {t,language}=usePreferences();const [error,setError]=useState<unknown>();const [busy,setBusy]=useState('');return <div className="p-context-page"><header><Brand/><Selectors/></header><main><span className="p-kicker">Vernatun</span><h1>{t('chooseContext')}</h1><p>{t('contextHint')}</p>{!!error&&<ErrorNotice error={error}/>}<div className="p-context-grid">{session.contexts.map(c=><button key={c.id} disabled={!!busy} onClick={async()=>{setBusy(c.id);try{await onChoose(c.id)}catch(e){setError(e);setBusy('')}}}><span className="p-icon-circle"><Building2/></span><strong>{c.organization_name??t('platform')}</strong><p>{roleName(language,c.role_key)}</p><small>{[c.building_name,c.unit_number?t('unit')+' '+c.unit_number:null].filter(Boolean).join(' · ')||t(c.unit_id?'unitScope':c.building_id?'buildingScope':c.organization_id?'orgScope':'platformScope')}</small><span className="p-context-bottom">{products[primaryProduct(c.role_key)]}<ArrowRight size={18}/></span></button>)}</div>{session.contexts.length===0&&<EmptyState/>}</main></div>}
 const navigation=[{key:'users',icon:Users,permission:'organizations.manage'},{key:'roles',icon:ShieldCheck,permission:'roles.assign'},{key:'permissions',icon:ShieldCheck,permission:'organizations.manage'},{key:'ownership',icon:Home,permission:'ownership.read'},{key:'analytics',icon:LayoutDashboard,permission:'reports.read'},{key:'scorecard',icon:ShieldCheck,permission:'workorders.accept'},{key:'budgets',icon:Wallet,permission:'expenses.read'},{key:'onboarding',icon:Layers,permission:'onboarding.manage'},{key:'documents',icon:FileText,permission:'documents.read'},{key:'leases',icon:KeyRound,permission:'leases.read'},{key:'handovers',icon:Building2,permission:'handover.read'},{key:'subscriptions',icon:Wallet,permission:'subscriptions.manage'},{key:'payments',icon:Wallet,permission:null},{key:'support-cases',icon:Mail,permission:'support.cases'},{key:'announcements',icon:Mail,permission:'announcements.read'},{key:'assets',icon:Settings,permission:'assets.read'},{key:'edge',icon:Activity,permission:'edge.read'},{key:'edge-devices',icon:Activity,permission:'device.read.own'},{key:'meters',icon:Activity,permission:'meters.manage'},{key:'meetings',icon:Users,permission:'meetings.read'},{key:'expenses',icon:Wallet,permission:'expenses.read'},{key:'imports',icon:Layers,permission:'imports.manage'},{key:'notifications',icon:Mail,permission:null},{key:'finance',icon:Wallet,permission:'billing.read'},{key:'defects',icon:FileText,permission:'defects.read'},{key:'passes',icon:KeyRound,permission:'access.validate'},{key:'support',icon:ShieldCheck,permission:'support.access.request'},{key:'delegations',icon:Users,permission:'residents.delegate'},{key:'requests',icon:FileText,permission:'requests.read'},{key:'incidents',icon:Activity,permission:'incidents.read'},{key:'overview',icon:LayoutDashboard,permission:null},{key:'organizations',icon:Building2,permission:'organizations.read'},{key:'properties',icon:Building2,permission:'properties.read'},{key:'units',icon:Home,permission:'properties.read'},{key:'people',icon:Users,permission:'people.read'},{key:'invitations',icon:Mail,permission:'people.invite'},{key:'modules',icon:Layers,permission:'modules.read'},{key:'invoices',icon:Wallet,permission:'billing.read'},{key:'audit',icon:Activity,permission:'audit.read'},{key:'system',icon:Activity,permission:'system.read'},{key:'email',icon:Mail,permission:null},{key:'settings',icon:Settings,permission:null}] as const;
 function Overview({context:c,onNavigate}:{context:RoleContext;onNavigate:(s:string)=>void}){
@@ -120,4 +176,87 @@ function AuthenticatedShell(props:Parameters<typeof AppShell>[0]){
    setCurrency={setCurrency} security={<SecurityPage c={props.c}/>}/>;
  return <WorkspaceToolsContext.Provider value={props.c}><AppShell {...props}/></WorkspaceToolsContext.Provider>;
 }
-export default function Portal(){const [language,setLanguageState]=useState<Language>(()=>{const l=localStorage.getItem('vernatun.language');return l==='ru'||l==='en'?l:'hy'});const [currency,setCurrencyState]=useState<Currency>(()=>{const c=localStorage.getItem('vernatun.currency');return c==='RUB'||c==='USD'?c:'AMD'});const [session,setSession]=useState<AuthState>();const [error,setError]=useState<unknown>();const [choosing,setChoosing]=useState(false);const [switching,setSwitching]=useState(false);const t=(key:TextKey)=>translate(language,key);const load=()=>{setError(undefined);request<AuthState>('/auth/session').then(s=>{setSession(s);if(s.user){setLanguageState(s.user.locale);setCurrencyState(s.user.currency)}}).catch(setError)};useEffect(()=>{load();window.addEventListener('popstate',load);return()=>window.removeEventListener('popstate',load)},[]);useEffect(()=>{document.documentElement.lang=language;document.title='Vernatun — '+t('brandSubtitle')},[language]);async function prefs(l:Language,c:Currency){if(session?.user){try{await request('/auth/preferences','PATCH',{locale:l,currency:c})}catch(e){setError(e);return}}localStorage.setItem('vernatun.language',l);localStorage.setItem('vernatun.currency',c);setLanguageState(l);setCurrencyState(c)}const provider={language,currency,t,setLanguage:(l:Language)=>void prefs(l,currency),setCurrency:(c:Currency)=>void prefs(language,c)};async function choose(id:string,product?:Product){setSwitching(true);try{await request('/auth/context','POST',{id});const s=await request<AuthState>('/auth/session');const c=s.contexts.find(c=>c.id===id);if(!c||product&&!allowedProducts(c).includes(product))throw new ApiClientError('forbidden',403);history.replaceState(null,'',product&&product!==primaryProduct(c.role_key)?'/'+product+'/finance':startRoute(c.role_key,c));setSession(s);setChoosing(false)}catch(e){setError(e)}finally{setSwitching(false)}}function signedIn(s:AuthState){setSession(s);if(s.user){setLanguageState(s.user.locale);setCurrencyState(s.user.currency)}const c=s.contexts.find(c=>c.id===s.contextId);if(c)history.replaceState(null,'',startRoute(c.role_key,c));else{history.replaceState(null,'','/context');setChoosing(true)}}const mode=location.pathname.split('/')[1]||'login';const active=session?.contexts.find(c=>c.id===session.contextId);const explicitAuth=['forgot-password','reset-password','accept-invitation'].includes(mode);const routeRole=Object.entries(roleRoutes).find(([,r])=>'/'+r.join('/')===location.pathname)?.[0];const wrongShell=active&&((['platform','workspace','field','home'].includes(mode)&&(mode!==active.shell||location.pathname.split('/')[2]!==active.role_key))||(Object.keys(products).includes(mode)&&(!allowedProducts(active).includes(mode as Product)||(routeRole&&routeRole!==active.role_key&&!(location.pathname==='/console/onboarding'&&active.permissions.includes('onboarding.manage'))))));useEffect(()=>{if(active&&!wrongShell&&['platform','workspace','field','home','login'].includes(mode))history.replaceState(null,'',startRoute(active.role_key)+location.search+location.hash)},[active?.id,mode,wrongShell]);return <PreferencesContext.Provider value={provider}><div className="portal-root" lang={language}>{error?<div className="p-start-error"><Brand/><ErrorNotice error={error}/><button className="p-button orange" onClick={load}>{t('retry')}</button></div>:switching?<div className="p-loading" role="status">{productText('switching',language)}</div>:!session?<div className="p-loading" role="status">{t('loading')}</div>:!session.user||explicitAuth?<AuthPage mode={mode} onSession={signedIn}/>:choosing||!active?<ContextPicker session={session} onChoose={choose}/>:wrongShell?<div className="p-start-error"><h1>{t('noAccess')}</h1><p>{t('noAccessHint')}</p><button className="p-button orange" onClick={()=>void choose(active.id)}>{t('returnHome')}</button></div>:<AuthenticatedShell key={active.id+':'+mode} onProduct={choose} session={session} c={active} onSwitch={()=>setChoosing(true)} onLogout={()=>{void request('/auth/logout','POST').then(()=>location.assign('/login')).catch(setError)}}/>}</div></PreferencesContext.Provider>}
+export default function Portal(){
+ const [language,setLanguageState]=useState<Language>(()=>{const l=localStorage.getItem('vernatun.language');return l==='ru'||l==='en'?l:'hy'});
+ const [currency,setCurrencyState]=useState<Currency>(()=>{const c=localStorage.getItem('vernatun.currency');return c==='RUB'||c==='USD'?c:'AMD'});
+ const [session,setSession]=useState<AuthState>();
+ const [error,setError]=useState<unknown>();
+ const [choosing,setChoosing]=useState(false);
+ const [switching,setSwitching]=useState(false);
+ const t=(key:TextKey)=>translate(language,key);
+ const load=()=>{
+  setError(undefined);
+  request<AuthState>('/auth/session').then(s=>{
+   setSession(s);
+   if(s.user){setLanguageState(s.user.locale);setCurrencyState(s.user.currency)}
+  }).catch(setError);
+ };
+ useEffect(()=>{load();window.addEventListener('popstate',load);return()=>window.removeEventListener('popstate',load)},[]);
+ useEffect(()=>{document.documentElement.lang=language;document.title='Vernatun — '+t('brandSubtitle')},[language]);
+ async function prefs(l:Language,c:Currency){
+  if(session?.user){
+   try{await request('/auth/preferences','PATCH',{locale:l,currency:c})}
+   catch(e){setError(e);return}
+  }
+  localStorage.setItem('vernatun.language',l);localStorage.setItem('vernatun.currency',c);
+  setLanguageState(l);setCurrencyState(c);
+ }
+ const provider={language,currency,t,setLanguage:(l:Language)=>void prefs(l,currency),setCurrency:(c:Currency)=>void prefs(language,c)};
+ async function choose(id:string,product?:Product){
+  setSwitching(true);
+  try{
+   await request('/auth/context','POST',{id});
+   const s=await request<AuthState>('/auth/session');
+   const c=s.contexts.find(c=>c.id===id);
+   if(!c||product&&!allowedProducts(c).includes(product))throw new ApiClientError('forbidden',403);
+   history.replaceState(null,'',product&&product!==primaryProduct(c.role_key)?'/'+product+'/finance':startRoute(c.role_key,c));
+   setSession(s);setChoosing(false);
+  }catch(e){setError(e)}
+  finally{setSwitching(false)}
+ }
+ function signedIn(s:AuthState){
+  setSession(s);
+  if(s.user){setLanguageState(s.user.locale);setCurrencyState(s.user.currency)}
+  if(s.user?.mustChangePassword){
+   history.replaceState(null,'','/first-login-password');setChoosing(false);return;
+  }
+  const c=s.contexts.find(c=>c.id===s.contextId);
+  if(c)history.replaceState(null,'',startRoute(c.role_key,c));
+  else{history.replaceState(null,'','/context');setChoosing(true)}
+ }
+ async function firstPasswordChanged(){
+  const s=await request<AuthState>('/auth/session');
+  setSession(s);setChoosing(false);
+  if(s.user){setLanguageState(s.user.locale);setCurrencyState(s.user.currency)}
+  const c=s.contexts.find(c=>c.id===s.contextId);
+  if(c)history.replaceState(null,'',startRoute(c.role_key,c));
+  else{history.replaceState(null,'','/context');setChoosing(true)}
+ }
+ const mode=location.pathname.split('/')[1]||'login';
+ const active=session?.contexts.find(c=>c.id===session.contextId);
+ const explicitAuth=['forgot-password','reset-password','accept-invitation','first-login-password'].includes(mode);
+ const routeRole=Object.entries(roleRoutes).find(([,r])=>'/'+r.join('/')===location.pathname)?.[0];
+ const wrongShell=!!active&&(
+  (['platform','workspace','field','home'].includes(mode)&&
+   (mode!==active.shell||location.pathname.split('/')[2]!==active.role_key))||
+  (Object.keys(products).includes(mode)&&(
+   !allowedProducts(active).includes(mode as Product)||
+   Boolean(routeRole&&routeRole!==active.role_key&&
+    !(location.pathname==='/console/onboarding'&&active.permissions.includes('onboarding.manage')))
+  ))
+ );
+ useEffect(()=>{
+  if(active&&!wrongShell&&['platform','workspace','field','home','login'].includes(mode))
+   history.replaceState(null,'',startRoute(active.role_key)+location.search+location.hash)
+ },[active?.id,mode,wrongShell]);
+ return <PreferencesContext.Provider value={provider}><div className="portal-root" lang={language}>
+  {error?<div className="p-start-error"><Brand/><ErrorNotice error={error}/><button className="p-button orange" onClick={load}>{t('retry')}</button></div>
+   :switching?<div className="p-loading" role="status">{productText('switching',language)}</div>
+   :!session?<div className="p-loading" role="status">{t('loading')}</div>
+   :session.user?.mustChangePassword?<FirstLoginPassword onChanged={firstPasswordChanged}/>
+   :!session.user||explicitAuth?<AuthPage mode={mode} onSession={signedIn}/>
+   :choosing||!active?<ContextPicker session={session} onChoose={choose}/>
+   :wrongShell?<div className="p-start-error"><h1>{t('noAccess')}</h1><p>{t('noAccessHint')}</p><button className="p-button orange" onClick={()=>void choose(active.id)}>{t('returnHome')}</button></div>
+   :<AuthenticatedShell key={active.id+':'+mode} onProduct={choose} session={session} c={active} onSwitch={()=>setChoosing(true)} onLogout={()=>{void request('/auth/logout','POST').then(()=>location.assign('/login')).catch(setError)}}/>}
+ </div></PreferencesContext.Provider>;
+}

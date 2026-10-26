@@ -102,9 +102,17 @@ async function main() {
 
     const password = randomBytes(32).toString('base64url');
     const passwordHash = await bcrypt.hash(password, 12);
-    await client.query('UPDATE users SET password_hash=$1 WHERE id=$2', [passwordHash, user.id]);
+    await client.query('UPDATE users SET password_hash=$1,must_change_password=true WHERE id=$2', [passwordHash, user.id]);
     await client.query(
       'UPDATE password_resets SET used_at=COALESCE(used_at,now()) WHERE user_id=$1 AND used_at IS NULL',
+      [user.id],
+    );
+    await client.query(
+      `INSERT INTO system_revoked_sessions(ref,expires_at)
+       SELECT encode(sha256(convert_to(s.sid,'UTF8')),'hex'),s.expire
+       FROM session s
+       WHERE s.sess->'passport'->>'user'=$1
+       ON CONFLICT(ref) DO UPDATE SET expires_at=GREATEST(system_revoked_sessions.expires_at,EXCLUDED.expires_at)`,
       [user.id],
     );
     const revokedSessions = await client.query(
@@ -126,6 +134,7 @@ async function main() {
         role,
         accountEmail: email,
         password,
+        mustChangePassword: true,
         mfaChanged: false,
         createdAt: new Date().toISOString(),
       }, null, 2),
