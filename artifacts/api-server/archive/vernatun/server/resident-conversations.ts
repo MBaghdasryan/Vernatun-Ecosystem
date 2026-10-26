@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {ApiError,requireAuth} from './access.js';
 import {record,transaction} from './operations.js';
 import {actionsFor,assertEnabled,publicRecord,readRecord,residentKinds,residentScope,writable} from './resident-policy.js';
+import {notifyResidentViewing,type ResidentViewingEvent} from './resident-viewing-notifications.js';
 
 export const residentConversations=Router();
 residentConversations.use(requireAuth);
@@ -15,11 +16,17 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
   const row=await readRecord(db,s,kind,uuid.parse(req.params.id),req.user!.id,true);
   if(!actionsFor(row,s,req.user!.id).includes(b.action))throw new ApiError(403,'forbidden');
   if(row.version!==b.version)throw new ApiError(409,'stale_version');
-  if(['confirm_viewing','decline_viewing'].includes(b.action)){
+  let viewingOwnerId:string|null=null;
+  if(['confirm_viewing','decline_viewing','cancel_viewing'].includes(b.action)){
    // Lock the listing as well: closure/moderation must not race confirmation.
-   const listing=await readRecord(db,s,'listings',row.parent_id,req.user!.id,true);
+   const listing=b.action==='cancel_viewing'
+    ?(await db.query(`SELECT owner_user_id FROM resident_product_records WHERE id=$1 AND organization_id=$2
+      AND building_id=$3 AND kind='listings' AND deleted_at IS NULL FOR UPDATE`,[row.parent_id,s.organizationId,s.buildingId])).rows[0]
+    :await readRecord(db,s,'listings',row.parent_id,req.user!.id,true);
+   if(!listing)throw new ApiError(404,'not_found');
    if(b.action!=='cancel_viewing'&&(listing.status!=='active'||listing.owner_user_id!==req.user!.id))throw new ApiError(403,'forbidden');
    if(b.action==='confirm_viewing'&&Date.parse(row.data.viewingAt)<=Date.now())throw new ApiError(409,'invalid_viewing_time');
+    viewingOwnerId=listing.owner_user_id;
   }
   const mark:{[key:string]:string}={accept:'accepted',withdraw:'withdrawn',save:'saved',unsave:'saved',support:'supported',unsupport:'supported',read:'read',report:'reported'};
   const m=mark[b.action];
@@ -55,6 +62,12 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
     ...(b.action==='approve'?{approvedAt:new Date().toISOString()}:{}),
    };
    await db.query('UPDATE resident_product_records SET status=$2,data=$3,version=version+1,updated_at=now() WHERE id=$1',[row.id,status,JSON.stringify(data)]);
+    if(row.kind==='conversations'&&row.data.viewingAt&&viewingOwnerId){
+     const recipient=b.action==='cancel_viewing'?viewingOwnerId:row.owner_user_id;
+     const event:ResidentViewingEvent=b.action==='confirm_viewing'?'viewing_confirmed':
+      b.action==='decline_viewing'?'viewing_declined':'viewing_cancelled';
+     await notifyResidentViewing(db,recipient,s.organizationId,row.id,event);
+    }
   }
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.'+kind+'.'+b.action,'resident_record',row.id,
    {recordVersion:row.version,contextId:s.c.id,...(b.reason?{reason:b.reason}:{}),...(kind==='agreements'?{category:row.data.category,agreementRevision:row.data.agreementRevision??1}:{}),

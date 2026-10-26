@@ -687,6 +687,7 @@ export const RevokeResidentPassResponse = zod.object({
 export const ListResidentNotificationsResponseItem = zod.object({
   "id": zod.string(),
   "kind": zod.string(),
+  "event_code": zod.string(),
   "category": zod.string(),
   "critical": zod.boolean(),
   "created_at": zod.string(),

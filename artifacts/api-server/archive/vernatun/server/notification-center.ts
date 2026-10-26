@@ -20,6 +20,20 @@ notificationCenter.put('/notifications/preferences',async(req,res)=>{const f=pre
 const resources:Record<string,[string,string,string]>={request:['resident_requests','requests','requests'],invoice:['invoices','finance','finance'],payment:['payments','finance','finance'],bank_transaction:['bank_transactions','finance','finance'],meeting:['meetings','community','meetings'],announcement:['announcements','community','announcements'],pass:['visitor_passes','access','passes'],lease:['leases','finance','leases'],support:['support_cases','','support-cases'],onboarding:['onboarding_steps','','onboarding']};
 async function targets(n:any,userId:string,options:Context[]){
  if(n.entity_type==='system')return options.filter(c=>c.organization_id===n.organization_id).map(c=>({c,view:'settings'}));
+ if(n.entity_type==='resident_conversation'){
+  const row=(await pool.query(`SELECT c.id,c.organization_id,c.building_id,c.unit_id,c.owner_user_id AS author_user_id,
+   p.owner_user_id AS listing_owner_id,p.unit_id AS listing_unit_id
+   FROM resident_product_records c JOIN resident_product_records p ON p.id=c.parent_id AND p.kind='listings'
+   JOIN resident_building_settings s ON s.building_id=c.building_id AND s.organization_id=c.organization_id AND s.marketplace
+   WHERE c.id=$1 AND c.kind='conversations' AND c.organization_id=$2 AND c.deleted_at IS NULL AND p.deleted_at IS NULL`,
+   [n.entity_id,n.organization_id])).rows[0];
+  if(!row||n.user_id!==row.author_user_id&&n.user_id!==row.listing_owner_id)return [];
+  const author=n.user_id===row.author_user_id;
+  return options.filter(c=>c.organization_id===row.organization_id&&c.building_id===row.building_id&&
+   c.permissions.includes('properties.own')&&c.modules?.includes('community')&&
+   (author?c.unit_id===row.unit_id&&['unit_owner','renter','family'].includes(c.role_key):
+    c.unit_id===row.listing_unit_id&&c.role_key==='unit_owner')).map(c=>({c,view:'marketplace'}));
+ }
  const spec=resources[n.entity_type];if(!spec||!n.entity_id)return [];
  // Identifiers are from a closed whitelist; never from request inputs.
  const r=(await pool.query(`SELECT to_jsonb(t) AS row FROM ${spec[0]} t WHERE id=$1`,[n.entity_id])).rows[0]?.row;
@@ -64,7 +78,8 @@ notificationCenter.get('/notifications/:id/destination',async(req,res)=>{const e
  const target=entry.t.find(x=>x.c.id===desired)??(!req.query.contextId?entry.t[0]:undefined);if(!target)throw new ApiError(403,'forbidden');
  const {c,view}=target,product=c.permissions.includes('requests.own')?'imtun':view==='finance'?'os':c.product;
  if(!['imtun','hayat','os','console'].includes(product??''))throw new ApiError(403,'forbidden');
- const query=entry.n.entity_type==='request'?`?requestId=${entry.n.entity_id}`:'';
+  const query=entry.n.entity_type==='request'?`?requestId=${entry.n.entity_id}`:
+   entry.n.entity_type==='resident_conversation'?`?recordKind=conversations&recordId=${entry.n.entity_id}`:'';
  res.json({targetContextId:c.id,requiresSwitch:c.id!==req.session.contextId,destination:`/${product}/${view}${query}`});
 });
 notificationCenter.post('/notifications/:id/read',async(req,res)=>{const r=await pool.query('UPDATE notifications SET read_at=COALESCE(read_at,now()) WHERE id=$1 AND user_id=$2 RETURNING id',[uuid.parse(req.params.id),req.user!.id]);if(!r.rowCount)throw new ApiError(404,'not_found');res.json(r.rows[0])});

@@ -9,6 +9,7 @@
 export type ListResidentNotifications200Item = {
   id: string;
   kind: string;
+  event_code: string;
   category: string;
   critical: boolean;
   created_at: string;

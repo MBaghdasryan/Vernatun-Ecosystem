@@ -208,10 +208,11 @@ paths:
                 type: array
                 items:
                   type: object
-                  required: [id, kind, category, critical, created_at, access_denied]
+                  required: [id, kind, event_code, category, critical, created_at, access_denied]
                   properties:
                     id: {type: string}
                     kind: {type: string}
+                    event_code: {type: string}
                     category: {type: string}
                     critical: {type: boolean}
                     created_at: {type: string}

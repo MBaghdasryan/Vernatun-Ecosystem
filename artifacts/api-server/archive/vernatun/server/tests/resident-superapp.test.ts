@@ -184,6 +184,23 @@ test('viewings persist explicit requests and only the listing owner can confirm 
  const request=response.data,path='/resident/records/conversations/'+request.id;
  assert.equal(request.data.viewingStatus,'requested');
  assert.ok(request.actions.includes('cancel_viewing'));assert.ok(!request.actions.includes('confirm_viewing'));
+  const ownerId=seed.accounts.unit_owner.id,familyId=seed.accounts.family.id;
+  const initialNotice=(await pool.query(`SELECT id,user_id,event_code,in_app_enabled FROM notifications
+   WHERE entity_type='resident_conversation' AND entity_id=$1 ORDER BY created_at`,[request.id])).rows;
+  assert.deepEqual(initialNotice.map((n:any)=>[n.user_id,n.event_code,n.in_app_enabled]),[[ownerId,'viewing_requested',true]]);
+  const outbox=(await pool.query('SELECT state FROM notification_email_outbox WHERE notification_id=$1',[initialNotice[0].id])).rows[0];
+  assert.equal(outbox.state,'pending_domain');
+  await pool.query(`SELECT emit_notification($1,$2,'viewing_requested','resident_conversation',$3,$4)`,
+   [ownerId,(await pool.query('SELECT organization_id FROM resident_product_records WHERE id=$1',[request.id])).rows[0].organization_id,
+    request.id,`resident-viewing:${request.id}:viewing_requested`]);
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND dedupe_key=$2`,
+   [ownerId,`resident-viewing:${request.id}:viewing_requested`])).rows[0].n,1);
+  const ownerInbox=await owner.call('/notifications'),ownerNotice=ownerInbox.data.find((n:any)=>n.id===initialNotice[0].id);
+  assert.equal(ownerNotice.event_code,'viewing_requested');
+  assert.ok(ownerNotice.targets.some((target:any)=>target.id===owner.contextId));
+  assert.doesNotMatch(JSON.stringify(ownerNotice),/Viewing request|Please confirm|@/);
+  const destination=await owner.call(`/notifications/${initialNotice[0].id}/destination?contextId=${owner.contextId}`);
+  assert.equal(destination.data.destination,`/imtun/marketplace?recordKind=conversations&recordId=${request.id}`);
  assert.equal((await family.call(path+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
  assert.equal((await admin.call(path+'/actions'+query,'POST',{action:'confirm_viewing',version:1})).status,403);
  const stranger=await new Client().login('renter');
@@ -194,12 +211,37 @@ test('viewings persist explicit requests and only the listing owner can confirm 
  assert.equal(owned.data.phone,undefined);assert.equal(owned.data.email,undefined);
  const confirm=await owner.call(path+'/actions','POST',{action:'confirm_viewing',version:1});assert.equal(confirm.status,200);
  assert.equal(confirm.data.data.viewingStatus,'confirmed');
+  const confirmed=(await pool.query(`SELECT event_code FROM notifications WHERE user_id=$1 AND entity_type='resident_conversation' AND entity_id=$2`,
+   [familyId,request.id])).rows;
+  assert.deepEqual(confirmed.map((n:any)=>n.event_code),['viewing_confirmed']);
+  const confirmNoticeId=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_type='resident_conversation' AND entity_id=$2 AND event_code='viewing_confirmed'`,
+   [familyId,request.id])).rows[0].id;
+  const familyNotice=(await family.call('/notifications')).data.find((n:any)=>n.id===confirmNoticeId);
+  assert.ok(familyNotice.targets.some((target:any)=>target.id===family.contextId));
  assert.equal((await family.call(path)).data.data.viewingStatus,'confirmed');
  assert.equal((await family.call(path+'/actions','POST',{action:'cancel_viewing',version:1})).status,409);
  assert.equal((await family.call(path+'/actions','POST',{action:'cancel_viewing',version:2})).data.data.viewingStatus,'cancelled');
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_type='resident_conversation' AND entity_id=$2 AND event_code='viewing_cancelled'`,
+   [ownerId,request.id])).rows[0].n,1);
  assert.equal((await owner.call(path+'/actions','POST',{action:'confirm_viewing',version:3})).status,403);
  const next=(await family.call('/resident/records/conversations','POST',payload)).data;
  assert.equal((await owner.call('/resident/records/conversations/'+next.id+'/actions','POST',{action:'decline_viewing',version:1})).data.data.viewingStatus,'declined');
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_type='resident_conversation' AND entity_id=$2 AND event_code='viewing_declined'`,
+   [familyId,next.id])).rows[0].n,1);
+  const prefs=(await owner.call('/notifications/preferences')).data;
+  const categories={...prefs.categories,community:{email:false,in_app:false}};
+  assert.equal((await owner.call('/notifications/preferences','PUT',{...prefs,categories})).status,200);
+  try{
+   const muted=(await family.call('/resident/records/conversations','POST',{...payload,title:'Private preference test'})).data;
+   const suppressed=(await pool.query(`SELECT in_app_enabled FROM notifications WHERE user_id=$1 AND entity_type='resident_conversation' AND entity_id=$2 AND event_code='viewing_requested'`,
+    [ownerId,muted.id])).rows[0];
+   assert.equal(suppressed.in_app_enabled,false);
+   assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notification_email_outbox o JOIN notifications n ON n.id=o.notification_id
+    WHERE n.user_id=$1 AND n.entity_type='resident_conversation' AND n.entity_id=$2`,[ownerId,muted.id])).rows[0].n,0);
+  }finally{
+   const current=(await owner.call('/notifications/preferences')).data;
+   assert.equal((await owner.call('/notifications/preferences','PUT',{...current,categories:prefs.categories})).status,200);
+  }
  const pending=(await family.call('/resident/records/conversations','POST',payload)).data;
  await owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'close',version:listing.version});
  assert.equal((await owner.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);

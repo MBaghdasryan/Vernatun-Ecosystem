@@ -13,7 +13,17 @@ const S={
  newUpdate:['Հայտի թարմացում','Обновление заявки','Request update'],unit:['բն.','пом.','unit']} as const;
 const events:Record<string,[string,string,string]>={
  request_created:['Создана заявка','Request created','Հայտը ստեղծված է'],request_assigned:['Заявка назначена','Request assigned','Հայտը նշանակված է'],visit_proposed:['Предложен визит','Visit proposed','Այցն առաջարկված է'],visit_changed:['Визит изменён','Visit changed','Այցը փոփոխված է'],technician_started:['Работы начаты','Work started','Աշխատանքները սկսված են'],technician_completed:['Работы выполнены','Work completed','Աշխատանքները կատարված են'],manager_verified:['Работы приняты управляющим','Work verified by manager','Աշխատանքն ընդունված է կառավարչի կողմից'],resident_action_required:['Требуется действие жителя','Resident action required','Պահանջվում է բնակչի գործողությունը'],new_charge:['Новое начисление','New charge','Նոր հաշվեգրում'],payment_received:['Платёж получен','Payment received','Վճարումն ստացված է'],payment_unmatched:['Платёж не сопоставлен','Unmatched payment','Վճարումը չի համադրվել'],meeting_created:['Создано собрание','Meeting created','Ժողովը ստեղծված է'],voting_started:['Голосование началось','Voting started','Քվեարկությունը սկսվել է'],voting_ending:['Голосование заканчивается','Voting ending','Քվեարկությունն ավարտվում է'],announcement_published:['Новое объявление','New announcement','Նոր հայտարարություն'],pass_expiring:['Срок пропуска истекает','Pass expiring','Անցագրի ժամկետը լրանում է'],lease_expiring:['Срок аренды истекает','Lease expiring','Վարձակալության ժամկետը լրանում է'],support_case_updated:['Обращение обновлено','Support case updated','Դիմումը թարմացված է'],onboarding_task_due:['Подходит срок задачи внедрения','Onboarding task due','Մոտենում է ներդրման առաջադրանքի ժամկետը'],SLA_warning:['Срок SLA приближается','SLA deadline approaching','Մոտենում է SLA ժամկետը'],SLA_breached:['Срок SLA нарушен','SLA breached','SLA ժամկետը խախտված է'],account_security:['Безопасность аккаунта','Account security','Հաշվի անվտանգություն'],legacy_request_event:['Обновление заявки','Request update','Հայտի թարմացում']};
-export function eventLabel(code:string,cat:Row|undefined,language:Language){const known=(cat?.events??[]).find((e:Row)=>e.code===code),label=events[code]?.[language==='ru'?0:language==='en'?1:2]??code;return known?.critical?label+(language==='hy'?' (կարևոր)':language==='ru'?' (важное)':' (critical)'):label}
+const viewingEvents:Record<string,[string,string,string]>={
+ viewing_requested:['Դիտման նոր հարցում','Новый запрос на просмотр','New viewing request'],
+ viewing_confirmed:['Դիտումը հաստատվեց','Просмотр подтверждён','Viewing confirmed'],
+ viewing_declined:['Դիտումը մերժվեց','Просмотр отклонён','Viewing declined'],
+ viewing_cancelled:['Դիտումը չեղարկվեց','Просмотр отменён','Viewing cancelled'],
+};
+export function eventLabel(code:string,cat:Row|undefined,language:Language){
+ const known=(cat?.events??[]).find((e:Row)=>e.code===code);
+ const label=viewingEvents[code]?.[language==='hy'?0:language==='ru'?1:2]??events[code]?.[language==='ru'?0:language==='en'?1:2]??code;
+ return known?.critical?label+(language==='hy'?' (կարևոր)':language==='ru'?' (важное)':' (critical)'):label;
+}
 export default function Notifications({c,language}:{c:RoleContext;language:Language}){
  const i=language==='hy'?0:language==='ru'?1:2;const t=(k:keyof typeof S)=>S[k][i];
  const [rows,setRows]=useState<Row[]>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState<{n:Row;target:Row;to:string}>();

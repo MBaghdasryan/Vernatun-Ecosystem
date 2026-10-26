@@ -6,6 +6,7 @@ import {ApiError,requireAuth,requirePermission} from './access.js';
 import {record,transaction} from './operations.js';
 import {activeLeasePredicate} from './lease-policy.js';
 import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,type ResidentKind} from './resident-policy.js';
+import {notifyResidentViewing} from './resident-viewing-notifications.js';
 
 export const residentRecords=Router();
 residentRecords.use(requireAuth);
@@ -86,7 +87,7 @@ residentRecords.post('/records/:kind',async(req,res)=>{
  const input=payloadSchemas[kind].parse(req.body),{title,body,version:_,...data}=input;
  if('mandatory' in data&&'withdrawable' in data&&data.mandatory&&data.withdrawable)throw new ApiError(400,'validation_error');
  const created=await transaction(async db=>{
-  let parentId='parentId' in data?data.parentId:null;
+  let parentId='parentId' in data?data.parentId:null,listingOwnerId:string|null=null;
   if(kind==='subscriptions'){
    const service=await readRecord(db,s,'services',parentId!,req.user!.id,true);
    if(service.status!=='active')throw new ApiError(409,'invalid_transition');
@@ -98,6 +99,7 @@ residentRecords.post('/records/:kind',async(req,res)=>{
    const listing=await readRecord(db,s,'listings',parentId,req.user!.id,true);
    if(listing.status!=='active')throw new ApiError(409,'invalid_transition');
    if(listing.owner_user_id===req.user!.id)throw new ApiError(400,'validation_error');
+   listingOwnerId=listing.owner_user_id;
    if('viewingAt' in data&&data.viewingAt){
     if(!('viewingConsent' in data)||data.viewingConsent!==true)throw new ApiError(400,'consent_required');
     const at=Date.parse(data.viewingAt);
@@ -124,6 +126,9 @@ residentRecords.post('/records/:kind',async(req,res)=>{
   const row=(await db.query(`INSERT INTO resident_product_records(organization_id,building_id,unit_id,kind,owner_user_id,title,body,data,status,parent_id,session_ref)
    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,[s.organizationId,s.buildingId,s.unitId,kind,req.user!.id,title,body,JSON.stringify(data),status,parentId,
    kind==='mobile-devices'?sessionRef(req.sessionID):null])).rows[0];
+  if(kind==='conversations'&&'viewingAt' in data&&data.viewingAt&&listingOwnerId){
+   await notifyResidentViewing(db,listingOwnerId,s.organizationId,row.id,'viewing_requested');
+  }
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.'+kind+'.create','resident_record',row.id);return row;
  });
  res.status(201).json(publicRecord(created,s,req.user!.id));
