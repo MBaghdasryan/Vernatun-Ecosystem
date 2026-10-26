@@ -12,8 +12,14 @@ export default function BillsScreen() { const palette = useAppPalette(); const s
   const l = useLang(); const ws = useWorkspace(); const ctx = useContextId(); const go = useSection(); const acc = useDomainAccess('finance');
   const insets = useSafeAreaInsets(); const top = Platform.OS === 'web' ? 67 : insets.top + 8;
   const h = ws.data?.home; const payable = money(h?.payableMinor, h?.currency); const overdue = money(h?.overdueMinor, h?.currency); const paid = money(h?.annualPaidMinor, h?.currency);
+  const role = ws.data?.building.role.toLowerCase() ?? '';
+  const pageTitle = /tenant|renter|lease/.test(role)
+    ? tr(l, ['Վարձ և վճարումներ', 'Аренда и платежи', 'Rent & payments'])
+    : role.includes('owner')
+      ? tr(l, ['Ֆինանսներ', 'Финансы', 'Property finances'])
+      : tr(l, ['Վճարներ', 'Начисления и платежи', 'Bills']);
   return <ScrollView style={st.root} contentContainerStyle={[st.c, { paddingTop: top }]} keyboardShouldPersistTaps="handled">
-    <Text style={st.h} accessibilityRole="header">{tr(l, ['Վճարներ', 'Начисления и платежи', 'Bills'])}</Text>
+    <Text style={st.h} accessibilityRole="header">{pageTitle}</Text>
     {ws.isPending || acc.loading ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները անհասանելի են', 'Данные недоступны', 'Data unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : !acc.allowed || (payable === null && overdue === null) ? (
       <EmptyState icon="lock" title={tr(l, ['Ֆինանսական տվյալները ձեզ հասանելի չեն', 'Финансы вам недоступны', 'Finance is not available to you'])} text={tr(l, ['Հասանելիությունը տրամադրում է սեփականատերը կամ կառավարիչը։', 'Доступ предоставляет собственник или управляющая компания.', 'Access is granted by the owner or management.'])} />
     ) : <View key={ctx ?? 'none'} style={{ gap: 12 }}>

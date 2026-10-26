@@ -6,11 +6,11 @@ import { useLogoutMobileAuth, useGetMobileAuthSession, useSwitchMobileAuthContex
 import { useRouter } from 'expo-router';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { csrfSessionRef } from '../_layout';
-import { useColors } from '@/hooks/useColors';
 import { armenianCurrency, friendlyError } from '@/constants/armenian';
 import { useLang, useWorkspace } from '@/lib/resident/hooks';
 import { roleLabel, tr, useSection } from '@/lib/resident/shell';
 import { Row } from '@/components/resident/Ui';
+import { residentSectionAllowed } from '@/lib/resident/navigation';
 
 function isResidentContext(context: MobileAuthContext) {
   const product = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
@@ -18,7 +18,6 @@ function isResidentContext(context: MobileAuthContext) {
 }
 
 export default function ProfileScreen() { const palette = useAppPalette(); const styles = React.useMemo(() => make_styles(palette), [palette]);
-  const colors = useColors();
   const router = useRouter();
   const client = useQueryClient();
   const session = useGetMobileAuthSession();
@@ -32,6 +31,8 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
   const user = session.data?.user;
   const l = useLang(); const ws = useWorkspace(); const go = useSection();
   const b = ws.data?.building; const sum = ws.data?.home.summary;
+  const can = (section: string) => residentSectionAllowed(active, ws.data, section);
+  const canReadRequests = !!active?.permissions.includes('requests.own');
 
   const changeContext = (context: MobileAuthContext) => {
     setError('');
@@ -43,7 +44,7 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
         client.clear();
         void session.refetch();
       },
-      onError: (cause) => setError(friendlyError(cause, 'Չհաջողվեց փոխել տունը։ Կրկին փորձեք։')),
+      onError: (cause) => setError(friendlyError(cause, tr(l, ['Չհաջողվեց փոխել տունը։ Կրկին փորձեք։', 'Не удалось сменить дом. Повторите попытку.', 'Could not switch home. Please try again.']))),
     });
   };
 
@@ -55,64 +56,69 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
         client.clear();
         router.replace('/');
       },
-      onError: (cause) => setError(friendlyError(cause, 'Չհաջողվեց ավարտել սեսիան։ Կրկին փորձեք։')),
+      onError: (cause) => setError(friendlyError(cause, tr(l, ['Չհաջողվեց ավարտել սեսիան։ Կրկին փորձեք։', 'Не удалось завершить сеанс. Повторите попытку.', 'Could not end the session. Please try again.']))),
     });
   };
 
   if (session.isLoading) return <View style={styles.center}><View style={styles.skeleton} /><View style={[styles.skeleton, { width: '65%' }]} /><View style={[styles.skeleton, { height: 170 }]} /></View>;
-  if (session.isError && !session.data) return <View style={styles.center}><Feather name="wifi-off" size={27} color={colors.mutedForeground} /><Text style={styles.title}>Անձնական էջն անհասանելի է</Text><Text style={styles.muted}>Չհաջողվեց ստանալ հաշվի տվյալները։</Text><Pressable accessibilityRole="button" testID="profile-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին փորձել</Text></Pressable></View>;
+  if (session.isError && !session.data) return <View style={styles.center}><Feather name="wifi-off" size={27} color={palette.mutedForeground} /><Text style={styles.title}>{tr(l, ['Անձնական էջն անհասանելի է', 'Профиль недоступен', 'Profile unavailable'])}</Text><Text style={styles.muted}>{tr(l, ['Չհաջողվեց ստանալ հաշվի տվյալները։', 'Не удалось загрузить данные аккаунта.', 'Could not load account information.'])}</Text><Pressable accessibilityRole="button" testID="profile-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>{tr(l, ['Կրկին փորձել', 'Повторить', 'Retry'])}</Text></Pressable></View>;
 
   const initials = (user?.name || ' ').trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || '•';
   return <>
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <View style={styles.top}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ՁԵՐ ՀԱՇԻՎԸ</Text></View>
-      <Text style={styles.title}>Անձնական էջ</Text><Text style={styles.subtitle}>Ձեր տվյալներն ու ընտրված տունը։</Text>
-      <View style={styles.identityCard}><View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{user?.name || 'ImTun-ի օգտատեր'}</Text><Text style={styles.email}>{user?.email || 'Էլեկտրոնային փոստը նշված չէ'}</Text></View><Feather name="check-circle" size={19} color={palette.success} /></View>
-      <Text style={styles.section}>ՏՈՒՆ ԵՎ ԲՆԱԿԱՐԱՆ</Text>
+      <View style={styles.top}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>{tr(l, ['ՁԵՐ ՀԱՇԻՎԸ', 'ВАШ АККАУНТ', 'YOUR ACCOUNT'])}</Text></View>
+      <Text style={styles.title}>{tr(l, ['Անձնական էջ', 'Профиль', 'Profile'])}</Text><Text style={styles.subtitle}>{tr(l, ['Ձեր տվյալներն ու ընտրված տունը։', 'Ваши данные и выбранный дом.', 'Your details and selected home.'])}</Text>
+      <View style={styles.identityCard}><View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{user?.name || tr(l, ['ImTun-ի օգտատեր', 'Пользователь ImTun', 'ImTun resident'])}</Text><Text style={styles.email}>{user?.email || tr(l, ['Էլեկտրոնային փոստը նշված չէ', 'Электронная почта не указана', 'Email not provided'])}</Text></View><Feather name="check-circle" size={19} color={palette.success} /></View>
+      <Text style={styles.section}>{tr(l, ['ՏՈՒՆ ԵՎ ԲՆԱԿԱՐԱՆ', 'ДОМ И КВАРТИРА', 'HOME & APARTMENT'])}</Text>
       <Pressable accessibilityRole="button" testID="profile-change-context" disabled={contexts.length < 2} onPress={() => setContextSheet(true)} style={[styles.listCard, contexts.length < 2 && styles.notInteractive]}>
-        <View style={styles.listIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{active?.building_name || active?.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.itemDescription}>{active?.unit_number ? `Բնակարան ${active.unit_number}` : 'Բնակչի մուտք'}{active?.organization_name && active.building_name ? ` · ${active.organization_name}` : ''}</Text></View>{contexts.length > 1 ? <Feather name="chevron-right" size={19} color={palette.mutedForeground} /> : <Feather name="check" size={18} color={palette.success} />}
+        <View style={styles.listIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{active?.building_name || active?.organization_name || tr(l, ['Բնակելի շենք', 'Жилой дом', 'Residential building'])}</Text><Text style={styles.itemDescription}>{active?.unit_number ? `${tr(l, ['Բնակարան', 'Квартира', 'Apartment'])} ${active.unit_number}` : tr(l, ['Բնակչի մուտք', 'Доступ жителя', 'Resident access'])}{active?.organization_name && active.building_name ? ` · ${active.organization_name}` : ''}</Text></View>{contexts.length > 1 ? <Feather name="chevron-right" size={19} color={palette.mutedForeground} /> : <Feather name="check" size={18} color={palette.success} />}
       </Pressable>
       <View style={styles.listCard}><View style={styles.listIcon}><Feather name="award" size={18} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{roleLabel(l, b?.role ?? active?.role_key)}</Text><Text style={styles.itemDescription}>{[b?.unit ? `${tr(l, ['Բն.', 'Кв.', 'Apt'])} ${b.unit}` : null, b?.area ? `${b.area} m²` : null, b?.address].filter(Boolean).join(' · ') || '—'}</Text></View></View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>{[[tr(l, ['Բաց հայտեր', 'Заявки', 'Requests']), ws.data?.home.openRequests], [tr(l, ['Անցաթղթեր', 'Пропуска', 'Passes']), sum?.activeGuestPasses], [tr(l, ['Քվեարկություն', 'Голосования', 'Votes']), sum?.activeVoting?.length]].map(([k, v]) => <View key={String(k)} style={[styles.listCard, { flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }]}><Text style={styles.name}>{v == null ? '—' : String(v)}</Text><Text style={styles.itemDescription}>{k}</Text></View>)}</View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{[
+        ...(canReadRequests ? [[tr(l, ['Բաց հայտեր', 'Заявки', 'Requests']), ws.data?.home.openRequests] as const] : []),
+        ...(can('passes') ? [[tr(l, ['Անցաթղթեր', 'Пропуска', 'Passes']), sum?.activeGuestPasses] as const] : []),
+        ...(can('meetings') ? [[tr(l, ['Քվեարկություն', 'Голосования', 'Votes']), sum?.activeVoting?.length] as const] : []),
+      ].map(([k, v]) => <View key={String(k)} style={[styles.listCard, { flexGrow: 1, flexBasis: '28%', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }]}><Text style={styles.name}>{v == null ? '—' : String(v)}</Text><Text style={styles.itemDescription}>{k}</Text></View>)}</View>
       <Text style={styles.section}>{tr(l, ['ԻՄ ՏՈՒՆԸ', 'МОЙ ДОМ', 'MY HOME'])}</Text>
       <View style={{ gap: 8 }}>
-        <Row icon="users" title={tr(l, ['Ընտանիք և հասանելիություն', 'Семья и права доступа', 'Household and access'])} onPress={() => go('family')} />
-        <Row icon="key" title={tr(l, ['Հյուրի անցաթղթեր', 'Гостевые пропуска', 'Guest passes'])} onPress={() => go('passes')} />
-        <Row icon="truck" tone="plain" title={tr(l, ['Մեքենաներ', 'Автомобили', 'Vehicles'])} onPress={() => go('vehicles')} />
-        <Row icon="file-text" tone="plain" title={tr(l, ['Փաստաթղթեր', 'Документы', 'Documents'])} onPress={() => go('documents')} />
-        <Row icon="check-square" tone="plain" title={tr(l, ['Համաձայնություններ', 'Соглашения', 'Agreements'])} onPress={() => go('agreements')} />
-        <Row icon="phone" tone="plain" title={tr(l, ['Շենքի կոնտակտներ', 'Контакты дома', 'Building contacts'])} onPress={() => go('building')} />
+        {can('family') ? <Row icon="users" title={tr(l, ['Ընտանիք և հասանելիություն', 'Семья и права доступа', 'Household and access'])} onPress={() => go('family')} /> : null}
+        {can('passes') ? <Row icon="key" title={tr(l, ['Հյուրի անցաթղթեր', 'Гостевые пропуска', 'Guest passes'])} onPress={() => go('passes')} /> : null}
+        {can('vehicles') ? <Row icon="truck" tone="plain" title={tr(l, ['Մեքենաներ', 'Автомобили', 'Vehicles'])} onPress={() => go('vehicles')} /> : null}
+        {can('documents') ? <Row icon="file-text" tone="plain" title={tr(l, ['Փաստաթղթեր', 'Документы', 'Documents'])} onPress={() => go('documents')} /> : null}
+        {can('agreements') ? <Row icon="check-square" tone="plain" title={tr(l, ['Համաձայնություններ', 'Соглашения', 'Agreements'])} onPress={() => go('agreements')} /> : null}
+        {can('building') ? <Row icon="phone" tone="plain" title={tr(l, ['Շենքի կոնտակտներ', 'Контакты дома', 'Building contacts'])} onPress={() => go('building')} /> : null}
+        {can('access') ? <Row icon="unlock" tone="plain" title={tr(l, ['Մուտք', 'Доступ', 'Access'])} onPress={() => go('access')} /> : null}
         <Row icon="grid" tone="plain" title={tr(l, ['Բոլոր ծառայությունները', 'Все сервисы', 'All services'])} onPress={() => router.push('/(tabs)/more')} testID="profile-more" />
       </View>
       <Text style={styles.section}>{tr(l, ['ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ', 'НАСТРОЙКИ', 'SETTINGS'])}</Text>
       <View style={{ gap: 8 }}>
-        <Row icon="sliders" tone="plain" title={tr(l, ['Լեզու, թեմա, ծանուցումներ', 'Язык, тема, уведомления', 'Language, theme, notifications'])} onPress={() => go('preferences')} />
-        <Row icon="lock" tone="plain" title={tr(l, ['Անվտանգություն և սարքեր', 'Безопасность и устройства', 'Security and devices'])} onPress={() => go('security')} testID="profile-security" />
-        <Row icon="life-buoy" tone="plain" title={tr(l, ['Օգնություն', 'Помощь', 'Help'])} onPress={() => go('help')} />
+        {can('preferences') ? <Row icon="sliders" tone="plain" title={tr(l, ['Լեզու, թեմա, ծանուցումներ', 'Язык, тема, уведомления', 'Language, theme, notifications'])} onPress={() => go('preferences')} /> : null}
+        {can('security') ? <Row icon="lock" tone="plain" title={tr(l, ['Անվտանգություն և սարքեր', 'Безопасность и устройства', 'Security and devices'])} onPress={() => go('security')} testID="profile-security" /> : null}
+        {can('help') ? <Row icon="life-buoy" tone="plain" title={tr(l, ['Օգնություն', 'Помощь', 'Help'])} onPress={() => go('help')} /> : null}
       </View>
-      <Text style={styles.section}>ՀԱՇԻՎ</Text>
+      <Text style={styles.section}>{tr(l, ['ՀԱՇԻՎ', 'АККАУНТ', 'ACCOUNT'])}</Text>
       <View style={styles.listCard}>
-        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="mail" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Էլեկտրոնային փոստ</Text><Text style={styles.itemDescription}>{user?.email || 'Նշված չէ'}</Text></View>
+        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="mail" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{tr(l, ['Էլեկտրոնային փոստ', 'Электронная почта', 'Email'])}</Text><Text style={styles.itemDescription}>{user?.email || tr(l, ['Նշված չէ', 'Не указана', 'Not provided'])}</Text></View>
       </View>
       <View style={styles.listCard}>
-        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="globe" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Լեզու և արժույթ</Text><Text style={styles.itemDescription}>Հայերեն · {armenianCurrency(user?.currency)}</Text></View>
+        <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="globe" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{tr(l, ['Լեզու և արժույթ', 'Язык и валюта', 'Language & currency'])}</Text><Text style={styles.itemDescription}>{tr(l, ['Հայերեն', 'Русский', 'English'])} · {armenianCurrency(user?.currency)}</Text></View>
       </View>
       {error ? <View style={styles.errorBox}><Feather name="alert-circle" size={16} color={palette.destructive} /><Text style={styles.errorText}>{error}</Text></View> : null}
-      <View style={styles.security}><View style={styles.securityIcon}><Feather name="shield" size={17} color={palette.success} /></View><View style={{ flex: 1 }}><Text style={styles.securityTitle}>Պաշտպանված սեսիա</Text><Text style={styles.securityText}>Տան հասանելիությունը որոշվում է սերվերի և ընտրված միջավայրի կողմից։</Text></View></View>
-      <Pressable accessibilityRole="button" testID="profile-logout" disabled={logout.isPending} onPress={signOut} style={styles.logout}><Feather name="log-out" size={17} color={palette.dangerText} /><Text style={styles.logoutText}>{logout.isPending ? 'Ավարտում ենք սեսիան…' : 'Դուրս գալ հաշվից'}</Text></Pressable>
-      <Text style={styles.version}>IMTUN · VERNATUN-Ի ԿՈՂՄԻՑ</Text>
+      <View style={styles.security}><View style={styles.securityIcon}><Feather name="shield" size={17} color={palette.success} /></View><View style={{ flex: 1 }}><Text style={styles.securityTitle}>{tr(l, ['Պաշտպանված սեսիա', 'Защищённый сеанс', 'Protected session'])}</Text><Text style={styles.securityText}>{tr(l, ['Տան հասանելիությունը որոշվում է սերվերի և ընտրված միջավայրի կողմից։', 'Доступ к дому определяется сервером и выбранным контекстом.', 'Home access is determined by the server and selected context.'])}</Text></View></View>
+      <Pressable accessibilityRole="button" testID="profile-logout" disabled={logout.isPending} onPress={signOut} style={styles.logout}><Feather name="log-out" size={17} color={palette.dangerText} /><Text style={styles.logoutText}>{logout.isPending ? tr(l, ['Ավարտում ենք սեսիան…', 'Завершаем сеанс…', 'Ending session…']) : tr(l, ['Դուրս գալ հաշվից', 'Выйти из аккаунта', 'Sign out'])}</Text></Pressable>
+      <Text style={styles.version}>{tr(l, ['IMTUN · VERNATUN-Ի ԿՈՂՄԻՑ', 'IMTUN · ОТ VERNATUN', 'IMTUN · BY VERNATUN'])}</Text>
     </ScrollView>
     <Modal visible={contextSheet} transparent animationType="slide" onRequestClose={() => setContextSheet(false)}>
-      <View style={styles.sheetBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="Փակել տների ընտրությունը" testID="context-sheet-backdrop" onPress={() => setContextSheet(false)} style={StyleSheet.absoluteFill} /><View style={styles.sheet}>
-        <View style={styles.sheetHandle} /><View style={styles.sheetTitleRow}><View><Text style={styles.kicker}>ՁԵՐ ՄՈՒՏՔԸ</Text><Text style={styles.sheetTitle}>Ընտրեք տունը</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Փակել" testID="context-sheet-close" onPress={() => setContextSheet(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
-        <Text style={styles.sheetDescription}>Փոխվում է միայն ակտիվ միջավայրը։ Մուտքի իրավունքը ստուգում է սերվերը։</Text>
+      <View style={styles.sheetBackdrop}><Pressable accessibilityRole="button" accessibilityLabel={tr(l, ['Փակել տների ընտրությունը', 'Закрыть выбор дома', 'Close home selection'])} testID="context-sheet-backdrop" onPress={() => setContextSheet(false)} style={StyleSheet.absoluteFill} /><View style={styles.sheet}>
+        <View style={styles.sheetHandle} /><View style={styles.sheetTitleRow}><View><Text style={styles.kicker}>{tr(l, ['ՁԵՐ ՄՈՒՏՔԸ', 'ВАШ ДОСТУП', 'YOUR ACCESS'])}</Text><Text style={styles.sheetTitle}>{tr(l, ['Ընտրեք տունը', 'Выберите дом', 'Choose a home'])}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={tr(l, ['Փակել', 'Закрыть', 'Close'])} testID="context-sheet-close" onPress={() => setContextSheet(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
+        <Text style={styles.sheetDescription}>{tr(l, ['Փոխվում է միայն ակտիվ միջավայրը։ Մուտքի իրավունքը ստուգում է սերվերը։', 'Меняется только активный контекст. Права доступа проверяет сервер.', 'Only the active context changes. Access rights are checked by the server.'])}</Text>
         {contexts.map((context) => {
           const selected = context.id === session.data?.contextId;
-          return <Pressable accessibilityRole="button" testID={`profile-context-${context.id}`} key={context.id} disabled={selected || switchContext.isPending} onPress={() => changeContext(context)} style={[styles.contextOption, selected && styles.contextSelected]}>
-            <View style={[styles.listIcon, selected && { backgroundColor: palette.accent }]}><Feather name="home" size={18} color={selected ? palette.accentForeground : palette.mutedForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{context.building_name || context.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.itemDescription}>{context.unit_number ? `Բնակարան ${context.unit_number}` : 'Բնակչի մուտք'}</Text></View>{selected ? <Feather name="check-circle" size={19} color={palette.success} /> : <Feather name="arrow-right" size={17} color={palette.subdued} />}
+          return <Pressable accessibilityRole="button" accessibilityLabel={`${context.building_name || context.organization_name || tr(l, ['Բնակելի շենք', 'Жилой дом', 'Residential building'])}, ${context.unit_number ? `${tr(l, ['Բնակարան', 'Квартира', 'Apartment'])} ${context.unit_number}` : tr(l, ['Բնակչի մուտք', 'Доступ жителя', 'Resident access'])}`} testID={`profile-context-${context.id}`} key={context.id} disabled={selected || switchContext.isPending} onPress={() => changeContext(context)} style={[styles.contextOption, selected && styles.contextSelected]}>
+            <View style={[styles.listIcon, selected && { backgroundColor: palette.accent }]}><Feather name="home" size={18} color={selected ? palette.accentForeground : palette.mutedForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{context.building_name || context.organization_name || tr(l, ['Բնակելի շենք', 'Жилой дом', 'Residential building'])}</Text><Text style={styles.itemDescription}>{context.unit_number ? `${tr(l, ['Բնակարան', 'Квартира', 'Apartment'])} ${context.unit_number}` : tr(l, ['Բնակչի մուտք', 'Доступ жителя', 'Resident access'])}</Text></View>{selected ? <Feather name="check-circle" size={19} color={palette.success} /> : <Feather name="arrow-right" size={17} color={palette.subdued} />}
           </Pressable>;
         })}
-        {switchContext.isPending ? <Text style={styles.muted}>Փոխում ենք տունը…</Text> : null}
+        {switchContext.isPending ? <Text style={styles.muted}>{tr(l, ['Փոխում ենք տունը…', 'Меняем дом…', 'Switching home…'])}</Text> : null}
       </View></View>
     </Modal>
   </>;
