@@ -20,3 +20,9 @@ New resident directory, discussions, private chats, property listings and servic
 **Why:** Legacy access preservation must not silently publish residents' identities or enable new community/service surfaces for existing buildings. Enabling a section also cannot override module, role, lease or privacy restrictions.
 
 **How to apply:** Keep an authorized staff setup step and privacy-aware filtering when expanding resident features; never treat an enabled building section as authorization by itself.
+
+Discussion support is informal, not a legal vote. Converting a topic requires an explicitly confirming operational employee; organization administration alone is not operational execution authority.
+
+**Why:** The product requires real requests or proposals within existing governance, without a second Workflow/voting engine or a fabricated apartment/resident author for shared-area work.
+
+**How to apply:** Keep publication and owner eligibility in existing governance. Draft meeting/agenda metadata must remain private even through discussion backlinks and action/list payloads; a backlink is not permission to inspect an unpublished meeting. Cancellation is not evidence of publication: a meeting can be cancelled before it was ever published. Preserve building-scoped system provenance for shared-area requests and do not grant operational staff resident-settings or private-chat administration just to process a discussion.

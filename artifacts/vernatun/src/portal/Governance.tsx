@@ -2,6 +2,7 @@ import {useState,type FormEvent,type ReactNode} from 'react';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import {Dlg,Fail,Frozen,useFrozen,useMounted,useLoad,useOrgTz,LoadFail,Empty,p6,bp,parsePct,zonedToInstant,stamp,g,type Row} from './phase6-ui';
+import DiscussionOperations from '../imtun/superapp/DiscussionOperations';
 
 type Item={title:string;kind:'yes_no'|'single_choice';options:string;passOption:string;pass:string;proposalId?:string};
 const blank=():Item=>({title:'',kind:'yes_no',options:'',passOption:'yes',pass:'50'});
@@ -118,10 +119,12 @@ function Detail({c,l,id,onChanged}:{c:RoleContext;l:Language;id:string;onChanged
  </section>}
 
 export default function Governance({c,language:l,legacy}:{c:RoleContext;language:Language;legacy:ReactNode}){
+ const [discussionRevision,setDiscussionRevision]=useState(0);
  const {tz}=useOrgTz();const list=useLoad<Row[]>('/governance/meetings',[c.id]);const [sel,setSel]=useState(''),[creating,setCreating]=useState(false);
  const manage=c.permissions.includes('meetings.manage')&&c.role_key!=='unit_owner';
   return <div className="p5">{manage&&<ProposalQueue c={c} l={l}/>}<div className="p5-split"><section className="p-card"><header><h2>{p6(l,'meetings')}</h2>{manage&&<button className="p-button orange small" onClick={()=>setCreating(true)}>{p6(l,'newMeeting')}</button>}<button className="p-button small" onClick={list.reload}>{p6(l,'refresh')}</button></header>
   <LoadFail l={l} error={list.error} onRetry={list.reload}/>{!list.data&&!list.error?<p role="status">{p6(l,'loading')}</p>:list.data&&(list.data.length===0?<Empty l={l}/>:<ul className="p5-list">{list.data.map(r=><li key={r.id}><button className="p5-item" aria-current={sel===r.id} onClick={()=>setSel(r.id)}><strong>{r.title}</strong><small>{r.building_name?r.building_name+' · ':''}{stamp(g(r,'starts_at','startsAt'),l,tz)} · {p6(l,String(r.status))===String(r.status)?r.status:p6(l,String(r.status))}</small></button></li>)}</ul>)}</section>
-  {sel?<Detail key={sel+c.id} c={c} l={l} id={sel} onChanged={list.reload}/>:<Empty l={l} text={p6(l,'meetings')}/>}</div>
+  {sel?<Detail key={sel+c.id+discussionRevision} c={c} l={l} id={sel} onChanged={list.reload}/>:<Empty l={l} text={p6(l,'meetings')}/>}</div>
+  {manage&&<DiscussionOperations key={c.id} c={c} l={l} onChanged={()=>{list.reload();setDiscussionRevision(v=>v+1)}}/>}
   <section className="p-card p6-legacy"><h3>{p6(l,'legacyHead')}</h3><p className="p-info">{p6(l,'legacyNote')}</p>{legacy}</section>
   {creating&&<Create c={c} l={l} onClose={()=>setCreating(false)} onDone={id=>{setCreating(false);list.reload();if(id)setSel(id)}}/>}</div>}

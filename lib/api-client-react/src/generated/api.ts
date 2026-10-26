@@ -158,6 +158,8 @@ import type {
   GetResidentContinuityParams,
   GetResidentDirectMessages200,
   GetResidentDirectMessagesParams,
+  GetResidentDiscussionTarget200,
+  GetResidentDiscussionTargetParams,
   GetResidentListingPhotoParams,
   GetResidentMessagesParams,
   GetResidentPayerPolicyParams,
@@ -4538,6 +4540,94 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getActOnResidentRecordMutationOptions(options));
     }
+
+export const getGetResidentDiscussionTargetUrl = (id: string,
+    target: 'request' | 'proposal',
+    params?: GetResidentDiscussionTargetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/discussions/${id}/links/${target}?${stringifiedParams}` : `/api/resident/discussions/${id}/links/${target}`
+}
+
+export const getResidentDiscussionTarget = async (id: string,
+    target: 'request' | 'proposal',
+    params?: GetResidentDiscussionTargetParams, options?: Parameters<typeof customFetch>[1]): Promise<GetResidentDiscussionTarget200> => {
+
+  return customFetch<GetResidentDiscussionTarget200>(getGetResidentDiscussionTargetUrl(id,target,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentDiscussionTargetQueryKey = (id: string,
+    target: 'request' | 'proposal',
+    params?: GetResidentDiscussionTargetParams,) => {
+    return [
+    `/api/resident/discussions/${id}/links/${target}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentDiscussionTargetQueryOptions = <TData = Awaited<ReturnType<typeof getResidentDiscussionTarget>>, TError = ErrorType<unknown>>(id: string,
+    target: 'request' | 'proposal',
+    params?: GetResidentDiscussionTargetParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentDiscussionTarget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentDiscussionTargetQueryKey(id,target,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentDiscussionTarget>>> = ({ signal }) => getResidentDiscussionTarget(id,target,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && target !== null && target !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentDiscussionTarget>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentDiscussionTargetQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentDiscussionTarget>>>
+export type GetResidentDiscussionTargetQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentDiscussionTarget<TData = Awaited<ReturnType<typeof getResidentDiscussionTarget>>, TError = ErrorType<unknown>>(
+ id: string,
+    target: 'request' | 'proposal',
+    params?: GetResidentDiscussionTargetParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentDiscussionTarget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentDiscussionTargetQueryOptions(id,target,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetResidentMessagesUrl = (kind: ResidentRecordKind,
     id: string,

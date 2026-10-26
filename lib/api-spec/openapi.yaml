@@ -99,6 +99,8 @@ paths:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}'
   /resident/records/{kind}/{id}/actions:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1actions'
+  /resident/discussions/{id}/links/{target}:
+    $ref: './resident.yaml#/paths/~1resident~1discussions~1{id}~1links~1{target}'
   /resident/records/{kind}/{id}/messages:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1messages'
   /resident/records/discussions/{id}/requests:

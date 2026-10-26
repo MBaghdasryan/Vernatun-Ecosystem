@@ -19,7 +19,7 @@ export function useLang(): Language {
 }
 export function useRecords(kind: ResidentRecordKind, enabled: boolean, search = '', filters?: Record<string, unknown>) {
   const ctx = useContextId();
-  return useQuery({ queryKey: ['resident-rec', ctx, kind, search, filters ?? {}], enabled: enabled && !!ctx, refetchOnMount: 'always', refetchInterval: kind === 'listings' || kind === 'conversations' ? 30000 : false, queryFn: () => getResidentRecords(kind, (search || (filters && Object.keys(filters).length) ? { ...(search ? { search } : {}), ...filters } : undefined) as never) });
+  return useQuery({ queryKey: ['resident-rec', ctx, kind, search, filters ?? {}], enabled: enabled && !!ctx, refetchOnMount: 'always', refetchInterval: ['listings','conversations','discussions'].includes(kind) ? 30000 : false, queryFn: () => getResidentRecords(kind, (search || (filters && Object.keys(filters).length) ? { ...(search ? { search } : {}), ...filters } : undefined) as never) });
 }
 export function useMessages(kind: ResidentRecordKind, id: string) {
   const ctx = useContextId();

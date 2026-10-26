@@ -3,6 +3,7 @@ import type {PoolClient} from 'pg';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,context,requirePermission,type Context} from './access.js';
+import {canConvert} from './resident-conversion.js';
 
 export const residentKinds=z.enum(['vehicles','mobile-devices','agreements','contacts','directory','services','subscriptions','conversations','discussions','listings','help','feedback']);
 export type ResidentKind=z.infer<typeof residentKinds>;
@@ -11,11 +12,16 @@ export const residentSettings=z.object({directory:z.boolean(),discussions:z.bool
 export const defaults={directory:false,discussions:false,chat:false,marketplace:false,services:false,activationRequired:false,financeTransparency:false};
 export type ResidentScope={c:Context;organizationId:string;buildingId:string;unitId:string|null;administrative:boolean;settings:typeof defaults};
 
-export async function residentScope(req:Request,operationalPermission?:'requests.assign'):Promise<ResidentScope>{
+export async function residentScope(req:Request,operation:false|true|'requests.assign'=false):Promise<ResidentScope>{
  const c=await context(req),administrative=c.shell!=='home';
  let buildingId=c.building_id,organizationId=c.organization_id;
  if(administrative){
-  await requirePermission(req,operationalPermission??(c.organization_id?'organization.settings':'organizations.manage'));
+  if(operation===true&&c.organization_id&&!c.unit_id&&!c.permissions.includes('organization.settings')){
+   // Operational staff can process discussions, not change resident settings,
+   // inspect private conversations, or administer other resident records.
+   if(!c.modules?.includes('community'))throw new ApiError(403,'module_disabled');
+   await requirePermission(req,c.permissions.includes('meetings.manage')?'meetings.manage':'requests.assign');
+  }else await requirePermission(req,operation==='requests.assign'?operation:c.organization_id?'organization.settings':'organizations.manage');
   buildingId=z.string().uuid().parse(req.query.buildingId);
   const row=(await pool.query(`SELECT organization_id FROM buildings WHERE id=$1 AND ($2::uuid IS NULL OR organization_id=$2)
    AND ($3::uuid IS NULL OR id=$3)`,[buildingId,c.organization_id,c.building_id])).rows[0];
@@ -70,7 +76,14 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
   if(adminOnlyKinds.includes(kind))a.push('edit','delete');
   if(kind==='subscriptions'&&row.status==='requested')a.push('approve','reject');
   if(kind==='subscriptions'&&['active','cancel_requested'].includes(row.status))a.push('cancel');
-  if(kind==='discussions')a.push(...(row.status==='open'?['close','freeze']:['reopen']));
+  if(kind==='discussions'){
+   if(s.c.permissions.includes('organization.settings')||s.c.permissions.includes('organizations.manage'))
+    a.push(...(row.status==='open'?['close','freeze']:['reopen']));
+   if(row.status==='open'){
+    if(!row.linked_request_id&&canConvert(s,'request'))a.push('request');
+    if(!row.data.proposalConversion&&canConvert(s,'proposal'))a.push('proposal');
+   }
+  }
   if(kind==='listings'&&row.status==='submitted')a.push('approve','reject');
   if(kind==='listings'&&row.status==='active')a.push('close');
  }else{
@@ -87,11 +100,8 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
    if(own&&s.c.role_key==='unit_owner'&&row.status==='active')a.push('close');
   }
  }
- if(kind==='discussions'&&row.status==='open'){
-  if(s.c.permissions.includes('requests.create')||s.c.permissions.includes('requests.assign'))a.push('request');
-  a.push('proposal');
- }
- if((kind==='conversations'||kind==='discussions')&&!['closed','frozen','rejected','draft','submitted'].includes(row.status))a.push('message');
+ if((kind==='conversations'||kind==='discussions')&&!['closed','frozen','rejected','draft','submitted'].includes(row.status)&&
+  (!s.administrative||s.c.permissions.includes('organization.settings')||s.c.permissions.includes('organizations.manage')))a.push('message');
  if(kind==='conversations'&&row.parent_id&&s.settings.marketplace&&row.status==='open'){
   if(own&&['requested','confirmed'].includes(row.data.viewingStatus))a.push('cancel_viewing');
   if(!own&&!s.administrative&&s.c.role_key==='unit_owner'&&row.data.viewingStatus==='requested')a.push('confirm_viewing','decline_viewing');
@@ -99,8 +109,19 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
  if(kind==='conversations'&&!s.administrative)a.push('read');
  return a;
 }
+// Match governance's draft visibility boundary in every record serializer,
+// including lists and responses to unrelated resident actions.
+export const publishedProposalSql=`EXISTS(SELECT 1 FROM agenda_items pa JOIN meetings pm ON pm.id=pa.meeting_id
+ WHERE pa.source_discussion_id=r.id AND pm.organization_id=r.organization_id
+ AND pm.building_id=r.building_id AND pm.mode='weighted' AND pm.was_published) AS proposal_visible`;
 export function publicRecord(row:any,s:ResidentScope,userId:string){
  const {pushToken:_,...data}=row.data??{};
+ // Idempotency inputs belong to staff, not to the public discussion payload.
+ for(const k of ['requestConversion','proposalConversion']){
+  if(data[k])data[k]={id:data[k].id,...(data[k].meetingId?{meetingId:data[k].meetingId}:{})};
+ }
+ if(!s.c.modules?.includes('community')||!s.c.permissions.includes('meetings.read')||
+  (!s.c.permissions.includes('meetings.manage')&&!row.proposal_visible))delete data.proposalConversion;
  if(row.kind==='mobile-devices')data.pushRegistered=!!row.data?.pushToken;
  return {id:row.id,kind:row.kind,title:row.title,body:row.body,status:row.status,version:row.version,createdAt:new Date(row.created_at).toISOString(),
   own:row.owner_user_id===userId,data,actions:actionsFor(row,s,userId),linkedRequestId:row.linked_request_id??null,
@@ -114,7 +135,7 @@ export async function readRecord(db:PoolClient|typeof pool,s:ResidentScope,kind:
    AND owner_user_id=$2 AND deleted_at IS NULL ${lock?'FOR UPDATE':''}`,[id,userId])).rows[0];
   if(!device)throw new ApiError(404,'not_found');return device;
  }
- const row=(await db.query(`SELECT r.*,
+ const row=(await db.query(`SELECT r.*,${publishedProposalSql},
   ARRAY(SELECT p.id FROM resident_listing_photos p WHERE p.listing_id=r.id ORDER BY p.created_at,p.id) AS photos
   FROM resident_product_records r WHERE r.id=$1 AND r.organization_id=$2 AND r.building_id=$3
   AND r.kind=$4 AND r.deleted_at IS NULL AND

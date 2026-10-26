@@ -26,12 +26,12 @@ governance.get('/governance/meetings',async(req,res)=>{
  const c=await requirePermission(req,'meetings.read'),manage=c.permissions.includes('meetings.manage');
  res.json((await pool.query(`SELECT m.*,b.name AS building_name FROM meetings m JOIN buildings b ON b.id=m.building_id
  WHERE m.organization_id=$1 AND ($2::uuid IS NULL OR m.building_id=$2) AND m.mode='weighted'
- AND ($3 OR m.status<>'draft') ORDER BY m.starts_at DESC`,[c.organization_id,c.building_id,manage])).rows.map(m=>({...m,voting_phase:phase(m)})));
+ AND ($3 OR m.was_published) ORDER BY m.starts_at DESC`,[c.organization_id,c.building_id,manage])).rows.map(m=>({...m,voting_phase:phase(m)})));
 });
 governance.get('/governance/meetings/:id',async(req,res)=>{
  const c=await requirePermission(req,'meetings.read'),id=uuid.parse(req.params.id);
  res.json(await transaction(async db=>{
- const m=await locked(db,c,id);if(m.status==='draft'&&!c.permissions.includes('meetings.manage'))throw new ApiError(404,'not_found');
+ const m=await locked(db,c,id);if(!m.was_published&&!c.permissions.includes('meetings.manage'))throw new ApiError(404,'not_found');
  const eligibility=(await db.query(`SELECT e.*,u.number,p.name AS owner_name FROM meeting_eligibility e JOIN units u ON u.id=e.unit_id JOIN users p ON p.id=e.owner_id
  WHERE e.meeting_id=$1 AND ($2 OR (e.owner_id=$3 AND e.unit_id=$4)) ORDER BY u.number`,[id,c.permissions.includes('meetings.manage'),req.user!.id,c.unit_id])).rows;
   const agenda=(await db.query(`SELECT a.*,p.id AS proposal_id,l.discussion_id,l.source_message_id,
@@ -128,7 +128,7 @@ governance.post('/governance/meetings/:id/actions',async(req,res)=>{
  if(!rows.length)throw new ApiError(409,'no_eligible_owners');
  const totals=new Map<string,number>();for(const o of rows){totals.set(o.unit_id,(totals.get(o.unit_id)??0)+o.share_basis_points);if((totals.get(o.unit_id)??0)>10000)throw new ApiError(409,'ownership_share_overflow')}
  for(const o of rows)await db.query('INSERT INTO meeting_eligibility(meeting_id,ownership_id,unit_id,owner_id,share_basis_points) VALUES($1,$2,$3,$4,$5)',[id,o.id,o.unit_id,o.user_id,o.share_basis_points]);
- await db.query("UPDATE meetings SET status='published',version=version+1 WHERE id=$1",[id]);
+ await db.query("UPDATE meetings SET status='published',was_published=true,version=version+1 WHERE id=$1",[id]);
  }else if(b.action==='cancel'){
  if(!['draft','published'].includes(m.status)||b.reason.length<3)throw new ApiError(409,'invalid_transition');
  await db.query("UPDATE meetings SET status='cancelled',version=version+1 WHERE id=$1",[id]);

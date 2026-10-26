@@ -384,12 +384,47 @@ paths:
                 action: {type: string, enum: [accept, withdraw, submit, approve, reject, activate, cancel, close, reopen, freeze, support, unsupport, read, save, unsave, report, request, proposal, confirm_viewing, decline_viewing, cancel_viewing]}
                 version: {type: integer, minimum: 1}
                 reason: {type: string, maxLength: 2000}
+                conversion:
+                  type: object
+                  additionalProperties: false
+                  required: [confirmed]
+                  properties:
+                    confirmed: {type: boolean, enum: [true]}
+                    categoryId: {type: string, format: uuid}
+                    meetingId: {type: string, format: uuid}
+                    meetingVersion: {type: integer, minimum: 1}
+                    passBasisPoints: {type: integer, minimum: 1, maximum: 10000}
       responses:
         '200':
-          description: Audited transition; unrelated domain mutations are not implied.
+          description: Audited transition. Confirmed request/proposal creates one canonical common-area request or draft agenda item; retries return the linked record.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ResidentRecord'}
+  /resident/discussions/{id}/links/{target}:
+    parameters:
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+      - name: target
+        in: path
+        required: true
+        schema: {type: string, enum: [request, proposal]}
+    get:
+      operationId: getResidentDiscussionTarget
+      responses:
+        '200':
+          description: Scoped canonical object summary, never private request messages or draft ballots.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title, status, target]
+                properties:
+                  id: {type: string}
+                  title: {type: string}
+                  status: {type: string}
+                  target: {type: string, enum: [request, proposal]}
+                  meetingId: {type: string}
+                  meetingTitle: {type: string}
   /resident/records/{kind}/{id}/messages:
     parameters:
       - {$ref: '#/components/parameters/Kind'}

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ActOnResidentRecordBodyAction } from './actOnResidentRecordBodyAction';
+import type { ActOnResidentRecordBodyConversion } from './actOnResidentRecordBodyConversion';
 
 export type ActOnResidentRecordBody = {
   action: ActOnResidentRecordBodyAction;
@@ -13,4 +14,5 @@ export type ActOnResidentRecordBody = {
   version: number;
   /** @maxLength 2000 */
   reason?: string;
+  conversion?: ActOnResidentRecordBodyConversion;
 };

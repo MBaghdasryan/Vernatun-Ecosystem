@@ -32,7 +32,7 @@ class Client{
   return {status:r.status,body:Buffer.from(await r.arrayBuffer()),type:r.headers.get('content-type'),cache:r.headers.get('cache-control')};
  }
 }
-let owner:Client,family:Client,admin:Client,manager:Client,buildingId:string,query:string;
+let owner:Client,family:Client,admin:Client,manager:Client,ops:Client,buildingId:string,query:string;
 const photoKeys:string[]=[];
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
@@ -40,7 +40,7 @@ before(async()=>{
  const schema=(await pool.query('SELECT current_schema() AS name')).rows[0].name;
  assert.match(schema,/^qa_[a-f0-9]{20}$/);assert.equal(schema,process.env.PRIVATE_FILES_TEST_RUN);
  await pool.query('DELETE FROM auth_rate_limits');
- owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');
+ owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');ops=await new Client().login('manager');
  buildingId=seed.fixtures.ba;query='?buildingId='+buildingId;
 });
 after(async()=>{try{for(const key of photoKeys)await deletePrivateFile('photos',key)}finally{server.close();server.closeAllConnections();await pool.end()}});
@@ -399,6 +399,133 @@ test('mobile installation registration is idempotent and revocation invalidates 
  assert.equal((await owner.call('/resident/records/mobile-devices/'+first.data.id+'?version=2','DELETE')).status,204);
  assert.equal((await other.call('/resident/workspace')).status,401);
  assert.equal((await owner.call('/resident/workspace')).status,200);
+});
+test('discussion conversion creates canonical common-area work once and exposes only a scoped summary',async()=>{
+ const topic=(await owner.call('/resident/records/discussions','POST',{title:'Repair shared garden',body:'Repair the shared garden fence.',category:'building'})).data;
+ const path='/resident/records/discussions/'+topic.id+'/actions';
+ const category=(await ops.call('/operations/categories')).data.find((x:any)=>x.active);
+ assert.ok(category);
+ const body={action:'request',version:1,conversion:{confirmed:true,categoryId:category.id}};
+ assert.equal((await ops.call(path+query,'POST',{action:'request',version:1})).status,400);
+ assert.equal((await admin.call(path+query,'POST',body)).status,403);
+ assert.equal((await owner.call(path,'POST',body)).status,403);
+ assert.equal((await ops.call(path+query,'POST',{...body,version:99})).status,409);
+ assert.equal((await ops.call(path+query,'POST',{...body,conversion:{confirmed:false,categoryId:category.id}})).status,400);
+ const [first,replay]=await Promise.all([ops.call(path+query,'POST',body),ops.call(path+query,'POST',body)]);
+ assert.equal(first.status,200,JSON.stringify(first.data));assert.equal(replay.status,200,JSON.stringify(replay.data));
+ assert.equal(first.data.linkedRequestId,replay.data.linkedRequestId);
+ const id=first.data.linkedRequestId;assert.ok(id);assert.equal(first.data.actions.includes('request'),false);
+ const r=(await pool.query('SELECT * FROM resident_requests WHERE id=$1',[id])).rows[0];
+ assert.equal(r.unit_id,null);assert.equal(r.author_user_id,null);assert.equal(r.source,'system');
+ assert.equal(r.building_id,buildingId);assert.equal(r.source_discussion_id,topic.id);
+ assert.equal((await pool.query('SELECT status FROM work_orders WHERE request_id=$1',[id])).rows[0].status,'queued');
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM request_sla_deadlines WHERE request_id=$1',[id])).rows[0].n,4);
+ assert.equal((await ops.call('/requests/'+id)).status,200);
+ assert.equal((await owner.call('/requests/'+id)).status,404);
+ const link='/resident/discussions/'+topic.id+'/links/request';
+ const summary=await family.call(link);assert.equal(summary.status,200);assert.equal(summary.data.id,id);
+ assert.equal(summary.data.messages,undefined);assert.equal(summary.data.author_user_id,undefined);
+ const list=(await owner.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id);
+ assert.equal(list.linkedRequestId,id);assert.equal(list.data.requestConversion.input,undefined);
+ assert.equal((await pool.query("SELECT count(*)::int AS n FROM audit_events WHERE action='resident.discussions.request' AND entity_id=$1",[topic.id])).rows[0].n,1);
+ const retries=await Promise.all(Array.from({length:12},()=>ops.call(path+query,'POST',body)));
+ assert.ok(retries.every(x=>x.status===200&&x.data.linkedRequestId===id));
+ assert.equal((await ops.call(path+query,'POST',{...body,conversion:{confirmed:true,categoryId:randomUUID()}})).status,409);
+ assert.equal((await ops.call(path+'?buildingId='+seed.fixtures.bb,'POST',body)).status,404);
+});
+test('agenda conversion uses an existing scoped draft, not topic support or a second voting engine',async()=>{
+ const topic=(await owner.call('/resident/records/discussions','POST',{title:'Garden budget proposal',body:'Discuss next year garden budget.',category:'building'})).data;
+ const meeting=(await ops.call('/governance/meetings','POST',{key:randomUUID(),buildingId,title:'Garden planning',description:'',
+  startsAt:new Date(Date.now()+3600000).toISOString(),endsAt:new Date(Date.now()+7200000).toISOString(),quorumBasisPoints:5000,
+  agenda:[{title:'Existing agenda',votingType:'yes_no',options:['yes','no','abstain'],passOption:'yes',passBasisPoints:5000}]}));
+ assert.equal(meeting.status,201,JSON.stringify(meeting.data));
+ const path='/resident/records/discussions/'+topic.id+'/actions';
+ const body={action:'proposal',version:1,conversion:{confirmed:true,meetingId:meeting.data.id,meetingVersion:meeting.data.version,passBasisPoints:6000}};
+ assert.equal((await family.call(path,'POST',body)).status,403);
+ assert.equal((await ops.call(path+query,'POST',{...body,conversion:{...body.conversion,meetingId:randomUUID()}})).status,404);
+ assert.equal((await ops.call(path+query,'POST',{...body,conversion:{...body.conversion,meetingVersion:99}})).status,409);
+ const first=await ops.call(path+query,'POST',body);assert.equal(first.status,200,JSON.stringify(first.data));
+ const replay=await ops.call(path+query,'POST',body);assert.equal(replay.status,200,JSON.stringify(replay.data));
+ assert.deepEqual(first.data.data.proposalConversion,replay.data.data.proposalConversion);
+ const detail=(await ops.call('/governance/meetings/'+meeting.data.id)).data;
+ assert.equal(detail.status,'draft');assert.equal(detail.agenda.length,2);assert.equal(detail.version,meeting.data.version+1);
+ const agenda=detail.agenda.find((x:any)=>x.source_discussion_id===topic.id);assert.ok(agenda);
+ assert.equal(agenda.id,first.data.data.proposalConversion.id);assert.equal(agenda.pass_basis_points,6000);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM meeting_ballots WHERE agenda_item_id=$1',[agenda.id])).rows[0].n,0);
+ assert.equal(detail.eligibility.length,0);
+ const proposalPath='/resident/discussions/'+topic.id+'/links/proposal';
+ assert.equal((await owner.call(proposalPath)).status,404);
+ assert.equal((await family.call(proposalPath)).status,403);
+ const before=(await owner.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id);
+ assert.equal(before.data.proposalConversion,undefined);
+ // Unrelated actions must not disclose the draft receipt either.
+ const supported=await owner.call(path,'POST',{action:'support',version:first.data.version});
+ assert.equal(supported.status,200);assert.equal(supported.data.data.proposalConversion,undefined);
+ const staffLink=await ops.call(proposalPath+query);
+ assert.equal(staffLink.status,200);assert.equal(staffLink.data.id,agenda.id);assert.equal(staffLink.data.status,'draft');
+ assert.equal((await pool.query("SELECT count(*)::int AS n FROM audit_events WHERE action='resident.discussions.proposal' AND entity_id=$1",[topic.id])).rows[0].n,1);
+ // Publishing uses the bumped meeting version; it is never implied by conversion.
+ assert.equal((await ops.call('/governance/meetings/'+meeting.data.id+'/actions','POST',{key:randomUUID(),version:meeting.data.version,action:'publish'})).status,409);
+ const published=await ops.call('/governance/meetings/'+meeting.data.id+'/actions','POST',{key:randomUUID(),version:detail.version,action:'publish'});
+ assert.equal(published.status,200,JSON.stringify(published.data));
+ const after=(await owner.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id);
+ assert.equal(after.data.proposalConversion.id,agenda.id);assert.equal(after.data.proposalConversion.meetingId,meeting.data.id);
+ const link=await owner.call(proposalPath);assert.equal(link.status,200);assert.equal(link.data.id,agenda.id);assert.equal(link.data.status,'published');
+ assert.equal(link.data.my_votes,undefined);
+ assert.equal((await family.call(proposalPath)).status,403);
+ assert.equal((await family.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id).data.proposalConversion,undefined);
+ assert.equal((await ops.call('/governance/meetings/'+meeting.data.id+'/actions','POST',{key:randomUUID(),version:published.data.version,action:'cancel',reason:'Published meeting cancelled'})).status,200);
+ assert.equal((await owner.call(proposalPath)).status,200);
+ assert.equal((await owner.call('/governance/meetings/'+meeting.data.id)).status,200);
+ assert.ok((await owner.call('/governance/meetings')).data.some((x:any)=>x.id===meeting.data.id));
+ assert.equal((await owner.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id).data.proposalConversion.id,agenda.id);
+ const other=(await owner.call('/resident/records/discussions','POST',{title:'Second garden proposal',body:'',category:'building'})).data;
+ assert.equal((await ops.call('/resident/records/discussions/'+other.id+'/actions'+query,'POST',{...body,version:1})).status,409);
+});
+test('cancelling an unpublished draft never discloses its agenda through governance or discussion backlinks',async()=>{
+ const topic=(await owner.call('/resident/records/discussions','POST',{title:'Unpublished confidential proposal',body:'',category:'building'})).data;
+ const meeting=await ops.call('/governance/meetings','POST',{key:randomUUID(),buildingId,title:'Private draft meeting',description:'',
+  startsAt:new Date(Date.now()+3600000).toISOString(),endsAt:new Date(Date.now()+7200000).toISOString(),quorumBasisPoints:5000,
+  agenda:[{title:'Private draft agenda',votingType:'yes_no',options:['yes','no','abstain'],passOption:'yes',passBasisPoints:5000}]});
+ assert.equal(meeting.status,201);
+ const converted=await ops.call('/resident/records/discussions/'+topic.id+'/actions'+query,'POST',
+  {action:'proposal',version:1,conversion:{confirmed:true,meetingId:meeting.data.id,meetingVersion:1,passBasisPoints:5000}});
+ assert.equal(converted.status,200);
+ const cancelled=await ops.call('/governance/meetings/'+meeting.data.id+'/actions','POST',
+  {key:randomUUID(),version:2,action:'cancel',reason:'Cancel before publication'});
+ assert.equal(cancelled.status,200);assert.equal(cancelled.data.was_published,false);
+ assert.equal((await owner.call('/governance/meetings/'+meeting.data.id)).status,404);
+ assert.ok(!(await owner.call('/governance/meetings')).data.some((x:any)=>x.id===meeting.data.id));
+ const target='/resident/discussions/'+topic.id+'/links/proposal';
+ assert.equal((await owner.call(target)).status,404);
+ assert.equal((await ops.call(target+query)).status,200);
+ assert.equal((await owner.call('/resident/records/discussions')).data.items.find((x:any)=>x.id===topic.id).data.proposalConversion,undefined);
+ const action=await owner.call('/resident/records/discussions/'+topic.id+'/actions','POST',{action:'support',version:converted.data.version});
+ assert.equal(action.status,200);assert.equal(action.data.data.proposalConversion,undefined);
+});
+test('conversion requires enabled modules, building opt-in, live permissions, and open discussions',async()=>{
+ const topic=(await owner.call('/resident/records/discussions','POST',{title:'Conversion guard checks',body:'',category:'building'})).data;
+ const path='/resident/records/discussions/'+topic.id+'/actions'+query;
+ const category=(await ops.call('/operations/categories')).data.find((x:any)=>x.active);
+ const body={action:'request',version:1,conversion:{confirmed:true,categoryId:category.id}};
+ await pool.query('UPDATE resident_building_settings SET discussions=false WHERE building_id=$1',[buildingId]);
+ try{assert.equal((await ops.call(path,'POST',body)).status,403)}finally{await pool.query('UPDATE resident_building_settings SET discussions=true WHERE building_id=$1',[buildingId])}
+ await pool.query(`INSERT INTO iam_assignment_rules(assignment_id,permission_key,effect,reason,created_by)
+  VALUES($1,'requests.assign','deny','QA discussion conversion',$2)`,[ops.contextId,seed.accounts.org_admin.id]);
+ try{assert.equal((await ops.call(path,'POST',body)).status,403)}finally{await pool.query("DELETE FROM iam_assignment_rules WHERE assignment_id=$1 AND reason='QA discussion conversion'",[ops.contextId])}
+ const org=(await pool.query('SELECT organization_id FROM resident_product_records WHERE id=$1',[topic.id])).rows[0].organization_id;
+ for(const module of ['requests','community']){
+  const original=(await pool.query('SELECT enabled,override_state FROM module_entitlements WHERE organization_id=$1 AND module=$2',[org,module])).rows[0];
+  await pool.query("UPDATE module_entitlements SET enabled=false,override_state='disabled' WHERE organization_id=$1 AND module=$2",[org,module]);
+  try{assert.equal((await ops.call(path,'POST',body)).status,403)}finally{await pool.query('UPDATE module_entitlements SET enabled=$3,override_state=$4 WHERE organization_id=$1 AND module=$2',[org,module,original.enabled,original.override_state])}
+ }
+ await pool.query('UPDATE organizations SET subscription_enforced=true WHERE id=$1',[org]);
+ try{assert.equal((await ops.call(path,'POST',body)).status,403)}finally{await pool.query('UPDATE organizations SET subscription_enforced=false WHERE id=$1',[org])}
+ assert.equal((await ops.call('/resident/settings'+query,'PUT',{directory:true,discussions:true,chat:true,marketplace:true,services:true})).status,403);
+ assert.equal((await ops.call('/resident/records/conversations'+query)).status,403);
+ await pool.query("UPDATE resident_product_records SET status='frozen' WHERE id=$1",[topic.id]);
+ assert.equal((await ops.call(path,'POST',body)).status,409);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_requests WHERE source_discussion_id=$1',[topic.id])).rows[0].n,0);
 });
 test('feedback is separate from property requests and contains no spoofed scope',async()=>{
  const count=(await pool.query('SELECT count(*) FROM resident_requests')).rows[0].count;

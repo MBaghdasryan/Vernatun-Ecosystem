@@ -14,7 +14,7 @@ export default function Records({kind,l,c,caps}:{kind:ResidentRecordKind;l:Langu
  const offer=selected.get('offerType'),initialSaleType=kind==='listings'&&(offer==='sale'||offer==='rent')?offer:'';
  const qc=useQueryClient(),[search,setSearch]=useState(selected.get('search')??''),[lf,setLf]=useState({...emptyLF,saleType:initialSaleType}),fp=kind==='listings'?lfParams(lf):{},key=['resident-rec',c.id,kind,search,recordId??'',fp];
  useEffect(()=>{setSearch(new URLSearchParams(location.search).get('search')??'');setLf(f=>({...f,saleType:initialSaleType}))},[location.search,initialSaleType]);
- const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,refetchOnMount:'always',refetchInterval:['listings','conversations'].includes(kind)?30000:false,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{}),...fp})});
+ const enabled=always.includes(kind)||caps?.[kind]===true,q=useQuery({queryKey:key,enabled,refetchOnMount:'always',refetchInterval:['listings','conversations','discussions'].includes(kind)?30000:false,queryFn:()=>getResidentRecords(kind,{...(search?{search}:{}),...(recordId?{recordId}:{}),...fp})});
  useEffect(()=>{if(recordId&&q.data?.items.some(r=>r.id===recordId)){
   const node=document.getElementById('resident-record-'+recordId);node?.focus({preventScroll:true});node?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
  }},[recordId,q.data]);

@@ -5107,12 +5107,50 @@ export const ActOnResidentRecordBodyAction = {
   cancel_viewing: 'cancel_viewing',
 } as const;
 
+export type ActOnResidentRecordBodyConversion = {
+  confirmed: true;
+  categoryId?: string;
+  meetingId?: string;
+  /** @minimum 1 */
+  meetingVersion?: number;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  passBasisPoints?: number;
+};
+
 export type ActOnResidentRecordBody = {
   action: ActOnResidentRecordBodyAction;
   /** @minimum 1 */
   version: number;
   /** @maxLength 2000 */
   reason?: string;
+  conversion?: ActOnResidentRecordBodyConversion;
+};
+
+export type GetResidentDiscussionTargetParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type GetResidentDiscussionTarget200Target = typeof GetResidentDiscussionTarget200Target[keyof typeof GetResidentDiscussionTarget200Target];
+
+
+export const GetResidentDiscussionTarget200Target = {
+  request: 'request',
+  proposal: 'proposal',
+} as const;
+
+export type GetResidentDiscussionTarget200 = {
+  id: string;
+  title: string;
+  status: string;
+  target: GetResidentDiscussionTarget200Target;
+  meetingId?: string;
+  meetingTitle?: string;
 };
 
 export type GetResidentMessagesParams = {

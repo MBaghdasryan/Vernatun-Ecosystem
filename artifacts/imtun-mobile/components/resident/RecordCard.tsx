@@ -14,6 +14,7 @@ import ListingPhotos from './ListingPhotos';
 import ViewingForm from './ViewingForm';
 import { LT, fmtView, listingSummary } from '@/lib/resident/listingText';
 import { newUuid } from '@/lib/resident/hooks';
+import DiscussionLinks from './DiscussionLinks';
 const metaKeys = ['plate', 'make', 'model', 'color', 'platform', 'appVersion', 'phone', 'email', 'hours', 'category', 'saleType', 'priceMinor', 'currency', 'area', 'rooms', 'floor', 'quantity'];
 type Source = { id?: string; text: string };
 type LocalText = [string, string, string];
@@ -69,6 +70,7 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
     {meta ? <Text style={st.meta}>{meta}</Text> : null}
     {vw ? <Text style={st.meta} accessibilityRole="alert">{vw}</Text> : null}
     {kind === 'listings' ? <ListingPhotos rec={rec} l={l} after={after} /> : null}
+    <DiscussionLinks rec={rec} l={l}/>
     <View style={st.row}>
       {acts.map(x => <View key={x} style={{ flexGrow: 1 }}><Btn kind={x === 'delete' || x === 'revoke' ? 'danger' : 'secondary'} label={actLabel[x] ? L(l, actLabel[x]) : LT.act[x] ? L(l, LT.act[x]) : L(l, S.open2)} onPress={() => doAct(x)} busy={a.busy} /></View>)}
       {hasMsg && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, S.msgs)} onPress={() => setMode(mode === 'thread' ? 'none' : 'thread')} /></View>}

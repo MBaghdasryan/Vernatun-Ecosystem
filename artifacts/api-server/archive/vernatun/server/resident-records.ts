@@ -6,8 +6,8 @@ import {ApiError,requireAuth,requirePermission} from './access.js';
 import {idempotent,record,transaction} from './operations.js';
 import {prepareOperationalRequest,commitPreparedRequest,requestHistoryWithContext} from './core-operation-store.js';
 import {activeLeasePredicate} from './lease-policy.js';
-import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,type ResidentKind} from './resident-policy.js';
 import {notifyResidentViewing} from './resident-viewing-notifications.js';
+import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,publishedProposalSql,type ResidentKind} from './resident-policy.js';
 
 export const residentRecords=Router();
 residentRecords.use(requireAuth);
@@ -117,7 +117,7 @@ residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
 });
 
 residentRecords.get('/records/:kind',async(req,res)=>{
- const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);
+ const kind=residentKinds.parse(req.params.kind),s=await residentScope(req,kind==='discussions');assertEnabled(s,kind);
  const search=z.string().trim().max(200).parse(req.query.search??'');
  const recordId=req.query.recordId===undefined?null:id.parse(req.query.recordId);
  const offerType=z.enum(['all','sale','rent']).parse(req.query.offerType??'all');
@@ -150,7 +150,7 @@ residentRecords.get('/records/:kind',async(req,res)=>{
  }).parse(req.query):{};
  if((filters.minPrice||filters.maxPrice)&&!filters.currency)throw new ApiError(400,'currency_required');
  if(filters.minPrice&&filters.maxPrice&&BigInt(filters.minPrice)>BigInt(filters.maxPrice))throw new ApiError(400,'validation_error');
- const rows=(await pool.query(`SELECT r.*,
+ const rows=(await pool.query(`SELECT r.*,${publishedProposalSql},
   ARRAY(SELECT p.id FROM resident_listing_photos p WHERE p.listing_id=r.id ORDER BY p.created_at,p.id) AS photos,
   EXISTS(SELECT 1 FROM resident_record_marks m WHERE m.record_id=r.id AND m.user_id=$6 AND m.mark='accepted')
    AND NOT EXISTS(SELECT 1 FROM resident_record_marks m WHERE m.record_id=r.id AND m.user_id=$6 AND m.mark='withdrawn') AS accepted,

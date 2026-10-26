@@ -1,19 +1,46 @@
 import {Router} from 'express';
 import {z} from 'zod';
-import {ApiError,requireAuth} from './access.js';
+import {ApiError,requireAuth,requirePermission} from './access.js';
 import {record,transaction} from './operations.js';
 import {actionsFor,assertEnabled,publicRecord,readRecord,residentKinds,residentScope,writable} from './resident-policy.js';
 import {notifyResidentViewing,type ResidentViewingEvent} from './resident-viewing-notifications.js';
+import {conversionInput,convertDiscussion,authorizeConversion} from './resident-conversion.js';
 
 export const residentConversations=Router();
 residentConversations.use(requireAuth);
 const uuid=z.string().uuid();
+residentConversations.get('/discussions/:id/links/:target',async(req,res)=>{
+ const s=await residentScope(req,true);assertEnabled(s,'discussions');
+ if(!s.settings.discussions||!s.c.modules?.includes('community'))throw new ApiError(403,'module_disabled');
+ const target=z.enum(['request','proposal']).parse(req.params.target);
+ if(target==='proposal')await requirePermission(req,'meetings.read');
+ if(target==='request'&&!s.c.modules.includes('requests'))throw new ApiError(403,'module_disabled');
+ res.json(await transaction(async db=>{
+  const row=await readRecord(db,s,'discussions',uuid.parse(req.params.id),req.user!.id);
+  const result=target==='request'?(await db.query(`SELECT r.id,r.subject AS title,r.status FROM resident_requests r
+   WHERE r.id=$1 AND r.source_discussion_id=$2 AND r.organization_id=$3 AND r.building_id=$4`,
+   [row.linked_request_id,row.id,s.organizationId,s.buildingId])).rows[0]:
+   (await db.query(`SELECT a.id,a.title,m.status,m.was_published,m.id AS "meetingId",m.title AS "meetingTitle" FROM agenda_items a
+    JOIN meetings m ON m.id=a.meeting_id WHERE a.source_discussion_id=$1 AND m.organization_id=$2 AND m.building_id=$3`,
+    [row.id,s.organizationId,s.buildingId])).rows[0];
+  if(!result)throw new ApiError(404,'not_found');
+  if(target==='proposal'&&!result.was_published&&!s.c.permissions.includes('meetings.manage'))throw new ApiError(404,'not_found');
+  const {was_published:_,...summary}=result;
+  return {...summary,target};
+ }));
+});
 residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
- const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);writable(s);
+ const kind=residentKinds.parse(req.params.kind),s=await residentScope(req,kind==='discussions');assertEnabled(s,kind);writable(s);
  const b=z.object({action:z.enum(['accept','withdraw','submit','approve','reject','activate','cancel','close','reopen','freeze','support','unsupport','read','save','unsave','report','request','proposal','confirm_viewing','decline_viewing','cancel_viewing']),
-  version:z.number().int().positive(),reason:z.string().trim().max(2000).optional()}).strict().parse(req.body);
+  version:z.number().int().positive(),reason:z.string().trim().max(2000).optional(),conversion:conversionInput.optional()}).strict().parse(req.body);
+ if(b.action==='request'||b.action==='proposal')await authorizeConversion(req,s,b.action);
  res.json(await transaction(async db=>{
   const row=await readRecord(db,s,kind,uuid.parse(req.params.id),req.user!.id,true);
+  if(b.action==='request'||b.action==='proposal'){
+   await convertDiscussion(db,req,s,row,b.action,b.conversion,b.version);
+   return publicRecord(await readRecord(db,s,kind,row.id,req.user!.id),s,req.user!.id);
+  }
+  if(b.conversion)throw new ApiError(400,'invalid_conversion');
   if(!actionsFor(row,s,req.user!.id).includes(b.action))throw new ApiError(403,'forbidden');
   if(row.version!==b.version)throw new ApiError(409,'stale_version');
   let viewingOwnerId:string|null=null;
@@ -49,7 +76,6 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
     case 'close':status='closed';break;
     case 'reopen':status='open';break;
     case 'freeze':status='frozen';break;
-  case 'proposal':throw new ApiError(409,'use_agenda_proposal_review_flow'); // Proposals are separate records and require explicit review.
     case 'confirm_viewing':case 'decline_viewing':case 'cancel_viewing':status=row.status;break;
     default:throw new ApiError(409,'invalid_transition');
    }
@@ -70,7 +96,7 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
   }
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.'+kind+'.'+b.action,'resident_record',row.id,
    {recordVersion:row.version,contextId:s.c.id,...(b.reason?{reason:b.reason}:{}),...(kind==='agreements'?{category:row.data.category,agreementRevision:row.data.agreementRevision??1}:{}),
-    ...(b.action==='proposal'?{officialVotingCreated:false}:{})});
+   });
   const next=await readRecord(db,s,kind,row.id,req.user!.id);
   const marks=(await db.query(`SELECT mark FROM resident_record_marks WHERE record_id=$1 AND user_id=$2`,[row.id,req.user!.id])).rows.map(x=>x.mark);
   return publicRecord({...next,accepted:marks.includes('accepted')&&!marks.includes('withdrawn'),saved:marks.includes('saved'),supported:marks.includes('supported')},s,req.user!.id);

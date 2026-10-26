@@ -1277,11 +1277,21 @@ export const ActOnResidentRecordQueryParams = zod.object({
 export const actOnResidentRecordBodyReasonMax = 2000;
 
 
+export const actOnResidentRecordBodyConversionPassBasisPointsMax = 10000;
+
+
 
 export const ActOnResidentRecordBody = zod.object({
   "action": zod.enum(['accept', 'withdraw', 'submit', 'approve', 'reject', 'activate', 'cancel', 'close', 'reopen', 'freeze', 'support', 'unsupport', 'read', 'save', 'unsave', 'report', 'request', 'proposal', 'confirm_viewing', 'decline_viewing', 'cancel_viewing']),
   "version": zod.number().int().min(1),
-  "reason": zod.string().max(actOnResidentRecordBodyReasonMax).optional()
+  "reason": zod.string().max(actOnResidentRecordBodyReasonMax).optional(),
+  "conversion": zod.object({
+  "confirmed": zod.literal(true),
+  "categoryId": zod.string().uuid().optional(),
+  "meetingId": zod.string().uuid().optional(),
+  "meetingVersion": zod.number().int().min(1).optional(),
+  "passBasisPoints": zod.number().int().min(1).max(actOnResidentRecordBodyConversionPassBasisPointsMax).optional()
+}).optional()
 })
 
 export const ActOnResidentRecordResponse = zod.object({
@@ -1301,6 +1311,25 @@ export const ActOnResidentRecordResponse = zod.object({
   "supported": zod.boolean().optional(),
   "supportCount": zod.number().int().optional(),
   "photos": zod.array(zod.string().uuid()).optional()
+})
+
+
+export const GetResidentDiscussionTargetParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "target": zod.enum(['request', 'proposal'])
+})
+
+export const GetResidentDiscussionTargetQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const GetResidentDiscussionTargetResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "target": zod.enum(['request', 'proposal']),
+  "meetingId": zod.string().optional(),
+  "meetingTitle": zod.string().optional()
 })
 
 

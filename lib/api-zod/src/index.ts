@@ -21,7 +21,7 @@ export * from "./generated/types";
 export type {CreateResidentPassBody,SubmitResidentMeterReadingBody} from "./generated/types";
 export type {
   ActOnResidentRecordBody, ActOnResidentRecordParams, CreateResidentRecordParams,
-  GetResidentWorkspaceParams, GetResidentRecordsParams, GetResidentMessagesParams, PostResidentMessageBody,
+  GetResidentWorkspaceParams, GetResidentRecordsParams, GetResidentMessagesParams, GetResidentDiscussionTargetParams, PostResidentMessageBody,
   PostResidentMessageParams, RemoveResidentRecordParams, UpdateResidentRecordParams,
   DeleteResidentListingPhotoParams, GetResidentListingPhotoParams, GetResidentRecordParams, UploadResidentListingPhotoParams,
 } from "./generated/types";
