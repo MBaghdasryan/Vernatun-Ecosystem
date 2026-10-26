@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
+import { setCsrfTokenGetter, useGetMobileAuthSession } from '@workspace/api-client-react';
+import { csrfSessionRef } from '../_layout';
 import { L, S, kinds, superTitle } from '@/lib/resident/text';
-import { useContextId, useLang, useWorkspace } from '@/lib/resident/hooks';
+import { useLang, useWorkspace } from '@/lib/resident/hooks';
 import RecordsList from '@/components/resident/RecordsList';
 import PrefsForm from '@/components/resident/PrefsForm';
 import BuildingInfo from '@/components/resident/BuildingInfo';
@@ -30,7 +32,11 @@ function DomainSection({ view, l }: { view: DomainView; l: ReturnType<typeof use
 }
 export default function ResidentSection() { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const { section } = useLocalSearchParams<{ section: string }>();
-  const router = useRouter(); const l = useLang(); const ctx = useContextId(); const ws = useWorkspace();
+  const router = useRouter(); const l = useLang(); const session = useGetMobileAuthSession(); const ctx = session.data?.contextId ?? null; const ws = useWorkspace();
+  useEffect(() => {
+    if (session.data?.csrf) csrfSessionRef.current = session.data.csrf;
+    setCsrfTokenGetter(() => csrfSessionRef.current);
+  }, [session.data?.csrf]);
   const list = kinds[section ?? ''] ?? [];
   return <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={st.content} keyboardShouldPersistTaps="handled">
     <Pressable accessibilityRole="button" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{section === 'security' ? L(l, ['Անվտանգություն', 'Безопасность', 'Security']) : section === 'access' ? L(l, ['Մուտք', 'Доступ', 'Access']) : superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>

@@ -36,5 +36,5 @@
 - [Migration lineage](migration-lineage.md) — compare GitHub deployment history before numbering migrations; preserve upstream bytes and never silently rewrite production history.
 - [Resident route registration](resident-route-registration.md) — imports and section registries do not prove that web/native renderers mount a feature.
 - [Discussion and agenda lineage](discussion-proposal-lineage.md) — keep request conversion separate from reviewed agenda proposals while preserving source, meeting, vote, and request links.
-- [Expo dev proxy](expo-dev-proxy.md) — outer routing can intercept bare `/api`; a Metro wrapper must preserve Connect's third callback.
+- [Expo dev proxy](expo-dev-proxy.md) — protect the unique API bridge, sync route CSRF tokens, and launch Expo tests in development mode.
 - [ImTun Expo development routing](imtun-expo-dev-routing.md) — override shared production API origins with Replit-managed dev and Expo Go hosts in the local mobile workflow.

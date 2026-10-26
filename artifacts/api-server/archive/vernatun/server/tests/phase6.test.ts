@@ -246,6 +246,238 @@ test('manager and resident complete a weighted meeting through the UI and downlo
   if(web&&!web.killed)web.kill('SIGTERM');
  }
 });
+test('resident discussion conversions reach request, reviewed agenda, vote and decision across browser UIs',async()=>{
+ const uiUnit=(await pool.query("INSERT INTO units(organization_id,building_id,number,area) VALUES($1,$2,'P6-LINEAGE',48) RETURNING id",[org,building])).rows[0].id;
+ await pool.query('INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id) VALUES($1,$2,$3,$4,$5)',[users.unit_owner,org,'unit_owner',building,uiUnit]);
+ await pool.query("UPDATE users SET locale='en' WHERE id=ANY($1::uuid[])",[[users.manager,users.unit_owner]]);
+ const startsOn=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yerevan'}).format(new Date());
+ const ownership=await clients.manager.call('/ownerships','POST',{key:randomUUID(),unitId:uiUnit,userId:users.unit_owner,startsOn,endsOn:null,shareBasisPoints:10000,basis:'Isolated discussion-to-decision browser ownership'});
+ assert.equal(ownership.status,201,JSON.stringify(ownership.data));
+ const ownerContext=(await contexts(users.unit_owner)).find(c=>c.role_key==='unit_owner'&&c.building_id===building&&c.unit_id===uiUnit);
+ assert.ok(ownerContext,'The resident test user should have a context for the isolated unit');
+ await clients.unit_owner.switch(users.unit_owner,'unit_owner',building,uiUnit);
+
+ const webPort=4191,mobilePort=4192,webDir=resolve(process.cwd(),'../../../vernatun'),mobileDir=resolve(process.cwd(),'../../../imtun-mobile');
+ const viteBin=resolve(webDir,'node_modules/vite/bin/vite.js'),expoBin=resolve(mobileDir,'node_modules/expo/bin/cli');
+ let web:ChildProcess|undefined,mobile:ChildProcess|undefined,browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
+ let mobileLogs='';
+ try{
+  web=spawn(process.execPath,[viteBin,'--host','127.0.0.1'],{cwd:webDir,env:{...process.env,PORT:String(webPort),BASE_PATH:'/',API_PROXY_TARGET:base},stdio:'ignore'});
+  const mobileEnv={...process.env,NODE_ENV:'development',CI:'1',PORT:String(mobilePort),REPLIT_EXPO_DEV_DOMAIN:`localhost:${mobilePort}`};
+  mobile=spawn(process.execPath,[expoBin,'start','--web','--host','localhost','--port',String(mobilePort)],{
+   cwd:mobileDir,env:mobileEnv,stdio:'pipe',
+  });
+  mobile.stdout?.on('data',chunk=>{mobileLogs+=String(chunk)});
+  mobile.stderr?.on('data',chunk=>{mobileLogs+=String(chunk)});
+  const waitForServer=async(url:string,child:ChildProcess,label:string)=>{
+   const started=Date.now();
+   while(Date.now()-started<90000){
+    if(child.exitCode!==null)throw new Error(`${label} exited with code ${child.exitCode}${label==='ImTun browser UI'?`: ${mobileLogs.slice(-5000)}`:''}`);
+    try{const response=await fetch(url);if(response.ok)return}catch{}
+    await new Promise(r=>setTimeout(r,250));
+   }
+   throw new Error(`${label} did not become ready`);
+  };
+  await Promise.all([
+   waitForServer(`http://127.0.0.1:${webPort}/`,web,'Vernatun browser UI'),
+   waitForServer(`http://localhost:${mobilePort}/`,mobile,'ImTun browser UI'),
+  ]);
+  browser=await chromium.launch({headless:true,executablePath:process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE,args:['--no-sandbox']});
+  const ownerPage=await browser.newPage({viewport:{width:430,height:900}});
+  const mobilePageErrors:string[]=[];
+  const mobileApiResponses:string[]=[];
+  ownerPage.on('pageerror',error=>mobilePageErrors.push(error.message));
+  ownerPage.on('response',response=>{if(response.url().includes('/__imtun_dev_api/api/'))mobileApiResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`)});
+  const mobileOrigin=`http://localhost:${mobilePort}`;
+  await ownerPage.route('**/__imtun_dev_api/api/**',async route=>{
+   const request=route.request(),requestHeaders=request.headers(),url=new URL(request.url());
+   const headers:Record<string,string>={};
+   for(const key of ['accept','content-type','cookie','x-csrf-token'])if(requestHeaders[key])headers[key]=requestHeaders[key];
+   const response=await fetch(`${base}${url.pathname.replace('/__imtun_dev_api','')}${url.search}`,{
+    method:request.method(),headers,...(request.postDataBuffer()?{body:request.postDataBuffer()}:{}),
+   });
+   const responseHeaders:Record<string,string>={'content-type':response.headers.get('content-type')??'application/json'};
+   const setCookie=response.headers.get('set-cookie');if(setCookie)responseHeaders['set-cookie']=setCookie;
+   const payload=Buffer.from(await response.arrayBuffer());
+   if(response.status>=400)mobileApiResponses.push(`API error ${response.status} ${request.method()} ${url.pathname}${url.search}; csrf=${Boolean(headers['x-csrf-token'])}; cookie=${Boolean(headers.cookie)}; body=${payload.toString('utf8').slice(0,500)}`);
+   await route.fulfill({status:response.status,headers:responseHeaders,body:payload});
+  });
+  const residentAccount=seed.accounts[account('unit_owner')];
+  await ownerPage.goto(mobileOrigin);
+  await ownerPage.getByTestId('login-email').waitFor({timeout:30000});
+  await ownerPage.getByTestId('login-email').fill(residentAccount.email);
+  await ownerPage.getByTestId('login-password').fill(residentAccount.password);
+  await ownerPage.getByTestId('login-submit').click();
+  const contextCards=ownerPage.locator('[data-testid^="context-"]');
+  await contextCards.first().waitFor({timeout:20000});
+  let targetContext:string|undefined;
+  for(const card of await contextCards.all()){
+   if((await card.innerText()).includes('P6-LINEAGE')){targetContext=await card.getAttribute('data-testid')??undefined;break}
+  }
+  assert.ok(targetContext,'The ImTun context picker should list the isolated resident apartment');
+  await ownerPage.getByTestId(targetContext).click();
+  try{await ownerPage.getByTestId('home-context-button').waitFor({timeout:20000})}
+  catch{throw new Error(`ImTun did not open the selected resident home. URL: ${ownerPage.url()}; page: ${(await ownerPage.locator('body').innerText()).slice(-3000)}; browser errors: ${mobilePageErrors.join(' | ')}; API responses: ${mobileApiResponses.slice(-20).join(' | ')}`)}
+  await ownerPage.getByText('Community',{exact:true}).last().click();
+  await ownerPage.getByText('Discussions',{exact:true}).click();
+  await ownerPage.getByRole('button',{name:'Add',exact:true}).first().waitFor({timeout:20000});
+  await ownerPage.getByRole('button',{name:'Add',exact:true}).first().click();
+  const topicTitle=`QA discussion ${randomUUID().slice(0,8)}`,firstMessage=`QA source message ${randomUUID().slice(0,8)}`,secondMessage=`QA rejected source ${randomUUID().slice(0,8)}`;
+  await ownerPage.getByLabel('Title',{exact:true}).fill(topicTitle);
+  await ownerPage.getByLabel('Details',{exact:true}).fill('Resident discussion for the browser acceptance path.');
+  await ownerPage.getByRole('button',{name:'Save',exact:true}).click();
+  try{await ownerPage.getByText(topicTitle,{exact:true}).waitFor()}
+  catch{throw new Error(`ImTun did not show the newly created discussion. Page: ${(await ownerPage.locator('body').innerText()).slice(-3000)}; API responses: ${mobileApiResponses.slice(-20).join(' | ')}`)}
+  await ownerPage.getByRole('button',{name:'Messages',exact:true}).first().click();
+  const messageInput=ownerPage.getByLabel('Message',{exact:true});
+  await messageInput.fill(firstMessage);
+  await ownerPage.getByRole('button',{name:'Send',exact:true}).click();
+  await ownerPage.getByRole('button',{name:'Create request',exact:true}).waitFor();
+  await ownerPage.getByRole('button',{name:'Create request',exact:true}).click();
+  await ownerPage.getByText('Selected discussion source',{exact:false}).waitFor();
+  assert.ok(await ownerPage.getByText(firstMessage,{exact:true}).count()>=2,'The chosen source message should be previewed in the request form');
+  await ownerPage.getByLabel('Request subject',{exact:true}).fill('QA entrance light repair request');
+  await ownerPage.getByLabel('Details',{exact:true}).last().fill('Replace the failed entrance light.');
+  await ownerPage.getByRole('button',{name:'Create request',exact:true}).last().click();
+  await ownerPage.getByText('Submitted',{exact:true}).waitFor();
+  await ownerPage.getByRole('button',{name:'Linked records',exact:true}).first().click();
+  await ownerPage.getByText('Discussion → request',{exact:true}).waitFor();
+  const topicId=(await pool.query("SELECT id FROM resident_product_records WHERE organization_id=$1 AND kind='discussions' AND title=$2",[org,topicTitle])).rows[0]?.id;
+  assert.ok(topicId,'The discussion created in ImTun should be persisted');
+  const originalMessage=(await pool.query('SELECT id FROM resident_product_messages WHERE record_id=$1 AND body=$2',[topicId,firstMessage])).rows[0];
+  assert.ok(originalMessage,'The source message should be persisted before it is converted');
+  let trail=(await clients.unit_owner.call(`/resident/records/discussions/${topicId}/lineage`));
+  assert.equal(trail.status,200,JSON.stringify(trail.data));assert.equal(trail.data.length,1);
+  assert.ok(trail.data[0].requestId);assert.equal(trail.data[0].proposalId,null);
+  assert.equal(trail.data[0].sourceMessageId,originalMessage.id);
+  assert.equal((await pool.query('SELECT source_text FROM resident_discussion_lineage WHERE request_id=$1',[trail.data[0].requestId])).rows[0]?.source_text,firstMessage);
+
+  await ownerPage.getByRole('button',{name:'Messages',exact:true}).first().click();
+  await ownerPage.getByRole('button',{name:'Suggest agenda',exact:true}).click();
+  const approvedTitle='QA approved bicycle rack proposal';
+  await ownerPage.getByLabel('Agenda proposal title',{exact:true}).fill(approvedTitle);
+  await ownerPage.getByLabel('Proposal details',{exact:true}).fill('Review a secure bicycle rack near the entrance.');
+  await ownerPage.getByRole('button',{name:'Submit for review',exact:true}).click();
+  await ownerPage.getByText('Submitted',{exact:true}).waitFor();
+  await ownerPage.getByRole('button',{name:'Messages',exact:true}).first().click();
+  await messageInput.fill(secondMessage);
+  await ownerPage.getByRole('button',{name:'Send',exact:true}).click();
+  await ownerPage.getByRole('button',{name:'Suggest agenda',exact:true}).nth(1).waitFor();
+  await ownerPage.getByRole('button',{name:'Suggest agenda',exact:true}).nth(1).click();
+  const rejectedTitle='QA rejected parking proposal';
+  await ownerPage.getByLabel('Agenda proposal title',{exact:true}).fill(rejectedTitle);
+  await ownerPage.getByLabel('Proposal details',{exact:true}).fill('This proposal must not become an agenda item.');
+  await ownerPage.getByRole('button',{name:'Submit for review',exact:true}).click();
+  await ownerPage.getByText('Submitted',{exact:true}).waitFor();
+  await ownerPage.getByRole('button',{name:'Linked records',exact:true}).first().click();
+  const agendaLinks=ownerPage.getByText('Discussion → agenda proposal',{exact:true});
+  await agendaLinks.first().waitFor();
+  assert.equal(await agendaLinks.count(),2);
+  trail=await clients.unit_owner.call(`/resident/records/discussions/${topicId}/lineage`);
+  assert.equal(trail.status,200);assert.equal(trail.data.length,3);
+  assert.equal(trail.data.filter((x:any)=>x.requestId).length,1);
+  assert.equal(trail.data.filter((x:any)=>x.proposalId).length,2);
+  const approvedProposal=(await pool.query('SELECT id FROM resident_agenda_proposals WHERE organization_id=$1 AND title=$2',[org,approvedTitle])).rows[0]?.id;
+  const rejectedProposal=(await pool.query('SELECT id FROM resident_agenda_proposals WHERE organization_id=$1 AND title=$2',[org,rejectedTitle])).rows[0]?.id;
+  assert.ok(approvedProposal&&rejectedProposal,'Both proposals created in ImTun should be persisted separately from the request');
+  const secondMessageRecord=(await pool.query('SELECT id FROM resident_product_messages WHERE record_id=$1 AND body=$2',[topicId,secondMessage])).rows[0];
+  assert.ok(secondMessageRecord,'The second proposal source message should be persisted');
+  const proposalSources=await pool.query('SELECT proposal_id,source_message_id,source_text FROM resident_discussion_lineage WHERE proposal_id=ANY($1::uuid[])',[ [approvedProposal,rejectedProposal] ]);
+  assert.equal(proposalSources.rowCount,2);
+  assert.deepEqual(new Set(proposalSources.rows.map(row=>row.source_message_id)),new Set([originalMessage.id,secondMessageRecord.id]));
+  assert.deepEqual(new Set(proposalSources.rows.map(row=>row.source_text)),new Set([firstMessage,secondMessage]));
+
+  const managerPage=await browser.newPage();
+  const managerAccount=seed.accounts[account('manager')];
+  await managerPage.addInitScript(()=>localStorage.setItem('vernatun.language','en'));
+  await managerPage.goto(`http://127.0.0.1:${webPort}/login`,{waitUntil:'domcontentloaded'});
+  await managerPage.locator('input[name="email"]').fill(managerAccount.email);
+  await managerPage.locator('input[name="password"]').fill(managerAccount.password);
+  await managerPage.getByRole('button',{name:'Sign in'}).click();
+  await managerPage.waitForFunction(()=>location.pathname!=='/login',{timeout:15000});
+  if(await managerPage.locator('.p-context-grid').count())await managerPage.getByRole('button').filter({hasText:'Manager'}).first().click();
+  await managerPage.goto(`http://127.0.0.1:${webPort}/os/meetings`);
+  const proposalRow=(title:string)=>managerPage.locator('.p6-agenda').filter({hasText:title});
+  await proposalRow(rejectedTitle).getByRole('button',{name:'Reject',exact:true}).click();
+  const rejectDialog=managerPage.locator('dialog.p-modal').filter({hasText:'Reject'});
+  await rejectDialog.waitFor({state:'visible'});
+  await rejectDialog.locator('textarea').fill('Not suitable for the building.');
+  await rejectDialog.getByRole('button',{name:'Save decision',exact:true}).click();
+  await proposalRow(approvedTitle).getByRole('button',{name:'Approve after review',exact:true}).click();
+  await proposalRow(approvedTitle).waitFor({state:'detached',timeout:10000});
+  const rejected=await pool.query('SELECT status FROM resident_agenda_proposals WHERE id=$1',[rejectedProposal]);
+  assert.equal(rejected.rows[0].status,'rejected');
+  const approved=await pool.query('SELECT status FROM resident_agenda_proposals WHERE id=$1',[approvedProposal]);
+  assert.equal(approved.rows[0].status,'approved');
+  const approvedQueue=await clients.manager.call(`/governance/agenda-proposals?status=approved&buildingId=${building}`);
+  assert.equal(approvedQueue.status,200);
+  assert.ok(approvedQueue.data.some((proposal:any)=>proposal.id===approvedProposal));
+  assert.equal(approvedQueue.data.some((proposal:any)=>proposal.id===rejectedProposal),false);
+
+  await managerPage.getByRole('button',{name:'New weighted meeting',exact:true}).click();
+  const createDialog=managerPage.locator('dialog.p-modal').filter({hasText:'New weighted meeting'});
+  await createDialog.waitFor({state:'visible'});
+  const now=new Date(),start=new Date(now.getTime()+30*60_000),end=new Date(now.getTime()+60*60_000);
+  const inOrgTime=(date:Date)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yerevan',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date).replace(' ','T');
+  await createDialog.locator('select').first().selectOption({label:'Phase6 isolated building'});
+  const approvedCard=createDialog.locator('.p6-agenda').filter({hasText:approvedTitle});
+  await approvedCard.waitFor({state:'visible'});
+  await approvedCard.getByRole('button',{name:'Add to agenda',exact:true}).click();
+  assert.equal(await createDialog.getByText(rejectedTitle,{exact:true}).count(),0,'Rejected proposals must not appear in the approved-proposals picker');
+  await createDialog.getByRole('button',{name:'Remove',exact:true}).first().click();
+  await createDialog.getByLabel('Title',{exact:true}).first().fill('QA discussion decision meeting');
+  // Other phase6 fixtures use this building; a low quorum isolates the result to this test voter's actual ballot.
+  await createDialog.locator('label').filter({hasText:'Quorum (%)'}).locator('input').fill('0.01');
+  await createDialog.locator('input[type="datetime-local"]').nth(0).fill(inOrgTime(start));
+  await createDialog.locator('input[type="datetime-local"]').nth(1).fill(inOrgTime(end));
+  await createDialog.getByRole('button',{name:'Create',exact:true}).click();
+  await managerPage.getByRole('button',{name:'Publish',exact:true}).click();
+  await managerPage.getByRole('button',{name:'Cancel meeting',exact:true}).waitFor({timeout:10000});
+  const meetingId=(await clients.manager.call('/governance/meetings')).data.find((m:any)=>m.title==='QA discussion decision meeting')?.id;
+  assert.ok(meetingId,'The manager should create and publish the meeting from the approved proposal');
+  await pool.query("UPDATE meetings SET starts_at=now()-interval '1 second' WHERE id=$1",[meetingId]);
+  const agenda=await clients.manager.call(`/governance/meetings/${meetingId}`);
+  const proposalItem=agenda.data.agenda.find((item:any)=>item.proposal_id===approvedProposal);
+  assert.ok(proposalItem,'The published agenda item should preserve its approved proposal');
+  assert.equal(proposalItem.discussion_id,topicId);
+  assert.equal(proposalItem.source_message_id,trail.data.find((x:any)=>x.proposalId===approvedProposal).sourceMessageId);
+
+  const voterPage=await browser.newPage();
+  await voterPage.addInitScript(()=>localStorage.setItem('vernatun.language','en'));
+  await voterPage.goto(`http://127.0.0.1:${webPort}/login`,{waitUntil:'domcontentloaded'});
+  await voterPage.locator('input[name="email"]').fill(residentAccount.email);
+  await voterPage.locator('input[name="password"]').fill(residentAccount.password);
+  await voterPage.getByRole('button',{name:'Sign in'}).click();
+  await voterPage.waitForFunction(()=>location.pathname!=='/login',{timeout:15000});
+  if(await voterPage.locator('.p-context-grid').count())await voterPage.getByRole('button').filter({hasText:'P6-LINEAGE'}).click();
+  await voterPage.goto(`http://127.0.0.1:${webPort}/imtun/meetings`);
+  await voterPage.getByRole('button',{name:/QA discussion decision meeting/}).click();
+  await voterPage.locator('.p6-opt select').first().selectOption('yes');
+  await voterPage.getByRole('button',{name:'Cast vote',exact:true}).click();
+  await voterPage.getByText(/Ballot recorded/).waitFor({timeout:10000});
+  await pool.query("UPDATE meetings SET ends_at=now()-interval '1 second' WHERE id=$1",[meetingId]);
+  await managerPage.goto(`http://127.0.0.1:${webPort}/os/meetings`);
+  await managerPage.getByRole('button',{name:/QA discussion decision meeting/}).click();
+  await managerPage.getByRole('button',{name:'Finalize and produce protocol'}).click();
+  await managerPage.getByRole('link',{name:/Protected protocol.*Download/}).waitFor({timeout:10000});
+  const final=await clients.manager.call(`/governance/meetings/${meetingId}`);
+  assert.equal(final.data.result.agenda.find((x:any)=>x.id===proposalItem.id).passed,true,JSON.stringify(final.data.result));
+  await ownerPage.reload();
+  await ownerPage.getByTestId('home-context-button').waitFor({timeout:20000});
+  await ownerPage.getByText('Community',{exact:true}).last().click();
+  await ownerPage.getByText('Discussions',{exact:true}).click();
+  await ownerPage.getByText(topicTitle,{exact:true}).waitFor();
+  await ownerPage.getByRole('button',{name:'Linked records',exact:true}).first().click();
+  await ownerPage.getByText('Decision: Passed',{exact:true}).waitFor({timeout:15000});
+  await ownerPage.getByText(`Meeting: QA discussion decision meeting · finalized`,{exact:true}).waitFor();
+  assert.equal((await clients.unit_owner.call(`/resident/records/discussions/${topicId}/lineage`)).data.find((x:any)=>x.proposalId===approvedProposal).decision.passed,true);
+  await voterPage.close();await managerPage.close();await ownerPage.close();
+ }finally{
+  await browser?.close();
+  if(web&&!web.killed)web.kill('SIGTERM');
+  if(mobile&&!mobile.killed)mobile.kill('SIGTERM');
+ }
+});
 test('portfolio exact arithmetic, recorded budget CAS, real series and contractor history',async()=>{
  const budget={key:randomUUID(),buildingId:building,period:month,currency:'AMD',amountMinor:'99999999999999'};
  const a=await clients.manager.call('/portfolio/budgets','POST',budget);assert.equal(a.status,200,JSON.stringify(a.data));
