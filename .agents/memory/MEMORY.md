@@ -24,6 +24,7 @@
 - [Operations safety](operations-safety.md) — revocation must survive late session saves; encryption keys need an independent recovery lifecycle.
 - [Recovery password policy](recovery-password-policy.md) — CLI recovery keeps MFA and requires password replacement before any other API access.
 - [Corepack version pinning](pnpm-corepack-pinning.md) — use Corepack to exercise the repository's packageManager pin instead of relying on a conflicting global pnpm.
+- [Expo workspace dependency recovery](expo-workspace-dependency-recovery.md) — reconcile a missing Expo module from the full lockfile before restarting; filtered forced installs can disrupt other workspace links.
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.
 - [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.

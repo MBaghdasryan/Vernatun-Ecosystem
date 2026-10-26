@@ -1,16 +1,20 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateOperationalRequest, useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
+import { uploadOperationalPhoto, useCreateOperationalRequest, useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
 import { palette } from '@/constants/colors';
 import { useLocalSearchParams } from 'expo-router';
 import RequestPhoto from '@/components/resident/continuity/RequestPhoto';
 import { csrfSessionRef } from '../_layout';
 import { useColors } from '@/hooks/useColors';
 import { formatArmenianDate, friendlyError, isCompletedRequestStatus, localizeRequestStatus } from '@/constants/armenian';
+import { newUuid, useLang } from '@/lib/resident/hooks';
+import { pickImage } from '@/components/resident/continuity/media';
+import { tt } from '@/components/resident/continuity/core';
 
 type RequestCard = { id: string; subject: string; description: string; status: string; statusCode: string; date: string };
+type RequestPhotoDraft = { blob: Blob; uri: string; operationKey: string };
 function normalizeRequests(rows: unknown): RequestCard[] {
   if (!Array.isArray(rows)) return [];
   return rows.flatMap((row, index) => {
@@ -27,6 +31,7 @@ function normalizeRequests(rows: unknown): RequestCard[] {
 
 export default function RequestsScreen() {
   const colors = useColors();
+  const lang = useLang();
   const client = useQueryClient();
   const session = useGetMobileAuthSession();
   const requests = useGetOperationalRequests();
@@ -35,25 +40,97 @@ export default function RequestsScreen() {
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState('');
+  const [photo, setPhoto] = useState<RequestPhotoDraft | null>(null);
+  const [pendingPhotoRequestId, setPendingPhotoRequestId] = useState<string | null>(null);
+  const [isSubmitting, setSubmitting] = useState(false);
+  const pendingPhotoRequestIdRef = React.useRef<string | null>(null);
+  const submitInFlight = React.useRef(false);
   csrfSessionRef.current = session.data?.csrf ?? csrfSessionRef.current;
   const { requestId: selectedId } = useLocalSearchParams<{ requestId?: string }>();
   const records = useMemo(() => { const all = normalizeRequests(requests.data); return selectedId ? [...all.filter(r => r.id === selectedId), ...all.filter(r => r.id !== selectedId)] : all; }, [requests.data, selectedId]);
   const active = session.data?.contexts.find((context) => context.id === session.data?.contextId);
   const unitId = active?.unit_id;
 
-  const submit = () => {
-    const cleanSubject = subject.trim();
-    if (!unitId) { setFormError('Ընտրված միջավայրի համար բնակարան նշված չէ։ Անձնական էջում ընտրեք հասանելի բնակարանը։'); return; }
-    if (cleanSubject.length < 3) { setFormError('Նշեք հայտի թեման՝ առնվազն 3 նիշ։'); return; }
-    if (cleanSubject.length > 160 || description.trim().length > 4000) { setFormError('Թեման կարող է ունենալ մինչև 160, իսկ նկարագրությունը՝ մինչև 4000 նիշ։'); return; }
+  const resetComposer = () => {
+    setComposerOpen(false);
+    setSubject('');
+    setDescription('');
     setFormError('');
-    createRequest.mutate({ data: { unitId, subject: cleanSubject, description: description.trim() } }, {
-      onSuccess: () => {
-        client.invalidateQueries({ queryKey: requests.queryKey });
-        setComposerOpen(false); setSubject(''); setDescription('');
-      },
-      onError: (error) => setFormError(friendlyError(error, 'Չհաջողվեց ուղարկել հայտը։ Կրկին փորձեք։')),
-    });
+    setPhoto(null);
+    pendingPhotoRequestIdRef.current = null;
+    setPendingPhotoRequestId(null);
+  };
+
+  const closeComposer = () => {
+    if (pendingPhotoRequestIdRef.current && photo) {
+      setFormError(tt(lang, 'Լուսանկարը դեռ չի վերբեռնվել։ Կրկնեք վերբեռնումը կամ ավարտեք հայտը առանց լուսանկարի։', 'Фото ещё не загружено. Повторите загрузку или завершите заявку без фото.', 'The photo is still pending. Retry the upload or finish the request without it.'));
+      return;
+    }
+    setComposerOpen(false);
+  };
+
+  const choosePhoto = async () => {
+    setFormError('');
+    try {
+      const picked = await pickImage(lang, 6 * 1024 * 1024, false);
+      if (!picked) return;
+      if ('error' in picked) { setFormError(picked.error); return; }
+      setPhoto({ ...picked, operationKey: newUuid() });
+    } catch (error) {
+      setFormError(friendlyError(error, tt(lang, 'Չհաջողվեց ընտրել լուսանկարը։', 'Не удалось выбрать фото.', 'Could not select the photo.')));
+    }
+  };
+
+  const submit = async () => {
+    if (submitInFlight.current) return;
+    const cleanSubject = subject.trim();
+    if (!pendingPhotoRequestIdRef.current) {
+      if (!unitId) { setFormError('Ընտրված միջավայրի համար բնակարան նշված չէ։ Անձնական էջում ընտրեք հասանելի բնակարանը։'); return; }
+      if (cleanSubject.length < 3) { setFormError('Նշեք հայտի թեման՝ առնվազն 3 նիշ։'); return; }
+      if (cleanSubject.length > 160 || description.trim().length > 4000) { setFormError('Թեման կարող է ունենալ մինչև 160, իսկ նկարագրությունը՝ մինչև 4000 նիշ։'); return; }
+    }
+
+    submitInFlight.current = true;
+    setSubmitting(true);
+    setFormError('');
+    try {
+      let requestId: string;
+      const existingRequestId = pendingPhotoRequestIdRef.current;
+      if (existingRequestId) {
+        requestId = existingRequestId;
+      } else {
+        const created = await createRequest.mutateAsync({
+          data: { unitId: unitId!, subject: cleanSubject, description: description.trim() },
+        });
+        if (typeof created.id !== 'string' || !created.id) throw new Error('Request creation returned no request ID.');
+        requestId = created.id;
+        pendingPhotoRequestIdRef.current = requestId;
+        setPendingPhotoRequestId(requestId);
+        await client.invalidateQueries({ queryKey: requests.queryKey });
+      }
+
+      if (photo) {
+        await uploadOperationalPhoto(
+          requestId,
+          photo.blob,
+          { photoType: 'evidence' },
+          { headers: { 'X-Operation-Key': photo.operationKey } },
+        );
+        await client.invalidateQueries({ queryKey: requests.queryKey });
+      }
+      resetComposer();
+    } catch (error) {
+      const fallback = pendingPhotoRequestIdRef.current && photo
+        ? tt(lang, 'Հայտը ստեղծվել է, բայց լուսանկարը չի վերբեռնվել։ Կրկնեք՝ առանց երկրորդ հայտ ստեղծելու։', 'Заявка создана, но фото не загружено. Повторите загрузку — вторая заявка не создастся.', 'The request was created, but the photo did not upload. Retry; this will not create a duplicate request.')
+        : 'Չհաջողվեց ուղարկել հայտը։ Կրկին փորձեք։';
+      setFormError(friendlyError(error, fallback));
+      if (pendingPhotoRequestIdRef.current) {
+        await client.invalidateQueries({ queryKey: requests.queryKey });
+      }
+    } finally {
+      submitInFlight.current = false;
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -75,17 +152,24 @@ export default function RequestsScreen() {
         ListFooterComponent={<View style={{ height: 100 }} />}
       />
       <Pressable accessibilityRole="button" testID="create-request-open" disabled={!unitId} onPress={() => { setFormError(''); setComposerOpen(true); }} style={[styles.fab, !unitId && styles.fabDisabled]}><Feather name="plus" size={20} color={palette.foreground} /><Text style={styles.fabText}>Նոր հայտ</Text></Pressable>
-      <Modal visible={isComposerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setComposerOpen(false)}>
+      <Modal visible={isComposerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeComposer}>
         <KeyboardAvoidingView style={styles.modalRoot} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalHead}><View><Text style={styles.kicker}>ՀԱՅՏ ՁԵՐ ՏԱՆ ՀԱՄԱՐ</Text><Text style={styles.modalTitle}>Նոր հայտ</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Փակել" testID="create-request-close" onPress={() => setComposerOpen(false)} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
+            <View style={styles.modalHead}><View><Text style={styles.kicker}>ՀԱՅՏ ՁԵՐ ՏԱՆ ՀԱՄԱՐ</Text><Text style={styles.modalTitle}>Նոր հայտ</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Փակել" testID="create-request-close" onPress={closeComposer} style={styles.close}><Feather name="x" size={20} color={palette.foreground} /></Pressable></View>
             <View style={styles.unitNotice}><Feather name="home" size={17} color={palette.accentForeground} /><Text style={styles.unitNoticeText}>{active?.building_name || active?.organization_name || 'Ձեր տունը'}{active?.unit_number ? ` · բն. ${active.unit_number}` : ''}</Text></View>
-            <Text style={styles.fieldLabel}>Հայտի թեման</Text><TextInput testID="request-subject" accessibilityLabel="Հայտի թեման" value={subject} onChangeText={setSubject} placeholder="Օրինակ՝ մուտքի լույսը չի աշխատում" placeholderTextColor={palette.placeholder} maxLength={160} style={styles.input} />
-            <Text style={styles.fieldLabel}>Մանրամասներ</Text><TextInput testID="request-description" accessibilityLabel="Հայտի մանրամասներ" value={description} onChangeText={setDescription} placeholder="Նկարագրեք՝ ինչ է տեղի ունեցել և որտեղ" placeholderTextColor={palette.placeholder} multiline textAlignVertical="top" maxLength={4000} style={[styles.input, styles.textarea]} />
+            <Text style={styles.fieldLabel}>Հայտի թեման</Text><TextInput testID="request-subject" accessibilityLabel="Հայտի թեման" editable={!isSubmitting && !pendingPhotoRequestId} value={subject} onChangeText={setSubject} placeholder="Օրինակ՝ մուտքի լույսը չի աշխատում" placeholderTextColor={palette.placeholder} maxLength={160} style={styles.input} />
+            <Text style={styles.fieldLabel}>Մանրամասներ</Text><TextInput testID="request-description" accessibilityLabel="Հայտի մանրամասներ" editable={!isSubmitting && !pendingPhotoRequestId} value={description} onChangeText={setDescription} placeholder="Նկարագրեք՝ ինչ է տեղի ունեցել և որտեղ" placeholderTextColor={palette.placeholder} multiline textAlignVertical="top" maxLength={4000} style={[styles.input, styles.textarea]} />
             <Text style={styles.counter}>{subject.length}/160 · {description.length}/4000</Text>
+            <Text style={styles.fieldLabel}>{tt(lang, 'Լուսանկար (ըստ ցանկության)', 'Фото (необязательно)', 'Photo (optional)')}</Text>
+            {photo ? <View style={styles.photoCard}>
+              <Image testID="request-photo-preview" accessibilityLabel={tt(lang, 'Ընտրված լուսանկարը', 'Выбранное фото', 'Selected photo')} source={{ uri: photo.uri }} style={styles.photoPreview} resizeMode="cover" />
+              {!pendingPhotoRequestId ? <Pressable accessibilityRole="button" testID="request-photo-remove" disabled={isSubmitting} onPress={() => setPhoto(null)} style={styles.photoRemove}><Feather name="x" size={15} color={palette.foreground} /><Text style={styles.photoRemoveText}>{tt(lang, 'Հեռացնել լուսանկարը', 'Убрать фото', 'Remove photo')}</Text></Pressable> : null}
+            </View> : <Pressable accessibilityRole="button" testID="request-photo-choose" disabled={isSubmitting || !!pendingPhotoRequestId} onPress={() => { void choosePhoto(); }} style={styles.photoPicker}><Feather name="image" size={18} color={palette.accentForeground} /><Text style={styles.photoPickerText}>{tt(lang, 'Ընտրել լուսանկար', 'Выбрать фото', 'Choose a photo')}</Text><Text style={styles.photoPickerHint}>JPG, PNG, WebP · մինչև 6 ՄԲ</Text></Pressable>}
+            {pendingPhotoRequestId ? <View accessibilityRole="alert" style={styles.photoStatus}><Feather name="info" size={16} color={palette.accentForeground} /><Text style={styles.photoStatusText}>{tt(lang, 'Հայտն արդեն ստեղծվել է։ Կրկնում ենք միայն լուսանկարի վերբեռնումը։', 'Заявка уже создана. Повторяется только загрузка фото.', 'The request is already created. Retrying will upload only the photo.')}</Text></View> : null}
             {formError ? <View style={styles.formError}><Feather name="alert-circle" size={16} color={palette.destructive} /><Text style={styles.formErrorText}>{formError}</Text></View> : null}
             <View style={styles.privacy}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.privacyText}>Հայտը կուղարկվի ընտրված բնակչի անունից։</Text></View>
-            <Pressable accessibilityRole="button" testID="request-submit" disabled={createRequest.isPending || !subject.trim()} onPress={submit} style={[styles.submit, (createRequest.isPending || !subject.trim()) && styles.fabDisabled]}>{createRequest.isPending ? <ActivityIndicator color={palette.foreground} /> : <><Text style={styles.submitText}>Ուղարկել հայտը</Text><Feather name="arrow-right" size={18} color={palette.foreground} /></>}</Pressable>
+            <Pressable accessibilityRole="button" testID="request-submit" disabled={isSubmitting || (!pendingPhotoRequestId && !subject.trim())} onPress={() => { void submit(); }} style={[styles.submit, (isSubmitting || (!pendingPhotoRequestId && !subject.trim())) && styles.fabDisabled]}>{isSubmitting ? <ActivityIndicator color={palette.foreground} /> : <><Text style={styles.submitText}>{pendingPhotoRequestId && photo ? tt(lang, 'Կրկնել լուսանկարի վերբեռնումը', 'Повторить загрузку фото', 'Retry photo upload') : 'Ուղարկել հայտը'}</Text><Feather name={pendingPhotoRequestId && photo ? 'refresh-cw' : 'arrow-right'} size={18} color={palette.foreground} /></>}</Pressable>
+            {pendingPhotoRequestId && photo ? <Pressable accessibilityRole="button" testID="request-finish-without-photo" disabled={isSubmitting} onPress={resetComposer} style={styles.finishWithoutPhoto}><Text style={styles.finishWithoutPhotoText}>{tt(lang, 'Ավարտել առանց լուսանկարի', 'Завершить без фото', 'Finish without photo')}</Text></Pressable> : null}
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
@@ -123,6 +207,12 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 18, left: 20, right: 20, backgroundColor: palette.primary, minHeight: 52, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, elevation: 5, shadowColor: palette.shadow, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   fabText: { color: palette.foreground, fontSize: 14, fontWeight: '800' }, fabDisabled: { opacity: 0.5 },
   modalRoot: { flex: 1, backgroundColor: palette.background }, modalContent: { padding: 22, paddingTop: 25, paddingBottom: 38, maxWidth: 560, width: '100%', alignSelf: 'center' },
+  photoPicker: { minHeight: 96, marginBottom: 16, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.border, borderRadius: 12, backgroundColor: palette.surface, alignItems: 'center', justifyContent: 'center', gap: 5, padding: 12 },
+  photoPickerText: { color: palette.accentForeground, fontSize: 12, fontWeight: '800' }, photoPickerHint: { color: palette.subdued, fontSize: 10 },
+  photoCard: { marginBottom: 16, borderWidth: 1, borderColor: palette.border, borderRadius: 12, overflow: 'hidden', backgroundColor: palette.surface },
+  photoPreview: { width: '100%', height: 180, backgroundColor: palette.skeleton }, photoRemove: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, photoRemoveText: { color: palette.foreground, fontSize: 11, fontWeight: '700' },
+  photoStatus: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 11, marginBottom: 13, borderRadius: 10, backgroundColor: palette.accent }, photoStatusText: { flex: 1, color: palette.accentForeground, fontSize: 11, lineHeight: 16 },
+  finishWithoutPhoto: { marginTop: 9, minHeight: 42, alignItems: 'center', justifyContent: 'center' }, finishWithoutPhotoText: { color: palette.mutedForeground, fontSize: 11, fontWeight: '700' },
   modalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 19 }, modalTitle: { fontSize: 25, color: palette.foreground, fontWeight: '800', letterSpacing: -0.6 }, close: { width: 42, height: 42, borderRadius: 14, borderColor: palette.border, borderWidth: 1, backgroundColor: palette.surface, alignItems: 'center', justifyContent: 'center' },
   unitNotice: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12, backgroundColor: palette.accent, borderRadius: 11, marginBottom: 22 }, unitNoticeText: { color: palette.foreground, fontSize: 12, fontWeight: '700' },
   fieldLabel: { color: palette.foreground, fontSize: 12, fontWeight: '800', marginBottom: 8 }, input: { minHeight: 48, backgroundColor: palette.surface, borderColor: palette.border, borderWidth: 1, borderRadius: 11, paddingHorizontal: 13, fontSize: 13, color: palette.foreground, marginBottom: 17 },
