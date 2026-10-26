@@ -1,0 +1,2 @@
+.sx-target { border-radius: 14px; outline: 3px solid #147795; outline-offset: 4px; scroll-margin: 100px; }
+@media (prefers-reduced-motion: reduce) { .sx-target { scroll-behavior: auto; } }

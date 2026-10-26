@@ -12,6 +12,10 @@ export type GetResidentRecordsParams = {
  */
 buildingId?: string;
 /**
+ * Exact record deep link, still subject to the same visibility policy.
+ */
+recordId?: string;
+/**
  * @maxLength 200
  */
 search?: string;

@@ -1,4 +1,5 @@
 import {Router} from 'express';
+import {residentHomeSummary} from './resident-home.js';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,contexts,requireAuth,requirePermission} from './access.js';
@@ -95,7 +96,8 @@ residentWorkspace.get('/workspace',async(req,res)=>{
    {key:'ble',status:'NOT_CONFIGURED'},{key:'intercom',status:'NOT_CONFIGURED'},
    {key:'cameras',status:'NOT_CONFIGURED'},{key:'biometrics',status:'NOT_CONFIGURED'},
    {key:'ai',status:'NOT_CONFIGURED'},{key:'push',status:'NOT_CONFIGURED'},
-  ],home:{payableMinor,overdueMinor,annualPaidMinor,unreadNotifications,openRequests,currency:user.currency}});
+  ],home:{payableMinor,overdueMinor,annualPaidMinor,unreadNotifications,openRequests,currency:user.currency,
+   summary:await residentHomeSummary(s,user.id,user.currency,!!canFinance)}});
 });
 
 export const residentContexts=Router();

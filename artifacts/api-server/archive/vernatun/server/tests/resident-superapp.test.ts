@@ -32,6 +32,13 @@ before(async()=>{
 });
 after(async()=>{server.close();server.closeAllConnections();await pool.end()});
 const vehicle={title:'Car',body:'',plate:'TEST101',country:'AM',vehicleType:'car'};
+test('migration numbering preserves GitHub 047 and resident schema is 048',async()=>{
+ const names=(await pool.query('SELECT name FROM schema_migrations ORDER BY name')).rows.map(r=>r.name);
+ assert.ok(names.includes('047_update_release_pipeline.sql'));
+ assert.ok(names.includes('048_resident_superapp.sql'));
+ assert.ok(!names.includes('047_resident_superapp.sql'));
+ assert.ok(!names.includes('038_update_release_pipeline.sql'));
+});
 test('resident APIs require authenticated context and reject resident-selected foreign building',async()=>{
  assert.equal((await new Client().call('/resident/workspace')).status,401);
  assert.equal((await owner.call('/resident/workspace?buildingId='+randomUUID())).status,403);
@@ -129,4 +136,72 @@ test('feedback is separate from property requests and contains no spoofed scope'
  assert.equal((await owner.call('/resident/records/feedback','POST',{title:'App idea',body:'Please improve search',category:'idea'})).status,201);
  assert.equal((await pool.query('SELECT count(*) FROM resident_requests')).rows[0].count,count);
  assert.ok((await pool.query("SELECT count(*) FROM audit_events WHERE action LIKE 'resident.%'")).rows[0].count>0);
+});
+test('Home contains only published building news, current weighted votes and permitted aggregates',async()=>{
+ const org=(await pool.query('SELECT organization_id FROM buildings WHERE id=$1',[buildingId])).rows[0].organization_id;
+ const published=randomUUID(),draft=randomUUID(),active=randomUUID(),future=randomUUID(),ended=randomUUID();
+ await pool.query(`INSERT INTO announcements(id,organization_id,building_id,title,body,published,created_by)
+  VALUES($1,$3,$4,'Home published','Visible',true,$5),($2,$3,$4,'Home draft','Private',false,$5)`,
+  [published,draft,org,buildingId,seed.accounts.org_admin.id]);
+ for(const [id,start,end] of [[active,-1,60],[future,60,120],[ended,-120,-60]]){
+  await pool.query(`INSERT INTO meetings(id,organization_id,building_id,title,starts_at,ends_at,created_by,mode,status)
+   VALUES($1,$2,$3,'Home voting',now()+$4::int*interval '1 minute',now()+$5::int*interval '1 minute',$6,'weighted','published')`,
+   [id,org,buildingId,start,end,seed.accounts.org_admin.id]);
+ }
+ const response=await owner.call('/resident/workspace');assert.equal(response.status,200);
+ const h=response.data.home.summary;
+ assert.ok(h.announcements.some((r:any)=>r.id===published));
+ assert.ok(!h.announcements.some((r:any)=>r.id===draft));
+ assert.ok(h.activeVoting.some((r:any)=>r.id===active));
+ assert.ok(!h.activeVoting.some((r:any)=>[future,ended].includes(r.id)));
+ assert.ok(h.emergencyContacts.some((r:any)=>r.phone==='112'));
+ assert.equal(h.elevatorStatus,'NOT_CONFIGURED');assert.equal(h.serviceInterruptions,'UNAVAILABLE');
+ const noFinance=await family.call('/resident/workspace');assert.equal(noFinance.status,200);
+ assert.equal(noFinance.data.home.summary.latestPayment,null);
+ assert.equal(noFinance.data.home.summary.utilityStatus,'UNAVAILABLE');
+ const entitlement=(await pool.query("SELECT override_state FROM module_entitlements WHERE organization_id=$1 AND module='community'",[org])).rows[0];
+ try{
+  await pool.query("UPDATE module_entitlements SET override_state='disabled' WHERE organization_id=$1 AND module='community'",[org]);
+  const off=await owner.call('/resident/workspace');assert.equal(off.status,200);
+  assert.equal(off.data.home.summary.announcements,null);assert.equal(off.data.home.summary.activeVoting,null);
+  assert.equal(off.data.home.summary.unreadMessages,null);
+ }finally{
+  await pool.query("UPDATE module_entitlements SET override_state=$2 WHERE organization_id=$1 AND module='community'",[org,entitlement.override_state]);
+ }
+});
+test('Home unread chats are participant scoped and read acknowledgement advances the watermark',async()=>{
+ const thread=await owner.call('/resident/records/conversations','POST',{title:'Home private thread',body:''});
+ assert.equal(thread.status,201);
+ const baseline=(await owner.call('/resident/workspace')).data.home.summary.unreadMessages;
+ const familyBaseline=(await family.call('/resident/workspace')).data.home.summary.unreadMessages;
+ assert.equal((await admin.call('/resident/records/conversations/'+thread.data.id+'/messages'+query,'POST',{
+  body:'Private staff answer',clientId:randomUUID()})).status,201);
+ assert.equal((await owner.call('/resident/workspace')).data.home.summary.unreadMessages,baseline+1);
+ assert.equal((await family.call('/resident/workspace')).data.home.summary.unreadMessages,familyBaseline);
+ const latest=(await owner.call('/resident/records/conversations?recordId='+thread.data.id)).data.items[0];
+ assert.equal((await owner.call('/resident/records/conversations/'+thread.data.id+'/actions','POST',{action:'read',version:latest.version})).status,200);
+ assert.equal((await owner.call('/resident/workspace')).data.home.summary.unreadMessages,baseline);
+});
+test('search separates resident kinds and exact record links preserve ownership and feature gates',async()=>{
+ const marker='SearchQA-'+randomUUID();
+ const contact=await admin.call('/resident/records/contacts'+query,'POST',{title:marker,body:'Visible configured contact',category:'emergency',phone:'112'});
+ assert.equal(contact.status,201);
+ const found=await owner.call('/workspace-search?q='+marker);assert.equal(found.status,200);
+ assert.ok(found.data.groups.find((g:any)=>g.kind==='resident:contacts')?.items.some((r:any)=>r.id===contact.data.id));
+ const exact=await owner.call('/resident/records/contacts?recordId='+contact.data.id);
+ assert.equal(exact.status,200);assert.equal(exact.data.items.length,1);assert.equal(exact.data.items[0].id,contact.data.id);
+ assert.equal((await owner.call('/resident/records/contacts?recordId=invalid')).status,400);
+ const privateVehicle=await owner.call('/resident/records/vehicles','POST',{...vehicle,title:marker+' private'});
+ assert.equal(privateVehicle.status,201);
+ assert.equal((await family.call('/resident/records/vehicles?recordId='+privateVehicle.data.id)).data.items.length,0);
+ assert.equal((await owner.call('/resident/records/contacts?recordId='+privateVehicle.data.id)).data.items.length,0);
+ const org=(await pool.query('SELECT organization_id FROM buildings WHERE id=$1',[buildingId])).rows[0].organization_id;
+ try{
+  await pool.query('UPDATE resident_building_settings SET chat=false WHERE building_id=$1',[buildingId]);
+  assert.equal((await owner.call('/resident/records/conversations?recordId='+randomUUID())).status,403);
+  const after=await owner.call('/workspace-search?q='+marker);
+  assert.ok(!after.data.groups.some((g:any)=>g.kind==='resident:conversations'));
+ }finally{
+  await pool.query('UPDATE resident_building_settings SET chat=true WHERE building_id=$1 AND organization_id=$2',[buildingId,org]);
+ }
 });

@@ -13,6 +13,7 @@ import {routeView,viewRoute} from '../../shared/products';
 import {available,tenantBrand,track} from './config';
 import {rt,type ResidentKey} from './i18n';
 import ExtensionView from './superapp/ExtensionView';
+import HomeSummary from './superapp/HomeSummary';
 import Hub from './superapp/Hub';
 import {superViews,superTitle} from './superapp/text';
 import './resident.css';
@@ -49,7 +50,7 @@ export default function ResidentApp({session,c,language,currency,setLanguage,set
  {!available(c,view)?<div className="im-card"><p>{t('denied')}</p>{action('overview','back')}</div>:view==='overview'?<>
  {!loaded&&<p role="status" className="im-notice">{t('loading')}</p>}{errors.length>0&&<div className="im-notice" role="alert">{t('error')} <button onClick={()=>setRevision(r=>r+1)}>{t('retry')}</button></div>}
  <RoleHome key={c.id} c={c} language={language} currency={currency} product="imtun" kpis={false}/>
-  <Hub view={view} language={language} go={navigate}/><div className="im-dashboard"><div className="im-primary-column">
+  <Hub view={view} language={language} go={navigate}/><HomeSummary c={c} language={language}/><div className="im-dashboard"><div className="im-primary-column">
   {available(c,'finance')&&<section className="im-balance"><div className="im-balance-decoration" aria-hidden="true"><Home/></div><div><span>{t(c.role_key==='renter'?'assigned':'due')}</span><strong>{financial?.dataState==='no_data'?t('noCurrentCharges'):financial?money(financial.value,currency,language):'—'}</strong><small>{c.role_key==='renter'?t('assignedHint'):contextLabel}</small></div><div className="im-balance-actions">{action('finance','pay')}<button className="im-charge-link" onClick={()=>navigate('finance')}>{t('charges')}<ChevronRight size={18}/></button></div></section>}
  <section className="im-actions-section"><h2>{t('quick')}</h2><div className={'im-quick '+(c.role_key==='unit_owner'?'im-owner-quick':'')}>{quick.filter(x=>available(c,x.view)).map(({view:to,label,icon:Icon})=><button key={to} onClick={()=>navigate(to)}><span><Icon size={29} strokeWidth={1.7}/></span>{t(label)}</button>)}</div></section>
  {available(c,'requests')&&<section>{sectionTitle('requests','requests')}{loaded&&!errors.includes('requests')&&!requestCards.length&&<div className="im-card im-empty"><Wrench size={27}/><p>{t('emptyRequests')}</p>{c.permissions.includes('requests.create')&&action('requests','create',true)}</div>}{requestCards.map(r=><article className="im-card im-request" key={r.id}><div className="im-card-top"><span className="im-chip im-warning"><Clock3 size={15}/>{t((r.work_status??r.status)==='assigned'?'assignedStatus':(['new','in_progress','review','resident_review','closed'].includes(r.work_status??r.status)?r.work_status??r.status:'new') as ResidentKey)}</span><span className="im-record-id">#{r.id.slice(0,8)}</span></div><h3>{r.subject}</h3><p>{r.building_name} · {t('unit')} {r.number}</p><div className="im-request-date"><CalendarDays size={21}/><span><small>{t('created')}</small>{date(r.created_at,language)}</span></div>{action('requests',r.work_status==='resident_review'?'check':'details',false,r.id)}</article>)}</section>}

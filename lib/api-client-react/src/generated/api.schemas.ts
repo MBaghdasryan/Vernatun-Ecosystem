@@ -3862,7 +3862,80 @@ export type ResidentWorkspaceIntegrationsItem = {
   status: ResidentWorkspaceIntegrationsItemStatus;
 };
 
+export interface ResidentHomeItem {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
+export type ResidentHomeSummaryUtilityStatus = typeof ResidentHomeSummaryUtilityStatus[keyof typeof ResidentHomeSummaryUtilityStatus];
+
+
+export const ResidentHomeSummaryUtilityStatus = {
+  CONTRACT_REQUIRED: 'CONTRACT_REQUIRED',
+  UNAVAILABLE: 'UNAVAILABLE',
+} as const;
+
+export type ResidentHomeSummaryServiceInterruptions = typeof ResidentHomeSummaryServiceInterruptions[keyof typeof ResidentHomeSummaryServiceInterruptions];
+
+
+export const ResidentHomeSummaryServiceInterruptions = {
+  UNAVAILABLE: 'UNAVAILABLE',
+} as const;
+
+export type ResidentHomeSummaryElevatorStatus = typeof ResidentHomeSummaryElevatorStatus[keyof typeof ResidentHomeSummaryElevatorStatus];
+
+
+export const ResidentHomeSummaryElevatorStatus = {
+  NOT_CONFIGURED: 'NOT_CONFIGURED',
+} as const;
+
+export type ResidentHomeSummaryAccessStatus = typeof ResidentHomeSummaryAccessStatus[keyof typeof ResidentHomeSummaryAccessStatus];
+
+
+export const ResidentHomeSummaryAccessStatus = {
+  NOT_CONFIGURED: 'NOT_CONFIGURED',
+} as const;
+
+export type ResidentHomeSummaryLatestPayment = {
+  id: string;
+  amountMinor: string;
+  currency: string;
+  createdAt: string;
+} | null;
+
+export type ResidentHomeSummaryEmergencyContactsItem = {
+  id: string;
+  title: string;
+  phone: string;
+};
+
+export interface ResidentHomeSummary {
+  latestPayment: ResidentHomeSummaryLatestPayment;
+  /** @nullable */
+  unreadMessages: number | null;
+  /** @nullable */
+  announcements: ResidentHomeItem[] | null;
+  /** @nullable */
+  activeVoting: ResidentHomeItem[] | null;
+  /** @nullable */
+  activeGuestPasses: number | null;
+  emergencyContacts: ResidentHomeSummaryEmergencyContactsItem[];
+  /** @nullable */
+  services: ResidentHomeItem[] | null;
+  /** @nullable */
+  pendingAgreements: number | null;
+  /** @nullable */
+  pendingHouseholdInvitations: number | null;
+  utilityStatus: ResidentHomeSummaryUtilityStatus;
+  serviceInterruptions: ResidentHomeSummaryServiceInterruptions;
+  elevatorStatus: ResidentHomeSummaryElevatorStatus;
+  accessStatus: ResidentHomeSummaryAccessStatus;
+}
+
 export type ResidentWorkspaceHome = {
+  summary: ResidentHomeSummary;
   /** @nullable */
   unreadNotifications: number | null;
   /** @nullable */
@@ -4248,6 +4321,10 @@ export type GetResidentRecordsParams = {
  * Only administrators can choose a building; residents always use their authenticated context.
  */
 buildingId?: string;
+/**
+ * Exact record deep link, still subject to the same visibility policy.
+ */
+recordId?: string;
 /**
  * @maxLength 200
  */

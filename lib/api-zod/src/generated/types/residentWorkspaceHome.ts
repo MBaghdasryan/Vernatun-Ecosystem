@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ResidentHomeSummary } from './residentHomeSummary';
 
 export type ResidentWorkspaceHome = {
+  summary: ResidentHomeSummary;
   /** @nullable */
   unreadNotifications: number | null;
   /** @nullable */

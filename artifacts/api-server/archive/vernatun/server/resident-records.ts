@@ -14,10 +14,12 @@ const sessionRef=(sid:string)=>createHash('sha256').update(sid).digest('hex');
 residentRecords.get('/records/:kind',async(req,res)=>{
  const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);
  const search=z.string().trim().max(200).parse(req.query.search??'');
+ const recordId=req.query.recordId===undefined?null:id.parse(req.query.recordId);
  if(kind==='mobile-devices'){
   const devices=(await pool.query(`SELECT * FROM resident_product_records WHERE kind='mobile-devices'
    AND owner_user_id=$1 AND deleted_at IS NULL AND ($2='' OR strpos(lower(title),lower($2))>0)
-   ORDER BY updated_at DESC,id LIMIT 101`,[req.user!.id,search])).rows;
+   AND ($3::uuid IS NULL OR id=$3)
+   ORDER BY updated_at DESC,id LIMIT 101`,[req.user!.id,search,recordId])).rows;
   res.json({items:devices.slice(0,100).map(r=>publicRecord(r,s,req.user!.id)),hasMore:devices.length>100});return;
  }
  if(kind==='directory'){
@@ -30,7 +32,8 @@ residentRecords.get('/records/:kind',async(req,res)=>{
    AND a.active AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now())
    AND m.active AND NOT u.blocked AND p.show_name AND ${activeLeasePredicate('a')}
    AND NOT EXISTS(SELECT 1 FROM resident_delegations d WHERE d.assignment_id=a.id)
-   AND ($3='' OR strpos(lower(u.name),lower($3))>0) ORDER BY u.name,u.id LIMIT 101`,[s.organizationId,s.buildingId,search])).rows;
+   AND ($3='' OR strpos(lower(u.name),lower($3))>0)
+   AND ($4::uuid IS NULL OR u.id=$4) ORDER BY u.name,u.id LIMIT 101`,[s.organizationId,s.buildingId,search,recordId])).rows;
   res.json({items:rows.slice(0,100).map(r=>({id:r.id,kind,title:r.name,body:r.show_unit?r.number:'',status:'active',version:1,createdAt:'',own:r.id===req.user!.id,actions:[],
    data:{phone:r.show_phone?r.phone:undefined,allowMessages:r.allow_messages}})),hasMore:rows.length>100});return;
  }
@@ -48,7 +51,8 @@ residentRecords.get('/records/:kind',async(req,res)=>{
    (r.kind='discussions' AND r.status IN('open','closed','frozen')) OR (r.kind='listings' AND r.status='active'))
   AND ($7='' OR strpos(lower(r.title||' '||r.body),lower($7))>0)
   AND (r.kind<>'help' OR $4 OR r.data->>'category'=$8)
-  ORDER BY created_at DESC,id LIMIT 101`,[s.organizationId,s.buildingId,kind,s.administrative,s.unitId,req.user!.id,search,req.user!.locale])).rows;
+  AND ($9::uuid IS NULL OR r.id=$9)
+  ORDER BY created_at DESC,id LIMIT 101`,[s.organizationId,s.buildingId,kind,s.administrative,s.unitId,req.user!.id,search,req.user!.locale,recordId])).rows;
  res.json({items:rows.slice(0,100).map(r=>publicRecord(r,s,req.user!.id)),hasMore:rows.length>100});
 });
 

@@ -6,6 +6,8 @@ import type {RoleContext} from './types';
 import type {Language} from './i18n';
 import {viewRoute,type Product} from '../../shared/products';
 import './workspace-header.css';
+import {kindName,L} from '../imtun/superapp/text';
+import type {ResidentRecordKind} from '@workspace/api-client-react';
 
 type SearchItem={id:string;title:string;description:string};
 type SearchGroup={kind:string;items:SearchItem[];hasMore:boolean};
@@ -69,6 +71,10 @@ export default function WorkspaceHeaderTools({c,language,product}:{c:RoleContext
   window.dispatchEvent(new Event('vernatun-notifications-changed'));
  }
  function destination(kind:string,id:string){
+  if(kind.startsWith('resident:')){
+   const recordKind=kind.slice(9),view=({contacts:'contacts',services:'services',discussions:'community',listings:'marketplace',help:'help',conversations:'community'} as Record<string,string>)[recordKind];
+   return viewRoute('imtun',view??'building',c.role_key)+'?'+new URLSearchParams({recordKind,recordId:id});
+  }
   if(kind==='resident')return viewRoute('imtun','building',c.role_key);
   if(kind==='organizations')return '/console/organizations';
   if(kind==='requests'||kind==='workorders')return product==='hayat'?'/hayat/works?requestId='+id:'/imtun/requests?requestId='+id;
@@ -90,7 +96,7 @@ export default function WorkspaceHeaderTools({c,language,product}:{c:RoleContext
    {query.trim().length<2&&<p className="p-context-caption">{text('hint')}</p>}
    <div aria-live="polite" role="status">{state==='loading'?text('loading'):state==='failed'?text('failed'):state==='loaded'&&!result?.groups.some(g=>g.items.length)?text('empty'):''}</div>
    {result?.groups.filter(g=>g.items.length>0).map(g=><section className="p-global-search-group" key={g.kind}>
-    <h3>{text(g.kind as keyof typeof words)}</h3><ul>{g.items.map(item=><li key={item.id}>
+    <h3>{g.kind.startsWith('resident:')&&Object.hasOwn(kindName,g.kind.slice(9))?L(language,kindName[g.kind.slice(9) as ResidentRecordKind]):text(Object.hasOwn(words,g.kind)?g.kind as keyof typeof words:'resident')}</h3><ul>{g.items.map(item=><li key={item.id}>
      <strong>{item.title}</strong><small>{item.description}</small><a href={destination(g.kind,item.id)}>{text('open')}</a>
     </li>)}</ul>{g.hasMore&&<p>{text('more')}</p>}
    </section>)}

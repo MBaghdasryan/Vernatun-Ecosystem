@@ -62,14 +62,16 @@ workspaceSearch.get('/workspace-search',async(req,res)=>{
  if(c.shell==='home'){
   const resident=await residentScope(req);
   const kinds=(['contacts','services','discussions','listings','help','conversations'] as ResidentKind[]).filter(k=>enabled(resident,k));
-  if(kinds.length)sources.push({kind:'resident',title:'title',description:'label',
-   sql:`SELECT r.id,r.title,concat(r.kind,' · ',r.body) AS label FROM resident_product_records r
-    WHERE r.organization_id=$1 AND r.building_id=$2 AND r.kind=ANY($3::text[]) AND r.deleted_at IS NULL
+  for(const kind of kinds)sources.push({kind:'resident:'+kind,title:'title',description:'label',
+   sql:`SELECT r.id,r.title,left(r.body,300) AS label FROM resident_product_records r
+    WHERE r.organization_id=$1 AND r.building_id=$2 AND r.kind=$3 AND r.deleted_at IS NULL
     AND ((r.owner_user_id=$4 AND (r.unit_id IS NULL OR r.unit_id=$5))
+     OR (r.kind='conversations' AND EXISTS(SELECT 1 FROM resident_product_records p
+       WHERE p.id=r.parent_id AND p.kind='listings' AND p.owner_user_id=$4 AND p.unit_id=$5 AND p.deleted_at IS NULL))
      OR (r.kind IN('contacts','services','help','listings') AND r.status='active')
      OR (r.kind='discussions' AND r.status IN('open','closed','frozen')))
     AND (r.kind<>'help' OR r.data->>'category'=$6)`,
-   args:[resident.organizationId,resident.buildingId,kinds,req.user!.id,resident.unitId,req.user!.locale]});
+   args:[resident.organizationId,resident.buildingId,kind,req.user!.id,resident.unitId,req.user!.locale]});
  }
  const groups=[];
  for(const source of sources){

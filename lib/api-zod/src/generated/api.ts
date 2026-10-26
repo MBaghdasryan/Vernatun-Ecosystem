@@ -205,6 +205,45 @@ export const GetResidentWorkspaceResponse = zod.object({
   "status": zod.enum(['NOT_CONFIGURED', 'CONTRACT_REQUIRED', 'CREDENTIALS_REQUIRED', 'ACTIVE', 'DEGRADED', 'UNSUPPORTED'])
 })),
   "home": zod.object({
+  "summary": zod.object({
+  "latestPayment": zod.union([zod.null(),zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.string(),
+  "currency": zod.string(),
+  "createdAt": zod.string()
+})]),
+  "unreadMessages": zod.number().int().nullable(),
+  "announcements": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "createdAt": zod.string()
+})).nullable(),
+  "activeVoting": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "createdAt": zod.string()
+})).nullable(),
+  "activeGuestPasses": zod.number().int().nullable(),
+  "emergencyContacts": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "phone": zod.string()
+})),
+  "services": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "createdAt": zod.string()
+})).nullable(),
+  "pendingAgreements": zod.number().int().nullable(),
+  "pendingHouseholdInvitations": zod.number().int().nullable(),
+  "utilityStatus": zod.enum(['CONTRACT_REQUIRED', 'UNAVAILABLE']),
+  "serviceInterruptions": zod.enum(['UNAVAILABLE']),
+  "elevatorStatus": zod.enum(['NOT_CONFIGURED']),
+  "accessStatus": zod.enum(['NOT_CONFIGURED'])
+}),
   "unreadNotifications": zod.number().int().nullable(),
   "openRequests": zod.number().int().nullable(),
   "currency": zod.string(),
@@ -262,6 +301,7 @@ export const getResidentRecordsQuerySearchMax = 200;
 
 export const GetResidentRecordsQueryParams = zod.object({
   "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
+  "recordId": zod.coerce.string().uuid().optional().describe('Exact record deep link, still subject to the same visibility policy.'),
   "search": zod.coerce.string().max(getResidentRecordsQuerySearchMax).optional()
 })
 

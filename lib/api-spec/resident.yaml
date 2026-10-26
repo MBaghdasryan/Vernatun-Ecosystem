@@ -259,6 +259,7 @@ paths:
     get:
       operationId: getResidentRecords
       parameters:
+        - {in: query, name: recordId, schema: {type: string, format: uuid}, description: "Exact record deep link, still subject to the same visibility policy."}
         - {in: query, name: search, schema: {type: string, maxLength: 200}}
       responses:
         '200':
@@ -533,11 +534,60 @@ components:
               status: {type: string, enum: [NOT_CONFIGURED, CONTRACT_REQUIRED, CREDENTIALS_REQUIRED, ACTIVE, DEGRADED, UNSUPPORTED]}
         home:
           type: object
-          required: [unreadNotifications, openRequests, currency, payableMinor, overdueMinor, annualPaidMinor]
+          required: [unreadNotifications, openRequests, currency, payableMinor, overdueMinor, annualPaidMinor, summary]
           properties:
+            summary: {$ref: '#/components/schemas/ResidentHomeSummary'}
             unreadNotifications: {type: [integer, 'null']}
             openRequests: {type: [integer, 'null']}
             currency: {type: string}
             payableMinor: {type: [string, 'null']}
             overdueMinor: {type: [string, 'null']}
             annualPaidMinor: {type: [string, 'null']}
+    ResidentHomeSummary:
+      type: object
+      required: [latestPayment, unreadMessages, announcements, activeVoting, activeGuestPasses, emergencyContacts, services, pendingAgreements, pendingHouseholdInvitations, utilityStatus, serviceInterruptions, elevatorStatus, accessStatus]
+      properties:
+        latestPayment:
+          oneOf:
+            - {type: 'null'}
+            - type: object
+              required: [id, amountMinor, currency, createdAt]
+              properties:
+                id: {type: string}
+                amountMinor: {type: string}
+                currency: {type: string}
+                createdAt: {type: string}
+        unreadMessages: {type: [integer, 'null']}
+        announcements:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/ResidentHomeItem'}
+        activeVoting:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/ResidentHomeItem'}
+        activeGuestPasses: {type: [integer, 'null']}
+        emergencyContacts:
+          type: array
+          items:
+            type: object
+            required: [id, title, phone]
+            properties:
+              id: {type: string}
+              title: {type: string}
+              phone: {type: string}
+        services:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/ResidentHomeItem'}
+        pendingAgreements: {type: [integer, 'null']}
+        pendingHouseholdInvitations: {type: [integer, 'null']}
+        utilityStatus: {type: string, enum: [CONTRACT_REQUIRED, UNAVAILABLE]}
+        serviceInterruptions: {type: string, enum: [UNAVAILABLE]}
+        elevatorStatus: {type: string, enum: [NOT_CONFIGURED]}
+        accessStatus: {type: string, enum: [NOT_CONFIGURED]}
+    ResidentHomeItem:
+      type: object
+      required: [id, title, description, createdAt]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        description: {type: string}
+        createdAt: {type: string}
