@@ -124,6 +124,20 @@ test('conversations are private, messages idempotent, closed discussions cannot 
  assert.equal((await admin.call('/resident/records/discussions/'+topic.data.id+'/actions'+query,'POST',{action:'freeze',version:1})).status,200);
  assert.equal((await owner.call('/resident/records/discussions/'+topic.data.id+'/messages','POST',{body:'Late',clientId:randomUUID()})).status,409);
 });
+test('discussion-to-request preserves the selected message and does not create an agenda proposal',async()=>{
+ const topic=await owner.call('/resident/records/discussions','POST',{title:'Repair the entrance light',body:'The entrance light is not working.',category:'building'});assert.equal(topic.status,201,JSON.stringify(topic.data));
+ const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:'It has been dark since yesterday.',clientId:randomUUID()});assert.equal(message.status,201,JSON.stringify(message.data));
+ const key=randomUUID(),path=`/resident/records/discussions/${topic.data.id}/requests`;
+ const input={key,sourceMessageId:message.data.id,subject:'Repair entrance light',description:'Please replace the failed lamp.'};
+ const created=await owner.call(path,'POST',input);assert.equal(created.status,201,JSON.stringify(created.data));
+ const replay=await owner.call(path,'POST',input);assert.equal(replay.status,201);assert.equal(replay.data.requestId,created.data.requestId);
+ const links=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(links.status,200,JSON.stringify(links.data));
+ assert.equal(links.data.length,1);assert.equal(links.data[0].discussionId,topic.data.id);assert.equal(links.data[0].sourceMessageId,message.data.id);
+ assert.equal(links.data[0].requestId,created.data.requestId);assert.equal(links.data[0].proposalId,null);assert.equal(links.data[0].meetingId,null);
+ assert.equal(links.data[0].workOrderId,null);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_agenda_proposals WHERE id IN (SELECT proposal_id FROM resident_discussion_lineage WHERE discussion_id=$1)',[topic.data.id])).rows[0].n,0);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM work_orders WHERE request_id=$1',[created.data.requestId])).rows[0].n,0);
+});
 test('marketplace requires explicit owner draft, submission and staff approval',async()=>{
  const payload={title:'Parking rent',body:'Contact through this app',saleType:'rent',priceMinor:'10000',currency:'AMD'};
  assert.equal((await family.call('/resident/records/listings','POST',payload)).status,403);

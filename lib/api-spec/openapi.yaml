@@ -101,6 +101,12 @@ paths:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1actions'
   /resident/records/{kind}/{id}/messages:
     $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1messages'
+  /resident/records/discussions/{id}/requests:
+    $ref: './resident.yaml#/paths/~1resident~1records~1discussions~1{id}~1requests'
+  /resident/records/discussions/{id}/agenda-proposals:
+    $ref: './resident.yaml#/paths/~1resident~1records~1discussions~1{id}~1agenda-proposals'
+  /resident/records/discussions/{id}/lineage:
+    $ref: './resident.yaml#/paths/~1resident~1records~1discussions~1{id}~1lineage'
   /resident/admin/buildings:
     $ref: './resident.yaml#/paths/~1resident~1admin~1buildings'
   /resident/settings:
@@ -2622,8 +2628,35 @@ paths:
                       options: { type: array, minItems: 2, maxItems: 10, items: { type: string, minLength: 1, maxLength: 100 } }
                       passOption: { type: string }
                       passBasisPoints: { type: integer, minimum: 1, maximum: 10000 }
+                      proposalId: { type: string, format: uuid }
       responses:
         "201": { description: Created draft, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+  /governance/agenda-proposals:
+    get:
+      operationId: listGovernanceAgendaProposals
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [pending_review, approved, rejected, included, decided] } }
+        - { in: query, name: buildingId, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Proposals visible to the current meetings manager
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/GovernanceAgendaProposal"}
+  /governance/agenda-proposals/{id}/review:
+    post:
+      operationId: reviewGovernanceAgendaProposal
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgendaProposalReviewInput" }
+      responses:
+        "200": { description: Approved or rejected after a scoped review, content: { application/json: { schema: { $ref: "#/components/schemas/GovernanceAgendaProposal" } } } }
   /governance/meetings/{id}:
     get:
       operationId: getGovernanceMeeting
@@ -5868,4 +5901,31 @@ components:
         groups:
           type: array
           items: { $ref: "#/components/schemas/WorkspaceSearchGroup" }
+    GovernanceAgendaProposal:
+      type: object
+      required: [id, title, description, status, version, building_id, source_text, discussion_id]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [pending_review, approved, rejected, included, decided] }
+        version: { type: integer }
+        building_id: { type: string, format: uuid }
+        building_name: { type: string }
+        discussion_id: { type: string, format: uuid }
+        source_message_id: { type: [string, 'null'], format: uuid }
+        source_text: { type: string }
+        meeting_id: { type: [string, 'null'], format: uuid }
+        agenda_item_id: { type: [string, 'null'], format: uuid }
+        decision: { type: [object, 'null'], additionalProperties: true }
+        submitter_name: { type: string }
+    AgendaProposalReviewInput:
+      type: object
+      additionalProperties: false
+      required: [key, version, action]
+      properties:
+        key: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        action: { type: string, enum: [approve, reject] }
+        reason: { type: string, maxLength: 1000 }
 

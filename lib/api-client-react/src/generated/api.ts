@@ -23,6 +23,9 @@ import type {
   ActManagedApiKeyBody,
   ActOnResidentRecordBody,
   ActOnResidentRecordParams,
+  AgendaProposalInput,
+  AgendaProposalResult,
+  AgendaProposalReviewInput,
   ApiKeyActionResult,
   AvailabilityBlock,
   AvailabilityBlockChange,
@@ -73,6 +76,9 @@ import type {
   DeleteResidentListingPhotoParams,
   DeviceActionAvailability,
   DeviceCapabilityPolicyInput,
+  DiscussionLineage,
+  DiscussionRequestInput,
+  DiscussionRequestResult,
   DownloadPlatformCaseAttachmentParams,
   EdgeAccepted,
   EdgeBatchAccepted,
@@ -180,6 +186,7 @@ import type {
   GetSystemUpdate200,
   GetSystemUpdates200,
   GetWebhookCenterParams,
+  GovernanceAgendaProposal,
   HandoverFloorAssignment,
   HandoverFloorInput,
   HandoverFloorReceipt,
@@ -219,6 +226,7 @@ import type {
   ListEdgeEvents200Item,
   ListEmailMessagesParams,
   ListFinanceAccountsParams,
+  ListGovernanceAgendaProposalsParams,
   ListGovernanceMeetings200Item,
   ListIamUsersParams,
   ListOperatingBudgets200Item,
@@ -4712,6 +4720,243 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPostResidentMessageMutationOptions(options));
     }
+
+export const getCreateRequestFromDiscussionUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/records/discussions/${id}/requests`
+}
+
+export const createRequestFromDiscussion = async (id: string,
+    discussionRequestInput: DiscussionRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<DiscussionRequestResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DiscussionRequestResult>(getCreateRequestFromDiscussionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(discussionRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRequestFromDiscussionMutationKey = () => ['createRequestFromDiscussion'] as const;
+
+export const getCreateRequestFromDiscussionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRequestFromDiscussion>>, TError,CreateRequestFromDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRequestFromDiscussion>>, TError,CreateRequestFromDiscussionMutationVariables, TContext> => {
+
+const mutationKey = getCreateRequestFromDiscussionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRequestFromDiscussion>>, CreateRequestFromDiscussionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createRequestFromDiscussion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRequestFromDiscussionMutationResult = NonNullable<Awaited<ReturnType<typeof createRequestFromDiscussion>>>
+    export type CreateRequestFromDiscussionMutationBody = BodyType<DiscussionRequestInput>
+    export type CreateRequestFromDiscussionMutationError = ErrorType<unknown>
+    export type CreateRequestFromDiscussionMutationVariables = {id: string;data: BodyType<DiscussionRequestInput>}
+
+    export const useCreateRequestFromDiscussion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRequestFromDiscussion>>, TError,CreateRequestFromDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRequestFromDiscussion>>,
+        TError,
+        CreateRequestFromDiscussionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateRequestFromDiscussionMutationOptions(options));
+    }
+
+export const getCreateAgendaProposalFromDiscussionUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/records/discussions/${id}/agenda-proposals`
+}
+
+export const createAgendaProposalFromDiscussion = async (id: string,
+    agendaProposalInput: AgendaProposalInput, options?: Parameters<typeof customFetch>[1]): Promise<AgendaProposalResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AgendaProposalResult>(getCreateAgendaProposalFromDiscussionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(agendaProposalInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAgendaProposalFromDiscussionMutationKey = () => ['createAgendaProposalFromDiscussion'] as const;
+
+export const getCreateAgendaProposalFromDiscussionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>, TError,CreateAgendaProposalFromDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>, TError,CreateAgendaProposalFromDiscussionMutationVariables, TContext> => {
+
+const mutationKey = getCreateAgendaProposalFromDiscussionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>, CreateAgendaProposalFromDiscussionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createAgendaProposalFromDiscussion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAgendaProposalFromDiscussionMutationResult = NonNullable<Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>>
+    export type CreateAgendaProposalFromDiscussionMutationBody = BodyType<AgendaProposalInput>
+    export type CreateAgendaProposalFromDiscussionMutationError = ErrorType<unknown>
+    export type CreateAgendaProposalFromDiscussionMutationVariables = {id: string;data: BodyType<AgendaProposalInput>}
+
+    export const useCreateAgendaProposalFromDiscussion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>, TError,CreateAgendaProposalFromDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAgendaProposalFromDiscussion>>,
+        TError,
+        CreateAgendaProposalFromDiscussionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAgendaProposalFromDiscussionMutationOptions(options));
+    }
+
+export const getGetDiscussionLineageUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/records/discussions/${id}/lineage`
+}
+
+export const getDiscussionLineage = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<DiscussionLineage[]> => {
+
+  return customFetch<DiscussionLineage[]>(getGetDiscussionLineageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDiscussionLineageQueryKey = (id: string,) => {
+    return [
+    `/api/resident/records/discussions/${id}/lineage`
+    ] as const;
+    }
+
+
+export const getGetDiscussionLineageQueryOptions = <TData = Awaited<ReturnType<typeof getDiscussionLineage>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDiscussionLineage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDiscussionLineageQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDiscussionLineage>>> = ({ signal }) => getDiscussionLineage(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDiscussionLineage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDiscussionLineageQueryResult = NonNullable<Awaited<ReturnType<typeof getDiscussionLineage>>>
+export type GetDiscussionLineageQueryError = ErrorType<unknown>
+
+
+
+export function useGetDiscussionLineage<TData = Awaited<ReturnType<typeof getDiscussionLineage>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDiscussionLineage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDiscussionLineageQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetResidentAdminBuildingsUrl = () => {
 
@@ -19116,6 +19361,167 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateGovernanceMeetingMutationOptions(options));
+    }
+
+export const getListGovernanceAgendaProposalsUrl = (params?: ListGovernanceAgendaProposalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/governance/agenda-proposals?${stringifiedParams}` : `/api/governance/agenda-proposals`
+}
+
+export const listGovernanceAgendaProposals = async (params?: ListGovernanceAgendaProposalsParams, options?: Parameters<typeof customFetch>[1]): Promise<GovernanceAgendaProposal[]> => {
+
+  return customFetch<GovernanceAgendaProposal[]>(getListGovernanceAgendaProposalsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGovernanceAgendaProposalsQueryKey = (params?: ListGovernanceAgendaProposalsParams,) => {
+    return [
+    `/api/governance/agenda-proposals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGovernanceAgendaProposalsQueryOptions = <TData = Awaited<ReturnType<typeof listGovernanceAgendaProposals>>, TError = ErrorType<unknown>>(params?: ListGovernanceAgendaProposalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGovernanceAgendaProposals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGovernanceAgendaProposalsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGovernanceAgendaProposals>>> = ({ signal }) => listGovernanceAgendaProposals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGovernanceAgendaProposals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGovernanceAgendaProposalsQueryResult = NonNullable<Awaited<ReturnType<typeof listGovernanceAgendaProposals>>>
+export type ListGovernanceAgendaProposalsQueryError = ErrorType<unknown>
+
+
+
+export function useListGovernanceAgendaProposals<TData = Awaited<ReturnType<typeof listGovernanceAgendaProposals>>, TError = ErrorType<unknown>>(
+ params?: ListGovernanceAgendaProposalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGovernanceAgendaProposals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGovernanceAgendaProposalsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReviewGovernanceAgendaProposalUrl = (id: string,) => {
+
+
+
+
+  return `/api/governance/agenda-proposals/${id}/review`
+}
+
+export const reviewGovernanceAgendaProposal = async (id: string,
+    agendaProposalReviewInput: AgendaProposalReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<GovernanceAgendaProposal> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GovernanceAgendaProposal>(getReviewGovernanceAgendaProposalUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(agendaProposalReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewGovernanceAgendaProposalMutationKey = () => ['reviewGovernanceAgendaProposal'] as const;
+
+export const getReviewGovernanceAgendaProposalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>, TError,ReviewGovernanceAgendaProposalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>, TError,ReviewGovernanceAgendaProposalMutationVariables, TContext> => {
+
+const mutationKey = getReviewGovernanceAgendaProposalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>, ReviewGovernanceAgendaProposalMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewGovernanceAgendaProposal(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewGovernanceAgendaProposalMutationResult = NonNullable<Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>>
+    export type ReviewGovernanceAgendaProposalMutationBody = BodyType<AgendaProposalReviewInput>
+    export type ReviewGovernanceAgendaProposalMutationError = ErrorType<unknown>
+    export type ReviewGovernanceAgendaProposalMutationVariables = {id: string;data: BodyType<AgendaProposalReviewInput>}
+
+    export const useReviewGovernanceAgendaProposal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>, TError,ReviewGovernanceAgendaProposalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewGovernanceAgendaProposal>>,
+        TError,
+        ReviewGovernanceAgendaProposalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewGovernanceAgendaProposalMutationOptions(options));
     }
 
 export const getGetGovernanceMeetingUrl = (id: string,) => {

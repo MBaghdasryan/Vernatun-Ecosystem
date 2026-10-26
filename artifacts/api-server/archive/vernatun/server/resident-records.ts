@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,requireAuth,requirePermission} from './access.js';
-import {record,transaction} from './operations.js';
+import {idempotent,record,transaction} from './operations.js';
+import {prepareOperationalRequest,commitPreparedRequest,requestHistoryWithContext} from './core-operation-store.js';
 import {activeLeasePredicate} from './lease-policy.js';
 import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,type ResidentKind} from './resident-policy.js';
 import {notifyResidentViewing} from './resident-viewing-notifications.js';
@@ -12,6 +13,109 @@ export const residentRecords=Router();
 residentRecords.use(requireAuth);
 const id=z.string().uuid();
 const sessionRef=(sid:string)=>createHash('sha256').update(sid).digest('hex');
+
+residentRecords.post('/records/discussions/:id/requests',async(req,res)=>{
+ const s=await residentScope(req);assertEnabled(s,'discussions');writable(s);
+ const discussionId=id.parse(req.params.id);
+ const b=z.object({
+  key:id,sourceMessageId:id.optional(),subject:z.string().trim().min(3).max(160),
+  description:z.string().trim().max(4000).default(''),categoryId:id.optional()
+ }).strict().parse(req.body);
+ const snapshot=await transaction(db=>readRecord(db,s,'discussions',discussionId,req.user!.id));
+ if(snapshot.status!=='open')throw new ApiError(409,'discussion_closed');
+ const unitId=s.unitId??snapshot.unit_id;
+ if(!unitId)throw new ApiError(400,'unit_required');
+ // Validate the actor and unit before opening the write transaction; request
+ // creation must not wait for another pool connection while holding a lock.
+ const prepared=await prepareOperationalRequest(req,{
+  key:b.key,unitId,subject:b.subject,description:b.description,categoryId:b.categoryId,
+  priority:'normal',contactMethod:'app'
+ });
+ const requestInput={...prepared.b};delete requestInput.key;
+ const requestPrepared={...prepared,b:requestInput};
+ res.status(201).json(await transaction(async db=>idempotent(db,req,b.key,{...b,discussionId},async()=>{
+  const discussion=await readRecord(db,s,'discussions',discussionId,req.user!.id,true);
+  if(discussion.status!=='open')throw new ApiError(409,'discussion_closed');
+  const source=b.sourceMessageId
+   ?(await db.query('SELECT body FROM resident_product_messages WHERE id=$1 AND record_id=$2',[b.sourceMessageId,discussionId])).rows[0]
+   :{body:discussion.body};
+  if(!source)throw new ApiError(404,'source_message_not_found');
+  const sourceText=String(source.body??'').trim();
+  if(!sourceText)throw new ApiError(400,'source_text_required');
+  if(unitId!==(s.unitId??discussion.unit_id))throw new ApiError(409,'discussion_context_changed');
+  const request=await commitPreparedRequest(db,req,requestPrepared,requestHistoryWithContext(prepared.c));
+  const inserted=await db.query(`INSERT INTO resident_discussion_lineage
+   (organization_id,building_id,discussion_id,source_message_id,source_text,link_type,request_id,created_by)
+   VALUES($1,$2,$3,$4,$5,'request',$6,$7) ON CONFLICT(request_id) DO NOTHING RETURNING id`,
+   [s.organizationId,s.buildingId,discussionId,b.sourceMessageId??null,sourceText,request.id,req.user!.id]);
+  if(!inserted.rowCount){
+   const prior=(await db.query('SELECT discussion_id,source_message_id,source_text FROM resident_discussion_lineage WHERE request_id=$1',[request.id])).rows[0];
+   if(prior.discussion_id!==discussionId||prior.source_message_id!==(b.sourceMessageId??null)||prior.source_text!==sourceText)throw new ApiError(409,'idempotency_conflict');
+  }
+  await record(db,req,{...s.c,organization_id:s.organizationId},'resident.discussion.convert_request','resident_record',discussionId,{requestId:request.id,sourceMessageId:b.sourceMessageId??null});
+  return {requestId:request.id,discussionId,sourceMessageId:b.sourceMessageId??null,status:request.status};
+ })));
+});
+
+residentRecords.post('/records/discussions/:id/agenda-proposals',async(req,res)=>{
+ const s=await residentScope(req);assertEnabled(s,'discussions');writable(s);
+ const discussionId=id.parse(req.params.id);
+ const b=z.object({
+  key:id,sourceMessageId:id.optional(),title:z.string().trim().min(3).max(200),
+  description:z.string().trim().max(4000).default('')
+ }).strict().parse(req.body);
+ res.status(201).json(await transaction(async db=>idempotent(db,req,b.key,{...b,discussionId},async()=>{
+  const discussion=await readRecord(db,s,'discussions',discussionId,req.user!.id,true);
+  if(discussion.status!=='open')throw new ApiError(409,'discussion_closed');
+  const source=b.sourceMessageId
+   ?(await db.query('SELECT body FROM resident_product_messages WHERE id=$1 AND record_id=$2',[b.sourceMessageId,discussionId])).rows[0]
+   :{body:discussion.body};
+  if(!source)throw new ApiError(404,'source_message_not_found');
+  const sourceText=String(source.body??'').trim();
+  if(!sourceText)throw new ApiError(400,'source_text_required');
+  const proposal=(await db.query(`INSERT INTO resident_agenda_proposals
+   (organization_id,building_id,submitted_by,title,description)
+   VALUES($1,$2,$3,$4,$5) RETURNING id,status,version,created_at`,
+   [s.organizationId,s.buildingId,req.user!.id,b.title,b.description])).rows[0];
+  await db.query(`INSERT INTO resident_discussion_lineage
+   (organization_id,building_id,discussion_id,source_message_id,source_text,link_type,proposal_id,created_by)
+   VALUES($1,$2,$3,$4,$5,'agenda_proposal',$6,$7)`,
+   [s.organizationId,s.buildingId,discussionId,b.sourceMessageId??null,sourceText,proposal.id,req.user!.id]);
+  await record(db,req,{...s.c,organization_id:s.organizationId},'resident.discussion.agenda_proposal','resident_record',discussionId,{proposalId:proposal.id});
+  return {proposalId:proposal.id,status:proposal.status,version:proposal.version,discussionId,sourceMessageId:b.sourceMessageId??null};
+ })));
+});
+
+residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
+ const s=await residentScope(req);assertEnabled(s,'discussions');
+ const discussionId=id.parse(req.params.id);
+ res.json(await transaction(async db=>{
+  await readRecord(db,s,'discussions',discussionId,req.user!.id);
+  const rows=(await db.query(`SELECT l.id,l.link_type,l.discussion_id,l.source_message_id,l.request_id,l.proposal_id,
+   l.meeting_id,l.created_at,r.subject AS request_subject,r.status AS request_status,w.id AS work_order_id,w.status AS work_order_status,
+   p.title AS proposal_title,p.status AS proposal_status,p.decision,m.title AS meeting_title,m.status AS meeting_status,
+   COALESCE((SELECT json_agg(v.vote_id ORDER BY v.created_at) FROM resident_discussion_vote_links v
+    JOIN meeting_ballots mb ON mb.id=v.vote_id JOIN meeting_eligibility e ON e.id=mb.eligibility_id
+    WHERE v.lineage_id=l.id AND ($5 OR mb.owner_id=$4)),'[]') AS vote_ids
+   FROM resident_discussion_lineage l
+   LEFT JOIN resident_requests r ON r.id=l.request_id
+   LEFT JOIN work_orders w ON w.request_id=r.id
+   LEFT JOIN resident_agenda_proposals p ON p.id=l.proposal_id
+   LEFT JOIN meetings m ON m.id=l.meeting_id
+   WHERE l.discussion_id=$1 AND l.organization_id=$2 AND l.building_id=$3
+    AND (l.request_id IS NULL OR $5 OR r.author_user_id=$4 OR r.unit_id=$6)
+   ORDER BY l.created_at,l.id`,[discussionId,s.organizationId,s.buildingId,req.user!.id,s.administrative,s.unitId])).rows;
+  return rows.map(r=>({
+   id:r.id,linkType:r.link_type,discussionId:r.discussion_id,sourceMessageId:r.source_message_id,
+   requestId:r.request_id,requestSubject:r.request_subject??null,requestStatus:r.request_status??null,
+   workOrderId:r.work_order_id??null,workOrderStatus:r.work_order_status??null,
+   proposalId:r.proposal_id,proposalTitle:r.proposal_title??null,proposalStatus:r.proposal_status??null,
+   meetingId:r.meeting_id,meetingTitle:r.meeting_title??null,meetingStatus:r.meeting_status??null,
+   voteIds:r.vote_ids??[],decision:r.decision??null,createdAt:r.created_at
+  }));
+ }));
+});
+
 residentRecords.get('/records/:kind',async(req,res)=>{
  const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);
  const search=z.string().trim().max(200).parse(req.query.search??'');

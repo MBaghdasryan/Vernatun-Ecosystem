@@ -27,4 +27,5 @@ export type CreateGovernanceMeetingBodyAgendaItem = {
      * @maximum 10000
      */
   passBasisPoints: number;
+  proposalId?: string;
 };

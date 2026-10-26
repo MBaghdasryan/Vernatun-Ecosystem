@@ -2,7 +2,7 @@ import type {Request} from 'express';
 import type {PoolClient} from 'pg';
 import {z} from 'zod';
 import {pool} from './db.js';
-import {ApiError,context,requirePermission,scopedUnit} from './access.js';
+import {ApiError,context,requirePermission,scopedUnit,type Context} from './access.js';
 import {transaction,idempotent} from './operations.js';
 import {activeLeasePredicate} from './lease-policy.js';
 
@@ -40,7 +40,11 @@ export async function prepareOperationalRequest(req:Request,trustedInput?:unknow
   return {b,c,staff,equipmentTech,unit};
 }
 type PreparedRequest=Awaited<ReturnType<typeof prepareOperationalRequest>>;
-type RequestHistory=(db:PoolClient,req:Request,row:any,action:string,to:string,note?:string)=>Promise<void>;
+export type RequestHistory=(db:PoolClient,req:Request,row:any,action:string,to:string,note?:string)=>Promise<void>;
+export function requestHistoryWithContext(c:Context):RequestHistory{return async(db,req,r,action,to,note='')=>{
+ await db.query('INSERT INTO request_history(request_id,actor_id,actor_role,action,from_status,to_status,note) VALUES($1,$2,$3,$4,$5,$6,$7)',[r.id,req.user!.id,c.role_key,action,r.work_status??r.status,to,note]);
+ await db.query('INSERT INTO audit_events(organization_id,actor_user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5,$6)',[r.organization_id,req.user!.id,'request.'+action,'resident_request',r.id,JSON.stringify({from:r.status,to})]);
+}}
 export async function commitPreparedRequest(db:PoolClient,req:Request,prepared:PreparedRequest,appendHistory:RequestHistory){
    const {b,c,staff,equipmentTech,unit}=prepared;
   const tech=equipmentTech?req.user!.id:b.technicianId;

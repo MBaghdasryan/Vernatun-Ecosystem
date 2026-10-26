@@ -49,7 +49,7 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
     case 'close':status='closed';break;
     case 'reopen':status='open';break;
     case 'freeze':status='frozen';break;
-    case 'proposal':status=row.status;break; // Agenda proposal is not an ownership vote or official meeting.
+  case 'proposal':throw new ApiError(409,'use_agenda_proposal_review_flow'); // Proposals are separate records and require explicit review.
     case 'confirm_viewing':case 'decline_viewing':case 'cancel_viewing':status=row.status;break;
     default:throw new ApiError(409,'invalid_transition');
    }
@@ -58,7 +58,6 @@ residentConversations.post('/records/:kind/:id/actions',async(req,res)=>{
      viewingStatus:b.action==='confirm_viewing'?'confirmed':b.action==='decline_viewing'?'declined':'cancelled',
      viewingUpdatedAt:new Date().toISOString(),
     }:{}),
-    ...(b.action==='proposal'?{proposalState:'reviewed',reviewedAt:new Date().toISOString()}:{}),
     ...(b.action==='approve'?{approvedAt:new Date().toISOString()}:{}),
    };
    await db.query('UPDATE resident_product_records SET status=$2,data=$3,version=version+1,updated_at=now() WHERE id=$1',[row.id,status,JSON.stringify(data)]);

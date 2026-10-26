@@ -8,7 +8,7 @@ import { L, S, type Language } from '@/lib/resident/text';
 import { newUuid, useContextId, useMessages } from '@/lib/resident/hooks';
 import { Btn, ErrorBox, Skeleton } from './Ui';
 import { useAction } from './useAction';
-export default function Thread({ kind, rec, l }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language }) {
+export default function Thread({ kind, rec, l, onConvertSource }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; onConvertSource?: (action: 'request' | 'proposal', id: string, text: string) => void }) {
   const qc = useQueryClient(); const ctx = useContextId();
   const q = useMessages(kind, rec.id);
   const [text, setText] = useState(''); const [cid, setCid] = useState(newUuid);
@@ -18,7 +18,7 @@ export default function Thread({ kind, rec, l }: { kind: ResidentRecordKind; rec
     <Text style={st.h}>{L(l, S.msgs)}</Text>
     {q.isPending && <Skeleton />}
     {q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}
-    {q.data?.map(m => <View key={m.id} style={[st.msg, m.own && st.own]}><Text style={st.meta}>{m.sender} · {new Date(m.createdAt).toLocaleString(l)}</Text><Text style={st.body}>{m.body}</Text></View>)}
+    {q.data?.map(m => <View key={m.id} style={[st.msg, m.own && st.own]}><Text style={st.meta}>{m.sender} · {new Date(m.createdAt).toLocaleString(l)}</Text><Text style={st.body}>{m.body}</Text>{kind === 'discussions' && onConvertSource ? <View style={st.actions}><Btn kind="secondary" label={L(l, ['Դարձնել հայտ','В заявку','Create request'])} onPress={() => onConvertSource('request', m.id, m.body)} /><Btn kind="secondary" label={L(l, ['Առաջարկել օրակարգ','Предложить в повестку','Suggest agenda'])} onPress={() => onConvertSource('proposal', m.id, m.body)} /></View> : null}</View>)}
     {q.data && !q.data.length && <Text style={st.meta}>{L(l, S.empty)}</Text>}
     <TextInput accessibilityLabel={L(l, S.msg)} style={st.input} value={text} onChangeText={setText} placeholder={L(l, S.msg)} placeholderTextColor={palette.placeholder} maxLength={5000} multiline />
     <Btn label={L(l, S.send)} onPress={send} busy={a.busy} disabled={!text.trim()} />
@@ -30,4 +30,5 @@ const st = StyleSheet.create({
   msg: { backgroundColor: palette.muted, borderRadius: 12, padding: 10, maxWidth: '88%' }, own: { alignSelf: 'flex-end', backgroundColor: palette.accent },
   meta: { fontSize: 11, color: palette.mutedForeground }, body: { color: palette.foreground, fontSize: 14 },
   input: { minHeight: 46, borderWidth: 1, borderColor: palette.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff', color: palette.foreground },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

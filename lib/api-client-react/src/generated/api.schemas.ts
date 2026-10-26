@@ -3635,6 +3635,60 @@ export interface WorkspaceSearchResult {
   groups: WorkspaceSearchGroup[];
 }
 
+export type GovernanceAgendaProposalStatus = typeof GovernanceAgendaProposalStatus[keyof typeof GovernanceAgendaProposalStatus];
+
+
+export const GovernanceAgendaProposalStatus = {
+  pending_review: 'pending_review',
+  approved: 'approved',
+  rejected: 'rejected',
+  included: 'included',
+  decided: 'decided',
+} as const;
+
+/**
+ * @nullable
+ */
+export type GovernanceAgendaProposalDecision = { [key: string]: unknown } | null;
+
+export interface GovernanceAgendaProposal {
+  id: string;
+  title: string;
+  description: string;
+  status: GovernanceAgendaProposalStatus;
+  version: number;
+  building_id: string;
+  building_name?: string;
+  discussion_id: string;
+  /** @nullable */
+  source_message_id?: string | null;
+  source_text: string;
+  /** @nullable */
+  meeting_id?: string | null;
+  /** @nullable */
+  agenda_item_id?: string | null;
+  /** @nullable */
+  decision?: GovernanceAgendaProposalDecision;
+  submitter_name?: string;
+}
+
+export type AgendaProposalReviewInputAction = typeof AgendaProposalReviewInputAction[keyof typeof AgendaProposalReviewInputAction];
+
+
+export const AgendaProposalReviewInputAction = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface AgendaProposalReviewInput {
+  key: string;
+  /** @minimum 1 */
+  version: number;
+  action: AgendaProposalReviewInputAction;
+  /** @maxLength 1000 */
+  reason?: string;
+}
+
 export interface PayerServicePolicy {
   serviceId: string;
   serviceName?: string;
@@ -4097,6 +4151,95 @@ export interface ResidentMessage {
   sender: string;
   /** @nullable */
   replyTo?: string | null;
+}
+
+export interface DiscussionRequestInput {
+  key: string;
+  sourceMessageId?: string;
+  /**
+     * @minLength 3
+     * @maxLength 160
+     */
+  subject: string;
+  /** @maxLength 4000 */
+  description?: string;
+  categoryId?: string;
+}
+
+export interface DiscussionRequestResult {
+  requestId: string;
+  discussionId: string;
+  /** @nullable */
+  sourceMessageId: string | null;
+  status: string;
+}
+
+export interface AgendaProposalInput {
+  key: string;
+  sourceMessageId?: string;
+  /**
+     * @minLength 3
+     * @maxLength 200
+     */
+  title: string;
+  /** @maxLength 4000 */
+  description?: string;
+}
+
+export interface AgendaProposalResult {
+  proposalId: string;
+  discussionId: string;
+  /** @nullable */
+  sourceMessageId: string | null;
+  status: string;
+  version: number;
+}
+
+export type DiscussionLineageLinkType = typeof DiscussionLineageLinkType[keyof typeof DiscussionLineageLinkType];
+
+
+export const DiscussionLineageLinkType = {
+  request: 'request',
+  agenda_proposal: 'agenda_proposal',
+} as const;
+
+/**
+ * @nullable
+ */
+export type DiscussionLineageDecision = { [key: string]: unknown } | null;
+
+export interface DiscussionLineage {
+  id: string;
+  linkType: DiscussionLineageLinkType;
+  discussionId: string;
+  /** @nullable */
+  sourceMessageId: string | null;
+  /** @nullable */
+  requestId: string | null;
+  /** @nullable */
+  requestSubject?: string | null;
+  /** @nullable */
+  requestStatus?: string | null;
+  /** @nullable */
+  workOrderId?: string | null;
+  /** @nullable */
+  workOrderStatus?: string | null;
+  /** @nullable */
+  proposalId: string | null;
+  /** @nullable */
+  proposalTitle?: string | null;
+  /** @nullable */
+  proposalStatus?: string | null;
+  /** @nullable */
+  meetingId: string | null;
+  /** @nullable */
+  meetingTitle?: string | null;
+  /** @nullable */
+  meetingStatus?: string | null;
+  voteIds: string[];
+  /** @nullable */
+  decision?: DiscussionLineageDecision;
+  createdAt: string;
 }
 
 export type ResidentWorkspaceBuilding = {
@@ -5850,6 +5993,7 @@ export type CreateGovernanceMeetingBodyAgendaItem = {
      * @maximum 10000
      */
   passBasisPoints: number;
+  proposalId?: string;
 };
 
 export type CreateGovernanceMeetingBody = {
@@ -5879,6 +6023,22 @@ export type CreateGovernanceMeetingBody = {
 };
 
 export type CreateGovernanceMeeting201 = { [key: string]: unknown };
+
+export type ListGovernanceAgendaProposalsParams = {
+status?: ListGovernanceAgendaProposalsStatus;
+buildingId?: string;
+};
+
+export type ListGovernanceAgendaProposalsStatus = typeof ListGovernanceAgendaProposalsStatus[keyof typeof ListGovernanceAgendaProposalsStatus];
+
+
+export const ListGovernanceAgendaProposalsStatus = {
+  pending_review: 'pending_review',
+  approved: 'approved',
+  rejected: 'rejected',
+  included: 'included',
+  decided: 'decided',
+} as const;
 
 export type GetGovernanceMeeting200 = { [key: string]: unknown };
 

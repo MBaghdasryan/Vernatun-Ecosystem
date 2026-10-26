@@ -3,23 +3,30 @@ import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import {Dlg,Fail,Frozen,useFrozen,useMounted,useLoad,useOrgTz,LoadFail,Empty,p6,bp,parsePct,zonedToInstant,stamp,g,type Row} from './phase6-ui';
 
-type Item={title:string;kind:'yes_no'|'single_choice';options:string;passOption:string;pass:string};
+type Item={title:string;kind:'yes_no'|'single_choice';options:string;passOption:string;pass:string;proposalId?:string};
 const blank=():Item=>({title:'',kind:'yes_no',options:'',passOption:'yes',pass:'50'});
 const YN=['yes','no','abstain'];
 const votePercent=(weight:unknown,total:unknown)=>{const d=BigInt(String(total??0));return d>0n?bp((BigInt(String(weight??0))*10000n/d).toString()):'—'};
 const optsOf=(i:Item)=>i.kind==='yes_no'?YN:i.options.split('\n').map(x=>x.trim()).filter(Boolean);
 const optText=(l:Language,o:string)=>YN.includes(o)?({yes:{hy:'Այո',ru:'Да',en:'Yes'},no:{hy:'Ոչ',ru:'Нет',en:'No'},abstain:{hy:'Ձեռնպահ',ru:'Воздержался',en:'Abstain'}} as any)[o][l]:o;
+const Q={
+ hy:{queue:'Բնակիչների օրակարգի առաջարկներ',empty:'Սպասվող առաջարկներ չկան։',approve:'Հաստատել ստուգումից հետո',reject:'Մերժել',reason:'Մերժման պատճառ',submit:'Պահպանել որոշումը',approved:'Հաստատված առաջարկներ',add:'Ավելացնել օրակարգում',included:'Կապված է առաջարկի հետ',source:'Քննարկման աղբյուր',meeting:'Ժողով',votes:'Քվեներ',work:'Աշխատանք'},
+ ru:{queue:'Предложения жителей в повестку',empty:'Нет предложений на рассмотрении.',approve:'Одобрить после проверки',reject:'Отклонить',reason:'Причина отказа',submit:'Сохранить решение',approved:'Одобренные предложения',add:'Добавить в повестку',included:'Связано с предложением',source:'Источник обсуждения',meeting:'Собрание',votes:'Голоса',work:'Работа'},
+ en:{queue:'Resident agenda proposals',empty:'No proposals awaiting review.',approve:'Approve after review',reject:'Reject',reason:'Rejection reason',submit:'Save decision',approved:'Approved proposals',add:'Add to agenda',included:'Linked to proposal',source:'Discussion source',meeting:'Meeting',votes:'Votes',work:'Work order'},
+} as const;
+const q=(l:Language,k:keyof typeof Q.en)=>Q[l][k];
 
 function Create({c,l,onClose,onDone}:{c:RoleContext;l:Language;onClose:()=>void;onDone:(id?:string)=>void}){
  const {tz,known}=useOrgTz();const h=useFrozen(),live=useMounted();
- const blds=useLoad<Row[]>('/community/buildings',[c.id]),docs=useLoad<Row[]>(c.permissions.includes('documents.read')?'/documents':null,[c.id]);
+  const blds=useLoad<Row[]>('/community/buildings',[c.id]),docs=useLoad<Row[]>(c.permissions.includes('documents.read')?'/documents':null,[c.id]);
  const [f,setF]=useState({buildingId:'',title:'',description:'',startsAt:'',endsAt:'',quorum:'50'}),[items,setItems]=useState<Item[]>([blank()]),[dids,setDids]=useState<string[]>([]),[err,setErr]=useState<unknown>(),[bad,setBad]=useState('');
+  const proposals=useLoad<Row[]>(f.buildingId?`/governance/agenda-proposals?status=approved&buildingId=${encodeURIComponent(f.buildingId)}`:null,[c.id,f.buildingId]);
  const dis=h.uncertain;
  const upd=(n:number,p:Partial<Item>)=>setItems(items.map((x,i)=>i===n?{...x,...p}:x));
  async function go(e:FormEvent){e.preventDefault();setErr(undefined);setBad('');
   let startsAt:string,endsAt:string;try{startsAt=zonedToInstant(f.startsAt,tz);endsAt=zonedToInstant(f.endsAt,tz)}catch{setBad(p6(l,'invalid'));return}
   const q=parsePct(f.quorum);if(!f.buildingId||f.title.trim().length<3||q===null||endsAt<=startsAt||!items.length){setBad(p6(l,'invalid'));return}
-  const agenda:Row[]=[];for(const i of items){const o=optsOf(i),p=parsePct(i.pass);if(i.title.trim().length<3||p===null||o.length<2||o.length>10||new Set(o).size!==o.length||!o.includes(i.passOption)||(i.kind==='yes_no'&&i.passOption==='abstain')){setBad(p6(l,'invalid')+': '+(i.title||'?'));return}agenda.push({title:i.title.trim(),votingType:i.kind,options:o,passOption:i.passOption,passBasisPoints:p})}
+   const agenda:Row[]=[];for(const i of items){const o=optsOf(i),p=parsePct(i.pass);if(i.title.trim().length<3||p===null||o.length<2||o.length>10||new Set(o).size!==o.length||!o.includes(i.passOption)||(i.kind==='yes_no'&&i.passOption==='abstain')){setBad(p6(l,'invalid')+': '+(i.title||'?'));return}agenda.push({title:i.title.trim(),votingType:i.kind,options:o,passOption:i.passOption,passBasisPoints:p,...(i.proposalId?{proposalId:i.proposalId}:{})})}
   try{const r=await h.send<Row>('POST','/governance/meetings',key=>({key,buildingId:f.buildingId,title:f.title.trim(),description:f.description.trim(),startsAt,endsAt,quorumBasisPoints:q,documentIds:dids,agenda}),()=>live.current);if(r&&live.current)onDone(r.id)}catch(x){if(live.current)setErr(x)}}
  async function retry(){try{const r=await h.retry<Row>(()=>live.current);if(r&&live.current)onDone(r.id)}catch(x){if(live.current)setErr(x)}}
  return <Dlg l={l} title={p6(l,'newMeeting')} onClose={onClose}><form className="p-edit-form" onSubmit={e=>void go(e)}>
@@ -30,9 +37,17 @@ function Create({c,l,onClose,onDone}:{c:RoleContext;l:Language;onClose:()=>void;
   <p className="p5-muted">{p6(l,'tzNote')} {tz} {!known&&p6(l,'tzFallback')}</p>
   <label>{p6(l,'quorum')}<input inputMode="decimal" required disabled={dis} pattern="\d{1,3}([.,]\d{1,2})?" value={f.quorum} onChange={e=>setF({...f,quorum:e.target.value})}/></label>
   {docs.data&&<fieldset><legend>{p6(l,'docs')}</legend>{docs.data.length===0&&<p className="p5-muted">{p6(l,'empty')}</p>}{docs.data.map(d=><label className="p-check-item" style={{display:'flex',gap:8}} key={d.id}><input type="checkbox" disabled={dis} checked={dids.includes(d.id)} onChange={e=>setDids(e.target.checked?[...dids,d.id]:dids.filter(x=>x!==d.id))}/>{d.title}</label>)}</fieldset>}
-  <h3>{p6(l,'agenda')}</h3>
+   <h3>{p6(l,'agenda')}</h3>
+   {f.buildingId&&<fieldset><legend>{q(l,'approved')}</legend>
+    <LoadFail l={l} error={proposals.error} onRetry={proposals.reload}/>
+    {proposals.data?.length?proposals.data.map(p=><div className="p6-agenda" key={p.id}>
+     <strong>{p.title}</strong><p className="p5-muted">{p.description}</p><small className="p5-muted">{q(l,'source')}: {g(p,'discussion_id')}{g(p,'source_message_id')?` · ${String(g(p,'source_message_id')).slice(0,8)}`:''}</small>
+     <button type="button" className="p-button small" disabled={dis||items.some(i=>i.proposalId===p.id)} onClick={()=>setItems([...items,{...blank(),title:String(p.title??''),proposalId:p.id}])}>{q(l,'add')}</button>
+    </div>):<p className="p5-muted">{q(l,'empty')}</p>}
+   </fieldset>}
   {items.map((it,n)=>{const o=optsOf(it);return <div className="p6-agenda" key={n}>
    <label>{p6(l,'title')} #{n+1}<input required minLength={3} maxLength={300} disabled={dis} value={it.title} onChange={e=>upd(n,{title:e.target.value})}/></label>
+    {it.proposalId&&<small className="p5-muted">{q(l,'included')}: {it.proposalId}</small>}
    <label>{p6(l,'votingType')}<select disabled={dis} value={it.kind} onChange={e=>{const kind=e.target.value as Item['kind'];upd(n,{kind,passOption:kind==='yes_no'?'yes':''})}}><option value="yes_no">{p6(l,'yesNo')}</option><option value="single_choice">{p6(l,'custom')}</option></select></label>
    {it.kind==='single_choice'&&<label>{p6(l,'options')}<textarea disabled={dis} value={it.options} onChange={e=>upd(n,{options:e.target.value})}/></label>}
    <div className="p5-grid2"><label>{p6(l,'passOption')}<select required disabled={dis} value={it.passOption} onChange={e=>upd(n,{passOption:e.target.value})}><option value="">—</option>{(it.kind==='yes_no'?['yes','no']:o).map(x=><option key={x} value={x}>{optText(l,x)}</option>)}</select></label>
@@ -42,6 +57,35 @@ function Create({c,l,onClose,onDone}:{c:RoleContext;l:Language;onClose:()=>void;
   {bad&&<p className="p-error" role="alert">{bad}</p>}<Fail l={l} error={err}/>
   <Frozen l={l} h={h} onRetry={()=>void retry()} onAbandon={onClose}/>
   <button className="p-button orange" disabled={h.pending||dis}>{h.pending?p6(l,'saving'):p6(l,'create')}</button></form></Dlg>}
+
+function ProposalQueue({c,l}:{c:RoleContext;l:Language}){
+ const list=useLoad<Row[]>('/governance/agenda-proposals?status=pending_review',[c.id]);
+ const h=useFrozen(),live=useMounted();const [rejecting,setRejecting]=useState<Row|null>(null),[reason,setReason]=useState(''),[err,setErr]=useState<unknown>();
+ async function review(p:Row,action:'approve'|'reject',why=''){
+  setErr(undefined);try{const r=await h.send<Row>('POST','/governance/agenda-proposals/'+p.id+'/review',key=>({key,version:p.version,action,...(why?{reason:why}:{})}),()=>live.current);
+   if(r&&live.current){setRejecting(null);setReason('');list.reload()}}
+  catch(x){if(live.current)setErr(x)}
+ }
+ async function retry(){try{const r=await h.retry<Row>(()=>live.current);if(r&&live.current){setRejecting(null);setReason('');setErr(undefined);list.reload()}}catch(x){if(live.current)setErr(x)}}
+ return <section className="p-card"><header><h2>{q(l,'queue')}</h2><button className="p-button small" onClick={list.reload}>{p6(l,'refresh')}</button></header>
+  <LoadFail l={l} error={list.error} onRetry={list.reload}/>
+  {!list.data&&!list.error?<p role="status">{p6(l,'loading')}</p>:list.data?.length===0?<Empty l={l} text={q(l,'empty')}/>:<div className="p5-list">
+   {list.data?.map(p=><article className="p6-agenda" key={p.id}>
+    <h3>{p.title}</h3><p>{p.description||'—'}</p>
+    <p className="p5-muted">{g(p,'building_name')} · {g(p,'submitter_name')} · {q(l,'source')}: {g(p,'discussion_id')}{g(p,'source_message_id')?` / ${String(g(p,'source_message_id')).slice(0,8)}`:''}</p>
+    {g(p,'source_text')&&<blockquote className="p6-pre">{g(p,'source_text')}</blockquote>}
+    <div className="p5-row"><button className="p-button orange" disabled={h.pending||h.uncertain} onClick={()=>void review(p,'approve')}>{q(l,'approve')}</button>
+     <button className="p-button" disabled={h.pending||h.uncertain} onClick={()=>{setRejecting(p);setReason('')}}>{q(l,'reject')}</button></div>
+   </article>)}
+  </div>}
+  <Fail l={l} error={err} onRefresh={list.reload}/><Frozen l={l} h={h} onRetry={()=>void retry()} onAbandon={list.reload}/>
+  {rejecting&&<Dlg l={l} title={q(l,'reject')} onClose={()=>setRejecting(null)}><form className="p-edit-form" onSubmit={e=>{e.preventDefault();if(reason.trim().length>=3)void review(rejecting,'reject',reason.trim())}}>
+   <label>{q(l,'reason')}<textarea required minLength={3} maxLength={1000} value={reason} disabled={h.uncertain} onChange={e=>setReason(e.target.value)}/></label>
+   <Fail l={l} error={err} onRefresh={list.reload}/><Frozen l={l} h={h} onRetry={()=>void retry()} onAbandon={()=>setRejecting(null)}/>
+   <button className="p-button orange" disabled={h.pending||h.uncertain||reason.trim().length<3}>{q(l,'submit')}</button>
+  </form></Dlg>}
+ </section>;
+}
 
 function Detail({c,l,id,onChanged}:{c:RoleContext;l:Language;id:string;onChanged:()=>void}){
  const {tz}=useOrgTz();const m=useLoad<Row>('/governance/meetings/'+id,[c.id]);const manage=c.permissions.includes('meetings.manage')&&c.role_key!=='unit_owner';const canVote=c.permissions.includes('meetings.vote')&&c.role_key==='unit_owner';
@@ -63,7 +107,7 @@ function Detail({c,l,id,onChanged}:{c:RoleContext;l:Language;id:string;onChanged
   {(d.documents??[]).length>0&&<><h3>{p6(l,'docs')}</h3><ul>{(d.documents as Row[]).map((x,i)=><li key={i}>{x.title??String(g(x,'version_id','versionId','id')).slice(0,8)}{g(x,'document_id','documentId')&&g(x,'version_id','versionId')&&<> · <a href={'/api/documents/'+g(x,'document_id','documentId')+'/versions/'+g(x,'version_id','versionId')+'/download'} download>{p6(l,'download')}</a></>}</li>)}</ul></>}
   <h3>{p6(l,'eligibility')}</h3>{elig.length===0?<Empty l={l}/>:<div className="p6-scroll"><table><thead><tr><th>{p6(l,'unit')}</th><th>{p6(l,'owner')}</th><th>{p6(l,'share')}</th></tr></thead><tbody>{elig.map(e=><tr key={e.id}><td>{e.number??e.unit_number??'—'}</td><td>{e.owner_name??'—'}</td><td className="p6-num">{bp(g(e,'share_basis_points','shareBasisPoints','weight_basis_points'))}</td></tr>)}</tbody></table></div>}
   <h3>{p6(l,'agenda')}</h3><p className="p5-muted">{p6(l,'ballotNote')}</p>
-  {agenda.map((a,n)=>{const r=ra(a.id);const opts:string[]=a.options??[];return <div className="p6-agenda" key={a.id}><strong>{n+1}. {a.title}</strong><small className="p5-muted">{p6(l,'passOption')}: {optText(l,g(a,'pass_option','passOption'))} · {p6(l,'passPct')}: {bp(g(a,'pass_basis_points','passBasisPoints'))}</small>
+   {agenda.map((a,n)=>{const r=ra(a.id);const opts:string[]=a.options??[];return <div className="p6-agenda" key={a.id}><strong>{n+1}. {a.title}</strong>{a.proposal_id&&<small className="p5-muted">{q(l,'included')} · {q(l,'source')}: {a.discussion_id}{a.source_message_id?` / ${String(a.source_message_id).slice(0,8)}`:''}</small>}<small className="p5-muted">{p6(l,'passOption')}: {optText(l,g(a,'pass_option','passOption'))} · {p6(l,'passPct')}: {bp(g(a,'pass_basis_points','passBasisPoints'))}</small>
    {canVote&&status==='published'&&elig.map(e=>{const k=a.id+':'+e.id;const voted=done.includes(k)||((a.my_votes??[]) as Row[]).some(v=>v.eligibility_id===e.id);return <div className="p6-opt" key={e.id}><span>{e.number??e.unit_number} · {bp(g(e,'share_basis_points','shareBasisPoints'))}</span>{voted?<span className="p-badge green">{p6(l,'voted')}</span>:<><select aria-label={p6(l,'cast')} value={pick[k]??''} disabled={locked} onChange={ev=>setPick({...pick,[k]:ev.target.value})}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{optText(l,o)}</option>)}</select><button className="p-button small orange" disabled={!pick[k]||vote.pending||locked} onClick={()=>void cast(a.id,e.id)}>{p6(l,'cast')}</button></>}</div>})}
    {r&&<div className="p6-scroll"><table><thead><tr><th>{p6(l,'byOption')}</th><th>{p6(l,'share')}</th></tr></thead><tbody>{Object.entries(r.byOption??{}).map(([o,v])=><tr key={o}><td>{optText(l,o)}</td><td className="p6-num">{votePercent(v,r.participationShare)}</td></tr>)}</tbody></table><p>{p6(l,'participation')}: {votePercent(r.participationShare,res.totalEligibleShare)} · {r.quorum?p6(l,'quorumMet'):p6(l,'quorumNot')} · {r.passed===true?p6(l,'passed'):r.passed===false?p6(l,'notPassed'):p6(l,'pending')}</p></div>}</div>})}
   <Fail l={l} error={verr} onRefresh={m.reload}/><Frozen l={l} h={vote} onRetry={()=>void retryVote()} onAbandon={m.reload}/>
@@ -76,7 +120,7 @@ function Detail({c,l,id,onChanged}:{c:RoleContext;l:Language;id:string;onChanged
 export default function Governance({c,language:l,legacy}:{c:RoleContext;language:Language;legacy:ReactNode}){
  const {tz}=useOrgTz();const list=useLoad<Row[]>('/governance/meetings',[c.id]);const [sel,setSel]=useState(''),[creating,setCreating]=useState(false);
  const manage=c.permissions.includes('meetings.manage')&&c.role_key!=='unit_owner';
- return <div className="p5"><div className="p5-split"><section className="p-card"><header><h2>{p6(l,'meetings')}</h2>{manage&&<button className="p-button orange small" onClick={()=>setCreating(true)}>{p6(l,'newMeeting')}</button>}<button className="p-button small" onClick={list.reload}>{p6(l,'refresh')}</button></header>
+  return <div className="p5">{manage&&<ProposalQueue c={c} l={l}/>}<div className="p5-split"><section className="p-card"><header><h2>{p6(l,'meetings')}</h2>{manage&&<button className="p-button orange small" onClick={()=>setCreating(true)}>{p6(l,'newMeeting')}</button>}<button className="p-button small" onClick={list.reload}>{p6(l,'refresh')}</button></header>
   <LoadFail l={l} error={list.error} onRetry={list.reload}/>{!list.data&&!list.error?<p role="status">{p6(l,'loading')}</p>:list.data&&(list.data.length===0?<Empty l={l}/>:<ul className="p5-list">{list.data.map(r=><li key={r.id}><button className="p5-item" aria-current={sel===r.id} onClick={()=>setSel(r.id)}><strong>{r.title}</strong><small>{r.building_name?r.building_name+' · ':''}{stamp(g(r,'starts_at','startsAt'),l,tz)} · {p6(l,String(r.status))===String(r.status)?r.status:p6(l,String(r.status))}</small></button></li>)}</ul>)}</section>
   {sel?<Detail key={sel+c.id} c={c} l={l} id={sel} onChanged={list.reload}/>:<Empty l={l} text={p6(l,'meetings')}/>}</div>
   <section className="p-card p6-legacy"><h3>{p6(l,'legacyHead')}</h3><p className="p-info">{p6(l,'legacyNote')}</p>{legacy}</section>

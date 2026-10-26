@@ -26,7 +26,7 @@ class Client{
  if(!r.data.contextId){const c=r.data.contexts.find((c:any)=>c.role_key===a.role);assert.equal((await this.call('/auth/context','POST',{id:c.id})).status,200)}return this}
  async switch(user:string,role:string,b:string,unit?:string){const list=await contexts(user),c=list.find(c=>c.role_key===role&&c.building_id===b&&(!unit||c.unit_id===unit));assert.ok(c);assert.equal((await this.call('/auth/context','POST',{id:c.id})).status,200)}
 }
-const clients:Record<string,Client>={},users:Record<string,string>={};let org:string,building:string,unit:string,co:string,meeting:any,caseId:string,docId:string,version1:string,share:any,eligibility:any[],agendaId:string;
+const clients:Record<string,Client>={},users:Record<string,string>={};let org:string,building:string,unit:string,co:string,meeting:any,caseId:string,docId:string,version1:string,share:any,eligibility:any[],agendaId:string,discussionId:string,proposalId:string;
 const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yerevan'}).format(new Date()),month=today.slice(0,7)+'-01',from=new Date(Date.parse(month)-35*86400000).toISOString().slice(0,10),filters=`from=${from}&to=${today}&currency=AMD`;
 const oldBytes=Buffer.from('%PDF-1.7\nPHASE6-ORIGINAL-PRIVATE\n%%EOF'),newBytes=Buffer.from('%PDF-1.7\nPHASE6-NEW-PRIVATE\n%%EOF');
 before(async()=>{
@@ -38,6 +38,7 @@ before(async()=>{
  building=(await pool.query("INSERT INTO buildings(organization_id,name,address) VALUES($1,'Phase6 isolated building','QA synthetic') RETURNING id",[org])).rows[0].id;
  unit=(await pool.query("INSERT INTO units(organization_id,building_id,number,area) VALUES($1,$2,'P6-101',56) RETURNING id",[org,building])).rows[0].id;
  for(const role of ['manager','developer','unit_owner']){await pool.query('INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id) VALUES($1,$2,$3,$4,$5)',[users[role],org,role,building,role==='unit_owner'?unit:null]);await clients[role].switch(users[role],role,building,role==='unit_owner'?unit:undefined)}
+ const settings=await clients.org_admin.call('/resident/settings?buildingId='+building,'PUT',{directory:true,discussions:true,chat:true,marketplace:true,services:true});assert.equal(settings.status,200,JSON.stringify(settings.data));
  co=users.family;
 });
 after(async()=>{await new Promise<void>((r,j)=>server.close(e=>e?j(e):r()));await pool.end()});
@@ -72,7 +73,14 @@ test('document v1 and consent are pinned before any parent replacement',async()=
  const pinned=await clients.support.call(`/platform/support-cases/${caseId}/attachments/${docId}?versionId=${version1}`);assert.equal(pinned.status,200);assert.deepEqual(pinned.data,oldBytes);
 });
 test('weighted publication freezes real legal records, excludes role-only access and hides drafts',async()=>{
- const p={key:randomUUID(),buildingId:building,title:'Հայերեն собрание',description:'Recorded weighted meeting',startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),quorumBasisPoints:5000,documentIds:[docId],agenda:[{title:'Question one',votingType:'yes_no',options:['yes','no','abstain'],passOption:'yes',passBasisPoints:5001},{title:'Question choice',votingType:'single_choice',options:['A','B'],passOption:'A',passBasisPoints:5001}]};
+ const topic=await clients.unit_owner.call('/resident/records/discussions','POST',{title:'Bike rack proposal',body:'A resident suggested a secure bicycle rack.',category:'building'});assert.equal(topic.status,201,JSON.stringify(topic.data));discussionId=topic.data.id;
+ const message=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/messages`,'POST',{body:'Please add a secure rack near entrance A.',clientId:randomUUID()});assert.equal(message.status,201,JSON.stringify(message.data));
+ const submitted=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/agenda-proposals`,'POST',{key:randomUUID(),sourceMessageId:message.data.id,title:'Install a bicycle rack',description:'Review placement and procurement of a secure bicycle rack.'});assert.equal(submitted.status,201,JSON.stringify(submitted.data));proposalId=submitted.data.proposalId;
+ assert.equal(submitted.data.status,'pending_review');
+ const proposalTrail=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/lineage`);assert.equal(proposalTrail.status,200);assert.equal(proposalTrail.data[0].proposalId,proposalId);assert.equal(proposalTrail.data[0].requestId,null);
+ const pending=await clients.manager.call(`/governance/agenda-proposals?status=pending_review&buildingId=${building}`);assert.equal(pending.status,200);assert.ok(pending.data.some((x:any)=>x.id===proposalId));
+ const approved=await clients.manager.call(`/governance/agenda-proposals/${proposalId}/review`,'POST',{key:randomUUID(),version:1,action:'approve'});assert.equal(approved.status,200,JSON.stringify(approved.data));assert.equal(approved.data.status,'approved');
+ const p:any={key:randomUUID(),buildingId:building,title:'Հայերեն собрание',description:'Recorded weighted meeting',startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),quorumBasisPoints:5000,documentIds:[docId],agenda:[{title:'Question one',votingType:'yes_no',options:['yes','no','abstain'],passOption:'yes',passBasisPoints:5001,proposalId},{title:'Question choice',votingType:'single_choice',options:['A','B'],passOption:'A',passBasisPoints:5001}]};
  const r=await clients.manager.call('/governance/meetings','POST',p);assert.equal(r.status,201,JSON.stringify(r.data));meeting=r.data;
  assert.equal((await clients.unit_owner.call('/governance/meetings/'+meeting.id)).status,404);
  assert.ok(!(await clients.unit_owner.call('/meetings')).data.some((m:any)=>m.id===meeting.id));
@@ -81,6 +89,8 @@ test('weighted publication freezes real legal records, excludes role-only access
  assert.equal(r.data.status,'published',JSON.stringify(r.data));meeting=r.data;
  assert.equal((await clients.manager.call(`/governance/meetings/${meeting.id}/actions`,'POST',pub)).data.version,2);
  const detail=await clients.manager.call('/governance/meetings/'+meeting.id);eligibility=detail.data.eligibility;agendaId=detail.data.agenda.find((a:any)=>a.voting_type==='yes_no').id;
+ assert.equal(detail.data.agenda.find((a:any)=>a.id===agendaId).proposal_id,proposalId);assert.equal(detail.data.agenda.find((a:any)=>a.id===agendaId).discussion_id,discussionId);
+ const traced=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/lineage`);assert.equal(traced.status,200);assert.equal(traced.data[0].meetingId,meeting.id);assert.equal(traced.data[0].proposalStatus,'included');assert.equal(traced.data[0].sourceMessageId,message.data.id);
  assert.equal(detail.data.result.totalEligibleShare,10000);assert.equal(eligibility.length,2);assert.equal(detail.data.documents[0].version_id,version1);
  const e=await clients.manager.call('/ownerships/'+share.id+'/end','POST',{key:randomUUID(),version:1,endsOn:'2020-01-02',reason:'Test historical legal ending after publication'});assert.equal(e.status,200,JSON.stringify(e.data));
  assert.equal((await clients.manager.call('/governance/meetings/'+meeting.id)).data.result.totalEligibleShare,10000);
@@ -93,8 +103,10 @@ test('only actual snapshot owners vote once; weights and quorum are not legacy v
  const a=await clients.unit_owner.call(`/governance/agenda/${agendaId}/vote`,'POST',p);assert.equal(a.status,201,JSON.stringify(a.data));
  assert.equal((await clients.unit_owner.call(`/governance/agenda/${agendaId}/vote`,'POST',p)).data.id,a.data.id);
  assert.equal((await clients.unit_owner.call(`/governance/agenda/${agendaId}/vote`,'POST',{...p,key:randomUUID(),selectedOption:'no'})).status,409);
+ const ownerTrail=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/lineage`);assert.equal(ownerTrail.status,200);assert.ok(ownerTrail.data[0].voteIds.includes(a.data.id));
  await pool.query("INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id) VALUES($1,$2,'unit_owner',$3,$4)",[co,org,building,unit]);await clients.family.switch(co,'unit_owner',building,unit);
- assert.equal((await clients.family.call(`/governance/agenda/${agendaId}/vote`,'POST',{key:randomUUID(),eligibilityId:other.id,selectedOption:'no'})).status,201);
+ const secondVote=await clients.family.call(`/governance/agenda/${agendaId}/vote`,'POST',{key:randomUUID(),eligibilityId:other.id,selectedOption:'no'});assert.equal(secondVote.status,201,JSON.stringify(secondVote.data));
+ const coTrail=await clients.family.call(`/resident/records/discussions/${discussionId}/lineage`);assert.equal(coTrail.status,200);assert.ok(coTrail.data[0].voteIds.includes(secondVote.data.id));
  const detail=await clients.manager.call('/governance/meetings/'+meeting.id),result=detail.data.result.agenda.find((a:any)=>a.id===agendaId);
  assert.equal(detail.data.result.participationShare,10000);assert.equal(result.byOption.yes,6000);assert.equal(result.byOption.no,4000);assert.equal(result.quorum,true);assert.equal(result.passed,true);
  const view=await clients.unit_owner.call('/governance/meetings/'+meeting.id);assert.equal(view.data.eligibility.length,1);assert.equal(view.data.agenda.find((a:any)=>a.id===agendaId).my_votes.length,1);
@@ -126,6 +138,7 @@ test('protocol is generated only after end, as a private Unicode PDF and immutab
  assert.equal((await clients.unit_owner.call(`/governance/agenda/${agendaId}/vote`,'POST',{key:randomUUID(),eligibilityId:eligibility[0].id,selectedOption:'yes'})).status,409);
  const p={key:randomUUID(),version:2,action:'finalize'},f=await clients.manager.call(`/governance/meetings/${meeting.id}/actions`,'POST',p);
  assert.equal(f.status,200,JSON.stringify(f.data));assert.equal(f.data.status,'finalized');assert.ok(f.data.protocol_document_id);
+ const decisionTrail=await clients.unit_owner.call(`/resident/records/discussions/${discussionId}/lineage`);assert.equal(decisionTrail.status,200);assert.equal(decisionTrail.data[0].proposalStatus,'decided');assert.equal(decisionTrail.data[0].decision?.passed,true);
  assert.equal((await clients.manager.call(`/governance/meetings/${meeting.id}/actions`,'POST',p)).data.protocol_document_id,f.data.protocol_document_id);
  assert.equal((await pool.query('SELECT count(*)::int AS count FROM meeting_results WHERE meeting_id=$1',[meeting.id])).rows[0].count,1);
  assert.equal((await pool.query('SELECT count(*)::int AS count FROM documents WHERE id=$1',[f.data.protocol_document_id])).rows[0].count,1);

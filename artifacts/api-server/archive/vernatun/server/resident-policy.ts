@@ -70,7 +70,7 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
   if(adminOnlyKinds.includes(kind))a.push('edit','delete');
   if(kind==='subscriptions'&&row.status==='requested')a.push('approve','reject');
   if(kind==='subscriptions'&&['active','cancel_requested'].includes(row.status))a.push('cancel');
-  if(kind==='discussions')a.push(...(row.status==='open'?['close','freeze','proposal']:['reopen']));
+  if(kind==='discussions')a.push(...(row.status==='open'?['close','freeze']:['reopen']));
   if(kind==='listings'&&row.status==='submitted')a.push('approve','reject');
   if(kind==='listings'&&row.status==='active')a.push('close');
  }else{
@@ -86,6 +86,10 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
    if(own&&s.c.role_key==='unit_owner'&&['draft','rejected'].includes(row.status))a.push('edit','submit','delete');
    if(own&&s.c.role_key==='unit_owner'&&row.status==='active')a.push('close');
   }
+ }
+ if(kind==='discussions'&&row.status==='open'){
+  if(s.c.permissions.includes('requests.create')||s.c.permissions.includes('requests.assign'))a.push('request');
+  a.push('proposal');
  }
  if((kind==='conversations'||kind==='discussions')&&!['closed','frozen','rejected','draft','submitted'].includes(row.status))a.push('message');
  if(kind==='conversations'&&row.parent_id&&s.settings.marketplace&&row.status==='open'){

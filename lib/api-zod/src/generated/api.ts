@@ -1353,6 +1353,87 @@ export const PostResidentMessageResponse = zod.object({
 })
 
 
+export const CreateRequestFromDiscussionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createRequestFromDiscussionBodySubjectMin = 3;
+export const createRequestFromDiscussionBodySubjectMax = 160;
+
+export const createRequestFromDiscussionBodyDescriptionMax = 4000;
+
+
+
+export const CreateRequestFromDiscussionBody = zod.object({
+  "key": zod.string().uuid(),
+  "sourceMessageId": zod.string().uuid().optional(),
+  "subject": zod.string().min(createRequestFromDiscussionBodySubjectMin).max(createRequestFromDiscussionBodySubjectMax),
+  "description": zod.string().max(createRequestFromDiscussionBodyDescriptionMax).optional(),
+  "categoryId": zod.string().uuid().optional()
+})
+
+export const CreateRequestFromDiscussionResponse = zod.object({
+  "requestId": zod.string().uuid(),
+  "discussionId": zod.string().uuid(),
+  "sourceMessageId": zod.string().uuid().nullable(),
+  "status": zod.string()
+})
+
+
+export const CreateAgendaProposalFromDiscussionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createAgendaProposalFromDiscussionBodyTitleMin = 3;
+export const createAgendaProposalFromDiscussionBodyTitleMax = 200;
+
+export const createAgendaProposalFromDiscussionBodyDescriptionMax = 4000;
+
+
+
+export const CreateAgendaProposalFromDiscussionBody = zod.object({
+  "key": zod.string().uuid(),
+  "sourceMessageId": zod.string().uuid().optional(),
+  "title": zod.string().min(createAgendaProposalFromDiscussionBodyTitleMin).max(createAgendaProposalFromDiscussionBodyTitleMax),
+  "description": zod.string().max(createAgendaProposalFromDiscussionBodyDescriptionMax).optional()
+})
+
+export const CreateAgendaProposalFromDiscussionResponse = zod.object({
+  "proposalId": zod.string().uuid(),
+  "discussionId": zod.string().uuid(),
+  "sourceMessageId": zod.string().uuid().nullable(),
+  "status": zod.string(),
+  "version": zod.number().int()
+})
+
+
+export const GetDiscussionLineageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetDiscussionLineageResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "linkType": zod.enum(['request', 'agenda_proposal']),
+  "discussionId": zod.string().uuid(),
+  "sourceMessageId": zod.string().uuid().nullable(),
+  "requestId": zod.string().uuid().nullable(),
+  "requestSubject": zod.string().nullish(),
+  "requestStatus": zod.string().nullish(),
+  "workOrderId": zod.string().uuid().nullish(),
+  "workOrderStatus": zod.string().nullish(),
+  "proposalId": zod.string().uuid().nullable(),
+  "proposalTitle": zod.string().nullish(),
+  "proposalStatus": zod.string().nullish(),
+  "meetingId": zod.string().uuid().nullable(),
+  "meetingTitle": zod.string().nullish(),
+  "meetingStatus": zod.string().nullish(),
+  "voteIds": zod.array(zod.string().uuid()),
+  "decision": zod.record(zod.string(), zod.unknown()).nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetDiscussionLineageResponse = zod.array(GetDiscussionLineageResponseItem)
+
+
 export const GetResidentAdminBuildingsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -5387,11 +5468,70 @@ export const CreateGovernanceMeetingBody = zod.object({
   "votingType": zod.enum(['yes_no', 'single_choice']),
   "options": zod.array(zod.string().min(1).max(createGovernanceMeetingBodyAgendaItemOptionsItemMax)).min(createGovernanceMeetingBodyAgendaItemOptionsMin).max(createGovernanceMeetingBodyAgendaItemOptionsMax),
   "passOption": zod.string(),
-  "passBasisPoints": zod.number().int().min(1).max(createGovernanceMeetingBodyAgendaItemPassBasisPointsMax)
+  "passBasisPoints": zod.number().int().min(1).max(createGovernanceMeetingBodyAgendaItemPassBasisPointsMax),
+  "proposalId": zod.string().uuid().optional()
 })).min(1).max(createGovernanceMeetingBodyAgendaMax)
 })
 
 export const CreateGovernanceMeetingResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListGovernanceAgendaProposalsQueryParams = zod.object({
+  "status": zod.enum(['pending_review', 'approved', 'rejected', 'included', 'decided']).optional(),
+  "buildingId": zod.coerce.string().uuid().optional()
+})
+
+export const ListGovernanceAgendaProposalsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected', 'included', 'decided']),
+  "version": zod.number().int(),
+  "building_id": zod.string().uuid(),
+  "building_name": zod.string().optional(),
+  "discussion_id": zod.string().uuid(),
+  "source_message_id": zod.string().uuid().nullish(),
+  "source_text": zod.string(),
+  "meeting_id": zod.string().uuid().nullish(),
+  "agenda_item_id": zod.string().uuid().nullish(),
+  "decision": zod.record(zod.string(), zod.unknown()).nullish(),
+  "submitter_name": zod.string().optional()
+})
+export const ListGovernanceAgendaProposalsResponse = zod.array(ListGovernanceAgendaProposalsResponseItem)
+
+
+export const ReviewGovernanceAgendaProposalParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const reviewGovernanceAgendaProposalBodyReasonMax = 1000;
+
+
+
+export const ReviewGovernanceAgendaProposalBody = zod.object({
+  "key": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "action": zod.enum(['approve', 'reject']),
+  "reason": zod.string().max(reviewGovernanceAgendaProposalBodyReasonMax).optional()
+})
+
+export const ReviewGovernanceAgendaProposalResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected', 'included', 'decided']),
+  "version": zod.number().int(),
+  "building_id": zod.string().uuid(),
+  "building_name": zod.string().optional(),
+  "discussion_id": zod.string().uuid(),
+  "source_message_id": zod.string().uuid().nullish(),
+  "source_text": zod.string(),
+  "meeting_id": zod.string().uuid().nullish(),
+  "agenda_item_id": zod.string().uuid().nullish(),
+  "decision": zod.record(zod.string(), zod.unknown()).nullish(),
+  "submitter_name": zod.string().optional()
+})
 
 
 export const GetGovernanceMeetingParams = zod.object({
