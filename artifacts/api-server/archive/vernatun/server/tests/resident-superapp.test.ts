@@ -8,6 +8,7 @@ import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
 import {registerResidentContinuityTests} from './resident-continuity.cases.js';
+import {registerPayerResponsibilityTests} from './payer-responsibility.cases.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='';
@@ -301,3 +302,4 @@ test('search separates resident kinds and exact record links preserve ownership 
  }
 });
 registerResidentContinuityTests(()=>({owner,family,admin,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));
+registerPayerResponsibilityTests(()=>({owner,family,admin,accountant:()=>new Client().login('accountant'),buildingId,query,seed}));

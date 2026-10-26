@@ -1,3 +1,10 @@
+# Additional payer-responsibility acceptance
+
+The subsequently implemented future-payer consent flow is documented separately
+in [PAYER-RESPONSIBILITY-ACCEPTANCE.md](PAYER-RESPONSIBILITY-ACCEPTANCE.md).
+That report records its own verification and remaining limits; it does not
+upgrade external integrations or the complete master prompt to accepted.
+
 # ImTun: внутренний resident-контур
 
 ## Статус

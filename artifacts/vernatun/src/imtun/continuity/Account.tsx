@@ -9,6 +9,7 @@ import {useAct} from '../superapp/useAct';
 import {contKey,tt,status} from './core';
 import Avatar from './Avatar';
 import Household from './Household';
+import Payer from './Payer';
 import './continuity.css';
 const COOL=60;
 function Email({d,l,refresh}:{d:ResidentContinuity;l:Language;refresh:()=>void}){
@@ -48,4 +49,5 @@ export default function Account({c,l,d}:{c:RoleContext;l:Language;d:ResidentCont
  <section className="im-card"><h3>{tt(l,'Հեռախոսի հաստատում','Подтверждение телефона','Phone verification')}</h3><p>{tt(l,'SMS մատակարարը կարգավորված չէ, հեռախոսը հաստատել հնարավոր չէ։ (PROVIDER_REQUIRED)','SMS-провайдер не подключён, подтвердить телефон пока нельзя. (PROVIDER_REQUIRED)','No SMS provider is configured, so the phone cannot be verified yet. (PROVIDER_REQUIRED)')}</p></section>
  <Avatar l={l} available={d.avatarAvailable===true} ctx={c.id} refresh={refresh}/>
  <Household c={c} l={l}/>
+ <Payer c={c} l={l}/>
  <Notify key={d.notificationSettings.version} v={d.notificationSettings} l={l} refresh={refresh}/></div>}

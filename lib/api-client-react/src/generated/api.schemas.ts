@@ -3635,6 +3635,75 @@ export interface WorkspaceSearchResult {
   groups: WorkspaceSearchGroup[];
 }
 
+export interface PayerServicePolicy {
+  serviceId: string;
+  serviceName?: string;
+  enabled: boolean;
+  version: number;
+}
+
+export type PayerResponsibilityResultStatus = typeof PayerResponsibilityResultStatus[keyof typeof PayerResponsibilityResultStatus];
+
+
+export const PayerResponsibilityResultStatus = {
+  pending: 'pending',
+  accepted: 'accepted',
+  declined: 'declined',
+  revoked: 'revoked',
+} as const;
+
+export interface PayerResponsibilityResult {
+  id: string;
+  status: PayerResponsibilityResultStatus;
+  version: number;
+}
+
+export type PayerResponsibility = PayerResponsibilityResult & ({
+  payerAssignmentId: string;
+  ownerId: string;
+  recipientId: string;
+  ownerName: string;
+  recipientName: string;
+  serviceName: string;
+  startsOn: string;
+  /** @nullable */
+  endsOn: string | null;
+  canAccept: boolean;
+  canRevoke: boolean;
+});
+
+export type PayerResponsibilityWorkspaceAssignmentsItem = {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  startsOn: string;
+  /** @nullable */
+  endsOn: string | null;
+  enabled: boolean;
+};
+
+export type PayerResponsibilityWorkspaceRecipientsItem = {
+  id: string;
+  name: string;
+};
+
+export type PayerResponsibilityWorkspaceInvoicesItem = {
+  id: string;
+  period: string;
+  amountMinor: string;
+  currency: string;
+  status: string;
+};
+
+export interface PayerResponsibilityWorkspace {
+  canPropose: boolean;
+  nextPeriod: string;
+  assignments: PayerResponsibilityWorkspaceAssignmentsItem[];
+  recipients: PayerResponsibilityWorkspaceRecipientsItem[];
+  delegations: PayerResponsibility[];
+  invoices: PayerResponsibilityWorkspaceInvoicesItem[];
+}
+
 export type ResidentHouseholdMembersItem = {
   id: string;
   userId: string;
@@ -4397,6 +4466,43 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type GetResidentPayerPolicyParams = {
+buildingId: string;
+};
+
+export type UpdateResidentPayerPolicyParams = {
+buildingId: string;
+};
+
+export type UpdateResidentPayerPolicyBody = {
+  enabled: boolean;
+  /** @minimum 0 */
+  version: number;
+};
+
+export type CreatePayerResponsibilityBody = {
+  payerAssignmentId: string;
+  recipientId: string;
+  startsOn: string;
+  endsOn?: string;
+  clientId: string;
+};
+
+export type ReviewPayerResponsibilityBodyAction = typeof ReviewPayerResponsibilityBodyAction[keyof typeof ReviewPayerResponsibilityBodyAction];
+
+
+export const ReviewPayerResponsibilityBodyAction = {
+  accept: 'accept',
+  decline: 'decline',
+  revoke: 'revoke',
+} as const;
+
+export type ReviewPayerResponsibilityBody = {
+  action: ReviewPayerResponsibilityBodyAction;
+  /** @minimum 1 */
+  version: number;
+};
 
 export type RevokeResidentDelegation200 = {
   id: string;

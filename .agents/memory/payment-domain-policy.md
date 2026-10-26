@@ -9,6 +9,16 @@ through Telcell B2B, never to Vernatun or the property organization.
 
 **Why:** The user explicitly fixed these three independent money flows in the payment master prompt.
 
+Payment responsibility delegation is not a settlement and must never change the
+beneficiary or merchant. The management company defines delegable charge/service
+categories. Within that allowlist, the owner proposes future responsibility to a
+renter or family member; activation requires only the recipient's acceptance,
+not company approval of each transfer. Legal ownership and the original
+billing/account history must remain unchanged. Actual property payments use
+the organization's own ArCa merchant, with provider server-to-server confirmation.
+
+**Why:** The user explicitly clarified the consent and financial boundary for payer delegation.
+
 **How to apply:** Keep platform/property/utility obligations and merchant routing
 separate. An organization without ArCa must not fall back to Vernatun's merchant.
 Telcell platform versus organization account scope must follow the actual B2B

@@ -8,6 +8,119 @@
 import * as zod from 'zod';
 
 
+export const GetResidentPayerPolicyQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid()
+})
+
+export const GetResidentPayerPolicyResponseItem = zod.object({
+  "serviceId": zod.string().uuid(),
+  "serviceName": zod.string().optional(),
+  "enabled": zod.boolean(),
+  "version": zod.number().int()
+})
+export const GetResidentPayerPolicyResponse = zod.array(GetResidentPayerPolicyResponseItem)
+
+
+export const UpdateResidentPayerPolicyParams = zod.object({
+  "serviceId": zod.coerce.string().uuid()
+})
+
+export const UpdateResidentPayerPolicyQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid()
+})
+
+export const updateResidentPayerPolicyBodyVersionMin = 0;
+
+
+
+export const UpdateResidentPayerPolicyBody = zod.object({
+  "enabled": zod.boolean(),
+  "version": zod.number().int().min(updateResidentPayerPolicyBodyVersionMin)
+})
+
+export const UpdateResidentPayerPolicyResponse = zod.object({
+  "serviceId": zod.string().uuid(),
+  "serviceName": zod.string().optional(),
+  "enabled": zod.boolean(),
+  "version": zod.number().int()
+})
+
+
+export const GetPayerResponsibilitiesResponse = zod.object({
+  "canPropose": zod.boolean(),
+  "nextPeriod": zod.coerce.date(),
+  "assignments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "serviceId": zod.string().uuid(),
+  "serviceName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "endsOn": zod.coerce.date().nullable(),
+  "enabled": zod.boolean()
+})),
+  "recipients": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string()
+})),
+  "delegations": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'declined', 'revoked']),
+  "version": zod.number().int()
+}).and(zod.object({
+  "payerAssignmentId": zod.string().uuid(),
+  "ownerId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "ownerName": zod.string(),
+  "recipientName": zod.string(),
+  "serviceName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "endsOn": zod.coerce.date().nullable(),
+  "canAccept": zod.boolean(),
+  "canRevoke": zod.boolean()
+}))),
+  "invoices": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "period": zod.coerce.date(),
+  "amountMinor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string()
+}))
+})
+
+
+export const CreatePayerResponsibilityBody = zod.object({
+  "payerAssignmentId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "startsOn": zod.coerce.date(),
+  "endsOn": zod.coerce.date().optional(),
+  "clientId": zod.string().uuid()
+})
+
+export const CreatePayerResponsibilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'declined', 'revoked']),
+  "version": zod.number().int()
+})
+
+
+export const ReviewPayerResponsibilityParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ReviewPayerResponsibilityBody = zod.object({
+  "action": zod.enum(['accept', 'decline', 'revoke']),
+  "version": zod.number().int().min(1)
+})
+
+export const ReviewPayerResponsibilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'declined', 'revoked']),
+  "version": zod.number().int()
+})
+
+
 export const GetResidentHouseholdResponse = zod.object({
   "unitId": zod.string().uuid(),
   "canManageDelegations": zod.boolean(),

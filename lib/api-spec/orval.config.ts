@@ -17,7 +17,7 @@ export default defineConfig({
   "api-client-react": {
     input: {
       target: "./openapi.yaml",
-      parserOptions: { externalRefs: { allow: ["./payments.yaml", "./resident.yaml", "./resident-continuity.yaml"] } },
+      parserOptions: { externalRefs: { allow: ["./payments.yaml", "./resident.yaml", "./resident-continuity.yaml", "./payer-responsibility.yaml"] } },
       override: {
         transformer: titleTransformer,
       },
@@ -44,7 +44,7 @@ export default defineConfig({
   zod: {
     input: {
       target: "./openapi.yaml",
-      parserOptions: { externalRefs: { allow: ["./payments.yaml", "./resident.yaml", "./resident-continuity.yaml"] } },
+      parserOptions: { externalRefs: { allow: ["./payments.yaml", "./resident.yaml", "./resident-continuity.yaml", "./payer-responsibility.yaml"] } },
       override: {
         transformer: titleTransformer,
       },

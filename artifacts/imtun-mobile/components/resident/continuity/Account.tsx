@@ -9,6 +9,7 @@ import { useContextId } from '@/lib/resident/hooks';
 import { Btn, Card, Chip, ErrorBox, Field, Toggle } from '../Ui';
 import { useAction } from '../useAction';
 import Avatar from './Avatar';
+import Payer from './Payer';
 import { contKey, httpStatus, tt } from './core';
 function Email({ d, l, refresh }: { d: ResidentContinuity; l: Language; refresh: () => void }) {
   const [sent, setSent] = useState(false); const [code, setCode] = useState(''); const [left, setLeft] = useState(0); const [note, setNote] = useState('');
@@ -55,6 +56,7 @@ export default function Account({ d, l }: { d: ResidentContinuity; l: Language }
     <Email d={d} l={l} refresh={refresh} />
     <Card><Text accessibilityRole="header" style={{ fontWeight: '800', fontSize: 16 }}>{tt(l, 'Հեռախոսի հաստատում', 'Подтверждение телефона', 'Phone verification')}</Text>
       <Text>{tt(l, 'SMS մատակարարը կարգավորված չէ, հեռախոսը հաստատել հնարավոր չէ։ (PROVIDER_REQUIRED)', 'SMS-провайдер не подключён, подтвердить телефон пока нельзя. (PROVIDER_REQUIRED)', 'No SMS provider is configured; the phone cannot be verified yet. (PROVIDER_REQUIRED)')}</Text></Card>
+    <Payer l={l} />
     <Avatar l={l} available={d.avatarAvailable === true} ctx={ctx} refresh={refresh} />
     <Notify key={d.notificationSettings.version} v={d.notificationSettings} l={l} refresh={refresh} />
   </>;

@@ -51,6 +51,7 @@ import type {
   CreateManagedApiKeyBody,
   CreateOwnership201,
   CreateOwnershipBody,
+  CreatePayerResponsibilityBody,
   CreateResidentAiHistoryBody,
   CreateResidentDirectChatBody,
   CreateResidentPass201,
@@ -153,6 +154,7 @@ import type {
   GetResidentDirectMessagesParams,
   GetResidentListingPhotoParams,
   GetResidentMessagesParams,
+  GetResidentPayerPolicyParams,
   GetResidentPropertyComparison200Item,
   GetResidentPropertyComparisonParams,
   GetResidentRecordParams,
@@ -259,6 +261,9 @@ import type {
   OperationalRow,
   OrganizationBrandingState,
   OutgoingWebhookStateInput,
+  PayerResponsibilityResult,
+  PayerResponsibilityWorkspace,
+  PayerServicePolicy,
   PaymentIntentDetails,
   PaymentProviderInstance,
   PaymentProviderSetupInput,
@@ -313,6 +318,7 @@ import type {
   ResidentServiceBooking,
   ResidentWorkspace,
   ResolveNotificationDestinationParams,
+  ReviewPayerResponsibilityBody,
   ReviewResidentServiceBookingBody,
   ReviewResidentServiceBookingParams,
   RevokeResidentDelegation200,
@@ -361,6 +367,8 @@ import type {
   UpdatePortfolioObjectBody,
   UpdateResidentBuildingSettingsParams,
   UpdateResidentDirectChatStateBody,
+  UpdateResidentPayerPolicyBody,
+  UpdateResidentPayerPolicyParams,
   UpdateResidentRecordParams,
   UploadDocumentVersion201,
   UploadDocumentVersionParams,
@@ -407,6 +415,412 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetResidentPayerPolicyUrl = (params: GetResidentPayerPolicyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/payer-policy?${stringifiedParams}` : `/api/resident/payer-policy`
+}
+
+export const getResidentPayerPolicy = async (params: GetResidentPayerPolicyParams, options?: Parameters<typeof customFetch>[1]): Promise<PayerServicePolicy[]> => {
+
+  return customFetch<PayerServicePolicy[]>(getGetResidentPayerPolicyUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentPayerPolicyQueryKey = (params?: GetResidentPayerPolicyParams,) => {
+    return [
+    `/api/resident/payer-policy`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentPayerPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getResidentPayerPolicy>>, TError = ErrorType<unknown>>(params: GetResidentPayerPolicyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentPayerPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentPayerPolicyQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentPayerPolicy>>> = ({ signal }) => getResidentPayerPolicy(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentPayerPolicy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentPayerPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentPayerPolicy>>>
+export type GetResidentPayerPolicyQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentPayerPolicy<TData = Awaited<ReturnType<typeof getResidentPayerPolicy>>, TError = ErrorType<unknown>>(
+ params: GetResidentPayerPolicyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentPayerPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentPayerPolicyQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateResidentPayerPolicyUrl = (serviceId: string,
+    params: UpdateResidentPayerPolicyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/payer-policy/${serviceId}?${stringifiedParams}` : `/api/resident/payer-policy/${serviceId}`
+}
+
+export const updateResidentPayerPolicy = async (serviceId: string,
+    updateResidentPayerPolicyBody: UpdateResidentPayerPolicyBody,
+    params: UpdateResidentPayerPolicyParams, options?: Parameters<typeof customFetch>[1]): Promise<PayerServicePolicy> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PayerServicePolicy>(getUpdateResidentPayerPolicyUrl(serviceId,params),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateResidentPayerPolicyBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentPayerPolicyMutationKey = () => ['updateResidentPayerPolicy'] as const;
+
+export const getUpdateResidentPayerPolicyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentPayerPolicy>>, TError,UpdateResidentPayerPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentPayerPolicy>>, TError,UpdateResidentPayerPolicyMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentPayerPolicyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentPayerPolicy>>, UpdateResidentPayerPolicyMutationVariables> = (props) => {
+          const {serviceId,data,params} = props ?? {};
+
+          return  updateResidentPayerPolicy(serviceId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentPayerPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentPayerPolicy>>>
+    export type UpdateResidentPayerPolicyMutationBody = BodyType<UpdateResidentPayerPolicyBody>
+    export type UpdateResidentPayerPolicyMutationError = ErrorType<unknown>
+    export type UpdateResidentPayerPolicyMutationVariables = {serviceId: string;data: BodyType<UpdateResidentPayerPolicyBody>;params: UpdateResidentPayerPolicyParams}
+
+    export const useUpdateResidentPayerPolicy = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentPayerPolicy>>, TError,UpdateResidentPayerPolicyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentPayerPolicy>>,
+        TError,
+        UpdateResidentPayerPolicyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentPayerPolicyMutationOptions(options));
+    }
+
+export const getGetPayerResponsibilitiesUrl = () => {
+
+
+
+
+  return `/api/resident/payer-responsibilities`
+}
+
+export const getPayerResponsibilities = async ( options?: Parameters<typeof customFetch>[1]): Promise<PayerResponsibilityWorkspace> => {
+
+  return customFetch<PayerResponsibilityWorkspace>(getGetPayerResponsibilitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPayerResponsibilitiesQueryKey = () => {
+    return [
+    `/api/resident/payer-responsibilities`
+    ] as const;
+    }
+
+
+export const getGetPayerResponsibilitiesQueryOptions = <TData = Awaited<ReturnType<typeof getPayerResponsibilities>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPayerResponsibilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPayerResponsibilitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayerResponsibilities>>> = ({ signal }) => getPayerResponsibilities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPayerResponsibilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPayerResponsibilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getPayerResponsibilities>>>
+export type GetPayerResponsibilitiesQueryError = ErrorType<unknown>
+
+
+
+export function useGetPayerResponsibilities<TData = Awaited<ReturnType<typeof getPayerResponsibilities>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPayerResponsibilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPayerResponsibilitiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePayerResponsibilityUrl = () => {
+
+
+
+
+  return `/api/resident/payer-responsibilities`
+}
+
+export const createPayerResponsibility = async (createPayerResponsibilityBody: CreatePayerResponsibilityBody, options?: Parameters<typeof customFetch>[1]): Promise<PayerResponsibilityResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PayerResponsibilityResult>(getCreatePayerResponsibilityUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createPayerResponsibilityBody)
+  }
+);}
+
+
+
+
+
+export const getCreatePayerResponsibilityMutationKey = () => ['createPayerResponsibility'] as const;
+
+export const getCreatePayerResponsibilityMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPayerResponsibility>>, TError,CreatePayerResponsibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPayerResponsibility>>, TError,CreatePayerResponsibilityMutationVariables, TContext> => {
+
+const mutationKey = getCreatePayerResponsibilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPayerResponsibility>>, CreatePayerResponsibilityMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPayerResponsibility(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePayerResponsibilityMutationResult = NonNullable<Awaited<ReturnType<typeof createPayerResponsibility>>>
+    export type CreatePayerResponsibilityMutationBody = BodyType<CreatePayerResponsibilityBody>
+    export type CreatePayerResponsibilityMutationError = ErrorType<unknown>
+    export type CreatePayerResponsibilityMutationVariables = {data: BodyType<CreatePayerResponsibilityBody>}
+
+    export const useCreatePayerResponsibility = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPayerResponsibility>>, TError,CreatePayerResponsibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPayerResponsibility>>,
+        TError,
+        CreatePayerResponsibilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePayerResponsibilityMutationOptions(options));
+    }
+
+export const getReviewPayerResponsibilityUrl = (id: string,) => {
+
+
+
+
+  return `/api/resident/payer-responsibilities/${id}`
+}
+
+export const reviewPayerResponsibility = async (id: string,
+    reviewPayerResponsibilityBody: ReviewPayerResponsibilityBody, options?: Parameters<typeof customFetch>[1]): Promise<PayerResponsibilityResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PayerResponsibilityResult>(getReviewPayerResponsibilityUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewPayerResponsibilityBody)
+  }
+);}
+
+
+
+
+
+export const getReviewPayerResponsibilityMutationKey = () => ['reviewPayerResponsibility'] as const;
+
+export const getReviewPayerResponsibilityMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewPayerResponsibility>>, TError,ReviewPayerResponsibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewPayerResponsibility>>, TError,ReviewPayerResponsibilityMutationVariables, TContext> => {
+
+const mutationKey = getReviewPayerResponsibilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewPayerResponsibility>>, ReviewPayerResponsibilityMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewPayerResponsibility(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewPayerResponsibilityMutationResult = NonNullable<Awaited<ReturnType<typeof reviewPayerResponsibility>>>
+    export type ReviewPayerResponsibilityMutationBody = BodyType<ReviewPayerResponsibilityBody>
+    export type ReviewPayerResponsibilityMutationError = ErrorType<unknown>
+    export type ReviewPayerResponsibilityMutationVariables = {id: string;data: BodyType<ReviewPayerResponsibilityBody>}
+
+    export const useReviewPayerResponsibility = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewPayerResponsibility>>, TError,ReviewPayerResponsibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewPayerResponsibility>>,
+        TError,
+        ReviewPayerResponsibilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewPayerResponsibilityMutationOptions(options));
+    }
 
 export const getGetResidentHouseholdUrl = () => {
 

@@ -1,0 +1,154 @@
+openapi: 3.1.0
+info: {title: Payer responsibility, version: 1.0.0}
+paths:
+  /resident/payer-policy:
+    get:
+      operationId: getResidentPayerPolicy
+      parameters:
+        - {in: query, name: buildingId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Organization's charge services, with building-scoped opt-in policy.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/PayerServicePolicy'}}
+  /resident/payer-policy/{serviceId}:
+    put:
+      operationId: updateResidentPayerPolicy
+      parameters:
+        - {in: path, name: serviceId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: buildingId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, version]
+              properties: {enabled: {type: boolean}, version: {type: integer, minimum: 0}}
+      responses:
+        '200':
+          description: Updated organization-settings policy; recent authentication required.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayerServicePolicy'}
+  /resident/payer-responsibilities:
+    get:
+      operationId: getPayerResponsibilities
+      responses:
+        '200':
+          description: Current unit only; original assignments and history remain unchanged.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayerResponsibilityWorkspace'}
+    post:
+      operationId: createPayerResponsibility
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payerAssignmentId, recipientId, startsOn, clientId]
+              properties:
+                payerAssignmentId: {type: string, format: uuid}
+                recipientId: {type: string, format: uuid}
+                startsOn: {type: string, format: date}
+                endsOn: {type: string, format: date}
+                clientId: {type: string, format: uuid}
+      responses:
+        '201':
+          description: Owner's proposal; not activated until recipient acceptance.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayerResponsibilityResult'}
+  /resident/payer-responsibilities/{id}:
+    put:
+      operationId: reviewPayerResponsibility
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, version]
+              properties:
+                action: {type: string, enum: [accept, decline, revoke]}
+                version: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Recipient accepts or declines; either party may revoke future responsibility. No company per-transfer approval.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayerResponsibilityResult'}
+components:
+  schemas:
+    PayerServicePolicy:
+      type: object
+      required: [serviceId, enabled, version]
+      properties:
+        serviceId: {type: string, format: uuid}
+        serviceName: {type: string}
+        enabled: {type: boolean}
+        version: {type: integer}
+    PayerResponsibilityResult:
+      type: object
+      required: [id, status, version]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [pending, accepted, declined, revoked]}
+        version: {type: integer}
+    PayerResponsibility:
+      allOf:
+        - {$ref: '#/components/schemas/PayerResponsibilityResult'}
+        - type: object
+          required: [payerAssignmentId, ownerId, recipientId, ownerName, recipientName, serviceName, startsOn, endsOn, canAccept, canRevoke]
+          properties:
+            payerAssignmentId: {type: string, format: uuid}
+            ownerId: {type: string, format: uuid}
+            recipientId: {type: string, format: uuid}
+            ownerName: {type: string}
+            recipientName: {type: string}
+            serviceName: {type: string}
+            startsOn: {type: string, format: date}
+            endsOn: {type: [string, 'null'], format: date}
+            canAccept: {type: boolean}
+            canRevoke: {type: boolean}
+    PayerResponsibilityWorkspace:
+      type: object
+      required: [canPropose, nextPeriod, assignments, recipients, delegations, invoices]
+      properties:
+        canPropose: {type: boolean}
+        nextPeriod: {type: string, format: date}
+        assignments:
+          type: array
+          items:
+            type: object
+            required: [id, serviceId, serviceName, startsOn, endsOn, enabled]
+            properties:
+              id: {type: string, format: uuid}
+              serviceId: {type: string, format: uuid}
+              serviceName: {type: string}
+              startsOn: {type: string, format: date}
+              endsOn: {type: [string, 'null'], format: date}
+              enabled: {type: boolean}
+        recipients:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties: {id: {type: string, format: uuid}, name: {type: string}}
+        delegations: {type: array, items: {$ref: '#/components/schemas/PayerResponsibility'}}
+        invoices:
+          type: array
+          items:
+            type: object
+            required: [id, period, amountMinor, currency, status]
+            properties:
+              id: {type: string, format: uuid}
+              period: {type: string, format: date}
+              amountMinor: {type: string}
+              currency: {type: string}
+              status: {type: string}

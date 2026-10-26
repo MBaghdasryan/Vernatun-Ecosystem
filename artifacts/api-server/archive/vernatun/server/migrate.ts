@@ -38,6 +38,8 @@ const expectedObjects=[
  {migration:'049_resident_continuity.sql',name:'resident_service_bookings',kind:'relation' as const,idempotent:false},
  {migration:'050_resident_avatars.sql',name:'resident_avatars',kind:'relation' as const,idempotent:false},
  {migration:'051_resident_listing_photos.sql',name:'resident_listing_photos',kind:'relation' as const,idempotent:false},
+ {migration:'052_resident_payer_responsibility.sql',name:'resident_payer_delegations',kind:'relation' as const,idempotent:false},
+ {migration:'052_resident_payer_responsibility.sql',name:'resident_payer_policy',kind:'relation' as const,idempotent:false},
  {migration:'039_payment_foundation.sql',name:'payment_intents',kind:'relation' as const,idempotent:false},
  {migration:'039_payment_foundation.sql',name:'payment_transactions',kind:'relation' as const,idempotent:false},
  {migration:'040_edge_management.sql',name:'edge_nodes',kind:'relation' as const,idempotent:false},

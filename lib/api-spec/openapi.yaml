@@ -17,6 +17,14 @@ tags:
   - name: edge-resident
     description: Devices explicitly mapped to the current resident unit.
 paths:
+  /resident/payer-policy:
+    $ref: './payer-responsibility.yaml#/paths/~1resident~1payer-policy'
+  /resident/payer-policy/{serviceId}:
+    $ref: './payer-responsibility.yaml#/paths/~1resident~1payer-policy~1{serviceId}'
+  /resident/payer-responsibilities:
+    $ref: './payer-responsibility.yaml#/paths/~1resident~1payer-responsibilities'
+  /resident/payer-responsibilities/{id}:
+    $ref: './payer-responsibility.yaml#/paths/~1resident~1payer-responsibilities~1{id}'
   /resident/household:
     $ref: './resident-continuity.yaml#/paths/~1resident~1household'
   /delegations/{id}/revoke:

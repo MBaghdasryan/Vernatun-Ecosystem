@@ -5,6 +5,7 @@ import {transaction,idempotent,record} from './operations.js';
 import {uuid,day,hash,amountLimit,version} from './finance-shared.js';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
+import {resolvePayers} from './payer-responsibility-store.js';
 export const billingBatches=Router();billingBatches.use(requireAuth);
 const input=z.object({buildingId:uuid,period:day.refine(s=>s.endsWith('-01')),tariffId:uuid}).strict();
 async function calculate(db:PoolClient,c:Context,b:z.infer<typeof input>,lock=false){
@@ -17,6 +18,7 @@ async function calculate(db:PoolClient,c:Context,b:z.infer<typeof input>,lock=fa
  if(lock)for(const unit of units)await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[unit.id+tariff.service_id]);
  const payers=(await db.query(`SELECT p.*,p.starts_on::text,p.ends_on::text FROM payer_assignments p JOIN units u ON u.id=p.unit_id
  WHERE p.organization_id=$1 AND u.building_id=$2 AND p.service_id=$3 AND p.starts_on<=$4 AND (p.ends_on IS NULL OR p.ends_on>=$4) ORDER BY p.id ${lock?'FOR UPDATE OF p':''}`,[c.organization_id,building.id,tariff.service_id,b.period])).rows;
+ const effective=new Map((await resolvePayers(db,payers.map(p=>p.id),b.period,lock)).map(p=>[p.id,p]));
  const prior=(await db.query('SELECT payer_assignment_id,tariff_id,invoice_id FROM charges WHERE organization_id=$1 AND period=$2',[c.organization_id,b.period])).rows;
  const charges:Record<string,any>[]=[];const skipped:Record<string,any>[]=[];let total=0n;
  for(const unit of units){
@@ -28,7 +30,7 @@ async function calculate(db:PoolClient,c:Context,b:z.infer<typeof input>,lock=fa
   const quantity=tariff.basis==='unit'?100n:BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'));
   const amount=(BigInt(tariff.amount_minor)*quantity+50n)/100n;
   if(amount<=0n||amount>amountLimit){skipped.push({unitId:unit.id,number:unit.number,code:'invalid_amount'});continue}
-  charges.push({unitId:unit.id,number:unit.number,payerId:p.payer_user_id,payerAssignmentId:p.id,quantityHundredths:quantity.toString(),amountMinor:amount.toString(),ruleStartsOn:p.starts_on,ruleEndsOn:p.ends_on});total+=amount;
+   charges.push({unitId:unit.id,number:unit.number,payerId:effective.get(p.id)!.payerId,payerDelegationId:effective.get(p.id)!.delegationId,payerAssignmentId:p.id,quantityHundredths:quantity.toString(),amountMinor:amount.toString(),ruleStartsOn:p.starts_on,ruleEndsOn:p.ends_on});total+=amount;
  }
  const snapshot={...b,buildingName:building.name,tariff:{id:tariff.id,serviceId:tariff.service_id,name:tariff.name,basis:tariff.basis,rateMinor:String(tariff.amount_minor),currency:tariff.currency},unitCount:units.length,chargeCount:charges.length,totalMinor:total.toString(),charges,skipped,warnings:skipped};
  return {snapshot,fingerprint:hash(snapshot)};
@@ -64,7 +66,7 @@ billingBatches.post('/finance/batches/:id/:action',async(req,res)=>{
      const tariff=fresh.snapshot.tariff;
      const invoice=(await db.query("INSERT INTO invoices(organization_id,unit_id,payer_user_id,period,amount_minor,currency,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING id",[c.organization_id,line.unitId,line.payerId,row.snapshot.period,line.amountMinor,tariff.currency,req.user!.id])).rows[0];
      await db.query('INSERT INTO invoice_lines(invoice_id,description,quantity_hundredths,rate_minor,amount_minor) VALUES($1,$2,$3,$4,$5)',[invoice.id,tariff.name,line.quantityHundredths,tariff.rateMinor,line.amountMinor]);
-     await db.query('INSERT INTO charges(organization_id,payer_assignment_id,period,tariff_id,invoice_id) VALUES($1,$2,$3,$4,$5)',[c.organization_id,line.payerAssignmentId,row.snapshot.period,row.tariff_id,invoice.id]);
+      await db.query('INSERT INTO charges(organization_id,payer_assignment_id,period,tariff_id,invoice_id,payer_delegation_id) VALUES($1,$2,$3,$4,$5,$6)',[c.organization_id,line.payerAssignmentId,row.snapshot.period,row.tariff_id,invoice.id,line.payerDelegationId]);
      await db.query("UPDATE invoices SET status='published',published_at=now(),published_by=$2 WHERE id=$1",[invoice.id,req.user!.id]);
      await db.query('INSERT INTO billing_batch_invoices(batch_id,organization_id,invoice_id) VALUES($1,$2,$3)',[row.id,c.organization_id,invoice.id]);
     }

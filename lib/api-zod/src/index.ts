@@ -1,5 +1,6 @@
 export * from "./generated/api";
 export type {
+ CreatePayerResponsibilityBody,ReviewPayerResponsibilityBody,UpdateResidentPayerPolicyBody,UpdateResidentPayerPolicyParams,
  ConfirmResidentEmailVerificationBody,CreateResidentAiHistoryBody,CreateResidentDirectChatBody,
  CreateResidentPlatformTicketBody,CreateResidentServiceBookingBody,GetResidentDirectMessagesParams,
  PostResidentDirectMessageBody,PostResidentDirectMessageParams,ReviewResidentServiceBookingBody,
