@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,context,requireAuth,requirePermission} from './access.js';
 import {recordDefinition} from './paged-records.js';
+import {enabled,residentScope,type ResidentKind} from './resident-policy.js';
 
 // A closed set of individually authorized sources, not an unrestricted UNION
 // across tenant data. Never return source rows, storage keys or financial values.
@@ -58,6 +59,18 @@ workspaceSearch.get('/workspace-search',async(req,res)=>{
    :`SELECT id,subject,status FROM support_cases WHERE organization_id=$1 AND created_by=$2 AND NOT $3::boolean`,
   args:platform?[c.permissions.includes('support.assign'),req.user!.id]:[c.organization_id,req.user!.id,!!(c.building_id||c.unit_id)],
   title:'subject',description:'status'});
+ if(c.shell==='home'){
+  const resident=await residentScope(req);
+  const kinds=(['contacts','services','discussions','listings','help','conversations'] as ResidentKind[]).filter(k=>enabled(resident,k));
+  if(kinds.length)sources.push({kind:'resident',title:'title',description:'label',
+   sql:`SELECT r.id,r.title,concat(r.kind,' · ',r.body) AS label FROM resident_product_records r
+    WHERE r.organization_id=$1 AND r.building_id=$2 AND r.kind=ANY($3::text[]) AND r.deleted_at IS NULL
+    AND ((r.owner_user_id=$4 AND (r.unit_id IS NULL OR r.unit_id=$5))
+     OR (r.kind IN('contacts','services','help','listings') AND r.status='active')
+     OR (r.kind='discussions' AND r.status IN('open','closed','frozen')))
+    AND (r.kind<>'help' OR r.data->>'category'=$6)`,
+   args:[resident.organizationId,resident.buildingId,kinds,req.user!.id,resident.unitId,req.user!.locale]});
+ }
  const groups=[];
  for(const source of sources){
   // All identifiers below come from the local closed source registry.

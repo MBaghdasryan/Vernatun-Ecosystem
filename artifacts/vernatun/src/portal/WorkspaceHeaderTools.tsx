@@ -20,7 +20,8 @@ const words={
  organizations:['Կազմակերպություններ','Организации','Organizations'],properties:['Շենքեր','Здания','Buildings'],
  units:['Տարածքներ','Помещения','Units'],people:['Աշխատակիցներ','Сотрудники','Employees'],requests:['Հայտեր','Заявки','Requests'],
  workorders:['Իմ աշխատանքները','Мои работы','My work'],defects:['Թերություններ','Дефекты','Defects'],invoices:['Հաշվարկներ','Начисления','Invoices'],
- documents:['Փաստաթղթեր','Документы','Documents'],support:['Աջակցություն','Поддержка','Support']
+ documents:['Փաստաթղթեր','Документы','Documents'],support:['Աջակցություն','Поддержка','Support'],
+ resident:['Տան ծառայություններ','Сервисы дома','Home services']
 } as const;
 export default function WorkspaceHeaderTools({c,language,product}:{c:RoleContext;language:Language;product:Product}){
  const i=language==='hy'?0:language==='ru'?1:2;
@@ -68,6 +69,7 @@ export default function WorkspaceHeaderTools({c,language,product}:{c:RoleContext
   window.dispatchEvent(new Event('vernatun-notifications-changed'));
  }
  function destination(kind:string,id:string){
+  if(kind==='resident')return viewRoute('imtun','building',c.role_key);
   if(kind==='organizations')return '/console/organizations';
   if(kind==='requests'||kind==='workorders')return product==='hayat'?'/hayat/works?requestId='+id:'/imtun/requests?requestId='+id;
   const view=({invoices:'finance',support:'support-cases',units:'units',properties:'properties',people:'people',defects:'defects',documents:'documents'} as Record<string,string>)[kind];

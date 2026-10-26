@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { palette } from '@/constants/colors';
+import HomeCounts from '@/components/resident/HomeCounts';
 import { formatArmenianDate, localizeRequestStatus, requestCount } from '@/constants/armenian';
 
 export default function HomeScreen() {
@@ -43,6 +44,7 @@ export default function HomeScreen() {
         </Pressable>
         <View pointerEvents="none" style={styles.heroMark}><Feather name="home" size={148} color={palette.heroDecoration} /></View>
       </View>
+      <HomeCounts />
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Ի՞նչ է պետք անել</Text><Text style={styles.sectionHint}>ԱՐԱԳ ՄՈՒՏՔ</Text></View>
       <View style={styles.quickGrid}>
         <Pressable accessibilityRole="button" testID="quick-request" onPress={() => router.push('/(tabs)/requests')} style={styles.quickCard}>

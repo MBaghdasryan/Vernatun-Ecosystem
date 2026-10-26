@@ -1,0 +1,543 @@
+openapi: 3.1.0
+info: {title: Resident product extension, version: 1.0.0}
+paths:
+  /meters:
+    get:
+      operationId: listResidentMeters
+      responses:
+        '200':
+          description: Existing authorized meter scope with reading history; never Edge machine credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, serial_number, kind, number, readings]
+                  properties:
+                    id: {type: string}
+                    serial_number: {type: string}
+                    kind: {type: string}
+                    number: {type: string}
+                    readings:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, period, value_thousandths]
+                        properties:
+                          id: {type: string}
+                          period: {type: string}
+                          value_thousandths: {type: [string, integer]}
+  /meters/{id}/readings:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: submitResidentMeterReading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period, value]
+              properties:
+                period: {type: string, pattern: '^\d{4}-\d{2}-01$'}
+                value: {type: string, pattern: '^\d{1,10}(\.\d{1,3})?$'}
+      responses:
+        '201':
+          description: Existing meter policy verifies monotonic period and reading.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentIdResult'}
+  /announcements:
+    get:
+      operationId: listResidentAnnouncements
+      responses:
+        '200':
+          description: Existing publication and building scope.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, title, body, created_at, published]
+                  properties:
+                    id: {type: string}
+                    title: {type: string}
+                    body: {type: string}
+                    created_at: {type: string}
+                    published: {type: boolean}
+  /documents:
+    get:
+      operationId: listResidentDocuments
+      responses:
+        '200':
+          description: Existing document authorization; no storage key is returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, title, media_type, created_at, category]
+                  properties:
+                    id: {type: string}
+                    title: {type: string}
+                    media_type: {type: string}
+                    created_at: {type: string}
+                    category: {type: string}
+                    latest_version_id: {type: [string, 'null']}
+  /documents/{id}/download:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: downloadResidentDocument
+      responses:
+        '200':
+          description: Authorized private bytes. Use the generated authenticated transport, not a public storage URL.
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+  /passes:
+    get:
+      operationId: listResidentPasses
+      responses:
+        '200':
+          description: Existing creator and unit scoped visitor passes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, visitor, vehicle, valid_from, valid_until, state]
+                  properties:
+                    id: {type: string}
+                    visitor: {type: string}
+                    vehicle: {type: string}
+                    valid_from: {type: string}
+                    valid_until: {type: string}
+                    revoked_at: {type: [string, 'null']}
+                    state: {type: string}
+    post:
+      operationId: createResidentPass
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unitId, visitor, vehicle, validFrom, validUntil]
+              properties:
+                unitId: {type: string, format: uuid}
+                visitor: {type: string, minLength: 2, maxLength: 100}
+                vehicle: {type: string, maxLength: 30}
+                validFrom: {type: string, format: date-time}
+                validUntil: {type: string, format: date-time}
+      responses:
+        '201':
+          description: Creates only the existing pass credential. Never implies physical access-provider activation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, token]
+                properties:
+                  id: {type: string}
+                  token: {type: string}
+  /passes/{id}/revoke:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: revokeResidentPass
+      responses:
+        '200':
+          description: Idempotently revokes own pass.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentIdResult'}
+  /notifications:
+    get:
+      operationId: listResidentNotifications
+      responses:
+        '200':
+          description: Existing authorized notification summaries; access-denied records have no payload.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, category, critical, created_at, access_denied]
+                  properties:
+                    id: {type: string}
+                    kind: {type: string}
+                    category: {type: string}
+                    critical: {type: boolean}
+                    created_at: {type: string}
+                    read_at: {type: [string, 'null']}
+                    access_denied: {type: boolean}
+  /notifications/{id}/read:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: markResidentNotificationRead
+      responses:
+        '200':
+          description: Marks only the authenticated user's notification.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentIdResult'}
+  /invoices:
+    get:
+      operationId: listResidentInvoices
+      parameters:
+        - {in: query, name: currency, schema: {type: string, enum: [AMD, RUB, USD]}}
+      responses:
+        '200':
+          description: Existing immutable ledger view; resident sees own payer invoices only.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, period, amount_minor, paid_minor, adjustment_minor, balance_minor, currency, status]
+                  properties:
+                    id: {type: string}
+                    period: {type: string}
+                    amount_minor: {type: string}
+                    paid_minor: {type: string}
+                    adjustment_minor: {type: string}
+                    balance_minor: {type: string}
+                    currency: {type: string}
+                    status: {type: string}
+  /me/contexts:
+    get:
+      operationId: getResidentContexts
+      responses:
+        '200':
+          description: Authorized resident assignments; selecting one uses the existing auth/context endpoint.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, role, organization, building, unit]
+                  properties:
+                    id: {type: string}
+                    role: {type: string}
+                    organization: {type: string}
+                    building: {type: string}
+                    unit: {type: string}
+  /resident/workspace:
+    get:
+      operationId: getResidentWorkspace
+      parameters: [{$ref: '#/components/parameters/Building'}]
+      responses:
+        '200':
+          description: Server-computed resident workspace, or explicitly scoped administration workspace.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentWorkspace'}
+  /resident/profile:
+    put:
+      operationId: updateResidentProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentProfileInput'}
+      responses:
+        '200':
+          description: Saved preferences; changing verified email requires existing verification workflow.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentProfileInput'}
+  /resident/records/{kind}:
+    parameters:
+      - {$ref: '#/components/parameters/Kind'}
+      - {$ref: '#/components/parameters/Building'}
+    get:
+      operationId: getResidentRecords
+      parameters:
+        - {in: query, name: search, schema: {type: string, maxLength: 200}}
+      responses:
+        '200':
+          description: At most 100 authorized records; search narrows the result, never scope.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, hasMore]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/ResidentRecord'}}
+                  hasMore: {type: boolean}
+    post:
+      operationId: createResidentRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentRecordInput'}
+      responses:
+        '201':
+          description: Created record, with status computed by the server.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
+  /resident/records/{kind}/{id}:
+    parameters:
+      - {$ref: '#/components/parameters/Kind'}
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+    patch:
+      operationId: updateResidentRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentRecordInput'}
+      responses:
+        '200':
+          description: Updated record; optimistic version required.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
+    delete:
+      operationId: removeResidentRecord
+      parameters:
+        - {in: query, name: version, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '204': {description: Soft-deleted or revoked; audit retained}
+  /resident/records/{kind}/{id}/actions:
+    parameters:
+      - {$ref: '#/components/parameters/Kind'}
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+    post:
+      operationId: actOnResidentRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, version]
+              properties:
+                action: {type: string, enum: [accept, withdraw, submit, approve, reject, activate, cancel, close, reopen, freeze, support, unsupport, read, save, unsave, report, request, proposal]}
+                version: {type: integer, minimum: 1}
+                reason: {type: string, maxLength: 2000}
+      responses:
+        '200':
+          description: Audited transition; unrelated domain mutations are not implied.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentRecord'}
+  /resident/records/{kind}/{id}/messages:
+    parameters:
+      - {$ref: '#/components/parameters/Kind'}
+      - {$ref: '#/components/parameters/Id'}
+      - {$ref: '#/components/parameters/Building'}
+    get:
+      operationId: getResidentMessages
+      responses:
+        '200':
+          description: Authorized thread messages, newest 100 in chronological order.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/ResidentMessage'}}
+    post:
+      operationId: postResidentMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body, clientId]
+              properties:
+                body: {type: string, minLength: 1, maxLength: 5000}
+                clientId: {type: string, format: uuid}
+                replyTo: {type: string, format: uuid}
+      responses:
+        '201':
+          description: Saved once for this sender and clientId; no message replay on reconnect.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentMessage'}
+  /resident/admin/buildings:
+    get:
+      operationId: getResidentAdminBuildings
+      responses:
+        '200':
+          description: Buildings within actual administrative scope.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, name, organization]
+                  properties:
+                    id: {type: string}
+                    name: {type: string}
+                    organization: {type: string}
+  /resident/settings:
+    put:
+      operationId: updateResidentBuildingSettings
+      parameters: [{$ref: '#/components/parameters/Building'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResidentBuildingSettings'}
+      responses:
+        '200':
+          description: Opt-in building feature policy, not an entitlement or permission grant.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResidentBuildingSettings'}
+components:
+  parameters:
+    Kind:
+      in: path
+      name: kind
+      required: true
+      schema: {$ref: '#/components/schemas/ResidentRecordKind'}
+    Id: {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+    Building:
+      in: query
+      name: buildingId
+      description: Only administrators can choose a building; residents always use their authenticated context.
+      schema: {type: string, format: uuid}
+  schemas:
+    ResidentIdResult:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+    ResidentRecordKind:
+      type: string
+      enum: [vehicles, mobile-devices, agreements, contacts, directory, services, subscriptions, conversations, discussions, listings, help, feedback]
+    ResidentProfileInput:
+      type: object
+      required: [name, phone, language, theme, preferredChannel, showName, showUnit, showPhone, allowMessages]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        phone: {type: string, maxLength: 30}
+        language: {type: string, enum: [hy, ru, en]}
+        theme: {type: string, enum: [system, light, dark]}
+        preferredChannel: {type: string, enum: [email, phone]}
+        showName: {type: boolean}
+        showUnit: {type: boolean}
+        showPhone: {type: boolean}
+        allowMessages: {type: boolean}
+    ResidentBuildingSettings:
+      type: object
+      required: [directory, discussions, chat, marketplace, services]
+      properties:
+        directory: {type: boolean}
+        discussions: {type: boolean}
+        chat: {type: boolean}
+        marketplace: {type: boolean}
+        services: {type: boolean}
+    ResidentRecordInput:
+      type: object
+      description: Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.
+      required: [title, body]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, maxLength: 5000}
+        version: {type: integer, minimum: 1}
+        category: {type: string, maxLength: 80}
+        phone: {type: string, maxLength: 30}
+        email: {type: string, maxLength: 254}
+        hours: {type: string, maxLength: 200}
+        plate: {type: string, maxLength: 24}
+        country: {type: string, maxLength: 3}
+        vehicleType: {type: string, enum: [car, motorcycle, bicycle, other]}
+        make: {type: string, maxLength: 80}
+        model: {type: string, maxLength: 80}
+        color: {type: string, maxLength: 40}
+        priceMinor: {type: string, pattern: '^\d{1,14}$'}
+        currency: {type: string, enum: [AMD, RUB, USD]}
+        quantity: {type: integer, minimum: 1, maximum: 1000}
+        parentId: {type: string, format: uuid}
+        expiresAt: {type: string, format: date-time}
+        installationId: {type: string, format: uuid}
+        platform: {type: string, enum: [ios, android, web]}
+        appVersion: {type: string, maxLength: 40}
+        osVersion: {type: string, maxLength: 80}
+        pushToken: {type: string, maxLength: 4096}
+        mandatory: {type: boolean}
+        withdrawable: {type: boolean}
+        saleType: {type: string, enum: [sale, rent]}
+    ResidentRecord:
+      type: object
+      required: [id, kind, title, body, status, version, createdAt, own, actions, data]
+      properties:
+        id: {type: string}
+        kind: {$ref: '#/components/schemas/ResidentRecordKind'}
+        title: {type: string}
+        body: {type: string}
+        status: {type: string}
+        version: {type: integer}
+        createdAt: {type: string}
+        own: {type: boolean}
+        actions: {type: array, items: {type: string}}
+        data: {type: object, additionalProperties: true}
+        linkedRequestId: {type: [string, 'null']}
+        accepted: {type: boolean}
+        saved: {type: boolean}
+        supported: {type: boolean}
+        supportCount: {type: integer}
+    ResidentMessage:
+      type: object
+      required: [id, body, own, createdAt, sender]
+      properties:
+        id: {type: string}
+        body: {type: string}
+        own: {type: boolean}
+        createdAt: {type: string}
+        sender: {type: string}
+        replyTo: {type: [string, 'null']}
+    ResidentWorkspace:
+      type: object
+      required: [contextId, administrative, building, profile, settings, capabilities, integrations, home]
+      properties:
+        contextId: {type: string}
+        administrative: {type: boolean}
+        building:
+          type: object
+          required: [id, name, organization, address, unit, area, role, timezone]
+          properties:
+            id: {type: string}
+            name: {type: string}
+            organization: {type: string}
+            address: {type: string}
+            unit: {type: [string, 'null']}
+            area: {type: [string, 'null']}
+            role: {type: string}
+            timezone: {type: string}
+        profile: {$ref: '#/components/schemas/ResidentProfileInput'}
+        settings: {$ref: '#/components/schemas/ResidentBuildingSettings'}
+        capabilities:
+          type: object
+          additionalProperties: {type: boolean}
+        integrations:
+          type: array
+          items:
+            type: object
+            required: [key, status]
+            properties:
+              key: {type: string}
+              status: {type: string, enum: [NOT_CONFIGURED, CONTRACT_REQUIRED, CREDENTIALS_REQUIRED, ACTIVE, DEGRADED, UNSUPPORTED]}
+        home:
+          type: object
+          required: [unreadNotifications, openRequests, currency, payableMinor, overdueMinor, annualPaidMinor]
+          properties:
+            unreadNotifications: {type: [integer, 'null']}
+            openRequests: {type: [integer, 'null']}
+            currency: {type: string}
+            payableMinor: {type: [string, 'null']}
+            overdueMinor: {type: [string, 'null']}
+            annualPaidMinor: {type: [string, 'null']}

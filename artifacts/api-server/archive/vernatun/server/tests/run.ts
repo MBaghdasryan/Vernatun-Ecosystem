@@ -75,6 +75,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/email-providers.test.ts'],['--test','server/tests/email-delivery.test.ts'],['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--phase1-only')
  ? [['--test','server/tests/phase1.test.ts']]
+ : process.argv.includes('--resident-superapp-only')
+ ? [['--test','server/tests/resident-superapp.test.ts']]
  : process.argv.includes('--imtun-only')
  ? [['--test','server/tests/imtun.test.ts']]
  : process.argv.includes('--hayat-only')

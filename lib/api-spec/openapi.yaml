@@ -17,6 +17,44 @@ tags:
   - name: edge-resident
     description: Devices explicitly mapped to the current resident unit.
 paths:
+  /meters:
+    $ref: './resident.yaml#/paths/~1meters'
+  /meters/{id}/readings:
+    $ref: './resident.yaml#/paths/~1meters~1{id}~1readings'
+  /announcements:
+    $ref: './resident.yaml#/paths/~1announcements'
+  /documents:
+    $ref: './resident.yaml#/paths/~1documents'
+  /documents/{id}/download:
+    $ref: './resident.yaml#/paths/~1documents~1{id}~1download'
+  /passes:
+    $ref: './resident.yaml#/paths/~1passes'
+  /passes/{id}/revoke:
+    $ref: './resident.yaml#/paths/~1passes~1{id}~1revoke'
+  /notifications:
+    $ref: './resident.yaml#/paths/~1notifications'
+  /notifications/{id}/read:
+    $ref: './resident.yaml#/paths/~1notifications~1{id}~1read'
+  /invoices:
+    $ref: './resident.yaml#/paths/~1invoices'
+  /me/contexts:
+    $ref: './resident.yaml#/paths/~1me~1contexts'
+  /resident/workspace:
+    $ref: './resident.yaml#/paths/~1resident~1workspace'
+  /resident/profile:
+    $ref: './resident.yaml#/paths/~1resident~1profile'
+  /resident/records/{kind}:
+    $ref: './resident.yaml#/paths/~1resident~1records~1{kind}'
+  /resident/records/{kind}/{id}:
+    $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}'
+  /resident/records/{kind}/{id}/actions:
+    $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1actions'
+  /resident/records/{kind}/{id}/messages:
+    $ref: './resident.yaml#/paths/~1resident~1records~1{kind}~1{id}~1messages'
+  /resident/admin/buildings:
+    $ref: './resident.yaml#/paths/~1resident~1admin~1buildings'
+  /resident/settings:
+    $ref: './resident.yaml#/paths/~1resident~1settings'
   /edge/v1/register:
     post:
       tags: [edge]
@@ -2982,6 +3020,25 @@ paths:
       responses:
         "200": { description: Password and configured MFA verified; five minute sensitive-action window }
   /delegations:
+    get:
+      operationId: listResidentDelegations
+      responses:
+        '200':
+          description: Existing owner-assignment-scoped household invitations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, email, expires_at, version]
+                  properties:
+                    id: {type: string}
+                    email: {type: string}
+                    expires_at: {type: string}
+                    accepted_at: {type: [string, 'null']}
+                    revoked_at: {type: [string, 'null']}
+                    version: {type: integer}
     post:
       operationId: createResidentDelegation
       requestBody:

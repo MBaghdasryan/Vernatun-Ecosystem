@@ -25,6 +25,10 @@ function NativeTabLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: 'wrench.and.screwdriver', selected: 'wrench.and.screwdriver.fill' }} />
         <NativeTabs.Trigger.Label>Հայտեր</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="more">
+        <NativeTabs.Trigger.Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} />
+        <NativeTabs.Trigger.Label>Ծառայություններ</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
         <NativeTabs.Trigger.Label>Անձնական էջ</NativeTabs.Trigger.Label>
@@ -88,6 +92,13 @@ function ClassicTabLayout() {
         options={{
           title: 'Հայտեր',
           tabBarIcon: ({ color }) => <Feather name="tool" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Ծառայություններ',
+          tabBarIcon: ({ color }) => <Feather name="grid" size={21} color={color} />,
         }}
       />
       <Tabs.Screen

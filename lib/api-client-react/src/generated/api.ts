@@ -21,6 +21,8 @@ import type {
 
 import type {
   ActManagedApiKeyBody,
+  ActOnResidentRecordBody,
+  ActOnResidentRecordParams,
   ApiKeyActionResult,
   AvailabilityBlock,
   AvailabilityBlockChange,
@@ -48,6 +50,9 @@ import type {
   CreateManagedApiKeyBody,
   CreateOwnership201,
   CreateOwnershipBody,
+  CreateResidentPass201,
+  CreateResidentPassBody,
+  CreateResidentRecordParams,
   CreateSystemBackup202,
   CreditAllocationInput,
   DefectCollaboration,
@@ -133,6 +138,12 @@ import type {
   GetPortfolioAnalyticsParams,
   GetPrivateBrandLogoParams,
   GetPrivateStorageStatus200,
+  GetResidentAdminBuildings200Item,
+  GetResidentContexts200Item,
+  GetResidentMessagesParams,
+  GetResidentRecords200,
+  GetResidentRecordsParams,
+  GetResidentWorkspaceParams,
   GetRoleInsights200,
   GetRoleInsightsParams,
   GetScopedRecordPageParams,
@@ -197,6 +208,14 @@ import type {
   ListOwnershipsParams,
   ListPlatformCasesParams,
   ListPlatformImplementationMeetingsParams,
+  ListResidentAnnouncements200Item,
+  ListResidentDelegations200Item,
+  ListResidentDocuments200Item,
+  ListResidentInvoices200Item,
+  ListResidentInvoicesParams,
+  ListResidentMeters200Item,
+  ListResidentNotifications200Item,
+  ListResidentPasses200Item,
   LogRetentionInput,
   LookupEquipmentParams,
   MaintenanceConfigurationInput,
@@ -246,12 +265,23 @@ import type {
   PlatformVersionIntent,
   PortfolioObject,
   PortfolioObjectInput,
+  PostResidentMessageBody,
+  PostResidentMessageParams,
   RecentAuthenticationInput,
   ReleasePipelineCallbackInput,
   RemoveOrganizationLogoParams,
+  RemoveResidentRecordParams,
   ReplacePortfolioBuildingsBody,
   ResendDeliveryInput,
+  ResidentBuildingSettings,
   ResidentDelegationInput,
+  ResidentIdResult,
+  ResidentMessage,
+  ResidentProfileInput,
+  ResidentRecord,
+  ResidentRecordInput,
+  ResidentRecordKind,
+  ResidentWorkspace,
   ResolveNotificationDestinationParams,
   RevokeSystemSessions200,
   RollbackSystemUpdate202,
@@ -267,6 +297,7 @@ import type {
   StaffAvailability,
   StageSystemUpdate200,
   StageSystemUpdateBody,
+  SubmitResidentMeterReadingBody,
   SuggestBankMatchesParams,
   SupportKnowledgeArticle,
   SystemBackupCreateInput,
@@ -294,6 +325,8 @@ import type {
   UpdateOrganizationModule200,
   UpdateOrganizationModuleBody,
   UpdatePortfolioObjectBody,
+  UpdateResidentBuildingSettingsParams,
+  UpdateResidentRecordParams,
   UploadDocumentVersion201,
   UploadDocumentVersionParams,
   UploadOperationalPhotoParams,
@@ -338,6 +371,1827 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListResidentMetersUrl = () => {
+
+
+
+
+  return `/api/meters`
+}
+
+export const listResidentMeters = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentMeters200Item[]> => {
+
+  return customFetch<ListResidentMeters200Item[]>(getListResidentMetersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentMetersQueryKey = () => {
+    return [
+    `/api/meters`
+    ] as const;
+    }
+
+
+export const getListResidentMetersQueryOptions = <TData = Awaited<ReturnType<typeof listResidentMeters>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentMeters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentMetersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentMeters>>> = ({ signal }) => listResidentMeters({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentMeters>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentMetersQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentMeters>>>
+export type ListResidentMetersQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentMeters<TData = Awaited<ReturnType<typeof listResidentMeters>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentMeters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentMetersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitResidentMeterReadingUrl = (id: string,) => {
+
+
+
+
+  return `/api/meters/${id}/readings`
+}
+
+export const submitResidentMeterReading = async (id: string,
+    submitResidentMeterReadingBody: SubmitResidentMeterReadingBody, options?: Parameters<typeof customFetch>[1]): Promise<ResidentIdResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentIdResult>(getSubmitResidentMeterReadingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(submitResidentMeterReadingBody)
+  }
+);}
+
+
+
+
+
+export const getSubmitResidentMeterReadingMutationKey = () => ['submitResidentMeterReading'] as const;
+
+export const getSubmitResidentMeterReadingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitResidentMeterReading>>, TError,SubmitResidentMeterReadingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitResidentMeterReading>>, TError,SubmitResidentMeterReadingMutationVariables, TContext> => {
+
+const mutationKey = getSubmitResidentMeterReadingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitResidentMeterReading>>, SubmitResidentMeterReadingMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitResidentMeterReading(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitResidentMeterReadingMutationResult = NonNullable<Awaited<ReturnType<typeof submitResidentMeterReading>>>
+    export type SubmitResidentMeterReadingMutationBody = BodyType<SubmitResidentMeterReadingBody>
+    export type SubmitResidentMeterReadingMutationError = ErrorType<unknown>
+    export type SubmitResidentMeterReadingMutationVariables = {id: string;data: BodyType<SubmitResidentMeterReadingBody>}
+
+    export const useSubmitResidentMeterReading = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitResidentMeterReading>>, TError,SubmitResidentMeterReadingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitResidentMeterReading>>,
+        TError,
+        SubmitResidentMeterReadingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitResidentMeterReadingMutationOptions(options));
+    }
+
+export const getListResidentAnnouncementsUrl = () => {
+
+
+
+
+  return `/api/announcements`
+}
+
+export const listResidentAnnouncements = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentAnnouncements200Item[]> => {
+
+  return customFetch<ListResidentAnnouncements200Item[]>(getListResidentAnnouncementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentAnnouncementsQueryKey = () => {
+    return [
+    `/api/announcements`
+    ] as const;
+    }
+
+
+export const getListResidentAnnouncementsQueryOptions = <TData = Awaited<ReturnType<typeof listResidentAnnouncements>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentAnnouncements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentAnnouncementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentAnnouncements>>> = ({ signal }) => listResidentAnnouncements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentAnnouncements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentAnnouncementsQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentAnnouncements>>>
+export type ListResidentAnnouncementsQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentAnnouncements<TData = Awaited<ReturnType<typeof listResidentAnnouncements>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentAnnouncements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentAnnouncementsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListResidentDocumentsUrl = () => {
+
+
+
+
+  return `/api/documents`
+}
+
+export const listResidentDocuments = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentDocuments200Item[]> => {
+
+  return customFetch<ListResidentDocuments200Item[]>(getListResidentDocumentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentDocumentsQueryKey = () => {
+    return [
+    `/api/documents`
+    ] as const;
+    }
+
+
+export const getListResidentDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listResidentDocuments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentDocumentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentDocuments>>> = ({ signal }) => listResidentDocuments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentDocuments>>>
+export type ListResidentDocumentsQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentDocuments<TData = Awaited<ReturnType<typeof listResidentDocuments>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentDocumentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadResidentDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/api/documents/${id}/download`
+}
+
+export const downloadResidentDocument = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadResidentDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadResidentDocumentQueryKey = (id: string,) => {
+    return [
+    `/api/documents/${id}/download`
+    ] as const;
+    }
+
+
+export const getDownloadResidentDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadResidentDocument>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadResidentDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadResidentDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadResidentDocument>>> = ({ signal }) => downloadResidentDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadResidentDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadResidentDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadResidentDocument>>>
+export type DownloadResidentDocumentQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadResidentDocument<TData = Awaited<ReturnType<typeof downloadResidentDocument>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadResidentDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadResidentDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListResidentPassesUrl = () => {
+
+
+
+
+  return `/api/passes`
+}
+
+export const listResidentPasses = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentPasses200Item[]> => {
+
+  return customFetch<ListResidentPasses200Item[]>(getListResidentPassesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentPassesQueryKey = () => {
+    return [
+    `/api/passes`
+    ] as const;
+    }
+
+
+export const getListResidentPassesQueryOptions = <TData = Awaited<ReturnType<typeof listResidentPasses>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentPasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentPassesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentPasses>>> = ({ signal }) => listResidentPasses({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentPasses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentPassesQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentPasses>>>
+export type ListResidentPassesQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentPasses<TData = Awaited<ReturnType<typeof listResidentPasses>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentPasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentPassesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResidentPassUrl = () => {
+
+
+
+
+  return `/api/passes`
+}
+
+export const createResidentPass = async (createResidentPassBody: CreateResidentPassBody, options?: Parameters<typeof customFetch>[1]): Promise<CreateResidentPass201> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreateResidentPass201>(getCreateResidentPassUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResidentPassBody)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentPassMutationKey = () => ['createResidentPass'] as const;
+
+export const getCreateResidentPassMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentPass>>, TError,CreateResidentPassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentPass>>, TError,CreateResidentPassMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentPassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentPass>>, CreateResidentPassMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResidentPass(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentPassMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentPass>>>
+    export type CreateResidentPassMutationBody = BodyType<CreateResidentPassBody>
+    export type CreateResidentPassMutationError = ErrorType<unknown>
+    export type CreateResidentPassMutationVariables = {data: BodyType<CreateResidentPassBody>}
+
+    export const useCreateResidentPass = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentPass>>, TError,CreateResidentPassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentPass>>,
+        TError,
+        CreateResidentPassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentPassMutationOptions(options));
+    }
+
+export const getRevokeResidentPassUrl = (id: string,) => {
+
+
+
+
+  return `/api/passes/${id}/revoke`
+}
+
+export const revokeResidentPass = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ResidentIdResult> => {
+
+  return customFetch<ResidentIdResult>(getRevokeResidentPassUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeResidentPassMutationKey = () => ['revokeResidentPass'] as const;
+
+export const getRevokeResidentPassMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeResidentPass>>, TError,RevokeResidentPassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeResidentPass>>, TError,RevokeResidentPassMutationVariables, TContext> => {
+
+const mutationKey = getRevokeResidentPassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeResidentPass>>, RevokeResidentPassMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeResidentPass(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeResidentPassMutationResult = NonNullable<Awaited<ReturnType<typeof revokeResidentPass>>>
+
+    export type RevokeResidentPassMutationError = ErrorType<unknown>
+    export type RevokeResidentPassMutationVariables = {id: string}
+
+    export const useRevokeResidentPass = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeResidentPass>>, TError,RevokeResidentPassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeResidentPass>>,
+        TError,
+        RevokeResidentPassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeResidentPassMutationOptions(options));
+    }
+
+export const getListResidentNotificationsUrl = () => {
+
+
+
+
+  return `/api/notifications`
+}
+
+export const listResidentNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentNotifications200Item[]> => {
+
+  return customFetch<ListResidentNotifications200Item[]>(getListResidentNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentNotificationsQueryKey = () => {
+    return [
+    `/api/notifications`
+    ] as const;
+    }
+
+
+export const getListResidentNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listResidentNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentNotifications>>> = ({ signal }) => listResidentNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentNotifications>>>
+export type ListResidentNotificationsQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentNotifications<TData = Awaited<ReturnType<typeof listResidentNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkResidentNotificationReadUrl = (id: string,) => {
+
+
+
+
+  return `/api/notifications/${id}/read`
+}
+
+export const markResidentNotificationRead = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ResidentIdResult> => {
+
+  return customFetch<ResidentIdResult>(getMarkResidentNotificationReadUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkResidentNotificationReadMutationKey = () => ['markResidentNotificationRead'] as const;
+
+export const getMarkResidentNotificationReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markResidentNotificationRead>>, TError,MarkResidentNotificationReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markResidentNotificationRead>>, TError,MarkResidentNotificationReadMutationVariables, TContext> => {
+
+const mutationKey = getMarkResidentNotificationReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markResidentNotificationRead>>, MarkResidentNotificationReadMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  markResidentNotificationRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkResidentNotificationReadMutationResult = NonNullable<Awaited<ReturnType<typeof markResidentNotificationRead>>>
+
+    export type MarkResidentNotificationReadMutationError = ErrorType<unknown>
+    export type MarkResidentNotificationReadMutationVariables = {id: string}
+
+    export const useMarkResidentNotificationRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markResidentNotificationRead>>, TError,MarkResidentNotificationReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markResidentNotificationRead>>,
+        TError,
+        MarkResidentNotificationReadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkResidentNotificationReadMutationOptions(options));
+    }
+
+export const getListResidentInvoicesUrl = (params?: ListResidentInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/invoices?${stringifiedParams}` : `/api/invoices`
+}
+
+export const listResidentInvoices = async (params?: ListResidentInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<ListResidentInvoices200Item[]> => {
+
+  return customFetch<ListResidentInvoices200Item[]>(getListResidentInvoicesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentInvoicesQueryKey = (params?: ListResidentInvoicesParams,) => {
+    return [
+    `/api/invoices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListResidentInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listResidentInvoices>>, TError = ErrorType<unknown>>(params?: ListResidentInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentInvoicesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentInvoices>>> = ({ signal }) => listResidentInvoices(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentInvoices>>>
+export type ListResidentInvoicesQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentInvoices<TData = Awaited<ReturnType<typeof listResidentInvoices>>, TError = ErrorType<unknown>>(
+ params?: ListResidentInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentInvoicesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetResidentContextsUrl = () => {
+
+
+
+
+  return `/api/me/contexts`
+}
+
+export const getResidentContexts = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetResidentContexts200Item[]> => {
+
+  return customFetch<GetResidentContexts200Item[]>(getGetResidentContextsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentContextsQueryKey = () => {
+    return [
+    `/api/me/contexts`
+    ] as const;
+    }
+
+
+export const getGetResidentContextsQueryOptions = <TData = Awaited<ReturnType<typeof getResidentContexts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentContexts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentContextsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentContexts>>> = ({ signal }) => getResidentContexts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentContexts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentContextsQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentContexts>>>
+export type GetResidentContextsQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentContexts<TData = Awaited<ReturnType<typeof getResidentContexts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentContexts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentContextsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetResidentWorkspaceUrl = (params?: GetResidentWorkspaceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/workspace?${stringifiedParams}` : `/api/resident/workspace`
+}
+
+export const getResidentWorkspace = async (params?: GetResidentWorkspaceParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentWorkspace> => {
+
+  return customFetch<ResidentWorkspace>(getGetResidentWorkspaceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentWorkspaceQueryKey = (params?: GetResidentWorkspaceParams,) => {
+    return [
+    `/api/resident/workspace`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getResidentWorkspace>>, TError = ErrorType<unknown>>(params?: GetResidentWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentWorkspaceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentWorkspace>>> = ({ signal }) => getResidentWorkspace(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentWorkspace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentWorkspace>>>
+export type GetResidentWorkspaceQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentWorkspace<TData = Awaited<ReturnType<typeof getResidentWorkspace>>, TError = ErrorType<unknown>>(
+ params?: GetResidentWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentWorkspaceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateResidentProfileUrl = () => {
+
+
+
+
+  return `/api/resident/profile`
+}
+
+export const updateResidentProfile = async (residentProfileInput: ResidentProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<ResidentProfileInput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentProfileInput>(getUpdateResidentProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentProfileMutationKey = () => ['updateResidentProfile'] as const;
+
+export const getUpdateResidentProfileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentProfile>>, TError,UpdateResidentProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentProfile>>, TError,UpdateResidentProfileMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentProfile>>, UpdateResidentProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateResidentProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentProfile>>>
+    export type UpdateResidentProfileMutationBody = BodyType<ResidentProfileInput>
+    export type UpdateResidentProfileMutationError = ErrorType<unknown>
+    export type UpdateResidentProfileMutationVariables = {data: BodyType<ResidentProfileInput>}
+
+    export const useUpdateResidentProfile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentProfile>>, TError,UpdateResidentProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentProfile>>,
+        TError,
+        UpdateResidentProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentProfileMutationOptions(options));
+    }
+
+export const getGetResidentRecordsUrl = (kind: ResidentRecordKind,
+    params?: GetResidentRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}?${stringifiedParams}` : `/api/resident/records/${kind}`
+}
+
+export const getResidentRecords = async (kind: ResidentRecordKind,
+    params?: GetResidentRecordsParams, options?: Parameters<typeof customFetch>[1]): Promise<GetResidentRecords200> => {
+
+  return customFetch<GetResidentRecords200>(getGetResidentRecordsUrl(kind,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentRecordsQueryKey = (kind: ResidentRecordKind,
+    params?: GetResidentRecordsParams,) => {
+    return [
+    `/api/resident/records/${kind}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentRecordsQueryOptions = <TData = Awaited<ReturnType<typeof getResidentRecords>>, TError = ErrorType<unknown>>(kind: ResidentRecordKind,
+    params?: GetResidentRecordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentRecords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentRecordsQueryKey(kind,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentRecords>>> = ({ signal }) => getResidentRecords(kind,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: kind !== null && kind !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentRecords>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentRecordsQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentRecords>>>
+export type GetResidentRecordsQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentRecords<TData = Awaited<ReturnType<typeof getResidentRecords>>, TError = ErrorType<unknown>>(
+ kind: ResidentRecordKind,
+    params?: GetResidentRecordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentRecords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentRecordsQueryOptions(kind,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResidentRecordUrl = (kind: ResidentRecordKind,
+    params?: CreateResidentRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}?${stringifiedParams}` : `/api/resident/records/${kind}`
+}
+
+export const createResidentRecord = async (kind: ResidentRecordKind,
+    residentRecordInput: ResidentRecordInput,
+    params?: CreateResidentRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentRecord>(getCreateResidentRecordUrl(kind,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentRecordInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResidentRecordMutationKey = () => ['createResidentRecord'] as const;
+
+export const getCreateResidentRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentRecord>>, TError,CreateResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResidentRecord>>, TError,CreateResidentRecordMutationVariables, TContext> => {
+
+const mutationKey = getCreateResidentRecordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResidentRecord>>, CreateResidentRecordMutationVariables> = (props) => {
+          const {kind,data,params} = props ?? {};
+
+          return  createResidentRecord(kind,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResidentRecordMutationResult = NonNullable<Awaited<ReturnType<typeof createResidentRecord>>>
+    export type CreateResidentRecordMutationBody = BodyType<ResidentRecordInput>
+    export type CreateResidentRecordMutationError = ErrorType<unknown>
+    export type CreateResidentRecordMutationVariables = {kind: ResidentRecordKind;data: BodyType<ResidentRecordInput>;params?: CreateResidentRecordParams}
+
+    export const useCreateResidentRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResidentRecord>>, TError,CreateResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResidentRecord>>,
+        TError,
+        CreateResidentRecordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResidentRecordMutationOptions(options));
+    }
+
+export const getUpdateResidentRecordUrl = (kind: ResidentRecordKind,
+    id: string,
+    params?: UpdateResidentRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}?${stringifiedParams}` : `/api/resident/records/${kind}/${id}`
+}
+
+export const updateResidentRecord = async (kind: ResidentRecordKind,
+    id: string,
+    residentRecordInput: ResidentRecordInput,
+    params?: UpdateResidentRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentRecord>(getUpdateResidentRecordUrl(kind,id,params),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentRecordInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentRecordMutationKey = () => ['updateResidentRecord'] as const;
+
+export const getUpdateResidentRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentRecord>>, TError,UpdateResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentRecord>>, TError,UpdateResidentRecordMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentRecordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentRecord>>, UpdateResidentRecordMutationVariables> = (props) => {
+          const {kind,id,data,params} = props ?? {};
+
+          return  updateResidentRecord(kind,id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentRecordMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentRecord>>>
+    export type UpdateResidentRecordMutationBody = BodyType<ResidentRecordInput>
+    export type UpdateResidentRecordMutationError = ErrorType<unknown>
+    export type UpdateResidentRecordMutationVariables = {kind: ResidentRecordKind;id: string;data: BodyType<ResidentRecordInput>;params?: UpdateResidentRecordParams}
+
+    export const useUpdateResidentRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentRecord>>, TError,UpdateResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentRecord>>,
+        TError,
+        UpdateResidentRecordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentRecordMutationOptions(options));
+    }
+
+export const getRemoveResidentRecordUrl = (kind: ResidentRecordKind,
+    id: string,
+    params: RemoveResidentRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}?${stringifiedParams}` : `/api/resident/records/${kind}/${id}`
+}
+
+export const removeResidentRecord = async (kind: ResidentRecordKind,
+    id: string,
+    params: RemoveResidentRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveResidentRecordUrl(kind,id,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveResidentRecordMutationKey = () => ['removeResidentRecord'] as const;
+
+export const getRemoveResidentRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeResidentRecord>>, TError,RemoveResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeResidentRecord>>, TError,RemoveResidentRecordMutationVariables, TContext> => {
+
+const mutationKey = getRemoveResidentRecordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeResidentRecord>>, RemoveResidentRecordMutationVariables> = (props) => {
+          const {kind,id,params} = props ?? {};
+
+          return  removeResidentRecord(kind,id,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveResidentRecordMutationResult = NonNullable<Awaited<ReturnType<typeof removeResidentRecord>>>
+
+    export type RemoveResidentRecordMutationError = ErrorType<unknown>
+    export type RemoveResidentRecordMutationVariables = {kind: ResidentRecordKind;id: string;params: RemoveResidentRecordParams}
+
+    export const useRemoveResidentRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeResidentRecord>>, TError,RemoveResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeResidentRecord>>,
+        TError,
+        RemoveResidentRecordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveResidentRecordMutationOptions(options));
+    }
+
+export const getActOnResidentRecordUrl = (kind: ResidentRecordKind,
+    id: string,
+    params?: ActOnResidentRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}/actions?${stringifiedParams}` : `/api/resident/records/${kind}/${id}/actions`
+}
+
+export const actOnResidentRecord = async (kind: ResidentRecordKind,
+    id: string,
+    actOnResidentRecordBody: ActOnResidentRecordBody,
+    params?: ActOnResidentRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentRecord>(getActOnResidentRecordUrl(kind,id,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(actOnResidentRecordBody)
+  }
+);}
+
+
+
+
+
+export const getActOnResidentRecordMutationKey = () => ['actOnResidentRecord'] as const;
+
+export const getActOnResidentRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actOnResidentRecord>>, TError,ActOnResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof actOnResidentRecord>>, TError,ActOnResidentRecordMutationVariables, TContext> => {
+
+const mutationKey = getActOnResidentRecordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actOnResidentRecord>>, ActOnResidentRecordMutationVariables> = (props) => {
+          const {kind,id,data,params} = props ?? {};
+
+          return  actOnResidentRecord(kind,id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActOnResidentRecordMutationResult = NonNullable<Awaited<ReturnType<typeof actOnResidentRecord>>>
+    export type ActOnResidentRecordMutationBody = BodyType<ActOnResidentRecordBody>
+    export type ActOnResidentRecordMutationError = ErrorType<unknown>
+    export type ActOnResidentRecordMutationVariables = {kind: ResidentRecordKind;id: string;data: BodyType<ActOnResidentRecordBody>;params?: ActOnResidentRecordParams}
+
+    export const useActOnResidentRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actOnResidentRecord>>, TError,ActOnResidentRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof actOnResidentRecord>>,
+        TError,
+        ActOnResidentRecordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActOnResidentRecordMutationOptions(options));
+    }
+
+export const getGetResidentMessagesUrl = (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}/messages?${stringifiedParams}` : `/api/resident/records/${kind}/${id}/messages`
+}
+
+export const getResidentMessages = async (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentMessagesParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentMessage[]> => {
+
+  return customFetch<ResidentMessage[]>(getGetResidentMessagesUrl(kind,id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentMessagesQueryKey = (kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentMessagesParams,) => {
+    return [
+    `/api/resident/records/${kind}/${id}/messages`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetResidentMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getResidentMessages>>, TError = ErrorType<unknown>>(kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentMessagesQueryKey(kind,id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentMessages>>> = ({ signal }) => getResidentMessages(kind,id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: kind !== null && kind !== undefined && id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentMessages>>>
+export type GetResidentMessagesQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentMessages<TData = Awaited<ReturnType<typeof getResidentMessages>>, TError = ErrorType<unknown>>(
+ kind: ResidentRecordKind,
+    id: string,
+    params?: GetResidentMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentMessagesQueryOptions(kind,id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostResidentMessageUrl = (kind: ResidentRecordKind,
+    id: string,
+    params?: PostResidentMessageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/records/${kind}/${id}/messages?${stringifiedParams}` : `/api/resident/records/${kind}/${id}/messages`
+}
+
+export const postResidentMessage = async (kind: ResidentRecordKind,
+    id: string,
+    postResidentMessageBody: PostResidentMessageBody,
+    params?: PostResidentMessageParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentMessage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentMessage>(getPostResidentMessageUrl(kind,id,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(postResidentMessageBody)
+  }
+);}
+
+
+
+
+
+export const getPostResidentMessageMutationKey = () => ['postResidentMessage'] as const;
+
+export const getPostResidentMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postResidentMessage>>, TError,PostResidentMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postResidentMessage>>, TError,PostResidentMessageMutationVariables, TContext> => {
+
+const mutationKey = getPostResidentMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postResidentMessage>>, PostResidentMessageMutationVariables> = (props) => {
+          const {kind,id,data,params} = props ?? {};
+
+          return  postResidentMessage(kind,id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostResidentMessageMutationResult = NonNullable<Awaited<ReturnType<typeof postResidentMessage>>>
+    export type PostResidentMessageMutationBody = BodyType<PostResidentMessageBody>
+    export type PostResidentMessageMutationError = ErrorType<unknown>
+    export type PostResidentMessageMutationVariables = {kind: ResidentRecordKind;id: string;data: BodyType<PostResidentMessageBody>;params?: PostResidentMessageParams}
+
+    export const usePostResidentMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postResidentMessage>>, TError,PostResidentMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postResidentMessage>>,
+        TError,
+        PostResidentMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostResidentMessageMutationOptions(options));
+    }
+
+export const getGetResidentAdminBuildingsUrl = () => {
+
+
+
+
+  return `/api/resident/admin/buildings`
+}
+
+export const getResidentAdminBuildings = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetResidentAdminBuildings200Item[]> => {
+
+  return customFetch<GetResidentAdminBuildings200Item[]>(getGetResidentAdminBuildingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResidentAdminBuildingsQueryKey = () => {
+    return [
+    `/api/resident/admin/buildings`
+    ] as const;
+    }
+
+
+export const getGetResidentAdminBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof getResidentAdminBuildings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentAdminBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResidentAdminBuildingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResidentAdminBuildings>>> = ({ signal }) => getResidentAdminBuildings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResidentAdminBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResidentAdminBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof getResidentAdminBuildings>>>
+export type GetResidentAdminBuildingsQueryError = ErrorType<unknown>
+
+
+
+export function useGetResidentAdminBuildings<TData = Awaited<ReturnType<typeof getResidentAdminBuildings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResidentAdminBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResidentAdminBuildingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateResidentBuildingSettingsUrl = (params?: UpdateResidentBuildingSettingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resident/settings?${stringifiedParams}` : `/api/resident/settings`
+}
+
+export const updateResidentBuildingSettings = async (residentBuildingSettings: ResidentBuildingSettings,
+    params?: UpdateResidentBuildingSettingsParams, options?: Parameters<typeof customFetch>[1]): Promise<ResidentBuildingSettings> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResidentBuildingSettings>(getUpdateResidentBuildingSettingsUrl(params),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentBuildingSettings)
+  }
+);}
+
+
+
+
+
+export const getUpdateResidentBuildingSettingsMutationKey = () => ['updateResidentBuildingSettings'] as const;
+
+export const getUpdateResidentBuildingSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentBuildingSettings>>, TError,UpdateResidentBuildingSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResidentBuildingSettings>>, TError,UpdateResidentBuildingSettingsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResidentBuildingSettingsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResidentBuildingSettings>>, UpdateResidentBuildingSettingsMutationVariables> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  updateResidentBuildingSettings(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResidentBuildingSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateResidentBuildingSettings>>>
+    export type UpdateResidentBuildingSettingsMutationBody = BodyType<ResidentBuildingSettings>
+    export type UpdateResidentBuildingSettingsMutationError = ErrorType<unknown>
+    export type UpdateResidentBuildingSettingsMutationVariables = {data: BodyType<ResidentBuildingSettings>;params?: UpdateResidentBuildingSettingsParams}
+
+    export const useUpdateResidentBuildingSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResidentBuildingSettings>>, TError,UpdateResidentBuildingSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResidentBuildingSettings>>,
+        TError,
+        UpdateResidentBuildingSettingsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResidentBuildingSettingsMutationOptions(options));
+    }
 
 export const getRegisterEdgeV1Url = () => {
 
@@ -17205,6 +19059,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getReauthenticateResidentMutationOptions(options));
     }
+
+export const getListResidentDelegationsUrl = () => {
+
+
+
+
+  return `/api/delegations`
+}
+
+export const listResidentDelegations = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListResidentDelegations200Item[]> => {
+
+  return customFetch<ListResidentDelegations200Item[]>(getListResidentDelegationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResidentDelegationsQueryKey = () => {
+    return [
+    `/api/delegations`
+    ] as const;
+    }
+
+
+export const getListResidentDelegationsQueryOptions = <TData = Awaited<ReturnType<typeof listResidentDelegations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentDelegations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResidentDelegationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResidentDelegations>>> = ({ signal }) => listResidentDelegations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResidentDelegations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResidentDelegationsQueryResult = NonNullable<Awaited<ReturnType<typeof listResidentDelegations>>>
+export type ListResidentDelegationsQueryError = ErrorType<unknown>
+
+
+
+export function useListResidentDelegations<TData = Awaited<ReturnType<typeof listResidentDelegations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResidentDelegations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResidentDelegationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateResidentDelegationUrl = () => {
 

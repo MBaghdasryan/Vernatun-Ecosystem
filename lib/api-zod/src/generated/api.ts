@@ -8,6 +8,599 @@
 import * as zod from 'zod';
 
 
+export const ListResidentMetersResponseItem = zod.object({
+  "id": zod.string(),
+  "serial_number": zod.string(),
+  "kind": zod.string(),
+  "number": zod.string(),
+  "readings": zod.array(zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "value_thousandths": zod.union([zod.string(),zod.number().int()])
+}))
+})
+export const ListResidentMetersResponse = zod.array(ListResidentMetersResponseItem)
+
+
+export const SubmitResidentMeterReadingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const submitResidentMeterReadingBodyPeriodRegExp = new RegExp('^\\d{4}-\\d{2}-01$');
+export const submitResidentMeterReadingBodyValueRegExp = new RegExp('^\\d{1,10}(\\.\\d{1,3})?$');
+
+
+export const SubmitResidentMeterReadingBody = zod.object({
+  "period": zod.string().regex(submitResidentMeterReadingBodyPeriodRegExp),
+  "value": zod.string().regex(submitResidentMeterReadingBodyValueRegExp)
+})
+
+export const SubmitResidentMeterReadingResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const ListResidentAnnouncementsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "created_at": zod.string(),
+  "published": zod.boolean()
+})
+export const ListResidentAnnouncementsResponse = zod.array(ListResidentAnnouncementsResponseItem)
+
+
+export const ListResidentDocumentsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "media_type": zod.string(),
+  "created_at": zod.string(),
+  "category": zod.string(),
+  "latest_version_id": zod.string().nullish()
+})
+export const ListResidentDocumentsResponse = zod.array(ListResidentDocumentsResponseItem)
+
+
+export const DownloadResidentDocumentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DownloadResidentDocumentResponse = zod.unknown()
+
+
+export const ListResidentPassesResponseItem = zod.object({
+  "id": zod.string(),
+  "visitor": zod.string(),
+  "vehicle": zod.string(),
+  "valid_from": zod.string(),
+  "valid_until": zod.string(),
+  "revoked_at": zod.string().nullish(),
+  "state": zod.string()
+})
+export const ListResidentPassesResponse = zod.array(ListResidentPassesResponseItem)
+
+
+export const createResidentPassBodyVisitorMin = 2;
+export const createResidentPassBodyVisitorMax = 100;
+
+export const createResidentPassBodyVehicleMax = 30;
+
+
+
+export const CreateResidentPassBody = zod.object({
+  "unitId": zod.string().uuid(),
+  "visitor": zod.string().min(createResidentPassBodyVisitorMin).max(createResidentPassBodyVisitorMax),
+  "vehicle": zod.string().max(createResidentPassBodyVehicleMax),
+  "validFrom": zod.coerce.date(),
+  "validUntil": zod.coerce.date()
+})
+
+export const CreateResidentPassResponse = zod.object({
+  "id": zod.string(),
+  "token": zod.string()
+})
+
+
+export const RevokeResidentPassParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RevokeResidentPassResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const ListResidentNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "category": zod.string(),
+  "critical": zod.boolean(),
+  "created_at": zod.string(),
+  "read_at": zod.string().nullish(),
+  "access_denied": zod.boolean()
+})
+export const ListResidentNotificationsResponse = zod.array(ListResidentNotificationsResponseItem)
+
+
+export const MarkResidentNotificationReadParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const MarkResidentNotificationReadResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const ListResidentInvoicesQueryParams = zod.object({
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional()
+})
+
+export const ListResidentInvoicesResponseItem = zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "amount_minor": zod.string(),
+  "paid_minor": zod.string(),
+  "adjustment_minor": zod.string(),
+  "balance_minor": zod.string(),
+  "currency": zod.string(),
+  "status": zod.string()
+})
+export const ListResidentInvoicesResponse = zod.array(ListResidentInvoicesResponseItem)
+
+
+export const GetResidentContextsResponseItem = zod.object({
+  "id": zod.string(),
+  "role": zod.string(),
+  "organization": zod.string(),
+  "building": zod.string(),
+  "unit": zod.string()
+})
+export const GetResidentContextsResponse = zod.array(GetResidentContextsResponseItem)
+
+
+export const GetResidentWorkspaceQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const getResidentWorkspaceResponseProfileNameMax = 120;
+
+export const getResidentWorkspaceResponseProfilePhoneMax = 30;
+
+
+
+export const GetResidentWorkspaceResponse = zod.object({
+  "contextId": zod.string(),
+  "administrative": zod.boolean(),
+  "building": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string(),
+  "address": zod.string(),
+  "unit": zod.string().nullable(),
+  "area": zod.string().nullable(),
+  "role": zod.string(),
+  "timezone": zod.string()
+}),
+  "profile": zod.object({
+  "name": zod.string().min(1).max(getResidentWorkspaceResponseProfileNameMax),
+  "phone": zod.string().max(getResidentWorkspaceResponseProfilePhoneMax),
+  "language": zod.enum(['hy', 'ru', 'en']),
+  "theme": zod.enum(['system', 'light', 'dark']),
+  "preferredChannel": zod.enum(['email', 'phone']),
+  "showName": zod.boolean(),
+  "showUnit": zod.boolean(),
+  "showPhone": zod.boolean(),
+  "allowMessages": zod.boolean()
+}),
+  "settings": zod.object({
+  "directory": zod.boolean(),
+  "discussions": zod.boolean(),
+  "chat": zod.boolean(),
+  "marketplace": zod.boolean(),
+  "services": zod.boolean()
+}),
+  "capabilities": zod.record(zod.string(), zod.boolean()),
+  "integrations": zod.array(zod.object({
+  "key": zod.string(),
+  "status": zod.enum(['NOT_CONFIGURED', 'CONTRACT_REQUIRED', 'CREDENTIALS_REQUIRED', 'ACTIVE', 'DEGRADED', 'UNSUPPORTED'])
+})),
+  "home": zod.object({
+  "unreadNotifications": zod.number().int().nullable(),
+  "openRequests": zod.number().int().nullable(),
+  "currency": zod.string(),
+  "payableMinor": zod.string().nullable(),
+  "overdueMinor": zod.string().nullable(),
+  "annualPaidMinor": zod.string().nullable()
+})
+})
+
+
+export const updateResidentProfileBodyNameMax = 120;
+
+export const updateResidentProfileBodyPhoneMax = 30;
+
+
+
+export const UpdateResidentProfileBody = zod.object({
+  "name": zod.string().min(1).max(updateResidentProfileBodyNameMax),
+  "phone": zod.string().max(updateResidentProfileBodyPhoneMax),
+  "language": zod.enum(['hy', 'ru', 'en']),
+  "theme": zod.enum(['system', 'light', 'dark']),
+  "preferredChannel": zod.enum(['email', 'phone']),
+  "showName": zod.boolean(),
+  "showUnit": zod.boolean(),
+  "showPhone": zod.boolean(),
+  "allowMessages": zod.boolean()
+})
+
+export const updateResidentProfileResponseNameMax = 120;
+
+export const updateResidentProfileResponsePhoneMax = 30;
+
+
+
+export const UpdateResidentProfileResponse = zod.object({
+  "name": zod.string().min(1).max(updateResidentProfileResponseNameMax),
+  "phone": zod.string().max(updateResidentProfileResponsePhoneMax),
+  "language": zod.enum(['hy', 'ru', 'en']),
+  "theme": zod.enum(['system', 'light', 'dark']),
+  "preferredChannel": zod.enum(['email', 'phone']),
+  "showName": zod.boolean(),
+  "showUnit": zod.boolean(),
+  "showPhone": zod.boolean(),
+  "allowMessages": zod.boolean()
+})
+
+
+export const GetResidentRecordsParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback'])
+})
+
+export const getResidentRecordsQuerySearchMax = 200;
+
+
+
+export const GetResidentRecordsQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
+  "search": zod.coerce.string().max(getResidentRecordsQuerySearchMax).optional()
+})
+
+export const GetResidentRecordsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional()
+})),
+  "hasMore": zod.boolean()
+})
+
+
+export const CreateResidentRecordParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback'])
+})
+
+export const CreateResidentRecordQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const createResidentRecordBodyTitleMax = 200;
+
+export const createResidentRecordBodyBodyMax = 5000;
+
+
+export const createResidentRecordBodyCategoryMax = 80;
+
+export const createResidentRecordBodyPhoneMax = 30;
+
+export const createResidentRecordBodyEmailMax = 254;
+
+export const createResidentRecordBodyHoursMax = 200;
+
+export const createResidentRecordBodyPlateMax = 24;
+
+export const createResidentRecordBodyCountryMax = 3;
+
+export const createResidentRecordBodyMakeMax = 80;
+
+export const createResidentRecordBodyModelMax = 80;
+
+export const createResidentRecordBodyColorMax = 40;
+
+export const createResidentRecordBodyPriceMinorRegExp = new RegExp('^\\d{1,14}$');
+export const createResidentRecordBodyQuantityMax = 1000;
+
+export const createResidentRecordBodyAppVersionMax = 40;
+
+export const createResidentRecordBodyOsVersionMax = 80;
+
+export const createResidentRecordBodyPushTokenMax = 4096;
+
+
+
+export const CreateResidentRecordBody = zod.object({
+  "title": zod.string().min(1).max(createResidentRecordBodyTitleMax),
+  "body": zod.string().max(createResidentRecordBodyBodyMax),
+  "version": zod.number().int().min(1).optional(),
+  "category": zod.string().max(createResidentRecordBodyCategoryMax).optional(),
+  "phone": zod.string().max(createResidentRecordBodyPhoneMax).optional(),
+  "email": zod.string().max(createResidentRecordBodyEmailMax).optional(),
+  "hours": zod.string().max(createResidentRecordBodyHoursMax).optional(),
+  "plate": zod.string().max(createResidentRecordBodyPlateMax).optional(),
+  "country": zod.string().max(createResidentRecordBodyCountryMax).optional(),
+  "vehicleType": zod.enum(['car', 'motorcycle', 'bicycle', 'other']).optional(),
+  "make": zod.string().max(createResidentRecordBodyMakeMax).optional(),
+  "model": zod.string().max(createResidentRecordBodyModelMax).optional(),
+  "color": zod.string().max(createResidentRecordBodyColorMax).optional(),
+  "priceMinor": zod.string().regex(createResidentRecordBodyPriceMinorRegExp).optional(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "quantity": zod.number().int().min(1).max(createResidentRecordBodyQuantityMax).optional(),
+  "parentId": zod.string().uuid().optional(),
+  "expiresAt": zod.coerce.date().optional(),
+  "installationId": zod.string().uuid().optional(),
+  "platform": zod.enum(['ios', 'android', 'web']).optional(),
+  "appVersion": zod.string().max(createResidentRecordBodyAppVersionMax).optional(),
+  "osVersion": zod.string().max(createResidentRecordBodyOsVersionMax).optional(),
+  "pushToken": zod.string().max(createResidentRecordBodyPushTokenMax).optional(),
+  "mandatory": zod.boolean().optional(),
+  "withdrawable": zod.boolean().optional(),
+  "saleType": zod.enum(['sale', 'rent']).optional()
+}).describe('Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.')
+
+export const CreateResidentRecordResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional()
+})
+
+
+export const UpdateResidentRecordParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+export const UpdateResidentRecordQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const updateResidentRecordBodyTitleMax = 200;
+
+export const updateResidentRecordBodyBodyMax = 5000;
+
+
+export const updateResidentRecordBodyCategoryMax = 80;
+
+export const updateResidentRecordBodyPhoneMax = 30;
+
+export const updateResidentRecordBodyEmailMax = 254;
+
+export const updateResidentRecordBodyHoursMax = 200;
+
+export const updateResidentRecordBodyPlateMax = 24;
+
+export const updateResidentRecordBodyCountryMax = 3;
+
+export const updateResidentRecordBodyMakeMax = 80;
+
+export const updateResidentRecordBodyModelMax = 80;
+
+export const updateResidentRecordBodyColorMax = 40;
+
+export const updateResidentRecordBodyPriceMinorRegExp = new RegExp('^\\d{1,14}$');
+export const updateResidentRecordBodyQuantityMax = 1000;
+
+export const updateResidentRecordBodyAppVersionMax = 40;
+
+export const updateResidentRecordBodyOsVersionMax = 80;
+
+export const updateResidentRecordBodyPushTokenMax = 4096;
+
+
+
+export const UpdateResidentRecordBody = zod.object({
+  "title": zod.string().min(1).max(updateResidentRecordBodyTitleMax),
+  "body": zod.string().max(updateResidentRecordBodyBodyMax),
+  "version": zod.number().int().min(1).optional(),
+  "category": zod.string().max(updateResidentRecordBodyCategoryMax).optional(),
+  "phone": zod.string().max(updateResidentRecordBodyPhoneMax).optional(),
+  "email": zod.string().max(updateResidentRecordBodyEmailMax).optional(),
+  "hours": zod.string().max(updateResidentRecordBodyHoursMax).optional(),
+  "plate": zod.string().max(updateResidentRecordBodyPlateMax).optional(),
+  "country": zod.string().max(updateResidentRecordBodyCountryMax).optional(),
+  "vehicleType": zod.enum(['car', 'motorcycle', 'bicycle', 'other']).optional(),
+  "make": zod.string().max(updateResidentRecordBodyMakeMax).optional(),
+  "model": zod.string().max(updateResidentRecordBodyModelMax).optional(),
+  "color": zod.string().max(updateResidentRecordBodyColorMax).optional(),
+  "priceMinor": zod.string().regex(updateResidentRecordBodyPriceMinorRegExp).optional(),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']).optional(),
+  "quantity": zod.number().int().min(1).max(updateResidentRecordBodyQuantityMax).optional(),
+  "parentId": zod.string().uuid().optional(),
+  "expiresAt": zod.coerce.date().optional(),
+  "installationId": zod.string().uuid().optional(),
+  "platform": zod.enum(['ios', 'android', 'web']).optional(),
+  "appVersion": zod.string().max(updateResidentRecordBodyAppVersionMax).optional(),
+  "osVersion": zod.string().max(updateResidentRecordBodyOsVersionMax).optional(),
+  "pushToken": zod.string().max(updateResidentRecordBodyPushTokenMax).optional(),
+  "mandatory": zod.boolean().optional(),
+  "withdrawable": zod.boolean().optional(),
+  "saleType": zod.enum(['sale', 'rent']).optional()
+}).describe('Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.')
+
+export const UpdateResidentRecordResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional()
+})
+
+
+export const RemoveResidentRecordParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const RemoveResidentRecordQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.'),
+  "version": zod.coerce.number().int().min(1)
+})
+
+export const RemoveResidentRecordResponse = zod.void()
+
+
+export const ActOnResidentRecordParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+export const ActOnResidentRecordQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+
+export const actOnResidentRecordBodyReasonMax = 2000;
+
+
+
+export const ActOnResidentRecordBody = zod.object({
+  "action": zod.enum(['accept', 'withdraw', 'submit', 'approve', 'reject', 'activate', 'cancel', 'close', 'reopen', 'freeze', 'support', 'unsupport', 'read', 'save', 'unsave', 'report', 'request', 'proposal']),
+  "version": zod.number().int().min(1),
+  "reason": zod.string().max(actOnResidentRecordBodyReasonMax).optional()
+})
+
+export const ActOnResidentRecordResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "version": zod.number().int(),
+  "createdAt": zod.string(),
+  "own": zod.boolean(),
+  "actions": zod.array(zod.string()),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "linkedRequestId": zod.string().nullish(),
+  "accepted": zod.boolean().optional(),
+  "saved": zod.boolean().optional(),
+  "supported": zod.boolean().optional(),
+  "supportCount": zod.number().int().optional()
+})
+
+
+export const GetResidentMessagesParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetResidentMessagesQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const GetResidentMessagesResponseItem = zod.object({
+  "id": zod.string(),
+  "body": zod.string(),
+  "own": zod.boolean(),
+  "createdAt": zod.string(),
+  "sender": zod.string(),
+  "replyTo": zod.string().nullish()
+})
+export const GetResidentMessagesResponse = zod.array(GetResidentMessagesResponseItem)
+
+
+export const PostResidentMessageParams = zod.object({
+  "kind": zod.enum(['vehicles', 'mobile-devices', 'agreements', 'contacts', 'directory', 'services', 'subscriptions', 'conversations', 'discussions', 'listings', 'help', 'feedback']),
+  "id": zod.coerce.string().uuid()
+})
+
+export const PostResidentMessageQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const postResidentMessageBodyBodyMax = 5000;
+
+
+
+export const PostResidentMessageBody = zod.object({
+  "body": zod.string().min(1).max(postResidentMessageBodyBodyMax),
+  "clientId": zod.string().uuid(),
+  "replyTo": zod.string().uuid().optional()
+})
+
+export const PostResidentMessageResponse = zod.object({
+  "id": zod.string(),
+  "body": zod.string(),
+  "own": zod.boolean(),
+  "createdAt": zod.string(),
+  "sender": zod.string(),
+  "replyTo": zod.string().nullish()
+})
+
+
+export const GetResidentAdminBuildingsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "organization": zod.string()
+})
+export const GetResidentAdminBuildingsResponse = zod.array(GetResidentAdminBuildingsResponseItem)
+
+
+export const UpdateResidentBuildingSettingsQueryParams = zod.object({
+  "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
+})
+
+export const UpdateResidentBuildingSettingsBody = zod.object({
+  "directory": zod.boolean(),
+  "discussions": zod.boolean(),
+  "chat": zod.boolean(),
+  "marketplace": zod.boolean(),
+  "services": zod.boolean()
+})
+
+export const UpdateResidentBuildingSettingsResponse = zod.object({
+  "directory": zod.boolean(),
+  "discussions": zod.boolean(),
+  "chat": zod.boolean(),
+  "marketplace": zod.boolean(),
+  "services": zod.boolean()
+})
+
+
 /**
  * @summary Register one Edge Agent using a single-use building-bound bootstrap token
  */
@@ -4582,6 +5175,17 @@ export const ReauthenticateResidentBody = zod.object({
 })
 
 export const ReauthenticateResidentResponse = zod.unknown()
+
+
+export const ListResidentDelegationsResponseItem = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "expires_at": zod.string(),
+  "accepted_at": zod.string().nullish(),
+  "revoked_at": zod.string().nullish(),
+  "version": zod.number().int()
+})
+export const ListResidentDelegationsResponse = zod.array(ListResidentDelegationsResponseItem)
 
 
 export const CreateResidentDelegationBody = zod.object({

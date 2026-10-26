@@ -10,6 +10,12 @@ export type { ListFinanceAccountsParams } from "./generated/types/listFinanceAcc
 export type { ListBankTransactionsParams } from "./generated/types/listBankTransactionsParams";
 export type { SuggestBankMatchesParams } from "./generated/types/suggestBankMatchesParams";
 export * from "./generated/types";
+export type {CreateResidentPassBody,SubmitResidentMeterReadingBody} from "./generated/types";
+export type {
+  ActOnResidentRecordBody, ActOnResidentRecordParams, CreateResidentRecordParams,
+  GetResidentWorkspaceParams, GetResidentRecordsParams, GetResidentMessagesParams, PostResidentMessageBody,
+  PostResidentMessageParams, RemoveResidentRecordParams, UpdateResidentRecordParams,
+} from "./generated/types";
 // Keep the operation-based public aliases alongside their Zod schemas.
 export type { IntegrationInstanceActionInput as ActIntegrationInstanceBody } from "./generated/types/integrationInstanceActionInput";
 export {

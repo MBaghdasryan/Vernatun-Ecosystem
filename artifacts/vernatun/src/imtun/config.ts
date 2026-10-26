@@ -10,7 +10,7 @@ export const features={
  ownership:{permission:'ownership.read'},
  finance:{permission:'billing.own',module:'finance'},'online-payments':{permission:'billing.own',module:'finance'},utilities:{permission:'billing.own',module:'finance'},requests:{permission:'requests.own',module:'requests'},meters:{permission:'meters.own',module:'meters'},announcements:{permission:'announcements.read',module:'community'},meetings:{permission:'meetings.read',module:'community'},documents:{permission:'documents.read',module:'documents'},passes:{permission:'access.create',module:'access'},delegations:{permission:'residents.delegate'},leases:{permission:'leases.own',module:'finance'},
 } as const;
-export function available(c:RoleContext,view:string){if(['overview','settings','notifications'].includes(view))return true;const f=features[view as keyof typeof features];return !!f&&c.permissions.includes(f.permission)&&(!('module' in f)||!!c.modules?.includes(f.module))}
+export function available(c:RoleContext,view:string){if(['overview','settings','notifications','building','vehicles','devices','agreements','contacts','directory','services','community','marketplace','help','feedback','preferences'].includes(view))return true;const f=features[view as keyof typeof features];return !!f&&c.permissions.includes(f.permission)&&(!('module' in f)||!!c.modules?.includes(f.module))}
 export type ProductEvent='context_selected'|'payment_started'|'request_viewed'|'announcement_opened'|'meeting_opened';
 // Disabled by default; adapters receive event names only, never resident payloads.
 let analytics:((event:ProductEvent)=>void)|undefined;

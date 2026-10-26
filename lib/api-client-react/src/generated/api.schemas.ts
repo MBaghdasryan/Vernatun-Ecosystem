@@ -3635,6 +3635,258 @@ export interface WorkspaceSearchResult {
   groups: WorkspaceSearchGroup[];
 }
 
+export interface ResidentIdResult {
+  id: string;
+}
+
+export type ResidentRecordKind = typeof ResidentRecordKind[keyof typeof ResidentRecordKind];
+
+
+export const ResidentRecordKind = {
+  vehicles: 'vehicles',
+  'mobile-devices': 'mobile-devices',
+  agreements: 'agreements',
+  contacts: 'contacts',
+  directory: 'directory',
+  services: 'services',
+  subscriptions: 'subscriptions',
+  conversations: 'conversations',
+  discussions: 'discussions',
+  listings: 'listings',
+  help: 'help',
+  feedback: 'feedback',
+} as const;
+
+export type ResidentProfileInputLanguage = typeof ResidentProfileInputLanguage[keyof typeof ResidentProfileInputLanguage];
+
+
+export const ResidentProfileInputLanguage = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export type ResidentProfileInputTheme = typeof ResidentProfileInputTheme[keyof typeof ResidentProfileInputTheme];
+
+
+export const ResidentProfileInputTheme = {
+  system: 'system',
+  light: 'light',
+  dark: 'dark',
+} as const;
+
+export type ResidentProfileInputPreferredChannel = typeof ResidentProfileInputPreferredChannel[keyof typeof ResidentProfileInputPreferredChannel];
+
+
+export const ResidentProfileInputPreferredChannel = {
+  email: 'email',
+  phone: 'phone',
+} as const;
+
+export interface ResidentProfileInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  /** @maxLength 30 */
+  phone: string;
+  language: ResidentProfileInputLanguage;
+  theme: ResidentProfileInputTheme;
+  preferredChannel: ResidentProfileInputPreferredChannel;
+  showName: boolean;
+  showUnit: boolean;
+  showPhone: boolean;
+  allowMessages: boolean;
+}
+
+export interface ResidentBuildingSettings {
+  directory: boolean;
+  discussions: boolean;
+  chat: boolean;
+  marketplace: boolean;
+  services: boolean;
+}
+
+export type ResidentRecordInputVehicleType = typeof ResidentRecordInputVehicleType[keyof typeof ResidentRecordInputVehicleType];
+
+
+export const ResidentRecordInputVehicleType = {
+  car: 'car',
+  motorcycle: 'motorcycle',
+  bicycle: 'bicycle',
+  other: 'other',
+} as const;
+
+export type ResidentRecordInputCurrency = typeof ResidentRecordInputCurrency[keyof typeof ResidentRecordInputCurrency];
+
+
+export const ResidentRecordInputCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type ResidentRecordInputPlatform = typeof ResidentRecordInputPlatform[keyof typeof ResidentRecordInputPlatform];
+
+
+export const ResidentRecordInputPlatform = {
+  ios: 'ios',
+  android: 'android',
+  web: 'web',
+} as const;
+
+export type ResidentRecordInputSaleType = typeof ResidentRecordInputSaleType[keyof typeof ResidentRecordInputSaleType];
+
+
+export const ResidentRecordInputSaleType = {
+  sale: 'sale',
+  rent: 'rent',
+} as const;
+
+/**
+ * Kind-specific strict validation is authoritative. No actor, organization, scope, status or permission fields are accepted.
+ */
+export interface ResidentRecordInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /** @maxLength 5000 */
+  body: string;
+  /** @minimum 1 */
+  version?: number;
+  /** @maxLength 80 */
+  category?: string;
+  /** @maxLength 30 */
+  phone?: string;
+  /** @maxLength 254 */
+  email?: string;
+  /** @maxLength 200 */
+  hours?: string;
+  /** @maxLength 24 */
+  plate?: string;
+  /** @maxLength 3 */
+  country?: string;
+  vehicleType?: ResidentRecordInputVehicleType;
+  /** @maxLength 80 */
+  make?: string;
+  /** @maxLength 80 */
+  model?: string;
+  /** @maxLength 40 */
+  color?: string;
+  /** @pattern ^\d{1,14}$ */
+  priceMinor?: string;
+  currency?: ResidentRecordInputCurrency;
+  /**
+     * @minimum 1
+     * @maximum 1000
+     */
+  quantity?: number;
+  parentId?: string;
+  expiresAt?: string;
+  installationId?: string;
+  platform?: ResidentRecordInputPlatform;
+  /** @maxLength 40 */
+  appVersion?: string;
+  /** @maxLength 80 */
+  osVersion?: string;
+  /** @maxLength 4096 */
+  pushToken?: string;
+  mandatory?: boolean;
+  withdrawable?: boolean;
+  saleType?: ResidentRecordInputSaleType;
+}
+
+export type ResidentRecordData = { [key: string]: unknown };
+
+export interface ResidentRecord {
+  id: string;
+  kind: ResidentRecordKind;
+  title: string;
+  body: string;
+  status: string;
+  version: number;
+  createdAt: string;
+  own: boolean;
+  actions: string[];
+  data: ResidentRecordData;
+  /** @nullable */
+  linkedRequestId?: string | null;
+  accepted?: boolean;
+  saved?: boolean;
+  supported?: boolean;
+  supportCount?: number;
+}
+
+export interface ResidentMessage {
+  id: string;
+  body: string;
+  own: boolean;
+  createdAt: string;
+  sender: string;
+  /** @nullable */
+  replyTo?: string | null;
+}
+
+export type ResidentWorkspaceBuilding = {
+  id: string;
+  name: string;
+  organization: string;
+  address: string;
+  /** @nullable */
+  unit: string | null;
+  /** @nullable */
+  area: string | null;
+  role: string;
+  timezone: string;
+};
+
+export type ResidentWorkspaceCapabilities = {[key: string]: boolean};
+
+export type ResidentWorkspaceIntegrationsItemStatus = typeof ResidentWorkspaceIntegrationsItemStatus[keyof typeof ResidentWorkspaceIntegrationsItemStatus];
+
+
+export const ResidentWorkspaceIntegrationsItemStatus = {
+  NOT_CONFIGURED: 'NOT_CONFIGURED',
+  CONTRACT_REQUIRED: 'CONTRACT_REQUIRED',
+  CREDENTIALS_REQUIRED: 'CREDENTIALS_REQUIRED',
+  ACTIVE: 'ACTIVE',
+  DEGRADED: 'DEGRADED',
+  UNSUPPORTED: 'UNSUPPORTED',
+} as const;
+
+export type ResidentWorkspaceIntegrationsItem = {
+  key: string;
+  status: ResidentWorkspaceIntegrationsItemStatus;
+};
+
+export type ResidentWorkspaceHome = {
+  /** @nullable */
+  unreadNotifications: number | null;
+  /** @nullable */
+  openRequests: number | null;
+  currency: string;
+  /** @nullable */
+  payableMinor: string | null;
+  /** @nullable */
+  overdueMinor: string | null;
+  /** @nullable */
+  annualPaidMinor: string | null;
+};
+
+export interface ResidentWorkspace {
+  contextId: string;
+  administrative: boolean;
+  building: ResidentWorkspaceBuilding;
+  profile: ResidentProfileInput;
+  settings: ResidentBuildingSettings;
+  capabilities: ResidentWorkspaceCapabilities;
+  integrations: ResidentWorkspaceIntegrationsItem[];
+  home: ResidentWorkspaceHome;
+}
+
 export interface PaymentReadiness {
   status: string;
   onlineAvailable: boolean;
@@ -3872,6 +4124,241 @@ export type PlatformRecordResponseResponse = PlatformRecord;
  * Authorized platform records.
  */
 export type PlatformRecordsResponseResponse = PlatformRecord[];
+
+export type ListResidentMeters200ItemReadingsItem = {
+  id: string;
+  period: string;
+  value_thousandths: string | number;
+};
+
+export type ListResidentMeters200Item = {
+  id: string;
+  serial_number: string;
+  kind: string;
+  number: string;
+  readings: ListResidentMeters200ItemReadingsItem[];
+};
+
+export type SubmitResidentMeterReadingBody = {
+  /** @pattern ^\d{4}-\d{2}-01$ */
+  period: string;
+  /** @pattern ^\d{1,10}(\.\d{1,3})?$ */
+  value: string;
+};
+
+export type ListResidentAnnouncements200Item = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  published: boolean;
+};
+
+export type ListResidentDocuments200Item = {
+  id: string;
+  title: string;
+  media_type: string;
+  created_at: string;
+  category: string;
+  /** @nullable */
+  latest_version_id?: string | null;
+};
+
+export type ListResidentPasses200Item = {
+  id: string;
+  visitor: string;
+  vehicle: string;
+  valid_from: string;
+  valid_until: string;
+  /** @nullable */
+  revoked_at?: string | null;
+  state: string;
+};
+
+export type CreateResidentPassBody = {
+  unitId: string;
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  visitor: string;
+  /** @maxLength 30 */
+  vehicle: string;
+  validFrom: string;
+  validUntil: string;
+};
+
+export type CreateResidentPass201 = {
+  id: string;
+  token: string;
+};
+
+export type ListResidentNotifications200Item = {
+  id: string;
+  kind: string;
+  category: string;
+  critical: boolean;
+  created_at: string;
+  /** @nullable */
+  read_at?: string | null;
+  access_denied: boolean;
+};
+
+export type ListResidentInvoicesParams = {
+currency?: ListResidentInvoicesCurrency;
+};
+
+export type ListResidentInvoicesCurrency = typeof ListResidentInvoicesCurrency[keyof typeof ListResidentInvoicesCurrency];
+
+
+export const ListResidentInvoicesCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type ListResidentInvoices200Item = {
+  id: string;
+  period: string;
+  amount_minor: string;
+  paid_minor: string;
+  adjustment_minor: string;
+  balance_minor: string;
+  currency: string;
+  status: string;
+};
+
+export type GetResidentContexts200Item = {
+  id: string;
+  role: string;
+  organization: string;
+  building: string;
+  unit: string;
+};
+
+export type GetResidentWorkspaceParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type GetResidentRecordsParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+/**
+ * @maxLength 200
+ */
+search?: string;
+};
+
+export type GetResidentRecords200 = {
+  items: ResidentRecord[];
+  hasMore: boolean;
+};
+
+export type CreateResidentRecordParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type UpdateResidentRecordParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type RemoveResidentRecordParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+/**
+ * @minimum 1
+ */
+version: number;
+};
+
+export type ActOnResidentRecordParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type ActOnResidentRecordBodyAction = typeof ActOnResidentRecordBodyAction[keyof typeof ActOnResidentRecordBodyAction];
+
+
+export const ActOnResidentRecordBodyAction = {
+  accept: 'accept',
+  withdraw: 'withdraw',
+  submit: 'submit',
+  approve: 'approve',
+  reject: 'reject',
+  activate: 'activate',
+  cancel: 'cancel',
+  close: 'close',
+  reopen: 'reopen',
+  freeze: 'freeze',
+  support: 'support',
+  unsupport: 'unsupport',
+  read: 'read',
+  save: 'save',
+  unsave: 'unsave',
+  report: 'report',
+  request: 'request',
+  proposal: 'proposal',
+} as const;
+
+export type ActOnResidentRecordBody = {
+  action: ActOnResidentRecordBodyAction;
+  /** @minimum 1 */
+  version: number;
+  /** @maxLength 2000 */
+  reason?: string;
+};
+
+export type GetResidentMessagesParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type PostResidentMessageParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
+
+export type PostResidentMessageBody = {
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  body: string;
+  clientId: string;
+  replyTo?: string;
+};
+
+export type GetResidentAdminBuildings200Item = {
+  id: string;
+  name: string;
+  organization: string;
+};
+
+export type UpdateResidentBuildingSettingsParams = {
+/**
+ * Only administrators can choose a building; residents always use their authenticated context.
+ */
+buildingId?: string;
+};
 
 export type GetEdgeConfigurationParams = {
 /**
@@ -4921,6 +5408,17 @@ export const ListEmailMessagesProvider = {
 export type GetDispatcherSetupParams = {
 buildingId?: string;
 unitId?: string;
+};
+
+export type ListResidentDelegations200Item = {
+  id: string;
+  email: string;
+  expires_at: string;
+  /** @nullable */
+  accepted_at?: string | null;
+  /** @nullable */
+  revoked_at?: string | null;
+  version: number;
 };
 
 export type ResolveNotificationDestinationParams = {

@@ -14,3 +14,9 @@ Common-area equipment maintenance uses a building-scoped system request and clos
 **Why:** Common equipment has no genuine apartment or resident author; inventing either misattributes records and can expose work through apartment permissions.
 
 **How to apply:** Keep the shared WorkOrder flow, real system provenance, and scoped access when adding maintenance sources or technician features.
+
+New resident directory, discussions, private chats, property listings and service catalogs are explicit building-level opt-ins, separate from ordinary restored account access.
+
+**Why:** Legacy access preservation must not silently publish residents' identities or enable new community/service surfaces for existing buildings. Enabling a section also cannot override module, role, lease or privacy restrictions.
+
+**How to apply:** Keep an authorized staff setup step and privacy-aware filtering when expanding resident features; never treat an enabled building section as authorization by itself.
