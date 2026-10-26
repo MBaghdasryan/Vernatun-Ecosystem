@@ -182,6 +182,59 @@ test('staff request details expose a scoped discussion source and staff can open
   await pool.query('UPDATE role_assignments SET building_id=NULL WHERE id=$1',[dispatcher.contextId]);
  }
 });
+test('discussion request details and source deny staff scoped to another building in the same organization',async()=>{
+ // The suite requires a runner-owned qa_* schema; never narrow a working staff assignment.
+ const organizationId=seed.fixtures.orgA;
+ const otherBuildingId=(await pool.query(`INSERT INTO buildings(organization_id,name,address)
+  VALUES($1,'QA other building','QA only') RETURNING id`,[organizationId])).rows[0].id;
+ const scopedStaff=async(scopeBuildingId:string)=>{
+  const key='scoped-dispatcher-'+randomUUID(),email=key+'@vernatun.test';
+  const userId=(await pool.query(`INSERT INTO users(email,name,password_hash)
+   SELECT $1,'QA scoped dispatcher',password_hash FROM users WHERE id=$2 RETURNING id`,
+   [email,seed.accounts.dispatcher.id])).rows[0].id;
+  await pool.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2)',[userId,organizationId]);
+  const assignmentId=(await pool.query(`INSERT INTO role_assignments(user_id,organization_id,role_key,building_id)
+   VALUES($1,$2,'dispatcher',$3) RETURNING id`,[userId,organizationId,scopeBuildingId])).rows[0].id;
+  seed.accounts[key]={id:userId,email,password:seed.accounts.dispatcher.password,role:'dispatcher'};
+  try{
+   const client=await new Client().login(key);
+   assert.equal(client.contextId,assignmentId);
+   const session=await client.call('/auth/session');
+   assert.equal(session.data.contexts.length,1);
+   assert.equal(session.data.contexts[0].organization_id,organizationId);
+   assert.equal(session.data.contexts[0].building_id,scopeBuildingId);
+   assert.ok(session.data.contexts[0].permissions.includes('requests.read'));
+   return client;
+  }finally{delete seed.accounts[key]}
+ };
+ const allowed=await scopedStaff(buildingId),denied=await scopedStaff(otherBuildingId);
+ const title='QA building-private discussion',body='QA building-private original body',text='QA building-private source message';
+ const topic=await owner.call('/resident/records/discussions','POST',{title,body,category:'building'});
+ assert.equal(topic.status,201,JSON.stringify(topic.data));
+ const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:text,clientId:randomUUID()});
+ assert.equal(message.status,201,JSON.stringify(message.data));
+ const created=await owner.call(`/resident/records/discussions/${topic.data.id}/requests`,'POST',{
+  key:randomUUID(),sourceMessageId:message.data.id,subject:'QA scoped request',description:'Inspect the shared door.'});
+ assert.equal(created.status,201,JSON.stringify(created.data));
+ const path='/requests/'+created.data.requestId;
+ for(const suffix of ['', '/origin-discussion']){
+  const response=await denied.call(path+suffix);
+  assert.equal(response.status,404,JSON.stringify(response.data));
+  const payload=JSON.stringify(response.data);
+  for(const secret of [title,body,text,topic.data.id,message.data.id]){
+   assert.ok(!payload.includes(secret),'Denied response must not reveal discussion content or identifiers');
+  }
+ }
+ const detail=await allowed.call(path);
+ assert.equal(detail.status,200,JSON.stringify(detail.data));
+ assert.equal(detail.data.originDiscussion.discussionId,topic.data.id);
+ assert.equal(detail.data.originDiscussion.sourceMessageId,message.data.id);
+ assert.equal(detail.data.originDiscussion.sourceExcerpt,text);
+ const thread=await allowed.call(path+'/origin-discussion');
+ assert.equal(thread.status,200,JSON.stringify(thread.data));
+ assert.equal(thread.data.title,title);assert.equal(thread.data.body,body);
+ assert.ok(thread.data.messages.some((m:any)=>m.id===message.data.id&&m.body===text));
+});
 test('marketplace requires explicit owner draft, submission and staff approval',async()=>{
  const payload={title:'Parking rent',body:'Contact through this app',saleType:'rent',priceMinor:'10000',currency:'AMD'};
  assert.equal((await family.call('/resident/records/listings','POST',payload)).status,403);
