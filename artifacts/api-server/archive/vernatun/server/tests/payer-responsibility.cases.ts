@@ -40,6 +40,12 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   const proposed=await f.owner.call('/resident/payer-responsibilities','POST',body);
   assert.equal(proposed.status,201,JSON.stringify(proposed.data));
   assert.equal(proposed.data.status,'pending');assert.equal(await effective(next),f.seed.accounts.unit_owner.id);
+  // These are distinct authenticated sessions holding the same pending offer.
+  const ownerPending=(await f.owner.call('/resident/payer-responsibilities')).data;
+  const recipientPending=(await f.family.call('/resident/payer-responsibilities')).data;
+  const findOffer=(workspace:any,id:string)=>workspace.delegations.find((d:any)=>d.id===id);
+  assert.equal(findOffer(ownerPending,proposed.data.id).status,'pending');
+  assert.equal(findOffer(recipientPending,proposed.data.id).status,'pending');
   let notice=(await pool.query(`SELECT id,visible_after FROM notifications WHERE user_id=$1 AND entity_type='payer_responsibility'
    AND entity_id=$2 AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,proposed.data.id])).rows[0];
   assert.ok(notice);assert.ok(new Date(notice.visible_after).getTime()>Date.now());
@@ -66,6 +72,11 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   assert.equal((await f.family.call('/resident/payer-responsibilities','POST',{...body,clientId:randomUUID()})).status,403);
   assert.equal((await f.owner.call('/resident/payer-responsibilities?buildingId='+randomUUID())).status,403);
   const consent=await review(f.family,proposed.data,'accept');assert.equal(consent.status,200,JSON.stringify(consent.data));accepted=consent.data;
+  // The other already-authenticated session sees the decision on its next read.
+  const ownerAfterAccept=(await f.owner.call('/resident/payer-responsibilities')).data;
+  const recipientAfterAccept=(await f.family.call('/resident/payer-responsibilities')).data;
+  assert.equal(findOffer(ownerAfterAccept,proposed.data.id).status,'accepted');
+  assert.equal(findOffer(recipientAfterAccept,proposed.data.id).status,'accepted');
   assert.equal((await review(f.family,proposed.data,'accept')).data.version,accepted.version);
   notice=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_type='payer_responsibility'
    AND entity_id=$2 AND event_code='payer_responsibility_accepted'`,[f.seed.accounts.unit_owner.id,accepted.id])).rows[0];
@@ -84,6 +95,8 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   assert.ok((await f.family.call('/resident/payer-responsibilities')).data.invoices.some((r:any)=>r.id===invoice.data.id));
   assert.ok(!(await f.owner.call('/resident/payer-responsibilities')).data.invoices.some((r:any)=>r.id===invoice.data.id));
   const revoked=await review(f.owner,accepted,'revoke');assert.equal(revoked.status,200);
+  const recipientAfterRevoke=(await f.family.call('/resident/payer-responsibilities')).data;
+  assert.equal(findOffer(recipientAfterRevoke,accepted.id).status,'revoked');
   assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2
    AND event_code='payer_responsibility_revoked'`,[f.seed.accounts.unit_owner.id,accepted.id])).rows[0].n,1);
   assert.equal(await effective(month(1)),f.seed.accounts.unit_owner.id);
@@ -96,11 +109,15 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
    categories=$2::jsonb WHERE user_id=$1`,
    [f.seed.accounts.family.id,JSON.stringify({finance:{in_app:false,email:false}})]);
   const declinedOffer=await create(month(6),month(6));assert.equal(declinedOffer.status,201,JSON.stringify(declinedOffer.data));
+  const ownerBeforeDecline=(await f.owner.call('/resident/payer-responsibilities')).data;
+  assert.equal(findOffer(ownerBeforeDecline,declinedOffer.data.id).status,'pending');
   const muted=(await pool.query(`SELECT id,in_app_enabled FROM notifications WHERE user_id=$1 AND entity_id=$2
    AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,declinedOffer.data.id])).rows[0];
   assert.equal(muted.in_app_enabled,false);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM notification_email_outbox WHERE notification_id=$1',[muted.id])).rows[0].n,0);
   const declined=await review(f.family,declinedOffer.data,'decline');assert.equal(declined.status,200);
+  const ownerAfterDecline=(await f.owner.call('/resident/payer-responsibilities')).data;
+  assert.equal(findOffer(ownerAfterDecline,declinedOffer.data.id).status,'declined');
   await pool.query(`UPDATE notification_preferences SET categories='{}'::jsonb WHERE user_id=$1`,[f.seed.accounts.family.id]);
   assert.equal((await review(f.family,declinedOffer.data,'decline')).data.version,declined.data.version);
   assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2

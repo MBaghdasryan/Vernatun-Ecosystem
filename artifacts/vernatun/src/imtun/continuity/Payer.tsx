@@ -12,7 +12,7 @@ const stl=(l:Language,s:string)=>s==='pending'?tt(l,'Սպասում է','Ожи�
 const per=(v:string)=>v.slice(0,7);
 const money=(l:Language,m:string,c:string)=>(Number(m)/100).toLocaleString(l)+' '+c;
 export default function Payer({c,l}:{c:RoleContext;l:Language}){
- const qc=useQueryClient(),key=['resident-payer',c.id],q=useQuery({queryKey:key,queryFn:()=>getPayerResponsibilities()});
+ const qc=useQueryClient(),key=['resident-payer',c.id],q=useQuery({queryKey:key,queryFn:()=>getPayerResponsibilities(),refetchInterval:15_000,refetchOnMount:'always',refetchOnWindowFocus:'always'});
  const a=useAct(l,()=>{void qc.invalidateQueries({queryKey:key})});
  const [need,setNeed]=useState(false),[notice,setNotice]=useState(''),[asg,setAsg]=useState(''),[rec,setRec]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState('');
  const cid=useRef(crypto.randomUUID());

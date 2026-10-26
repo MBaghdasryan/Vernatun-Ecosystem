@@ -14,7 +14,7 @@ const stl = (l: Language, s: string) => s === 'pending' ? tt(l, 'Սպասում 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 export default function Payer({ l }: { l: Language }) {
   const ctx = useContextId(); const qc = useQueryClient(); const key = ['resident-payer', ctx];
-  const q = useQuery({ queryKey: key, enabled: !!ctx, queryFn: () => getPayerResponsibilities() });
+  const q = useQuery({ queryKey: key, enabled: !!ctx, queryFn: () => getPayerResponsibilities(), refetchInterval: 15_000, refetchOnMount: 'always' });
   const a = useAction(l, () => { void qc.invalidateQueries({ queryKey: key }); });
   const [need, setNeed] = useState(false); const [pw, setPw] = useState(''); const [code, setCode] = useState('');
   const [asg, setAsg] = useState(''); const [rec, setRec] = useState(''); const [from, setFrom] = useState(''); const [to, setTo] = useState('');
