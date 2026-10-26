@@ -84,3 +84,11 @@ corepack pnpm --filter @workspace/api-server run db:provision:global-accounts --
 - `git diff --check` — успешно.
 
 Все локальные тесты доставки выполнялись на изолированной тестовой базе с синтетическими письмами и signing key. Production-письмо и успешную обработку `email.sent`/`email.delivered` сообщил пользователь; из этой рабочей среды live-письмо не отправлялось и настройки Resend не менялись.
+
+## Дополнительная проверка отправки и входящей почты
+
+- В Replit production environment видны `MAIL_PROVIDER=resend` и `EMAIL_FROM=noreply@vernatun.io`; secret `RESEND_WEBHOOK_SECRET` существует, `RESEND_API_KEY` отсутствует. Это состояние Replit, а не Coolify.
+- Coolify secrets/API container не доступны для независимой проверки. Значения секретов не запрашивались и не выводились.
+- Попытка прочитать домены через существующее Resend API-подключение завершилась `400 API key is invalid`; текущий статус `vernatun.io` и разрешённый sender `noreply@vernatun.io` поэтому отдельно не проверены. Пользователь ранее сообщил, что домен Verified и sender отправляет.
+- Публичные MX-записи `vernatun.io` сейчас указывают на `mx1.hostinger.com` (priority 5) и `mx2.hostinger.com` (priority 10). Записи DNS не изменялись.
+- Новое тестовое письмо не отправлялось: для него не был согласован адрес получателя и явное разрешение. Пользователь ранее сообщал о production-отправке и событиях `email.sent`/`email.delivered`.
