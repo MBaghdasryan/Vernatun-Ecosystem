@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { uploadOperationalPhoto } from '@workspace/api-client-react';
 import { useLang } from '@/lib/resident/hooks';

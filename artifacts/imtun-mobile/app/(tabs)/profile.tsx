@@ -4,17 +4,20 @@ import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogoutMobileAuth, useGetMobileAuthSession, useSwitchMobileAuthContext, type MobileAuthContext } from '@workspace/api-client-react';
 import { useRouter } from 'expo-router';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { csrfSessionRef } from '../_layout';
 import { useColors } from '@/hooks/useColors';
 import { armenianCurrency, friendlyError } from '@/constants/armenian';
+import { useLang, useWorkspace } from '@/lib/resident/hooks';
+import { roleLabel, tr, useSection } from '@/lib/resident/shell';
+import { Row } from '@/components/resident/Ui';
 
 function isResidentContext(context: MobileAuthContext) {
   const product = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
   return product.includes('imtun') || context.role_key.toLowerCase().includes('resident');
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen() { const palette = useAppPalette(); const styles = React.useMemo(() => make_styles(palette), [palette]);
   const colors = useColors();
   const router = useRouter();
   const client = useQueryClient();
@@ -27,13 +30,18 @@ export default function ProfileScreen() {
   const contexts = useMemo(() => (session.data?.contexts ?? []).filter(isResidentContext), [session.data?.contexts]);
   const active = contexts.find((context) => context.id === session.data?.contextId);
   const user = session.data?.user;
+  const l = useLang(); const ws = useWorkspace(); const go = useSection();
+  const b = ws.data?.building; const sum = ws.data?.home.summary;
 
   const changeContext = (context: MobileAuthContext) => {
     setError('');
     switchContext.mutate({ data: { id: context.id } }, {
       onSuccess: () => {
         setContextSheet(false);
-        client.invalidateQueries({ queryKey: session.queryKey });
+        // Generated finance, device and request hooks have context-agnostic
+        // query keys. Never show cached data from the previous assignment.
+        client.clear();
+        void session.refetch();
       },
       onError: (cause) => setError(friendlyError(cause, 'Չհաջողվեց փոխել տունը։ Կրկին փորձեք։')),
     });
@@ -64,6 +72,24 @@ export default function ProfileScreen() {
       <Pressable accessibilityRole="button" testID="profile-change-context" disabled={contexts.length < 2} onPress={() => setContextSheet(true)} style={[styles.listCard, contexts.length < 2 && styles.notInteractive]}>
         <View style={styles.listIcon}><Feather name="home" size={19} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{active?.building_name || active?.organization_name || 'Բնակելի շենք'}</Text><Text style={styles.itemDescription}>{active?.unit_number ? `Բնակարան ${active.unit_number}` : 'Բնակչի մուտք'}{active?.organization_name && active.building_name ? ` · ${active.organization_name}` : ''}</Text></View>{contexts.length > 1 ? <Feather name="chevron-right" size={19} color={palette.mutedForeground} /> : <Feather name="check" size={18} color={palette.success} />}
       </Pressable>
+      <View style={styles.listCard}><View style={styles.listIcon}><Feather name="award" size={18} color={palette.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{roleLabel(l, b?.role ?? active?.role_key)}</Text><Text style={styles.itemDescription}>{[b?.unit ? `${tr(l, ['Բն.', 'Кв.', 'Apt'])} ${b.unit}` : null, b?.area ? `${b.area} m²` : null, b?.address].filter(Boolean).join(' · ') || '—'}</Text></View></View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>{[[tr(l, ['Բաց հայտեր', 'Заявки', 'Requests']), ws.data?.home.openRequests], [tr(l, ['Անցաթղթեր', 'Пропуска', 'Passes']), sum?.activeGuestPasses], [tr(l, ['Քվեարկություն', 'Голосования', 'Votes']), sum?.activeVoting?.length]].map(([k, v]) => <View key={String(k)} style={[styles.listCard, { flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }]}><Text style={styles.name}>{v == null ? '—' : String(v)}</Text><Text style={styles.itemDescription}>{k}</Text></View>)}</View>
+      <Text style={styles.section}>{tr(l, ['ԻՄ ՏՈՒՆԸ', 'МОЙ ДОМ', 'MY HOME'])}</Text>
+      <View style={{ gap: 8 }}>
+        <Row icon="users" title={tr(l, ['Ընտանիք և հասանելիություն', 'Семья и права доступа', 'Household and access'])} onPress={() => go('family')} />
+        <Row icon="key" title={tr(l, ['Հյուրի անցաթղթեր', 'Гостевые пропуска', 'Guest passes'])} onPress={() => go('passes')} />
+        <Row icon="truck" tone="plain" title={tr(l, ['Մեքենաներ', 'Автомобили', 'Vehicles'])} onPress={() => go('vehicles')} />
+        <Row icon="file-text" tone="plain" title={tr(l, ['Փաստաթղթեր', 'Документы', 'Documents'])} onPress={() => go('documents')} />
+        <Row icon="check-square" tone="plain" title={tr(l, ['Համաձայնություններ', 'Соглашения', 'Agreements'])} onPress={() => go('agreements')} />
+        <Row icon="phone" tone="plain" title={tr(l, ['Շենքի կոնտակտներ', 'Контакты дома', 'Building contacts'])} onPress={() => go('building')} />
+        <Row icon="grid" tone="plain" title={tr(l, ['Բոլոր ծառայությունները', 'Все сервисы', 'All services'])} onPress={() => router.push('/(tabs)/more')} testID="profile-more" />
+      </View>
+      <Text style={styles.section}>{tr(l, ['ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ', 'НАСТРОЙКИ', 'SETTINGS'])}</Text>
+      <View style={{ gap: 8 }}>
+        <Row icon="sliders" tone="plain" title={tr(l, ['Լեզու, թեմա, ծանուցումներ', 'Язык, тема, уведомления', 'Language, theme, notifications'])} onPress={() => go('preferences')} />
+        <Row icon="lock" tone="plain" title={tr(l, ['Անվտանգություն և սարքեր', 'Безопасность и устройства', 'Security and devices'])} onPress={() => go('security')} testID="profile-security" />
+        <Row icon="life-buoy" tone="plain" title={tr(l, ['Օգնություն', 'Помощь', 'Help'])} onPress={() => go('help')} />
+      </View>
       <Text style={styles.section}>ՀԱՇԻՎ</Text>
       <View style={styles.listCard}>
         <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="mail" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>Էլեկտրոնային փոստ</Text><Text style={styles.itemDescription}>{user?.email || 'Նշված չէ'}</Text></View>
@@ -92,7 +118,7 @@ export default function ProfileScreen() {
   </>;
 }
 
-const styles = StyleSheet.create({
+const make_styles = (palette: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.background }, content: { paddingHorizontal: 21, paddingTop: 20, paddingBottom: 40 },
   top: { marginBottom: 17 }, logo: { width: 115, height: 49, marginLeft: -5 }, kicker: { color: palette.subdued, fontSize: 9, letterSpacing: 1.4, fontWeight: '800', marginTop: 8 },
   title: { color: palette.foreground, fontSize: 29, lineHeight: 35, letterSpacing: -0.7, fontWeight: '800' }, subtitle: { color: palette.mutedForeground, fontSize: 13, marginTop: 5, marginBottom: 21 },

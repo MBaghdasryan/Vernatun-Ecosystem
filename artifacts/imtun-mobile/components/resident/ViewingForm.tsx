@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Alert, Text, View } from 'react-native';
 import { createResidentRecord } from '@workspace/api-client-react';
 import type { ResidentRecord } from '@workspace/api-client-react';

@@ -3,12 +3,12 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { postResidentMessage } from '@workspace/api-client-react';
 import type { ResidentRecord, ResidentRecordKind } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { L, S, type Language } from '@/lib/resident/text';
 import { newUuid, useContextId, useMessages } from '@/lib/resident/hooks';
 import { Btn, ErrorBox, Skeleton } from './Ui';
 import { useAction } from './useAction';
-export default function Thread({ kind, rec, l, onConvertSource }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; onConvertSource?: (action: 'request' | 'proposal', id: string, text: string) => void }) {
+export default function Thread({ kind, rec, l, onConvertSource }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; onConvertSource?: (action: 'request' | 'proposal', id: string, text: string) => void }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const qc = useQueryClient(); const ctx = useContextId();
   const q = useMessages(kind, rec.id);
   const [text, setText] = useState(''); const [cid, setCid] = useState(newUuid);
@@ -25,10 +25,10 @@ export default function Thread({ kind, rec, l, onConvertSource }: { kind: Reside
     {a.err ? <ErrorBox message={a.err} /> : null}
   </View>;
 }
-const st = StyleSheet.create({
+const make_st = (palette: Palette) => StyleSheet.create({
   box: { gap: 8, borderTopWidth: 1, borderTopColor: palette.divider, paddingTop: 12 }, h: { fontWeight: '800', color: palette.foreground },
   msg: { backgroundColor: palette.muted, borderRadius: 12, padding: 10, maxWidth: '88%' }, own: { alignSelf: 'flex-end', backgroundColor: palette.accent },
   meta: { fontSize: 11, color: palette.mutedForeground }, body: { color: palette.foreground, fontSize: 14 },
-  input: { minHeight: 46, borderWidth: 1, borderColor: palette.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff', color: palette.foreground },
+  input: { minHeight: 46, borderWidth: 1, borderColor: palette.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: palette.surface, color: palette.foreground },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { changeDelegationExpiration, revokeResidentDelegation, reauthenticateResident, resendResidentDelegation } from '@workspace/api-client-react';

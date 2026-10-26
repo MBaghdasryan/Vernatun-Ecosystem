@@ -15,6 +15,8 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl, setCsrfTokenGetter } from '@workspace/api-client-react';
+import { AppThemeProvider, useAppPalette } from '@/hooks/useAppTheme';
+import { AppLockProvider } from '@/components/security/AppLock';
 import { palette } from '@/constants/colors';
 import { clearPrivateDocumentCache } from '@/lib/resident/privateDocument';
 
@@ -42,6 +44,7 @@ setCsrfTokenGetter(() => csrfSessionRef.current);
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const palette = useAppPalette();
   return (
     <Stack screenOptions={{ headerBackTitle: 'Հետ', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -76,7 +79,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView>
             <KeyboardProvider>
-              <RootLayoutNav />
+              <AppThemeProvider><AppLockProvider><RootLayoutNav /></AppLockProvider></AppThemeProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

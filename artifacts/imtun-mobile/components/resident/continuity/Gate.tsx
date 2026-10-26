@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import type { Language } from '@/lib/resident/text';
 import { Card, ErrorBox, Skeleton } from '../Ui';
 import { useDomainAccess } from '../domain/useDomain';

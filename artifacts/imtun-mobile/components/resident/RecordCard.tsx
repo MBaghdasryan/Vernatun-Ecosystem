@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { actOnResidentRecord, createAgendaProposalFromDiscussion, createRequestFromDiscussion, removeResidentRecord } from '@workspace/api-client-react';
 import type { ResidentRecord, ResidentRecordKind } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { L, S, A2, reasonNeeded, actLabel, statusLabel, inquire, type Language } from '@/lib/resident/text';
 import { Btn, Card, Chip, ErrorBox, Field } from './Ui';
 import { useAction } from './useAction';
@@ -31,7 +31,7 @@ const C: Record<string, LocalText> = {
   cancel: ['Չեղարկել', 'Отмена', 'Cancel'],
   sent: ['Ուղարկված է', 'Отправлено', 'Submitted'],
 };
-export default function RecordCard({ kind, rec, l, after }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; after: () => void }) {
+export default function RecordCard({ kind, rec, l, after }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; after: () => void }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const a = useAction(l, after);
   const [mode, setMode] = useState<'none' | 'edit' | 'thread' | 'inquire' | 'reason' | 'viewing' | 'request' | 'proposal' | 'lineage'>('none');
   const [note, setNote] = useState(''); const [reason, setReason] = useState(''); const [pending, setPending] = useState('');
@@ -116,4 +116,4 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
     {mode === 'inquire' && <RecordForm kind="conversations" l={l} parent={rec} after={after} onDone={() => setMode('none')} submitLabel={inquire} />}
   </Card>;
 }
-const st = StyleSheet.create({ top: { flexDirection: 'row', justifyContent: 'space-between' }, title: { fontSize: 17, fontWeight: '800', color: palette.foreground }, body: { color: palette.mutedForeground, fontSize: 14 }, meta: { color: palette.subdued, fontSize: 11 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 } });
+const make_st = (palette: Palette) => StyleSheet.create({ top: { flexDirection: 'row', justifyContent: 'space-between' }, title: { fontSize: 17, fontWeight: '800', color: palette.foreground }, body: { color: palette.mutedForeground, fontSize: 14 }, meta: { color: palette.subdued, fontSize: 11 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 } });

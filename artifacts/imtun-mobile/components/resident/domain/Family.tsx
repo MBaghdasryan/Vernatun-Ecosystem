@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createResidentDelegation, getResidentHousehold, listResidentDelegations } from '@workspace/api-client-react';
 import { useDomainAccess } from './useDomain';
 import { L, S, type Language, type T } from '@/lib/resident/text';
-import { Btn, Card, Chip, Empty, ErrorBox, Skeleton, Field, Segment, Toggle } from '../Ui';
+import { Btn, Card, Chip, Empty, ErrorBox, Skeleton, Field, Segment, Toggle , Row, SectionHead } from '../Ui';
+import { roleLabel } from '@/lib/resident/shell';
 import { useAction } from '../useAction';
 import DelegationActions from '../continuity/FamilyActions';
 import HouseholdLeases from '../continuity/HouseholdLeases';
@@ -12,7 +14,7 @@ type Perm = 'requests.own' | 'requests.create' | 'announcements.read' | 'propert
 const perms: [Perm, T][] = [['requests.own', ['Տեսնել հայտերը', 'Видеть заявки', 'See requests']], ['requests.create', ['Ստեղծել հայտեր', 'Создавать заявки', 'Create requests']], ['announcements.read', ['Հայտարարություններ', 'Объявления', 'Announcements']], ['properties.own', ['Տան տվյալներ', 'Данные дома', 'Home details']], ['access.create', ['Հյուրերի անցագրեր', 'Гостевые пропуска', 'Guest passes']]];
 const D = { email: ['Էլ. փոստ', 'Эл. почта', 'Email'] as T, phone: ['Հեռախոս', 'Телефон', 'Phone'] as T, until: ['Վավեր է', 'Действует', 'Valid for'] as T, send: ['Ուղարկել հրավեր', 'Отправить приглашение', 'Send invitation'] as T, sent: ['Հրավերն ուղարկված է։ Այն դեռ ընդունված չէ։', 'Приглашение создано. Оно ещё не принято.', 'Invitation created. It has not been accepted yet.'] as T, list: ['Իմ հրավերները', 'Мои приглашения', 'My invitations'] as T, accepted: ['Ընդունված', 'Принято', 'Accepted'] as T, revoked: ['Չեղարկված', 'Отозвано', 'Revoked'] as T, waiting: ['Սպասում է', 'Ожидает', 'Pending'] as T, untilDate: ['Մինչև', 'До', 'Until'] as T };
 const days: [string, string][] = [['30', '30'], ['90', '90'], ['180', '180'], ['365', '365']];
-export default function Family({ l }: { l: Language }) {
+export default function Family({ l }: { l: Language }) { const palette = useAppPalette();
   const [email, setEmail] = useState(''); const [phone, setPhone] = useState(''); const [d, setD] = useState('90'); const [sel, setSel] = useState<Perm[]>(['requests.own']); const [ok, setOk] = useState(false);
   const { ctxId } = useDomainAccess('family'); const qc = useQueryClient();
   const hh = useQuery({ queryKey: ['resident-household', ctxId], enabled: !!ctxId, queryFn: () => getResidentHousehold() });
@@ -23,13 +25,13 @@ export default function Family({ l }: { l: Language }) {
   if (hh.isError || !hh.data) return <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => hh.refetch()} />;
   const hd = hh.data;
   return <View style={{ gap: 12 }}>
-    <Card><Text style={{ fontWeight: '800' }}>{l === 'hy' ? 'Իմ տունը' : l === 'ru' ? 'Моё домохозяйство' : 'My household'}</Text>{hd.members.map(m => <Text key={m.id}>{m.name} · {m.role}{m.expiresAt ? ' · ' + new Date(m.expiresAt).toLocaleDateString(l) : ''}</Text>)}</Card>
+    <SectionHead title={l === 'hy' ? 'Իմ տունը' : l === 'ru' ? 'Моё домохозяйство' : 'My household'} />{!hd.members.length && <Empty text={L(l, S.empty)} />}{hd.members.map(m => <Row key={m.id} icon="user" tone="plain" title={m.name} subtitle={roleLabel(l, m.role) + (m.expiresAt ? ' · ' + new Date(m.expiresAt).toLocaleDateString(l) : '')} />)}
     <HouseholdLeases hh={hd} l={l} ctxId={ctxId} />
     {hd.canManageDelegations ? <><Card>
     <Field label={L(l, D.email)} value={email} onChange={x => { setOk(false); setEmail(x); }} keyboard="email-address" /><Field label={L(l, D.phone)} value={phone} onChange={setPhone} keyboard="phone-pad" />
     <Segment label={L(l, D.until) + ' (d)'} value={d} options={days} onChange={setD} />
     {perms.map(([k, lab]) => <Toggle key={k} label={L(l, lab)} value={sel.includes(k)} onChange={x => setSel(x ? [...sel, k] : sel.filter(y => y !== k))} />)}
     <Btn label={L(l, D.send)} busy={a.busy} disabled={!email.includes('@') || !sel.length} onPress={submit} />
-    {ok && <Text>{L(l, D.sent)}</Text>}{a.err ? <ErrorBox message={a.err} /> : null}</Card>{q.isPending && <Skeleton />}{q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}{q.data && !q.data.length && <Empty text={L(l, S.empty)} />}
-    {q.data?.map(x => <Card key={x.id}><Text style={{ fontWeight: '800' }}>{x.email}</Text><Chip tone={x.accepted_at ? 'ok' : 'warn'} label={L(l, x.revoked_at ? D.revoked : x.accepted_at ? D.accepted : D.waiting)} /><Text style={{ fontSize: 12 }}>{L(l, D.untilDate)}: {new Date(x.expires_at).toLocaleDateString(l)}</Text><DelegationActions x={x} l={l} ctxId={ctxId} /></Card>)}</> : null}</View>;
+    {ok && <Text style={{ color: palette.foreground }}>{L(l, D.sent)}</Text>}{a.err ? <ErrorBox message={a.err} /> : null}</Card>{q.isPending && <Skeleton />}{q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}{q.data && !q.data.length && <Empty text={L(l, S.empty)} />}
+    {q.data?.map(x => <Card key={x.id}><Text style={{ color: palette.foreground, fontWeight: '800' }}>{x.email}</Text><Chip tone={x.accepted_at ? 'ok' : 'warn'} label={L(l, x.revoked_at ? D.revoked : x.accepted_at ? D.accepted : D.waiting)} /><Text style={{ color: palette.foreground, fontSize: 12 }}>{L(l, D.untilDate)}: {new Date(x.expires_at).toLocaleDateString(l)}</Text><DelegationActions x={x} l={l} ctxId={ctxId} /></Card>)}</> : null}</View>;
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { View } from 'react-native';
 import { L, type Language } from '@/lib/resident/text';
 import { LT, majorToMinor, CURRENCIES } from '@/lib/resident/listingText';

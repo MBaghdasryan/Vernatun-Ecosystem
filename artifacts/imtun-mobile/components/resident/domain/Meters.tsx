@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listResidentMeters, submitResidentMeterReading } from '@workspace/api-client-react';
@@ -10,12 +11,12 @@ const kindLabel: Record<string, T> = { electricity: ['Էլեկտրաէներգի
 const D = { value: ['Ցուցմունք', 'Показание', 'Reading'] as T, submit: ['Ներկայացնել', 'Передать', 'Submit reading'] as T, hist: ['Պատմություն', 'История', 'History'] as T, bad: ['Մուտքագրեք թիվ (մինչև 3 տասնորդական)։', 'Введите число (до 3 знаков после запятой).', 'Enter a number (up to 3 decimals).'] as T, serial: ['Սերիա', 'Серийный №', 'Serial'] as T };
 const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; };
 const fmt = (v: string | number) => (Number(v) / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 });
-function Meter({ m, l, after }: { m: { id: string; serial_number: string; kind: string; number: string; readings: { id: string; period: string; value_thousandths: string | number }[] }; l: Language; after: () => void }) {
+function Meter({ m, l, after }: { m: { id: string; serial_number: string; kind: string; number: string; readings: { id: string; period: string; value_thousandths: string | number }[] }; l: Language; after: () => void }) { const palette = useAppPalette();
   const [v, setV] = useState(''); const a = useAction(l, after); const valid = /^\d{1,10}(\.\d{1,3})?$/.test(v.trim());
-  return <Card><Text style={{ fontWeight: '800', fontSize: 16 }}>{kindLabel[m.kind] ? L(l, kindLabel[m.kind]) : L(l, ['Հաշվիչ', 'Счётчик', 'Meter'])} · {m.number}</Text><Text style={{ fontSize: 11, color: '#728087' }}>{L(l, D.serial)}: {m.serial_number}</Text>
-    <Field label={L(l, D.value)} value={v} onChange={setV} keyboard="decimal-pad" maxLength={14} />{v && !valid ? <Text style={{ color: '#a43d32', fontSize: 12 }}>{L(l, D.bad)}</Text> : null}
+  return <Card><Text style={{ color: palette.foreground, fontWeight: '800', fontSize: 16 }}>{kindLabel[m.kind] ? L(l, kindLabel[m.kind]) : L(l, ['Հաշվիչ', 'Счётчик', 'Meter'])} · {m.number}</Text><Text style={{ fontSize: 11, color: palette.subdued }}>{L(l, D.serial)}: {m.serial_number}</Text>
+    <Field label={L(l, D.value)} value={v} onChange={setV} keyboard="decimal-pad" maxLength={14} />{v && !valid ? <Text style={{ color: palette.dangerText, fontSize: 12 }}>{L(l, D.bad)}</Text> : null}
     <Btn label={L(l, D.submit)} disabled={!valid} busy={a.busy} onPress={() => void a.run(async () => { await submitResidentMeterReading(m.id, { period: firstOfMonth(), value: v.trim() }); setV(''); })} />{a.err ? <ErrorBox message={a.err} /> : null}
-    <Text style={{ fontWeight: '700' }}>{L(l, D.hist)}</Text>{!m.readings.length && <Text>{L(l, S.empty)}</Text>}{m.readings.map(r => <Text key={r.id}>{r.period.slice(0, 7)} · {fmt(r.value_thousandths)}</Text>)}</Card>;
+    <Text style={{ color: palette.foreground, fontWeight: '700' }}>{L(l, D.hist)}</Text>{!m.readings.length && <Text style={{ color: palette.foreground }}>{L(l, S.empty)}</Text>}{m.readings.map(r => <Text key={r.id}>{r.period.slice(0, 7)} · {fmt(r.value_thousandths)}</Text>)}</Card>;
 }
 export default function Meters({ l }: { l: Language }) {
   const { ctxId } = useDomainAccess('meters'); const qc = useQueryClient();

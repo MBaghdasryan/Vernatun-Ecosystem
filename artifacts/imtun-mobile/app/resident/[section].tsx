@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { L, S, kinds, superTitle } from '@/lib/resident/text';
 import { useContextId, useLang, useWorkspace } from '@/lib/resident/hooks';
 import RecordsList from '@/components/resident/RecordsList';
@@ -19,6 +19,8 @@ import Meters from '@/components/resident/domain/Meters';
 import Announcements from '@/components/resident/domain/Announcements';
 import Documents from '@/components/resident/domain/Documents';
 import Passes from '@/components/resident/domain/Passes';
+import LocalSecurity from '@/components/security/LocalSecurity';
+import Access from '@/components/resident/Access';
 import Continuity, { continuitySections } from '@/components/resident/continuity/Gate';
 function DomainSection({ view, l }: { view: DomainView; l: ReturnType<typeof useLang> }) {
   const acc = useDomainAccess(view);
@@ -26,20 +28,22 @@ function DomainSection({ view, l }: { view: DomainView; l: ReturnType<typeof use
   if (!acc.allowed) return <Card><Text>{L(l, S.off)}</Text></Card>;
   return view === 'finance' ? <Finance l={l} /> : view === 'meetings' ? <Meetings l={l} /> : view === 'notifications' ? <Notifications l={l} /> : view === 'meters' ? <Meters l={l} /> : view === 'announcements' ? <Announcements l={l} /> : view === 'documents' ? <Documents l={l} /> : view === 'passes' ? <Passes l={l} /> : <Family l={l} />;
 }
-export default function ResidentSection() {
+export default function ResidentSection() { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const { section } = useLocalSearchParams<{ section: string }>();
   const router = useRouter(); const l = useLang(); const ctx = useContextId(); const ws = useWorkspace();
   const list = kinds[section ?? ''] ?? [];
   return <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={st.content} keyboardShouldPersistTaps="handled">
-    <Pressable accessibilityRole="button" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>
+    <Pressable accessibilityRole="button" onPress={() => router.back()} style={st.back}><Feather name="chevron-left" size={22} color={palette.foreground} /><Text style={st.backT}>{section === 'security' ? L(l, ['Անվտանգություն', 'Безопасность', 'Security']) : section === 'access' ? L(l, ['Մուտք', 'Доступ', 'Access']) : superTitle[section ?? ''] ? L(l, superTitle[section ?? '']) : (domainViews as readonly string[]).includes(section ?? '') ? L(l, domainTitle[section as DomainView]) : ''}</Text></Pressable>
     {/* key by context so forms and lists reset when the home changes */}
     <View key={(ctx ?? 'none') + section} style={{ gap: 16 }}>
       {continuitySections.includes(section ?? '') && <Continuity section={section ?? ''} l={l} />}
       {section === 'building' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <BuildingInfo ws={ws.data} l={l} />}<RecordsList kind="contacts" l={l} /></>}
+      {section === 'security' && <LocalSecurity />}
+      {section === 'access' && <Access l={l} />}
       {section === 'preferences' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <PrefsForm key={JSON.stringify(ws.data.profile)} profile={ws.data.profile} l={l} />}</>}
       {(domainViews as readonly string[]).includes(section ?? '') && <DomainSection view={section as DomainView} l={l} />}
       {list.map(k => <RecordsList key={k} kind={k} l={l} />)}
     </View>
   </ScrollView>;
 }
-const st = StyleSheet.create({ content: { padding: 20, paddingTop: 60, paddingBottom: 60, gap: 14 }, back: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 }, backT: { fontWeight: '700', color: palette.foreground } });
+const make_st = (palette: Palette) => StyleSheet.create({ content: { padding: 20, paddingTop: 60, paddingBottom: 60, gap: 14 }, back: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 }, backT: { fontWeight: '700', color: palette.foreground } });

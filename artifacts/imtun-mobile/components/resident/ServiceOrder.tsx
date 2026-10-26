@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import type { ResidentRecord } from '@workspace/api-client-react';
 import { L, S, type Language } from '@/lib/resident/text';
 import { Btn, Card } from './Ui';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import type { ResidentRecordKind } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { L, S, always, creatable, kindName, type Language } from '@/lib/resident/text';
 import { useRecords, useResidentRefresh, useWorkspace } from '@/lib/resident/hooks';
 import { Btn, Card, Empty, ErrorBox, Field, Skeleton } from './Ui';
@@ -11,7 +11,7 @@ import ListingForm from './ListingForm';
 import ListingFilters, { emptyLF, lfParams } from './ListingFilters';
 import DeviceRegister from './DeviceRegister';
 import ServiceOrder from './ServiceOrder';
-export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: Language }) {
+export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: Language }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const ws = useWorkspace(); const refresh = useResidentRefresh();
   const caps = ws.data?.capabilities;
   const enabled = always.includes(kind) || caps?.[kind] === true;
@@ -35,4 +35,4 @@ export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: 
     </>}
   </View>;
 }
-const st = StyleSheet.create({ h: { fontSize: 22, fontWeight: '800', color: palette.foreground }, muted: { color: palette.mutedForeground } });
+const make_st = (palette: Palette) => StyleSheet.create({ h: { fontSize: 22, fontWeight: '800', color: palette.foreground }, muted: { color: palette.mutedForeground } });

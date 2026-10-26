@@ -33,8 +33,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow ImTun to select photos for your property listing.",
-          "cameraPermission": false,
+          "photosPermission": "Allow ImTun to attach photos to your requests, profile or property listing.",
+          "cameraPermission": "Allow ImTun to take a photo for a request, profile or property listing when you choose the camera.",
           "microphonePermission": false
         }
       ],
@@ -55,7 +55,14 @@
           "backgroundColor": "#f5f3ed"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow ImTun to unlock the app with Face ID when you enable biometric app protection."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDiscussionLineage } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { useContextId } from '@/lib/resident/hooks';
 import { L, type Language } from '@/lib/resident/text';
 import { ErrorBox, Skeleton } from './Ui';
@@ -21,7 +21,7 @@ const T: Record<string, LocalText> = {
   failed: ['Չի ընդունվել', 'Не принято', 'Not passed'],
 };
 
-export default function DiscussionLineagePanel({ discussionId, l }: { discussionId: string; l: Language }) {
+export default function DiscussionLineagePanel({ discussionId, l }: { discussionId: string; l: Language }) { const palette = useAppPalette(); const s = React.useMemo(() => make_s(palette), [palette]);
   const contextId = useContextId();
   const query = useQuery({
     queryKey: ['discussion-lineage', contextId, discussionId],
@@ -50,7 +50,7 @@ export default function DiscussionLineagePanel({ discussionId, l }: { discussion
   </View>;
 }
 
-const s = StyleSheet.create({
+const make_s = (palette: Palette) => StyleSheet.create({
   box: { borderTopWidth: 1, borderTopColor: palette.divider, paddingTop: 12, gap: 10 },
   item: { backgroundColor: palette.muted, borderRadius: 10, padding: 10, gap: 4 },
   heading: { fontWeight: '800', color: palette.foreground, fontSize: 13 },

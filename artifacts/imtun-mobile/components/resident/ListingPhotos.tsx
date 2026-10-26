@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useQuery } from '@tanstack/react-query';
 import { getResidentListingPhoto, deleteResidentListingPhoto, uploadResidentListingPhoto } from '@workspace/api-client-react';
 import type { ResidentRecord } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { L, S, type Language } from '@/lib/resident/text';
 import { LT } from '@/lib/resident/listingText';
 import { useContextId } from '@/lib/resident/hooks';
@@ -12,7 +12,7 @@ import { Btn, ErrorBox } from './Ui';
 import { useAction } from './useAction';
 // Authenticated download through the shared client; blob is converted to a data URI (no raw image URL, no token in URL).
 function toDataUri(b: Blob): Promise<string> { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); }); }
-function Photo({ rec, id, onDelete, busy, label }: { rec: ResidentRecord; id: string; onDelete?: () => void; busy: boolean; label: string }) {
+function Photo({ rec, id, onDelete, busy, label }: { rec: ResidentRecord; id: string; onDelete?: () => void; busy: boolean; label: string }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const ctx = useContextId();
   const [large, setLarge] = useState(false);
   const q = useQuery({ queryKey: ['resident-photo', ctx, rec.id, id], enabled: !!ctx, staleTime: 300000, queryFn: async () => toDataUri(await getResidentListingPhoto(rec.id, id)) });
@@ -21,7 +21,7 @@ function Photo({ rec, id, onDelete, busy, label }: { rec: ResidentRecord; id: st
     {onDelete ? <Btn kind="danger" label={label} onPress={onDelete} busy={busy} /> : null}
   </View>;
 }
-export default function ListingPhotos({ rec, l, after }: { rec: ResidentRecord; l: Language; after: () => void }) {
+export default function ListingPhotos({ rec, l, after }: { rec: ResidentRecord; l: Language; after: () => void }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const a = useAction(l, after); const [ok, setOk] = useState(''); const [denied, setDenied] = useState(false); const [local, setLocal] = useState('');
   const pending = React.useRef<ImagePicker.ImagePickerAsset[]>([]);
   useEffect(() => { setOk(''); }, [rec.version]);
@@ -63,4 +63,4 @@ export default function ListingPhotos({ rec, l, after }: { rec: ResidentRecord; 
     {a.err ? <ErrorBox message={a.err} /> : null}
   </View>;
 }
-const st = StyleSheet.create({ img: { width: 120, height: 90, borderRadius: 8 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, h: { fontWeight: '800', color: palette.foreground }, m: { color: palette.mutedForeground, fontSize: 12 } });
+const make_st = (palette: Palette) => StyleSheet.create({ img: { width: 120, height: 90, borderRadius: 8 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, h: { fontWeight: '800', color: palette.foreground }, m: { color: palette.mutedForeground, fontSize: 12 } });

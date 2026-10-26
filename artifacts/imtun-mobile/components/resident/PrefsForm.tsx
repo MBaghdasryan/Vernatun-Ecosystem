@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { updateResidentProfile } from '@workspace/api-client-react';
 import type { ResidentProfileInput } from '@workspace/api-client-react';
@@ -8,7 +9,7 @@ import { useAction } from './useAction';
 import { useResidentRefresh } from '@/lib/resident/hooks';
 type Flag = 'showName' | 'showUnit' | 'showPhone' | 'allowMessages';
 const flags: [Flag, T][] = [['showName', ['Ցույց տալ անունը ցուցակում', 'Показывать имя в справочнике', 'Show name in directory']], ['showUnit', ['Ցույց տալ բնակարանը', 'Показывать квартиру', 'Show unit']], ['showPhone', ['Ցույց տալ հեռախոսը', 'Показывать телефон', 'Show phone']], ['allowMessages', ['Թույլատրել հաղորդագրություններ', 'Разрешить сообщения', 'Allow messages']]];
-export default function PrefsForm({ profile, l }: { profile: ResidentProfileInput; l: Language }) {
+export default function PrefsForm({ profile, l }: { profile: ResidentProfileInput; l: Language }) { const palette = useAppPalette();
   const refresh = useResidentRefresh(); const [p, setP] = useState(profile); const [ok, setOk] = useState(false);
   const a = useAction(l, refresh);
   const set = <K extends keyof ResidentProfileInput>(k: K, v: ResidentProfileInput[K]) => { setOk(false); setP({ ...p, [k]: v }); };
@@ -20,7 +21,7 @@ export default function PrefsForm({ profile, l }: { profile: ResidentProfileInpu
     <Segment label={L(l, ['Նախընտրելի կապ', 'Предпочтительный канал', 'Preferred channel'])} value={p.preferredChannel} options={[['email', 'Email'], ['phone', L(l, ['Հեռախոս', 'Телефон', 'Phone'])]]} onChange={v => set('preferredChannel', v)} />
     {flags.map(([k, lab]) => <Toggle key={k} label={L(l, lab)} value={p[k]} onChange={v => set(k, v)} />)}
     <Btn label={L(l, ['Պահպանել', 'Сохранить', 'Save'])} busy={a.busy} onPress={() => void a.run(async () => { await updateResidentProfile(p); setOk(true); })} />
-    {ok && <View><Text>{L(l, ['Պահպանված է', 'Сохранено', 'Saved'])}</Text></View>}
+    {ok && <View><Text style={{ color: palette.foreground }}>{L(l, ['Պահպանված է', 'Сохранено', 'Saved'])}</Text></View>}
     {a.err ? <ErrorBox message={a.err} /> : null}
   </Card>;
 }

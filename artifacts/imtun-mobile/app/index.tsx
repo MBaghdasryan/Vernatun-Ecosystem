@@ -4,22 +4,26 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMobileAuthSession, useLoginMobileAuth, useSwitchMobileAuthContext, type MobileAuthContext } from '@workspace/api-client-react';
-import { palette } from '@/constants/colors';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { friendlyError } from '@/constants/armenian';
 import { csrfSessionRef } from './_layout';
+import SavedProfiles from '@/components/SavedProfiles';
+import { rememberSavedProfile } from '@/lib/savedProfiles';
 
 function isImTunResident(context: MobileAuthContext) {
   const productLabels = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
   return productLabels.includes('imtun') || context.role_key.toLowerCase().includes('resident');
 }
 
-export default function EntryScreen() {
+export default function EntryScreen() { const palette = useAppPalette(); const styles = React.useMemo(() => make_styles(palette), [palette]);
   const router = useRouter();
   const client = useQueryClient();
   const session = useGetMobileAuthSession();
   const login = useLoginMobileAuth();
   const switchContext = useSwitchMobileAuthContext();
   const [email, setEmail] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [storeError, setStoreError] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
@@ -38,6 +42,10 @@ export default function EntryScreen() {
     login.mutate({ data: { email: email.trim(), password, ...(code.trim() ? { code: code.trim() } : {}) } }, {
       onSuccess: (result) => {
         csrfSessionRef.current = result.csrf;
+        setStoreError('');
+        if (remember && result.user?.email) {
+          Promise.resolve(rememberSavedProfile({ email: result.user.email, name: result.user.name ?? '' })).catch(() => setStoreError('Չհաջողվեց պահպանել հաշիվը սարքում։ Մուտքը կատարված է։'));
+        }
         client.invalidateQueries({ queryKey: session.queryKey });
       },
       onError: (error) => {
@@ -49,7 +57,7 @@ export default function EntryScreen() {
   const chooseContext = (context: MobileAuthContext) => {
     setMessage('');
     switchContext.mutate({ data: { id: context.id } }, {
-      onSuccess: () => client.invalidateQueries({ queryKey: session.queryKey }),
+      onSuccess: () => { client.clear(); void session.refetch(); },
       onError: (error) => setMessage(friendlyError(error, 'Չհաջողվեց ընտրել բնակարանը։ Կրկին փորձեք։')),
     });
   };
@@ -77,9 +85,10 @@ export default function EntryScreen() {
   return <ScrollView style={styles.screen} contentContainerStyle={styles.loginContent} keyboardShouldPersistTaps="handled">
     <View style={styles.brandTop}><Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.kicker}>ՁԵՐ ՏԱՆ ԿԱՐԳՈՒԿԱՆՈՆԸ ՍԿՍՎՈՒՄ Է ԱՅՍՏԵՂԻՑ</Text></View>
     <View style={styles.welcome}><View style={styles.welcomeIcon}><Feather name="key" size={19} color={palette.primary} /></View><Text style={styles.heading}>Մուտք գործել ImTun</Text><Text style={styles.body}>Կառավարեք ձեր տան դիմումներն ու առօրյա հարցերը մեկ վայրից։</Text></View>
+    <SavedProfiles onSelect={nextEmail => { setEmail(nextEmail); setPassword(''); setCode(''); setMessage(''); }} />
     <View style={styles.form}>
       <Text style={styles.label}>Էլեկտրոնային փոստ</Text><TextInput testID="login-email" accessibilityLabel="Էլեկտրոնային փոստ" autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="name@example.com" placeholderTextColor={palette.placeholder} style={styles.input} />
-      <Text style={styles.label}>Գաղտնաբառ</Text><TextInput testID="login-password" accessibilityLabel="Գաղտնաբառ" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="Մուտքագրեք գաղտնաբառը" placeholderTextColor={palette.placeholder} style={styles.input} />
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: remember }} testID="login-remember" onPress={() => setRemember(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}><Feather name={remember ? 'check-square' : 'square'} size={18} color={palette.primary} /><Text style={styles.label}>Հիշել հաշիվը այս սարքում (առանց գաղտնաբառի)</Text></Pressable>{storeError ? <Text style={{ color: palette.destructive, fontSize: 12 }}>{storeError}</Text> : null}<Text style={styles.label}>Գաղտնաբառ</Text><TextInput testID="login-password" accessibilityLabel="Գաղտնաբառ" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="Մուտքագրեք գաղտնաբառը" placeholderTextColor={palette.placeholder} style={styles.input} />
       {showCode ? <><Text style={styles.label}>Հաստատման կոդ</Text><TextInput testID="login-code" accessibilityLabel="Հաստատման կոդ" keyboardType="number-pad" value={code} onChangeText={setCode} placeholder="Մուտքագրեք անվտանգության կոդը" placeholderTextColor={palette.placeholder} style={styles.input} /></> : <Pressable accessibilityRole="button" testID="show-code" onPress={() => setShowCode(true)} style={styles.codeToggle}><Feather name="shield" size={15} color={palette.mutedForeground} /><Text style={styles.codeToggleText}>Մուտքագրե՞լ հաստատման կոդը</Text></Pressable>}
       {message ? <View style={styles.errorBox}><Feather name="alert-circle" size={17} color={palette.destructive} /><Text style={styles.errorText}>{message}</Text></View> : null}
       <Pressable accessibilityRole="button" testID="login-submit" disabled={!email.trim() || !password || login.isPending} onPress={submitLogin} style={[styles.primaryButton, (!email.trim() || !password || login.isPending) && styles.disabled]}><Text style={styles.primaryText}>{login.isPending ? 'Մուտք ենք գործում…' : 'Մուտք գործել'}</Text>{!login.isPending ? <Feather name="arrow-right" size={17} color={palette.foreground} /> : null}</Pressable>
@@ -88,7 +97,7 @@ export default function EntryScreen() {
   </ScrollView>;
 }
 
-const styles = StyleSheet.create({
+const make_styles = (palette: Palette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: palette.background, paddingHorizontal: 23 },
   loginContent: { paddingTop: 38, paddingBottom: 40, maxWidth: 500, width: '100%', alignSelf: 'center' },
   brandTop: { alignItems: 'flex-start', marginBottom: 34 }, logo: { width: 156, height: 67, marginLeft: -7 }, kicker: { fontSize: 9, letterSpacing: 1.5, fontWeight: '800', color: palette.subdued, marginTop: 12 },

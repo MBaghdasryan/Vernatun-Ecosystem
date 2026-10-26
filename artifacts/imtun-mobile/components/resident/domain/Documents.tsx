@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { listResidentDocuments } from '@workspace/api-client-react';
@@ -9,7 +10,7 @@ import { useAction } from '../useAction';
 import { useDomainAccess } from './useDomain';
 const D = { dl: ['Բացել / պահպանել', 'Открыть / сохранить', 'Open / save'] as T };
 const cat: Record<string, T> = { general: ['Ընդհանուր', 'Общие', 'General'], finance: ['Ֆինանսներ', 'Финансы', 'Finance'], lease: ['Վարձակալություն', 'Аренда', 'Lease'], ownership: ['Սեփականություն', 'Собственность', 'Ownership'], meeting: ['Ժողով', 'Собрание', 'Meeting'], legal: ['Իրավաբանական', 'Юридические', 'Legal'] };
-function Row({ d, l }: { d: { id: string; title: string; media_type: string; created_at: string; category: string }; l: Language }) {
+function Row({ d, l }: { d: { id: string; title: string; media_type: string; created_at: string; category: string }; l: Language }) { const palette = useAppPalette();
   const a = useAction(l, () => {});
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
@@ -18,7 +19,7 @@ function Row({ d, l }: { d: { id: string; title: string; media_type: string; cre
     request.current = new AbortController();
     await openPrivateDocument(d, request.current.signal);
   });
-  return <Card><Text style={{ fontWeight: '800' }}>{d.title}</Text><Text style={{ fontSize: 11, color: '#697780' }}>{cat[d.category] ? L(l, cat[d.category]) : L(l, cat.general)} · {new Date(d.created_at).toLocaleDateString(l)}</Text>
+  return <Card><Text style={{ color: palette.foreground, fontWeight: '800' }}>{d.title}</Text><Text style={{ fontSize: 11, color: palette.subdued }}>{cat[d.category] ? L(l, cat[d.category]) : L(l, cat.general)} · {new Date(d.created_at).toLocaleDateString(l)}</Text>
     <Btn kind="secondary" label={L(l, D.dl)} busy={a.busy} onPress={open} />{a.err ? <ErrorBox message={a.err} /> : null}</Card>;
 }
 export default function Documents({ l }: { l: Language }) {

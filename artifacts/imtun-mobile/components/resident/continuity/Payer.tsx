@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useAppPalette } from '@/hooks/useAppTheme';
 import { Alert, Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPayerResponsibility, getPayerResponsibilities, reauthenticateResident, reviewPayerResponsibility } from '@workspace/api-client-react';
@@ -12,7 +13,7 @@ const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch =>
 const per = (v: string) => v.slice(0, 7);
 const stl = (l: Language, s: string) => s === 'pending' ? tt(l, 'Սպասում է', 'Ожидает ответа', 'Awaiting reply') : s === 'accepted' ? tt(l, 'Ընդունված', 'Принято', 'Accepted') : s === 'declined' ? tt(l, 'Մերժված', 'Отклонено', 'Declined') : tt(l, 'Չեղարկված', 'Отозвано', 'Revoked');
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-export default function Payer({ l }: { l: Language }) {
+export default function Payer({ l }: { l: Language }) { const palette = useAppPalette();
   const ctx = useContextId(); const qc = useQueryClient(); const key = ['resident-payer', ctx];
   const q = useQuery({ queryKey: key, enabled: !!ctx, queryFn: () => getPayerResponsibilities(), refetchInterval: 15_000, refetchOnMount: 'always' });
   const a = useAction(l, () => { void qc.invalidateQueries({ queryKey: key }); });
@@ -34,21 +35,21 @@ export default function Payer({ l }: { l: Language }) {
   };
   return <Card>
     <Text accessibilityRole="header" style={{ fontWeight: '800', fontSize: 16 }}>{tt(l, 'Վճարողի պատասխանատվություն', 'Ответственность плательщика', 'Payer responsibility')}</Text>
-    <Text style={{ fontSize: 11 }}>{tt(l, 'Սա չի տեղափոխում գումար և սեփականություն։ Ընդունված կանոնը գործում է միայն մինչև ստացողը պիտանի է և ծառայությունը միացված է․ արդեն հաշվարկված ժամանակաշրջանները չեն փոխվում։', 'Это не перевод денег и не смена собственника. Принятое правило действует, пока получатель имеет право, а категория включена компанией; уже выставленные периоды не переносятся.', 'This moves no money and no ownership. An accepted rule applies only while the recipient stays eligible and the company keeps the category enabled; periods already billed never move.')}</Text>
+    <Text style={{ color: palette.foreground, fontSize: 11 }}>{tt(l, 'Սա չի տեղափոխում գումար և սեփականություն։ Ընդունված կանոնը գործում է միայն մինչև ստացողը պիտանի է և ծառայությունը միացված է․ արդեն հաշվարկված ժամանակաշրջանները չեն փոխվում։', 'Это не перевод денег и не смена собственника. Принятое правило действует, пока получатель имеет право, а категория включена компанией; уже выставленные периоды не переносятся.', 'This moves no money and no ownership. An accepted rule applies only while the recipient stays eligible and the company keeps the category enabled; periods already billed never move.')}</Text>
     {w.canPropose && <View style={{ gap: 8 }}>
-      {w.assignments.filter(x => x.enabled).length ? <Segment label={tt(l, 'Ծառայություն', 'Услуга', 'Service')} value={asg} options={w.assignments.filter(x => x.enabled).map(x => [x.id, x.serviceName] as [string, string])} onChange={setAsg} /> : <Text>{tt(l, 'Ընկերությունը դեռ չի միացրել ծառայություն։', 'Компания пока не включила ни одной категории.', 'The company has not enabled any category yet.')}</Text>}
-      {w.recipients.length ? <Segment label={tt(l, 'Ստացող', 'Получатель', 'Recipient')} value={rec} options={w.recipients.map(x => [x.id, x.name] as [string, string])} onChange={setRec} /> : <Text>{tt(l, 'Նույն բնակարանում ակտիվ վարձակալ կամ ընտանիքի անդամ չկա։', 'В этой квартире нет активного арендатора или члена семьи.', 'No active renter or family member in this unit.')}</Text>}
+      {w.assignments.filter(x => x.enabled).length ? <Segment label={tt(l, 'Ծառայություն', 'Услуга', 'Service')} value={asg} options={w.assignments.filter(x => x.enabled).map(x => [x.id, x.serviceName] as [string, string])} onChange={setAsg} /> : <Text style={{ color: palette.foreground }}>{tt(l, 'Ընկերությունը դեռ չի միացրել ծառայություն։', 'Компания пока не включила ни одной категории.', 'The company has not enabled any category yet.')}</Text>}
+      {w.recipients.length ? <Segment label={tt(l, 'Ստացող', 'Получатель', 'Recipient')} value={rec} options={w.recipients.map(x => [x.id, x.name] as [string, string])} onChange={setRec} /> : <Text style={{ color: palette.foreground }}>{tt(l, 'Նույն բնակարանում ակտիվ վարձակալ կամ ընտանիքի անդամ չկա։', 'В этой квартире нет активного арендатора или члена семьи.', 'No active renter or family member in this unit.')}</Text>}
       <Field label={tt(l, 'Սկսած ամսից (ՏՏՏՏ-ԱԱ)', 'С месяца (ГГГГ-ММ)', 'From month (YYYY-MM)')} value={from || next} onChange={setFrom} maxLength={7} />
       <Field label={tt(l, 'Մինչև ամիս ներառյալ (ըստ ցանկության)', 'По месяц включительно (необязательно)', 'Until month, inclusive (optional)')} value={to} onChange={setTo} maxLength={7} />
-      {!okRange && <Text>{tt(l, 'Սկիզբը չի կարող լինել հաջորդ ժամանակաշրջանից շուտ։', 'Начало не может быть раньше следующего периода.', 'Start cannot be before the next period.')}</Text>}
+      {!okRange && <Text style={{ color: palette.foreground }}>{tt(l, 'Սկիզբը չի կարող լինել հաջորդ ժամանակաշրջանից շուտ։', 'Начало не может быть раньше следующего периода.', 'Start cannot be before the next period.')}</Text>}
       <Btn label={tt(l, 'Ուղարկել առաջարկը', 'Отправить предложение', 'Send proposal')} busy={a.busy} disabled={!asg || !rec || !okRange} onPress={() => attempt(async () => { await createPayerResponsibility({ payerAssignmentId: asg, recipientId: rec, startsOn: start + '-01', ...(to ? { endsOn: to + '-01' } : {}), clientId: cid.current }); cid.current = uuid(); setAsg(''); setRec(''); setFrom(''); setTo(''); })} />
     </View>}
     {w.delegations.map(x => <View key={x.id + x.version} style={{ gap: 6 }}>
-      <Text style={{ fontWeight: '700' }}>{x.serviceName}</Text><Text>{x.ownerName} → {x.recipientName}</Text><Text>{per(x.startsOn)} – {x.endsOn ? per(x.endsOn) : tt(l, 'անժամկետ', 'без срока', 'open-ended')}</Text><Chip label={stl(l, x.status)} tone={x.status === 'accepted' ? 'ok' : 'warn'} />
+      <Text style={{ color: palette.foreground, fontWeight: '700' }}>{x.serviceName}</Text><Text style={{ color: palette.foreground }}>{x.ownerName} → {x.recipientName}</Text><Text style={{ color: palette.foreground }}>{per(x.startsOn)} – {x.endsOn ? per(x.endsOn) : tt(l, 'անժամկետ', 'без срока', 'open-ended')}</Text><Chip label={stl(l, x.status)} tone={x.status === 'accepted' ? 'ok' : 'warn'} />
       {x.canAccept && <><Btn label={tt(l, 'Ընդունել', 'Принять', 'Accept')} busy={a.busy} onPress={() => review(x, 'accept')} /><Btn kind="secondary" label={tt(l, 'Մերժել', 'Отклонить', 'Decline')} busy={a.busy} onPress={() => review(x, 'decline')} /></>}
       {x.canRevoke && <Btn kind="danger" label={tt(l, 'Չեղարկել ապագան', 'Отозвать на будущее', 'Revoke future')} busy={a.busy} onPress={() => review(x, 'revoke')} />}</View>)}
-    {!w.delegations.length && <Text>{tt(l, 'Առաջարկներ չկան', 'Предложений нет', 'No proposals yet')}</Text>}
-    {w.invoices.length ? <View style={{ gap: 4 }}><Text style={{ fontWeight: '700' }}>{tt(l, 'Իմ հրապարակված հաշիվները (դիտման համար)', 'Мои выставленные счета (только просмотр)', 'My published invoices (read-only)')}</Text>{w.invoices.map(i => <Text key={i.id}>{per(i.period)} · {(Number(i.amountMinor) / 100).toLocaleString(l)} {i.currency} · {i.status}</Text>)}</View> : null}
+    {!w.delegations.length && <Text style={{ color: palette.foreground }}>{tt(l, 'Առաջարկներ չկան', 'Предложений нет', 'No proposals yet')}</Text>}
+    {w.invoices.length ? <View style={{ gap: 4 }}><Text style={{ color: palette.foreground, fontWeight: '700' }}>{tt(l, 'Իմ հրապարակված հաշիվները (դիտման համար)', 'Мои выставленные счета (только просмотр)', 'My published invoices (read-only)')}</Text>{w.invoices.map(i => <Text key={i.id}>{per(i.period)} · {(Number(i.amountMinor) / 100).toLocaleString(l)} {i.currency} · {i.status}</Text>)}</View> : null}
     {need && <View style={{ gap: 8 }}><Text accessibilityRole="alert">{tt(l, 'Պահանջվում է գաղտնաբառի կրկնակի հաստատում։', 'Нужно подтвердить пароль.', 'Password confirmation is required.')}</Text>
       <Field label={tt(l, 'Գաղտնաբառ', 'Пароль', 'Password')} value={pw} onChange={setPw} maxLength={72} />
       <Field label={tt(l, 'MFA կոդ (եթե կա)', 'Код MFA (если есть)', 'MFA code (if enabled)')} value={code} onChange={setCode} keyboard="number-pad" maxLength={30} />

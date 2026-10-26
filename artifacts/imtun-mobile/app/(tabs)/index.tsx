@@ -1,100 +1,222 @@
 import React from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
-import { useColors } from '@/hooks/useColors';
-import { palette } from '@/constants/colors';
-import HomeCounts from '@/components/resident/HomeCounts';
-import { formatArmenianDate, localizeRequestStatus, requestCount } from '@/constants/armenian';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getGetOperationalRequestsQueryKey, useGetMobileAuthSession, useGetOperationalRequests } from '@workspace/api-client-react';
+import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
+import { useLang, useWorkspace } from '@/lib/resident/hooks';
+import { money, roleLabel, tr, useSection } from '@/lib/resident/shell';
+import { useDomainAccess } from '@/components/resident/domain/useDomain';
+import { EmptyState, ErrorBox, Row, SectionHead, Skeleton, Tile } from '@/components/resident/Ui';
+import { formatArmenianDate, localizeRequestStatus } from '@/constants/armenian';
 
-export default function HomeScreen() {
-  const colors = useColors();
-  const router = useRouter();
-  const session = useGetMobileAuthSession();
-  const requests = useGetOperationalRequests();
-  const active = session.data?.contexts.find((item) => item.id === session.data?.contextId);
-  const unitLabel = active?.unit_number ? `Բնակարան ${active.unit_number}` : 'Տուն';
+export default function HomeScreen() { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
+  const router = useRouter(); const go = useSection(); const l = useLang();
+  const insets = useSafeAreaInsets(); const top = Platform.OS === 'web' ? 67 : insets.top + 8;
+  const session = useGetMobileAuthSession(); const ws = useWorkspace();
+  const active = session.data?.contexts.find((c) => c.id === session.data?.contextId);
+  const requests = useGetOperationalRequests({ query: {
+    enabled: !!active?.permissions.includes('requests.own'),
+    queryKey: [...getGetOperationalRequestsQueryKey(), active?.id ?? 'none'],
+  } });
+  const b = ws.data?.building; const home = ws.data?.home; const sum = home?.summary;
+  const integ = (k: string) => ws.data?.integrations.find((i) => i.key === k)?.status === 'ACTIVE';
+  const payable = money(home?.payableMinor, home?.currency); const overdue = money(home?.overdueMinor, home?.currency);
+  const financeVisible = payable !== null || overdue !== null; // null = not authorised by server (e.g. family without delegation)
+  const first = session.data?.user?.name?.split(' ')[0];
+  // Server role only ARRANGES sections; each block below is still gated by server data/grants.
+  const roleKey = (b?.role ?? active?.role_key ?? '').toLowerCase();
+  const kind: 'owner' | 'renter' | 'family' | 'resident' = roleKey.includes('owner') ? 'owner' : /tenant|renter|lease/.test(roleKey) ? 'renter' : /family|member|household/.test(roleKey) ? 'family' : 'resident';
+  const passes = useDomainAccess('passes'); const family = useDomainAccess('family');
 
-  if (session.isLoading) return <View style={styles.center}><View style={styles.skeleton} /><View style={[styles.skeleton, { width: '72%' }]} /><View style={[styles.skeleton, { height: 130 }]} /></View>;
-  if (session.isError) return <View style={styles.center}><Feather name="wifi-off" size={28} color={colors.mutedForeground} /><Text style={styles.errorTitle}>Չհաջողվեց բեռնել տան տվյալները</Text><Text style={styles.muted}>Ստուգեք ինտերնետային կապը և կրկին փորձեք։</Text><Pressable accessibilityRole="button" testID="home-retry" onPress={() => session.refetch()} style={styles.retry}><Text style={styles.retryText}>Կրկին փորձել</Text></Pressable></View>;
+  if (session.isLoading) return <View style={[st.root, { paddingTop: top, padding: 20, gap: 12 }]}><Skeleton /><Skeleton /><Skeleton /></View>;
+  if (session.isError) return <View style={[st.root, st.center]}><ErrorBox message={tr(l, ['Չհաջողվեց բեռնել տան տվյալները', 'Не удалось загрузить данные дома', 'Could not load your home'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => session.refetch()} /></View>;
 
+  const reqRows = (requests.data ?? []).slice(0, 2) as unknown as Record<string, unknown>[];
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={session.isRefetching || requests.isRefetching} onRefresh={() => { session.refetch(); requests.refetch(); }} tintColor={colors.primary} />}>
-      <View style={styles.topline}>
-        <Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={styles.logo} accessibilityLabel="ImTun" />
-        <Pressable accessibilityRole="button" accessibilityLabel="Փոխել տունն ու բնակարանը" testID="home-context-button" onPress={() => router.push('/(tabs)/profile')} style={styles.unit}>
-          <Feather name="home" size={15} color={colors.primary} />
-          <View><Text style={styles.unitName}>{active?.building_name || active?.organization_name || 'Իմ տունը'}</Text><Text style={styles.unitCaption}>{unitLabel}</Text></View>
-          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+    <ScrollView style={st.root} contentContainerStyle={[st.content, { paddingTop: top }]} refreshControl={<RefreshControl refreshing={ws.isRefetching || requests.isRefetching} onRefresh={() => { ws.refetch(); requests.refetch(); session.refetch(); }} tintColor={palette.primary} />}>
+      <View style={st.top}>
+        <Image source={require('@/assets/imtun-original.png')} resizeMode="contain" style={st.logo} accessibilityLabel="ImTun" />
+        <Pressable accessibilityRole="button" accessibilityLabel={tr(l, ['Փոխել գույքը', 'Сменить объект', 'Switch property'])} testID="home-context-button" onPress={() => router.push('/(tabs)/profile')} style={st.ctx}>
+          <Text style={st.ctxRole} numberOfLines={1}>{roleLabel(l, b?.role ?? active?.role_key)}</Text><Feather name="chevron-down" size={14} color={palette.mutedForeground} />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={tr(l, ['Ծանուցումներ', 'Уведомления', 'Notifications'])} testID="home-bell" onPress={() => go('notifications')} style={st.bell}>
+          <Feather name="bell" size={20} color={palette.foreground} />{home?.unreadNotifications ? <View style={st.dot}><Text style={st.dotT}>{home.unreadNotifications > 9 ? '9+' : home.unreadNotifications}</Text></View> : null}
         </Pressable>
       </View>
-      <View style={styles.greeting}>
-        <Text style={styles.kicker}>IMTUN · ՏՈՒՆ ԵՎ ԾԱՌԱՅՈՒԹՅՈՒՆՆԵՐ</Text>
-        <Text style={styles.title}>Ողջո՛ւյն, {session.data?.user?.name?.split(' ')[0] || 'հարևան'}։</Text>
-        <Text style={styles.subtitle}>Ձեր տան հոգսերը՝ մեկ տեղում։</Text>
+      <Text style={st.hello}>{tr(l, ['Բարի օր', 'Добрый день', 'Good day'])}{first ? `, ${first}` : ''}</Text>
+      <Text style={st.sub}>{tr(l, ['Ձեր տունը՝ մեկ վայրում', 'Всё о вашем доме в одном месте', 'Everything about your home in one place'])}</Text>
+
+      <View style={st.prop}>
+        <View style={st.propIcon}><Feather name="home" size={22} color={palette.primary} /></View>
+        <View style={{ flex: 1 }}><Text style={st.propT} numberOfLines={1}>{b?.name || active?.building_name || active?.organization_name || '—'}</Text><Text style={st.propS} numberOfLines={1}>{[b?.unit || active?.unit_number ? `${tr(l, ['Բն.', 'Кв.', 'Apt'])} ${b?.unit || active?.unit_number}` : null, b?.address].filter(Boolean).join(' · ')}</Text></View>
       </View>
-      <View style={styles.hero}>
-        <View style={styles.heroIcon}><Feather name="sun" size={18} color={colors.primary} /></View>
-        <Text style={styles.heroEyebrow}>ՁԵՐ ՏԱՆ ԱՅՍՕՐՎԱ ՊԱՏԿԵՐԸ</Text>
-        <Text style={styles.heroTitle}>{requests.data?.length ? requestCount(requests.data.length) : 'Կարևորը՝ միշտ հասանելի'}</Text>
-        <Text style={styles.heroText}>Ստեղծեք հայտեր և հետևեք, թե ինչպես են լուծվում տան հարցերը։</Text>
-        <Pressable accessibilityRole="button" testID="home-create-request" onPress={() => router.push('/(tabs)/requests')} style={styles.heroAction}>
-          <Text style={styles.heroActionText}>Ստեղծել հայտ</Text><Feather name="arrow-up-right" size={18} color={colors.foreground} />
-        </Pressable>
-        <View pointerEvents="none" style={styles.heroMark}><Feather name="home" size={148} color={palette.heroDecoration} /></View>
+
+      {kind === 'owner' ? <>
+      {ws.isPending ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : financeVisible ? (
+        <View style={st.fin}>
+          <Text style={st.finK}>{tr(l, ['ՎՃԱՐՄԱՆ ԵՆԹԱԿԱ', 'К ОПЛАТЕ', 'PAYABLE NOW'])}</Text>
+          <Text style={st.finA} accessibilityLabel={payable ?? ''}>{payable ?? '—'}</Text>
+          {overdue && home?.overdueMinor !== '0' ? <Text style={st.finO}>{tr(l, ['Ժամկետանց՝ ', 'Просрочено: ', 'Overdue: '])}{overdue}</Text> : null}
+          <View style={st.finRow}>
+            {integ('payments') ? <Pressable accessibilityRole="button" testID="home-pay" onPress={() => router.push('/(tabs)/bills')} style={st.pay}><Text style={st.payT}>{tr(l, ['Վճարել', 'Оплатить', 'Pay'])}</Text></Pressable> : <Text style={st.finNote}>{tr(l, ['Առցանց վճարումը դեռ միացված չէ', 'Онлайн-оплата пока не подключена', 'Online payment is not enabled yet'])}</Text>}
+            <Pressable accessibilityRole="button" testID="home-bills" onPress={() => router.push('/(tabs)/bills')} style={st.det}><Text style={st.detT}>{tr(l, ['Մանրամասն', 'Подробнее', 'Details'])}</Text><Feather name="arrow-right" size={15} color={palette.surface} /></Pressable>
+          </View>
+        </View>) : null}
+
+      <View style={st.tiles}>
+        <Tile icon="tool" label={tr(l, ['Նոր հայտ', 'Новая заявка', 'New request'])} onPress={() => router.push('/(tabs)/requests')} testID="quick-request" />
+        {passes.allowed ? <Tile icon="key" label={tr(l, ['Հյուրի անցաթուղթ', 'Гостевой пропуск', 'Guest pass'])} onPress={() => go('passes')} testID="quick-pass" /> : null}
+        {integ('barrier') ? <Tile icon="unlock" label={tr(l, ['Մուտք', 'Доступ', 'Access'])} onPress={() => go('access')} testID="quick-access" /> : null}
+        <Tile icon="grid" label={tr(l, ['Ծառայություններ', 'Сервисы', 'Services'])} onPress={() => router.push('/(tabs)/more')} testID="quick-services" />
       </View>
-      <HomeCounts />
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Ի՞նչ է պետք անել</Text><Text style={styles.sectionHint}>ԱՐԱԳ ՄՈՒՏՔ</Text></View>
-      <View style={styles.quickGrid}>
-        <Pressable accessibilityRole="button" testID="quick-request" onPress={() => router.push('/(tabs)/requests')} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: palette.accent }]}><Feather name="tool" size={20} color={colors.primary} /></View><Text style={styles.quickTitle}>Հայտեր</Text><Text style={styles.quickSub}>Տան հետ կապված հարցեր</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" testID="quick-profile" onPress={() => router.push('/(tabs)/profile')} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="user" size={20} color={colors.foreground} /></View><Text style={styles.quickTitle}>Անձնական էջ</Text><Text style={styles.quickSub}>Հաշիվ և բնակարան</Text>
-        </Pressable>
+
+      {kind === 'owner' && family.allowed ? <Row icon="users" title={tr(l, ['Իմ ընտանիքը', 'Моя семья', 'My household'])} subtitle={tr(l, ['Անդամներ և հրավերներ', 'Участники и приглашения', 'Members and invitations'])} onPress={() => go('family')} testID="home-household" /> : null}
+      <SectionHead title={tr(l, ['Ընթացիկ հայտեր', 'Текущие заявки', 'Current requests'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/requests')} testID="home-all-requests" />
+      {requests.isLoading ? <Skeleton /> : requests.isError ? <ErrorBox message={tr(l, ['Ցանկը անհասանելի է', 'Список недоступен', 'List unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => requests.refetch()} /> : reqRows.length ? reqRows.map((r, i) => <Row key={String(r.id ?? i)} icon="clipboard" title={typeof r.subject === 'string' && r.subject ? r.subject : '—'} subtitle={`${localizeRequestStatus(String(r.status ?? ''))} · ${formatArmenianDate(r.created_at ?? r.createdAt)}`} onPress={() => router.push('/(tabs)/requests')} />) : <EmptyState title={tr(l, ['Ակտիվ հայտեր չկան', 'Активных заявок нет', 'No active requests'])} />}
+      {(sum?.pendingHouseholdInvitations || sum?.pendingAgreements) ? <View style={{ gap: 8 }}>
+        {sum?.pendingHouseholdInvitations ? <Row icon="user-plus" title={tr(l, ['Սպասվող հրավերներ', 'Ожидающие приглашения', 'Pending invitations'])} subtitle={String(sum.pendingHouseholdInvitations)} onPress={() => go('family')} /> : null}
+        {sum?.pendingAgreements ? <Row icon="check-square" title={tr(l, ['Համաձայնություններ՝ հաստատման', 'Соглашения на подтверждение', 'Agreements to review'])} subtitle={String(sum.pendingAgreements)} onPress={() => go('agreements')} /> : null}
+      </View> : null}
+
+      <SectionHead title={tr(l, ['Կարևոր թարմացումներ', 'Важные обновления', 'Important updates'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/community')} />
+      {sum?.announcements?.length ? sum.announcements.slice(0, 2).map((a) => <Row key={a.id} icon="volume-2" title={a.title} subtitle={formatArmenianDate(a.createdAt)} onPress={() => go('announcements')} />) : <EmptyState icon="volume-x" title={tr(l, ['Նոր հայտարարություններ չկան', 'Новых объявлений нет', 'No new announcements'])} />}
+      {sum?.activeVoting?.length ? sum.activeVoting.slice(0, 1).map((v) => <Row key={v.id} icon="check-circle" tone="ok" title={v.title} subtitle={tr(l, ['Ակտիվ քվեարկություն', 'Активное голосование', 'Active vote'])} onPress={() => go('meetings')} />) : null}
+
+      {sum?.emergencyContacts?.length ? <View style={st.emerg}>
+        <Text style={st.emergT}>{tr(l, ['Արտակարգ կապ', 'Экстренная связь', 'Emergency'])}</Text>
+        {sum.emergencyContacts.slice(0, 3).map((c) => <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.title} ${c.phone}`} onPress={() => Linking.openURL(`tel:${c.phone.replace(/[^\d+]/g, '')}`)} style={st.emergRow}><Feather name="phone-call" size={16} color={palette.destructive} /><Text style={st.emergName} numberOfLines={1}>{c.title}</Text><Text style={st.emergPh}>{c.phone}</Text></Pressable>)}
+      </View> : null}
+
+      </> : kind === 'renter' ? <>
+      {kind === 'renter' && family.allowed ? <Row icon="file-text" title={tr(l, ['Իմ վարձակալությունը', 'Моя аренда', 'My rental'])} subtitle={tr(l, ['Պայմանագիր և պարտավորություններ', 'Договор и обязательства', 'Lease and obligations'])} onPress={() => go('family')} testID="home-rental" /> : null}
+      {ws.isPending ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : financeVisible ? (
+        <View style={st.fin}>
+          <Text style={st.finK}>{tr(l, ['ՎՃԱՐՄԱՆ ԵՆԹԱԿԱ', 'К ОПЛАТЕ', 'PAYABLE NOW'])}</Text>
+          <Text style={st.finA} accessibilityLabel={payable ?? ''}>{payable ?? '—'}</Text>
+          {overdue && home?.overdueMinor !== '0' ? <Text style={st.finO}>{tr(l, ['Ժամկետանց՝ ', 'Просрочено: ', 'Overdue: '])}{overdue}</Text> : null}
+          <View style={st.finRow}>
+            {integ('payments') ? <Pressable accessibilityRole="button" testID="home-pay" onPress={() => router.push('/(tabs)/bills')} style={st.pay}><Text style={st.payT}>{tr(l, ['Վճարել', 'Оплатить', 'Pay'])}</Text></Pressable> : <Text style={st.finNote}>{tr(l, ['Առցանց վճարումը դեռ միացված չէ', 'Онлайн-оплата пока не подключена', 'Online payment is not enabled yet'])}</Text>}
+            <Pressable accessibilityRole="button" testID="home-bills" onPress={() => router.push('/(tabs)/bills')} style={st.det}><Text style={st.detT}>{tr(l, ['Մանրամասն', 'Подробнее', 'Details'])}</Text><Feather name="arrow-right" size={15} color={palette.surface} /></Pressable>
+          </View>
+        </View>) : null}
+
+      <View style={st.tiles}>
+        <Tile icon="tool" label={tr(l, ['Նոր հայտ', 'Новая заявка', 'New request'])} onPress={() => router.push('/(tabs)/requests')} testID="quick-request" />
+        {passes.allowed ? <Tile icon="key" label={tr(l, ['Հյուրի անցաթուղթ', 'Гостевой пропуск', 'Guest pass'])} onPress={() => go('passes')} testID="quick-pass" /> : null}
+        {integ('barrier') ? <Tile icon="unlock" label={tr(l, ['Մուտք', 'Доступ', 'Access'])} onPress={() => go('access')} testID="quick-access" /> : null}
+        <Tile icon="grid" label={tr(l, ['Ծառայություններ', 'Сервисы', 'Services'])} onPress={() => router.push('/(tabs)/more')} testID="quick-services" />
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Վերջին հայտերը</Text><Pressable accessibilityRole="button" testID="home-all-requests" onPress={() => router.push('/(tabs)/requests')}><Text style={styles.link}>Բոլորը <Feather name="arrow-right" size={13} color={colors.accentForeground} /></Text></Pressable></View>
-      {requests.isLoading ? <View style={styles.loadingCard}><View style={styles.line} /><View style={[styles.line, { width: '62%' }]} /></View> : requests.isError ? <View style={styles.inlineError}><Text style={styles.muted}>Ցանկը ժամանակավորապես անհասանելի է։</Text><Pressable onPress={() => requests.refetch()} testID="home-requests-retry"><Text style={styles.link}>Կրկին փորձել</Text></Pressable></View> : requests.data?.length ? requests.data.slice(0, 2).map((row, index) => {
-        const record = normalizeRow(row, index);
-        return <View key={record.key} style={styles.requestCard}><View style={styles.requestIcon}><Feather name="clipboard" size={18} color={colors.accentForeground} /></View><View style={{ flex: 1 }}><Text style={styles.requestTitle} numberOfLines={1}>{record.subject}</Text><Text style={styles.requestMeta}>{record.status} · {record.date}</Text></View><Feather name="chevron-right" size={18} color={colors.mutedForeground} /></View>;
-      }) : <View style={styles.empty}><Feather name="inbox" size={23} color={colors.mutedForeground} /><Text style={styles.emptyTitle}>Դեռ հայտեր չկան</Text><Text style={styles.muted}>Եթե օգնություն պետք լինի, մենք պատրաստ ենք օգնել։</Text></View>}
-      <Text style={styles.footer}>ImTun <Text style={styles.footerNote}>· հոգատարություն ձեր տան մասին</Text></Text>
+
+      <SectionHead title={tr(l, ['Ընթացիկ հայտեր', 'Текущие заявки', 'Current requests'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/requests')} testID="home-all-requests" />
+      {requests.isLoading ? <Skeleton /> : requests.isError ? <ErrorBox message={tr(l, ['Ցանկը անհասանելի է', 'Список недоступен', 'List unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => requests.refetch()} /> : reqRows.length ? reqRows.map((r, i) => <Row key={String(r.id ?? i)} icon="clipboard" title={typeof r.subject === 'string' && r.subject ? r.subject : '—'} subtitle={`${localizeRequestStatus(String(r.status ?? ''))} · ${formatArmenianDate(r.created_at ?? r.createdAt)}`} onPress={() => router.push('/(tabs)/requests')} />) : <EmptyState title={tr(l, ['Ակտիվ հայտեր չկան', 'Активных заявок нет', 'No active requests'])} />}
+      {(kind as string) !== 'owner' ? <Row icon="message-circle" title={(kind as string) === 'renter' ? tr(l, ['Կապ կառավարչի հետ', 'Чат с управляющей компанией', 'Chat with management']) : tr(l, ['Զրույցներ', 'Чаты', 'Chats'])} subtitle={sum?.unreadMessages ? tr(l, ['Չկարդացված՝ ', 'Непрочитанных: ', 'Unread: ']) + sum.unreadMessages : undefined} onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'chats' } })} testID="home-chat" /> : null}
+      {(sum?.pendingHouseholdInvitations || sum?.pendingAgreements) ? <View style={{ gap: 8 }}>
+        {sum?.pendingHouseholdInvitations ? <Row icon="user-plus" title={tr(l, ['Սպասվող հրավերներ', 'Ожидающие приглашения', 'Pending invitations'])} subtitle={String(sum.pendingHouseholdInvitations)} onPress={() => go('family')} /> : null}
+        {sum?.pendingAgreements ? <Row icon="check-square" title={tr(l, ['Համաձայնություններ՝ հաստատման', 'Соглашения на подтверждение', 'Agreements to review'])} subtitle={String(sum.pendingAgreements)} onPress={() => go('agreements')} /> : null}
+      </View> : null}
+
+      <SectionHead title={tr(l, ['Կարևոր թարմացումներ', 'Важные обновления', 'Important updates'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/community')} />
+      {sum?.announcements?.length ? sum.announcements.slice(0, 2).map((a) => <Row key={a.id} icon="volume-2" title={a.title} subtitle={formatArmenianDate(a.createdAt)} onPress={() => go('announcements')} />) : <EmptyState icon="volume-x" title={tr(l, ['Նոր հայտարարություններ չկան', 'Новых объявлений нет', 'No new announcements'])} />}
+      {sum?.activeVoting?.length ? sum.activeVoting.slice(0, 1).map((v) => <Row key={v.id} icon="check-circle" tone="ok" title={v.title} subtitle={tr(l, ['Ակտիվ քվեարկություն', 'Активное голосование', 'Active vote'])} onPress={() => go('meetings')} />) : null}
+
+      {sum?.emergencyContacts?.length ? <View style={st.emerg}>
+        <Text style={st.emergT}>{tr(l, ['Արտակարգ կապ', 'Экстренная связь', 'Emergency'])}</Text>
+        {sum.emergencyContacts.slice(0, 3).map((c) => <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.title} ${c.phone}`} onPress={() => Linking.openURL(`tel:${c.phone.replace(/[^\d+]/g, '')}`)} style={st.emergRow}><Feather name="phone-call" size={16} color={palette.destructive} /><Text style={st.emergName} numberOfLines={1}>{c.title}</Text><Text style={st.emergPh}>{c.phone}</Text></Pressable>)}
+      </View> : null}
+
+      </> : kind === 'family' ? <>
+      <View style={st.tiles}>
+        <Tile icon="tool" label={tr(l, ['Նոր հայտ', 'Новая заявка', 'New request'])} onPress={() => router.push('/(tabs)/requests')} testID="quick-request" />
+        {passes.allowed ? <Tile icon="key" label={tr(l, ['Հյուրի անցաթուղթ', 'Гостевой пропуск', 'Guest pass'])} onPress={() => go('passes')} testID="quick-pass" /> : null}
+        {integ('barrier') ? <Tile icon="unlock" label={tr(l, ['Մուտք', 'Доступ', 'Access'])} onPress={() => go('access')} testID="quick-access" /> : null}
+        <Tile icon="grid" label={tr(l, ['Ծառայություններ', 'Сервисы', 'Services'])} onPress={() => router.push('/(tabs)/more')} testID="quick-services" />
+      </View>
+
+      <SectionHead title={tr(l, ['Կարևոր թարմացումներ', 'Важные обновления', 'Important updates'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/community')} />
+      {sum?.announcements?.length ? sum.announcements.slice(0, 2).map((a) => <Row key={a.id} icon="volume-2" title={a.title} subtitle={formatArmenianDate(a.createdAt)} onPress={() => go('announcements')} />) : <EmptyState icon="volume-x" title={tr(l, ['Նոր հայտարարություններ չկան', 'Новых объявлений нет', 'No new announcements'])} />}
+      {sum?.activeVoting?.length ? sum.activeVoting.slice(0, 1).map((v) => <Row key={v.id} icon="check-circle" tone="ok" title={v.title} subtitle={tr(l, ['Ակտիվ քվեարկություն', 'Активное голосование', 'Active vote'])} onPress={() => go('meetings')} />) : null}
+
+      {(kind as string) !== 'owner' ? <Row icon="message-circle" title={(kind as string) === 'renter' ? tr(l, ['Կապ կառավարչի հետ', 'Чат с управляющей компанией', 'Chat with management']) : tr(l, ['Զրույցներ', 'Чаты', 'Chats'])} subtitle={sum?.unreadMessages ? tr(l, ['Չկարդացված՝ ', 'Непрочитанных: ', 'Unread: ']) + sum.unreadMessages : undefined} onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'chats' } })} testID="home-chat" /> : null}
+      {(sum?.pendingHouseholdInvitations || sum?.pendingAgreements) ? <View style={{ gap: 8 }}>
+        {sum?.pendingHouseholdInvitations ? <Row icon="user-plus" title={tr(l, ['Սպասվող հրավերներ', 'Ожидающие приглашения', 'Pending invitations'])} subtitle={String(sum.pendingHouseholdInvitations)} onPress={() => go('family')} /> : null}
+        {sum?.pendingAgreements ? <Row icon="check-square" title={tr(l, ['Համաձայնություններ՝ հաստատման', 'Соглашения на подтверждение', 'Agreements to review'])} subtitle={String(sum.pendingAgreements)} onPress={() => go('agreements')} /> : null}
+      </View> : null}
+
+      <SectionHead title={tr(l, ['Ընթացիկ հայտեր', 'Текущие заявки', 'Current requests'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/requests')} testID="home-all-requests" />
+      {requests.isLoading ? <Skeleton /> : requests.isError ? <ErrorBox message={tr(l, ['Ցանկը անհասանելի է', 'Список недоступен', 'List unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => requests.refetch()} /> : reqRows.length ? reqRows.map((r, i) => <Row key={String(r.id ?? i)} icon="clipboard" title={typeof r.subject === 'string' && r.subject ? r.subject : '—'} subtitle={`${localizeRequestStatus(String(r.status ?? ''))} · ${formatArmenianDate(r.created_at ?? r.createdAt)}`} onPress={() => router.push('/(tabs)/requests')} />) : <EmptyState title={tr(l, ['Ակտիվ հայտեր չկան', 'Активных заявок нет', 'No active requests'])} />}
+      {sum?.emergencyContacts?.length ? <View style={st.emerg}>
+        <Text style={st.emergT}>{tr(l, ['Արտակարգ կապ', 'Экстренная связь', 'Emergency'])}</Text>
+        {sum.emergencyContacts.slice(0, 3).map((c) => <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.title} ${c.phone}`} onPress={() => Linking.openURL(`tel:${c.phone.replace(/[^\d+]/g, '')}`)} style={st.emergRow}><Feather name="phone-call" size={16} color={palette.destructive} /><Text style={st.emergName} numberOfLines={1}>{c.title}</Text><Text style={st.emergPh}>{c.phone}</Text></Pressable>)}
+      </View> : null}
+
+      {ws.isPending ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : financeVisible ? (
+        <View style={st.fin}>
+          <Text style={st.finK}>{tr(l, ['ՎՃԱՐՄԱՆ ԵՆԹԱԿԱ', 'К ОПЛАТЕ', 'PAYABLE NOW'])}</Text>
+          <Text style={st.finA} accessibilityLabel={payable ?? ''}>{payable ?? '—'}</Text>
+          {overdue && home?.overdueMinor !== '0' ? <Text style={st.finO}>{tr(l, ['Ժամկետանց՝ ', 'Просрочено: ', 'Overdue: '])}{overdue}</Text> : null}
+          <View style={st.finRow}>
+            {integ('payments') ? <Pressable accessibilityRole="button" testID="home-pay" onPress={() => router.push('/(tabs)/bills')} style={st.pay}><Text style={st.payT}>{tr(l, ['Վճարել', 'Оплатить', 'Pay'])}</Text></Pressable> : <Text style={st.finNote}>{tr(l, ['Առցանց վճարումը դեռ միացված չէ', 'Онлайн-оплата пока не подключена', 'Online payment is not enabled yet'])}</Text>}
+            <Pressable accessibilityRole="button" testID="home-bills" onPress={() => router.push('/(tabs)/bills')} style={st.det}><Text style={st.detT}>{tr(l, ['Մանրամասն', 'Подробнее', 'Details'])}</Text><Feather name="arrow-right" size={15} color={palette.surface} /></Pressable>
+          </View>
+        </View>) : null}
+
+      </> : <>
+      {ws.isPending ? <Skeleton /> : ws.isError ? <ErrorBox message={tr(l, ['Տվյալները ժամանակավորապես անհասանելի են', 'Данные временно недоступны', 'Data temporarily unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => ws.refetch()} /> : financeVisible ? (
+        <View style={st.fin}>
+          <Text style={st.finK}>{tr(l, ['ՎՃԱՐՄԱՆ ԵՆԹԱԿԱ', 'К ОПЛАТЕ', 'PAYABLE NOW'])}</Text>
+          <Text style={st.finA} accessibilityLabel={payable ?? ''}>{payable ?? '—'}</Text>
+          {overdue && home?.overdueMinor !== '0' ? <Text style={st.finO}>{tr(l, ['Ժամկետանց՝ ', 'Просрочено: ', 'Overdue: '])}{overdue}</Text> : null}
+          <View style={st.finRow}>
+            {integ('payments') ? <Pressable accessibilityRole="button" testID="home-pay" onPress={() => router.push('/(tabs)/bills')} style={st.pay}><Text style={st.payT}>{tr(l, ['Վճարել', 'Оплатить', 'Pay'])}</Text></Pressable> : <Text style={st.finNote}>{tr(l, ['Առցանց վճարումը դեռ միացված չէ', 'Онлайн-оплата пока не подключена', 'Online payment is not enabled yet'])}</Text>}
+            <Pressable accessibilityRole="button" testID="home-bills" onPress={() => router.push('/(tabs)/bills')} style={st.det}><Text style={st.detT}>{tr(l, ['Մանրամասն', 'Подробнее', 'Details'])}</Text><Feather name="arrow-right" size={15} color={palette.surface} /></Pressable>
+          </View>
+        </View>) : null}
+
+      <View style={st.tiles}>
+        <Tile icon="tool" label={tr(l, ['Նոր հայտ', 'Новая заявка', 'New request'])} onPress={() => router.push('/(tabs)/requests')} testID="quick-request" />
+        {passes.allowed ? <Tile icon="key" label={tr(l, ['Հյուրի անցաթուղթ', 'Гостевой пропуск', 'Guest pass'])} onPress={() => go('passes')} testID="quick-pass" /> : null}
+        {integ('barrier') ? <Tile icon="unlock" label={tr(l, ['Մուտք', 'Доступ', 'Access'])} onPress={() => go('access')} testID="quick-access" /> : null}
+        <Tile icon="grid" label={tr(l, ['Ծառայություններ', 'Сервисы', 'Services'])} onPress={() => router.push('/(tabs)/more')} testID="quick-services" />
+      </View>
+
+      {sum?.emergencyContacts?.length ? <View style={st.emerg}>
+        <Text style={st.emergT}>{tr(l, ['Արտակարգ կապ', 'Экстренная связь', 'Emergency'])}</Text>
+        {sum.emergencyContacts.slice(0, 3).map((c) => <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.title} ${c.phone}`} onPress={() => Linking.openURL(`tel:${c.phone.replace(/[^\d+]/g, '')}`)} style={st.emergRow}><Feather name="phone-call" size={16} color={palette.destructive} /><Text style={st.emergName} numberOfLines={1}>{c.title}</Text><Text style={st.emergPh}>{c.phone}</Text></Pressable>)}
+      </View> : null}
+
+      {(sum?.pendingHouseholdInvitations || sum?.pendingAgreements) ? <View style={{ gap: 8 }}>
+        {sum?.pendingHouseholdInvitations ? <Row icon="user-plus" title={tr(l, ['Սպասվող հրավերներ', 'Ожидающие приглашения', 'Pending invitations'])} subtitle={String(sum.pendingHouseholdInvitations)} onPress={() => go('family')} /> : null}
+        {sum?.pendingAgreements ? <Row icon="check-square" title={tr(l, ['Համաձայնություններ՝ հաստատման', 'Соглашения на подтверждение', 'Agreements to review'])} subtitle={String(sum.pendingAgreements)} onPress={() => go('agreements')} /> : null}
+      </View> : null}
+
+      <SectionHead title={tr(l, ['Կարևոր թարմացումներ', 'Важные обновления', 'Important updates'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/community')} />
+      {sum?.announcements?.length ? sum.announcements.slice(0, 2).map((a) => <Row key={a.id} icon="volume-2" title={a.title} subtitle={formatArmenianDate(a.createdAt)} onPress={() => go('announcements')} />) : <EmptyState icon="volume-x" title={tr(l, ['Նոր հայտարարություններ չկան', 'Новых объявлений нет', 'No new announcements'])} />}
+      {sum?.activeVoting?.length ? sum.activeVoting.slice(0, 1).map((v) => <Row key={v.id} icon="check-circle" tone="ok" title={v.title} subtitle={tr(l, ['Ակտիվ քվեարկություն', 'Активное голосование', 'Active vote'])} onPress={() => go('meetings')} />) : null}
+
+      <SectionHead title={tr(l, ['Ընթացիկ հայտեր', 'Текущие заявки', 'Current requests'])} action={tr(l, ['Բոլորը', 'Все', 'All'])} onAction={() => router.push('/(tabs)/requests')} testID="home-all-requests" />
+      {requests.isLoading ? <Skeleton /> : requests.isError ? <ErrorBox message={tr(l, ['Ցանկը անհասանելի է', 'Список недоступен', 'List unavailable'])} retryLabel={tr(l, ['Կրկնել', 'Повторить', 'Retry'])} onRetry={() => requests.refetch()} /> : reqRows.length ? reqRows.map((r, i) => <Row key={String(r.id ?? i)} icon="clipboard" title={typeof r.subject === 'string' && r.subject ? r.subject : '—'} subtitle={`${localizeRequestStatus(String(r.status ?? ''))} · ${formatArmenianDate(r.created_at ?? r.createdAt)}`} onPress={() => router.push('/(tabs)/requests')} />) : <EmptyState title={tr(l, ['Ակտիվ հայտեր չկան', 'Активных заявок нет', 'No active requests'])} />}
+      {(kind as string) !== 'owner' ? <Row icon="message-circle" title={(kind as string) === 'renter' ? tr(l, ['Կապ կառավարչի հետ', 'Чат с управляющей компанией', 'Chat with management']) : tr(l, ['Զրույցներ', 'Чаты', 'Chats'])} subtitle={sum?.unreadMessages ? tr(l, ['Չկարդացված՝ ', 'Непрочитанных: ', 'Unread: ']) + sum.unreadMessages : undefined} onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'chats' } })} testID="home-chat" /> : null}
+      </>}
     </ScrollView>
   );
 }
 
-function normalizeRow(row: unknown, index: number) {
-  const value = row && typeof row === 'object' ? row as Record<string, unknown> : {};
-  const text = (input: unknown, fallback: string) => typeof input === 'string' && input.trim() ? input.trim() : fallback;
-  const dateRaw = value.created_at ?? value.createdAt;
-  const date = formatArmenianDate(dateRaw);
-  return { key: text(value.id, `request-${index}`), subject: text(value.subject, 'Հայտ՝ առանց վերնագրի'), status: localizeRequestStatus(text(value.status, '')), date };
-}
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.background }, content: { paddingHorizontal: 21, paddingTop: 18, paddingBottom: 34 },
-  topline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 28 },
-  logo: { width: 112, height: 47, marginLeft: -5 }, unit: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, maxWidth: '58%' },
-  unitName: { fontSize: 12, color: palette.foreground, fontWeight: '700' }, unitCaption: { fontSize: 11, color: palette.mutedForeground, marginTop: 2 },
-  greeting: { marginBottom: 22 }, kicker: { fontSize: 10, letterSpacing: 1.5, color: palette.mutedForeground, fontWeight: '700', marginBottom: 9 },
-  title: { fontSize: 25, lineHeight: 31, color: palette.foreground, fontWeight: '800', letterSpacing: -0.7 }, subtitle: { fontSize: 14, color: palette.mutedForeground, marginTop: 5 },
-  hero: { backgroundColor: palette.foreground, padding: 21, borderRadius: 19, minHeight: 216, overflow: 'hidden', marginBottom: 27 },
-  heroIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: palette.heroOverlay, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  heroEyebrow: { color: palette.heroMuted, fontSize: 10, letterSpacing: 1.35, fontWeight: '700' }, heroTitle: { color: palette.surface, fontSize: 23, fontWeight: '800', marginTop: 7, letterSpacing: -0.5 },
-  heroText: { color: palette.heroMuted, fontSize: 13, lineHeight: 19, maxWidth: 265, marginTop: 5 },
-  heroAction: { marginTop: 17, backgroundColor: palette.primary, minHeight: 44, borderRadius: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, width: 190 },
-  heroActionText: { color: palette.foreground, fontSize: 13, fontWeight: '800' }, heroMark: { position: 'absolute', right: -23, bottom: -39, transform: [{ rotate: '-12deg' }] },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: palette.foreground, letterSpacing: -0.3 }, sectionHint: { fontSize: 9, color: palette.subdued, letterSpacing: 1, fontWeight: '700' },
-  quickGrid: { flexDirection: 'row', gap: 11, marginBottom: 27 }, quickCard: { flex: 1, borderRadius: 15, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, padding: 14, minHeight: 122 },
-  quickIcon: { height: 37, width: 37, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }, quickTitle: { fontSize: 14, color: palette.foreground, fontWeight: '800' }, quickSub: { fontSize: 11, color: palette.mutedForeground, marginTop: 3 },
-  link: { fontSize: 12, fontWeight: '700', color: palette.accentForeground }, requestCard: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 70, padding: 12, borderRadius: 14, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, marginBottom: 9 },
-  requestIcon: { height: 38, width: 38, backgroundColor: palette.accent, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, requestTitle: { fontSize: 13, fontWeight: '700', color: palette.foreground }, requestMeta: { fontSize: 11, color: palette.mutedForeground, marginTop: 4 },
-  empty: { alignItems: 'center', paddingVertical: 21, backgroundColor: palette.surface, borderRadius: 14, borderWidth: 1, borderColor: palette.border, gap: 6 }, emptyTitle: { fontSize: 14, fontWeight: '700', color: palette.foreground },
-  muted: { color: palette.mutedForeground, fontSize: 12, textAlign: 'center' }, footer: { marginTop: 24, fontSize: 12, color: palette.foreground, fontWeight: '800' }, footerNote: { color: palette.subdued, fontWeight: '400' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 10, backgroundColor: palette.background }, errorTitle: { fontSize: 18, fontWeight: '800', color: palette.foreground },
-  retry: { backgroundColor: palette.primary, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 11, marginTop: 8 }, retryText: { color: palette.foreground, fontWeight: '800' },
-  skeleton: { width: '100%', height: 20, borderRadius: 8, backgroundColor: palette.skeleton, marginBottom: 13 }, loadingCard: { backgroundColor: palette.surface, padding: 16, borderRadius: 14, borderColor: palette.border, borderWidth: 1, gap: 11 },
-  line: { width: '82%', height: 11, backgroundColor: palette.skeleton, borderRadius: 6 }, inlineError: { backgroundColor: palette.surface, padding: 16, borderRadius: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+const make_st = (palette: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: palette.background }, center: { justifyContent: 'center', padding: 20 }, content: { paddingHorizontal: 18, paddingBottom: 120, gap: 12 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 8 }, logo: { width: 100, height: 40, marginLeft: -4 },
+  ctx: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, minHeight: 44 }, ctxRole: { fontSize: 13, fontWeight: '700', color: palette.foreground, flexShrink: 1 },
+  bell: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border },
+  dot: { position: 'absolute', top: 4, right: 4, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: palette.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }, dotT: { fontSize: 9, fontWeight: '800', color: palette.surface },
+  hello: { fontSize: 25, fontWeight: '800', color: palette.foreground, letterSpacing: -0.6, marginTop: 6 }, sub: { fontSize: 13, color: palette.mutedForeground, marginTop: -6 },
+  prop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border },
+  propIcon: { width: 52, height: 52, borderRadius: 14, backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center' }, propT: { fontSize: 15, fontWeight: '800', color: palette.foreground }, propS: { fontSize: 12, color: palette.mutedForeground, marginTop: 3 },
+  fin: { backgroundColor: palette.foreground, borderRadius: 18, padding: 18, gap: 4 }, finK: { color: palette.heroMuted, fontSize: 10, letterSpacing: 1.3, fontWeight: '800' }, finA: { color: palette.surface, fontSize: 30, fontWeight: '800', letterSpacing: -0.8 }, finO: { color: palette.selectedBorder, fontSize: 12, fontWeight: '700' },
+  finRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }, finNote: { color: palette.heroMuted, fontSize: 12, flex: 1 },
+  pay: { backgroundColor: palette.primary, minHeight: 44, borderRadius: 12, paddingHorizontal: 22, justifyContent: 'center' }, payT: { color: palette.surface, fontWeight: '800', fontSize: 14 },
+  det: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: palette.heroOverlay }, detT: { color: palette.surface, fontWeight: '700', fontSize: 13 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  emerg: { backgroundColor: palette.destructiveSurface, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: palette.dangerBorder }, emergT: { fontSize: 12, fontWeight: '800', color: palette.dangerText, marginBottom: 2 },
+  emergRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 }, emergName: { flex: 1, fontSize: 13, fontWeight: '700', color: palette.foreground }, emergPh: { fontSize: 13, fontWeight: '700', color: palette.destructive },
 });
