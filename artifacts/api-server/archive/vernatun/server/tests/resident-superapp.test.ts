@@ -10,6 +10,7 @@ import {config} from '../config.js';
 import {registerResidentContinuityTests} from './resident-continuity.cases.js';
 import {registerPayerResponsibilityTests} from './payer-responsibility.cases.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
+if(!/^qa_[a-f0-9]{20}$/.test(process.env.PRIVATE_FILES_TEST_RUN??''))throw new Error('Isolated private storage namespace required');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='';
 class Client{
@@ -36,6 +37,8 @@ const photoKeys:string[]=[];
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
  base='http://127.0.0.1:'+(server.address() as {port:number}).port;
+ const schema=(await pool.query('SELECT current_schema() AS name')).rows[0].name;
+ assert.match(schema,/^qa_[a-f0-9]{20}$/);assert.equal(schema,process.env.PRIVATE_FILES_TEST_RUN);
  await pool.query('DELETE FROM auth_rate_limits');
  owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');
  buildingId=seed.fixtures.ba;query='?buildingId='+buildingId;
@@ -174,6 +177,75 @@ test('listing photos are sanitized, scoped, versioned and immutable after submis
  const other=(await owner.call('/resident/records/listings','POST',payload)).data;
  assert.equal((await owner.call('/resident/listings/'+other.id+'/photos/'+updated.photos[0])).status,404);
 });
+test('concurrent same-version uploads serialize at the ten-photo limit',async()=>{
+ const payload={title:'Concurrent photo limit',body:'Race-safe listing',saleType:'sale',priceMinor:'12000000',currency:'USD'};
+ const listing=(await owner.call('/resident/records/listings','POST',payload)).data;
+ const path='/resident/listings/'+listing.id+'/photos';
+ const photo=await sharp({create:{width:12,height:9,channels:3,background:'#2277aa'}}).jpeg().toBuffer();
+ const upload=async(version:number)=>fetch(base+'/api'+path+'?version='+version,{method:'POST',
+  headers:{'Content-Type':'application/octet-stream',Cookie:owner.cookie,'X-CSRF-Token':owner.csrf},body:new Uint8Array(photo)});
+ let version=1;
+ for(let count=0;count<9;count++){
+  const response=await upload(version);assert.equal(response.status,201);
+  version=(await response.json()).version;
+ }
+ const [first,second]=await Promise.all([upload(version),upload(version)]);
+ const responses=[first,second],successes=responses.filter(r=>r.status===201),stale=responses.filter(r=>r.status===409);
+ assert.equal(successes.length,1);assert.equal(stale.length,1);
+ assert.equal((await stale[0]!.json()).error,'stale_version');
+ const saved=(await owner.call('/resident/records/listings/'+listing.id)).data;
+ assert.equal(saved.status,'draft');assert.equal(saved.version,11);assert.equal(saved.photos.length,10);
+ const rows=(await pool.query('SELECT storage_key FROM resident_listing_photos WHERE listing_id=$1',[listing.id])).rows;
+ assert.equal(rows.length,10);
+ photoKeys.push(...rows.map(r=>r.storage_key));
+ for(const row of rows)assert.ok((await readPrivateFile('photos',row.storage_key)).length>0);
+});
+test('listing submit serializes with photo upload and removal',async()=>{
+ const payload={title:'Concurrent listing change',body:'Race-safe listing',saleType:'rent',priceMinor:'90000',currency:'USD'};
+ const photo=await sharp({create:{width:12,height:9,channels:3,background:'#44aa66'}}).jpeg().toBuffer();
+ const upload=async(id:string,version:number)=>fetch(base+'/api/resident/listings/'+id+'/photos?version='+version,{method:'POST',
+  headers:{'Content-Type':'application/octet-stream',Cookie:owner.cookie,'X-CSRF-Token':owner.csrf},body:new Uint8Array(photo)});
+ const runUploadSubmitRace=async()=>{
+  const listing=(await owner.call('/resident/records/listings','POST',payload)).data;
+  const [photoResponse,submitResponse]=await Promise.all([
+   upload(listing.id,1),
+   owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'submit',version:1}),
+  ]);
+  const final=(await owner.call('/resident/records/listings/'+listing.id)).data;
+  const count=Number((await pool.query('SELECT count(*) FROM resident_listing_photos WHERE listing_id=$1',[listing.id])).rows[0].count);
+  if(photoResponse.status===201){
+   assert.equal(submitResponse.status,409);assert.equal(submitResponse.data.error,'stale_version');
+   assert.equal(final.status,'draft');assert.equal(final.version,2);assert.equal(count,1);
+  }else{
+   assert.equal(photoResponse.status,403);assert.equal(submitResponse.status,200);
+   assert.equal(final.status,'submitted');assert.equal(final.version,2);assert.equal(count,0);
+  }
+  const rows=(await pool.query('SELECT storage_key FROM resident_listing_photos WHERE listing_id=$1',[listing.id])).rows;
+  photoKeys.push(...rows.map(r=>r.storage_key));
+ };
+ await runUploadSubmitRace();
+
+ const listing=(await owner.call('/resident/records/listings','POST',payload)).data;
+ const added=await upload(listing.id,1);assert.equal(added.status,201);
+ const addedRecord=await added.json();
+ const photoId=addedRecord.photos[0] as string;
+ const key=(await pool.query('SELECT storage_key FROM resident_listing_photos WHERE listing_id=$1',[listing.id])).rows[0].storage_key;
+ photoKeys.push(key);
+ const [removeResponse,submitResponse]=await Promise.all([
+  owner.call('/resident/listings/'+listing.id+'/photos/'+photoId+'?version=2','DELETE'),
+  owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'submit',version:2}),
+ ]);
+ const final=(await owner.call('/resident/records/listings/'+listing.id)).data;
+ const count=Number((await pool.query('SELECT count(*) FROM resident_listing_photos WHERE listing_id=$1',[listing.id])).rows[0].count);
+ if(removeResponse.status===200){
+  assert.equal(submitResponse.status,409);assert.equal(submitResponse.data.error,'stale_version');
+  assert.equal(final.status,'draft');assert.equal(final.version,3);assert.equal(count,0);
+ }else{
+  assert.equal(removeResponse.status,403);assert.equal(submitResponse.status,200);
+  assert.equal(final.status,'submitted');assert.equal(final.version,3);assert.equal(count,1);
+ }
+ assert.ok((await readPrivateFile('photos',key)).length>0);
+});
 test('viewings persist explicit requests and only the listing owner can confirm or decline',async()=>{
  const listing=(await family.call('/resident/records/listings?search=terrace')).data.items[0];
  const payload={title:'Viewing request',body:'Please confirm',parentId:listing.id,viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true};
@@ -246,6 +318,51 @@ test('viewings persist explicit requests and only the listing owner can confirm 
  await owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'close',version:listing.version});
  assert.equal((await owner.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
  assert.equal((await family.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'cancel_viewing',version:1})).data.data.viewingStatus,'cancelled');
+});
+test('confirming a viewing serializes with cancellation and listing closure',async()=>{
+ const payload={title:'Concurrent viewing listing',body:'Available for scheduled visits',saleType:'sale',priceMinor:'18000000',currency:'USD'};
+ const makeRequest=async()=>{
+  const listing=(await owner.call('/resident/records/listings','POST',payload)).data;
+  const submitted=await owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'submit',version:1});
+  assert.equal(submitted.status,200);
+  const active=await admin.call('/resident/records/listings/'+listing.id+'/actions'+query,'POST',{action:'approve',version:2});
+  assert.equal(active.status,200);
+  const response=await family.call('/resident/records/conversations','POST',{
+   title:'Concurrent viewing request',body:'Please confirm',parentId:listing.id,
+   viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true,
+  });
+  assert.equal(response.status,201);
+  return {listingId:listing.id,conversationId:response.data.id};
+ };
+ const cancelled=await makeRequest(),conversationPath='/resident/records/conversations/'+cancelled.conversationId;
+ const [confirm,cancel]=await Promise.all([
+  owner.call(conversationPath+'/actions','POST',{action:'confirm_viewing',version:1}),
+  family.call(conversationPath+'/actions','POST',{action:'cancel_viewing',version:1}),
+ ]);
+ const current=(await family.call(conversationPath)).data;
+ if(confirm.status===200){
+  assert.equal(cancel.status,409);assert.equal(cancel.data.error,'stale_version');
+  assert.equal(current.version,2);assert.equal(current.data.viewingStatus,'confirmed');
+ }else{
+  assert.equal(confirm.status,403);assert.equal(cancel.status,200);
+  assert.equal(current.version,2);assert.equal(current.data.viewingStatus,'cancelled');
+ }
+
+ const closing=await makeRequest(),closingPath='/resident/records/conversations/'+closing.conversationId;
+ const [close,confirmAgainstClose]=await Promise.all([
+  owner.call('/resident/records/listings/'+closing.listingId+'/actions','POST',{action:'close',version:3}),
+  owner.call(closingPath+'/actions','POST',{action:'confirm_viewing',version:1}),
+ ]);
+ const closedListing=(await owner.call('/resident/records/listings/'+closing.listingId)).data;
+ const closedRequest=(await family.call(closingPath)).data;
+ assert.equal(close.status,200);assert.equal(closedListing.status,'closed');assert.equal(closedListing.version,4);
+ if(confirmAgainstClose.status===200){
+  // Confirmation linearized while the listing was still active; closure followed it.
+  assert.equal(closedRequest.version,2);assert.equal(closedRequest.data.viewingStatus,'confirmed');
+ }else{
+  assert.equal(confirmAgainstClose.status,403);assert.equal(closedRequest.version,1);
+  assert.equal(closedRequest.data.viewingStatus,'requested');
+ }
 });
 test('disabling the building marketplace revokes listings, photos and linked inquiry access',async()=>{
  const listing=(await owner.call('/resident/records/listings?search=terrace')).data.items.find((r:any)=>r.photos.length>0);
