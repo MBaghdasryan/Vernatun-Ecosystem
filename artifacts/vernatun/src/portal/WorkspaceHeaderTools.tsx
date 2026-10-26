@@ -1,6 +1,7 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import {Bell,Search,X} from 'lucide-react';
 import {request} from './client';
+import {identity} from '../hayat/offline-store';
 import Notifications from './Notifications';
 import type {RoleContext} from './types';
 import type {Language} from './i18n';
@@ -36,13 +37,20 @@ export default function WorkspaceHeaderTools({c,language,product}:{c:RoleContext
  const liveContext=useRef(c.id);liveContext.current=c.id;
  useEffect(()=>{
   let active=true;
+   const scope=identity();
+   let channel:BroadcastChannel|undefined;
+   if(scope?.contextId===c.id&&typeof BroadcastChannel!=='undefined'){
+    try{channel=new BroadcastChannel(['vernatun-notifications',scope.userId,c.id,c.role_key].map(encodeURIComponent).join(':'))}catch{}
+   }
   const refresh=()=>{const contextId=c.id;void request<{unread:number}>('/notifications/unread-count').then(r=>{
    if(active&&liveContext.current===contextId)setUnread(r.unread);
   }).catch(()=>{if(active)setUnread(undefined)})};
+   const changed=(event:Event)=>{refresh();if((event as CustomEvent).detail?.broadcast===true)channel?.postMessage('notifications-changed')};
+   if(channel)channel.onmessage=event=>{if(event.data==='notifications-changed')refresh()};
   refresh();const timer=setInterval(refresh,30000);
-  window.addEventListener('vernatun-notifications-changed',refresh);
-  return()=>{active=false;clearInterval(timer);window.removeEventListener('vernatun-notifications-changed',refresh)};
- },[c.id]);
+   window.addEventListener('vernatun-notifications-changed',changed);
+   return()=>{active=false;clearInterval(timer);window.removeEventListener('vernatun-notifications-changed',changed);channel?.close()};
+  },[c.id,c.role_key]);
  useEffect(()=>{
   function shortcut(e:KeyboardEvent){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
    if(notificationDialog.current?.open)return;
