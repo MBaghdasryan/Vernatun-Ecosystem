@@ -3,6 +3,8 @@ export const edgeHealth = Object.freeze({
  offlineAfterSeconds:120,
  inventoryStaleAfterSeconds:600,
  telemetryStaleAfterSeconds:300,
+ deviceStaleAfterSeconds:120,
+ deviceOfflineAfterSeconds:300,
  warningQueueDepth:100,
  criticalQueueDepth:1000,
 });
@@ -17,7 +19,52 @@ export function edgeThresholds(node:Record<string,any>){
  return {...edgeHealth,heartbeatExpectedSeconds,
   offlineAfterSeconds:Math.max(edgeHealth.offlineAfterSeconds,heartbeatExpectedSeconds*3),
   inventoryStaleAfterSeconds:Math.max(edgeHealth.inventoryStaleAfterSeconds,interval('inventorySeconds',300)*2),
-  telemetryStaleAfterSeconds:Math.max(edgeHealth.telemetryStaleAfterSeconds,interval('telemetrySeconds',30)*3)};
+  telemetryStaleAfterSeconds:Math.max(edgeHealth.telemetryStaleAfterSeconds,interval('telemetrySeconds',30)*3),
+  deviceStaleAfterSeconds:interval('deviceStaleAfterSeconds',edgeHealth.deviceStaleAfterSeconds),
+  deviceOfflineAfterSeconds:Math.max(interval('deviceOfflineAfterSeconds',edgeHealth.deviceOfflineAfterSeconds),
+   interval('deviceStaleAfterSeconds',edgeHealth.deviceStaleAfterSeconds))};
+}
+
+export function edgeTransportOnline(node:Record<string,any>,connected:boolean,now=Date.now()){
+ if(!connected||node.archived_at||node.status==='DISABLED'||node.registration_state!=='REGISTERED'||
+   node.credential_active===false||node.last_heartbeat_at==null)return false;
+ const age=(now-new Date(node.last_heartbeat_at).getTime())/1000;
+ return Number.isFinite(age)&&age>=0&&age<=edgeThresholds(node).offlineAfterSeconds;
+}
+
+export type DeviceHealthStatus='ONLINE'|'STALE'|'OFFLINE'|'UNKNOWN';
+export function explicitOnlineValue(value:unknown):boolean|null{
+ if(typeof value==='boolean')return value;
+ if(typeof value==='number'&&(value===0||value===1))return value===1;
+ if(typeof value==='string'){
+  const normalized=value.trim().toLowerCase();
+  if(['true','1','online','connected','on'].includes(normalized))return true;
+  if(['false','0','offline','disconnected','off'].includes(normalized))return false;
+ }
+ if(value&&typeof value==='object'&&!Array.isArray(value)&&'value' in value)
+  return explicitOnlineValue((value as {value:unknown}).value);
+ return null;
+}
+
+export function deviceHealth(input:{
+ edgeOnline:boolean;gatewayAvailable?:unknown;explicitOnline?:unknown;lastTelemetryAt?:unknown;lastEventAt?:unknown;lastAlarmAt?:unknown;
+},thresholds:{deviceStaleAfterSeconds:number;deviceOfflineAfterSeconds:number},now=Date.now()){
+ const activity=[input.lastTelemetryAt,input.lastEventAt,input.lastAlarmAt]
+  .map(value=>value==null?NaN:value instanceof Date?value.getTime():new Date(value as string|number).getTime())
+  .filter(Number.isFinite);
+ const lastSeenMs=activity.length?Math.max(...activity):null;
+ const lastSeenAt=lastSeenMs===null?null:new Date(lastSeenMs).toISOString();
+ const explicitOnline=explicitOnlineValue(input.explicitOnline);
+ if(!input.edgeOnline)return {healthStatus:'OFFLINE' as DeviceHealthStatus,online:false,lastSeenAt,reason:'edge_offline'};
+ if(input.gatewayAvailable===false)return {healthStatus:'OFFLINE' as DeviceHealthStatus,online:false,lastSeenAt,reason:'gateway_unavailable'};
+ if(explicitOnline===false)return {healthStatus:'OFFLINE' as DeviceHealthStatus,online:false,lastSeenAt,reason:'device_reported_offline'};
+ if(lastSeenMs===null)return {healthStatus:'UNKNOWN' as DeviceHealthStatus,online:false,lastSeenAt:null,reason:'no_device_activity'};
+ const age=(now-lastSeenMs)/1000;
+ if(age>thresholds.deviceOfflineAfterSeconds)
+  return {healthStatus:'OFFLINE' as DeviceHealthStatus,online:false,lastSeenAt,reason:'device_activity_expired'};
+ if(explicitOnline===true||age<=thresholds.deviceStaleAfterSeconds)
+  return {healthStatus:'ONLINE' as DeviceHealthStatus,online:true,lastSeenAt,reason:explicitOnline===true?'explicit_online':'recent_activity'};
+ return {healthStatus:'STALE' as DeviceHealthStatus,online:false,lastSeenAt,reason:'device_activity_stale'};
 }
 
 export function edgeStatusReasons(node:Record<string,any>,connected:boolean,now=Date.now()){

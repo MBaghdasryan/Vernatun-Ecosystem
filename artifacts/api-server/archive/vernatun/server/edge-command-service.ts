@@ -6,7 +6,7 @@ import {ApiError} from './access.js';
 import {permissionDecision} from './iam-evaluator.js';
 import {isEdgeConnected,sendEdgeMessage} from './edge-sockets.js';
 import {getDeviceActionDefinition,getDeviceActionProfile} from '@workspace/api-zod';
-import {normalizeEdgeStatus} from './edge-management-policy.js';
+import {deviceHealth,edgeThresholds,edgeTransportOnline} from './edge-management-policy.js';
 
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const hardDenied=new Set(['FIRE.CONTROL','ELEVATOR.SAFETY_CONTROL']);
@@ -34,6 +34,17 @@ async function deviceTelemetryState(db:any,deviceId:string){
  return Object.fromEntries(result.rows.map((row:any)=>[String(row.telemetry_key).toLowerCase(),row.value]));
 }
 
+async function deviceHealthActivity(db:any,device:any){
+ const activity=await db.query(`SELECT
+  (SELECT max(received_at) FROM edge_events WHERE device_inventory_id=$1) AS last_event_at,
+  (SELECT max(received_at) FROM edge_alarms WHERE device_inventory_id=$1) AS last_alarm_at`,[device.device_inventory_id??device.id]);
+ const telemetry=await db.query(`SELECT value FROM edge_telemetry_current
+  WHERE device_inventory_id=$1 AND lower(telemetry_key)='online' LIMIT 1`,[device.device_inventory_id??device.id]);
+ return {lastTelemetryAt:device.last_telemetry_at,lastEventAt:activity.rows[0]?.last_event_at,
+  lastAlarmAt:activity.rows[0]?.last_alarm_at,explicitOnline:telemetry.rows[0]?.value,
+  gatewayAvailable:device.metadata?.adapterMetadata?.gatewayAvailable};
+}
+
 async function policyReason(db:any,c:Context,device:any,capability:string,permissionResult:{allowed:boolean;reason:string},telemetry:Record<string,any>){
  if(hardDenied.has(capability))return 'safety_capability_hard_denied';
  const action=getDeviceActionProfile(device.profile)?.actions.find(item=>item.capability===capability);
@@ -57,10 +68,15 @@ async function policyReason(db:any,c:Context,device:any,capability:string,permis
  return null;
 }
 
-function connectionReason(device:any){
- if(device.reported_online!==true)return 'device_offline';
- const status=normalizeEdgeStatus({...device,last_telemetry_at:device.node_last_telemetry_at??device.last_telemetry_at},isEdgeConnected(device.edge_node_id));
- return status==='ONLINE'?null:status==='DEGRADED'?'edge_degraded':'edge_offline';
+async function connectionReason(db:any,device:any){
+ if(!edgeTransportOnline(device,isEdgeConnected(device.edge_node_id)))return 'edge_offline';
+ if(device.local_authorization_status!=='OK')return 'edge_local_authorization_unavailable';
+ const activity=await deviceHealthActivity(db,device);
+ const health=deviceHealth({edgeOnline:true,...activity},edgeThresholds(device));
+ if(health.healthStatus==='OFFLINE')return 'device_offline';
+ if(health.healthStatus==='STALE')return 'device_health_stale';
+ if(health.healthStatus==='UNKNOWN')return 'device_health_unknown';
+ return null;
 }
 
 export async function availableDeviceActions(c:Context,deviceId:string,buildingId:string){
@@ -80,7 +96,7 @@ export async function availableDeviceActions(c:Context,deviceId:string,buildingI
   const access=await pool.query('SELECT 1 FROM edge_device_access WHERE device_id=$1 AND unit_id=$2',[device.id,c.unit_id]);
   if(!access.rowCount)throw new ApiError(404,'device_not_found');
  }
- const telemetry=await deviceTelemetryState(pool,device.id),offline=connectionReason(device);
+  const telemetry=await deviceTelemetryState(pool,device.id),offline=await connectionReason(pool,device);
  const inFlight=await pool.query(`SELECT 1 FROM edge_commands WHERE device_inventory_id=$1
   AND status IN ('REQUESTED','AUTHORIZED','QUEUED','DELIVERED','ACKNOWLEDGED') AND expires_at>now()`,[device.id]);
  const actions=await Promise.all((profile?.actions??[]).map(async action=>{
@@ -126,7 +142,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
     await client.query('COMMIT');
    }else{
     await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['edge-device:'+input.deviceId]);
-    const target=await client.query(`SELECT d.id AS device_inventory_id,d.edge_node_id,d.edge_device_id,d.thingsboard_id,
+     const target=await client.query(`SELECT d.id AS device_inventory_id,d.edge_node_id,d.edge_device_id,d.thingsboard_id,d.metadata,
      d.capabilities,d.enabled_capabilities,d.device_type,d.profile,d.unit_id,d.reported_online,d.last_telemetry_at,
      n.organization_id,d.building_id,n.building_id AS node_building_id,n.status,n.registration_state,n.name AS edge_name,
      n.block_id,n.protocol_version,n.last_heartbeat_at,n.last_inventory_at,n.last_telemetry_at AS node_last_telemetry_at,
@@ -148,7 +164,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
     const rejection=await policyReason(client,context,device,input.capability,permissionResult,telemetry)
      ??(inFlight.rowCount?'device_command_in_progress':null);
     const decision=rejection?'DENY':'ALLOW',decisionReason=rejection??'role_scope_and_device_policy_verified';
-    const offlineReason=connectionReason(device);
+     const offlineReason=await connectionReason(client,device);
     const online=offlineReason===null;
    const commandId=randomUUID(),expiresAt=new Date(Date.now()+30_000).toISOString();
    const denied=decision!=='ALLOW',offline=decision==='ALLOW'&&!online;

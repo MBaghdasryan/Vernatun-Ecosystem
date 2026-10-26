@@ -46,12 +46,12 @@ const tone = (s: string) => {
   const v = s.toUpperCase();
   if (['ONLINE', 'REGISTERED', 'CONNECTED', 'OK', 'ACTIVE', 'SUCCESS', 'CLEARED', 'ACKNOWLEDGED', 'AUTHORIZED', 'USED'].includes(v)) return 'ok';
   if (['OFFLINE', 'FAILED', 'DISCONNECTED', 'REVOKED', 'ERROR', 'CRITICAL', 'DENIED', 'TIMEOUT', 'EXPIRED', 'EMERGENCY'].includes(v)) return 'bad';
-  if (['DEGRADED', 'WARNING', 'MAJOR', 'RECONNECTING', 'WAITING_BOOTSTRAP_TOKEN', 'PENDING', 'PENDING_REGISTRATION', 'QUEUED'].includes(v)) return 'warn';
+  if (['DEGRADED', 'STALE', 'WARNING', 'MAJOR', 'RECONNECTING', 'WAITING_BOOTSTRAP_TOKEN', 'PENDING', 'PENDING_REGISTRATION', 'QUEUED'].includes(v)) return 'warn';
   return 'idle';
 };
-export const Badge = ({ value, dot = true }: { value: unknown; dot?: boolean }) => {
+export const Badge = ({ value, dot = true, label }: { value: unknown; dot?: boolean; label?: string }) => {
   const s = String(value ?? 'UNKNOWN');
-  return <span className={'em-badge ' + tone(s)}>{dot && <i />}{s.replace(/_/g, ' ')}</span>;
+  return <span className={'em-badge ' + tone(s)}>{dot && <i />}{label ?? s.replace(/_/g, ' ')}</span>;
 };
 
 export function Modal({ title, onClose, children, wide, labelId }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; labelId: string }) {

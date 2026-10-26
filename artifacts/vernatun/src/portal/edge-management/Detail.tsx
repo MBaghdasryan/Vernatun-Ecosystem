@@ -42,6 +42,8 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
     hb: configuration.heartbeatSeconds == null ? '' : String(configuration.heartbeatSeconds),
     inv: configuration.inventorySeconds == null ? '' : String(configuration.inventorySeconds),
     tel: configuration.telemetrySeconds == null ? '' : String(configuration.telemetrySeconds),
+     deviceStale: String(configuration.deviceStaleAfterSeconds ?? 120),
+     deviceOffline: String(configuration.deviceOfflineAfterSeconds ?? 300),
     projectName: node.project_name == null ? '' : String(node.project_name),
     environment: node.environment == null ? '' : String(node.environment),
     modules: Array.isArray(configuration.enabledModules) ? (configuration.enabledModules as string[]) : [],
@@ -76,6 +78,8 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
     if (cfgForm.hb !== baseline.hb && cfgForm.hb.trim()) body.heartbeatSeconds = Number(cfgForm.hb);
     if (cfgForm.inv !== baseline.inv && cfgForm.inv.trim()) body.inventorySeconds = Number(cfgForm.inv);
     if (cfgForm.tel !== baseline.tel && cfgForm.tel.trim()) body.telemetrySeconds = Number(cfgForm.tel);
+    if (cfgForm.deviceStale !== baseline.deviceStale && cfgForm.deviceStale.trim()) body.deviceStaleAfterSeconds = Number(cfgForm.deviceStale);
+    if (cfgForm.deviceOffline !== baseline.deviceOffline && cfgForm.deviceOffline.trim()) body.deviceOfflineAfterSeconds = Number(cfgForm.deviceOffline);
     if (JSON.stringify([...cfgForm.modules].sort()) !== JSON.stringify([...baseline.modules].sort())) body.enabledModules = cfgForm.modules;
     if (!Object.keys(body).length) return;
     void run('cfg', () => request(base, 'PATCH', body), () => setBaseline(cfgForm));
@@ -87,6 +91,24 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
   const currentBlock = blocks.find(b => b.id === node.block_id);
   const addable = isV2 ? (currentBlock?.buildings ?? []).filter((b: Row) => !buildingsList.some(x => x.id === b.id)) : [];
   const buildingName = (id: string) => buildings.find(b => b.id === id);
+  const deviceHealthBadge = (d: Row) => {
+    const status = String(d.health_status ?? 'UNKNOWN').toUpperCase();
+    const labelKey = status === 'ONLINE' ? 'deviceOnline' : status === 'STALE' ? 'deviceStale' :
+      status === 'OFFLINE' ? 'deviceOffline' : 'deviceUnknown';
+    const label = L(labelKey);
+    const activity = d.last_seen_at ? `${L('activityReceived')}: ${rel(d.last_seen_at, language)}` : L('noDeviceActivity');
+    const reasonKey = d.health_reason === 'device_reported_offline' ? 'deviceReportedOffline' :
+      d.health_reason === 'device_activity_expired' ? 'deviceActivityExpired' :
+      d.health_reason === 'edge_offline' ? 'edgeOfflineReason' :
+      d.health_reason === 'device_activity_stale' ? 'deviceActivityStale' : '';
+    const reason = reasonKey ? L(reasonKey) : '';
+    const adapter = typeof d.thingsboard_active === 'boolean'
+      ? `${L('thingsboardActiveMetadata')}: ${String(d.thingsboard_active)}` : '';
+    const gateway = d.gateway_available === true ? L('gatewayAvailable') :
+      d.gateway_available === false ? L('gatewayUnavailable') : L('gatewayUnknown');
+    const title = [label, reason, activity, adapter, gateway].filter(Boolean).join(' · ');
+    return <span title={title} aria-label={title}><Badge value={status} label={label} /></span>;
+  };
 
   const Fact = (k: string, v: ReactNode) => <div className="em-fact" key={k}><small>{k}</small><strong>{v ?? '—'}</strong></div>;
   const Table = (head: string[], rows: ReactNode[][], empty = L('noData')) => rows.length
@@ -163,7 +185,7 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
     </div>}
 
     {tab === 'devices' && Table([L('device'), L('deviceId'), L('profile'), L('building'), L('zone'), L('status'), L('actions'), L('lastTelemetry'), L('lastEvt'), L('tbId'), L('access')],
-      (detail.devices ?? []).map((d: Row) => [d.label || d.name, <span className="em-mono">{d.edge_device_id}</span>, d.profile ?? d.device_type, d.building_name, d.zone ?? d.unit_id, <Badge value={d.reported_online == null ? 'UNKNOWN' : d.reported_online ? 'ONLINE' : 'OFFLINE'} />, <DeviceActions key={`${c.id}:${d.id}`} context={c} language={language} node={node} device={d} />, t(d.last_telemetry_at), t(d.last_event_at), <span className="em-mono">{d.thingsboard_id ?? '—'}</span>,
+      (detail.devices ?? []).map((d: Row) => [d.label || d.name, <span className="em-mono">{d.edge_device_id}</span>, <span>{d.profile ?? d.device_type}<small className="em-inline-meta"><Badge dot={false} value={d.adapter_status === 'VERIFIED' ? 'ONLINE' : 'UNKNOWN'} label={d.adapter_status === 'VERIFIED' ? L('adapterVerified') : L('adapterUnverified')} /></small></span>, d.building_name, d.zone ?? d.unit_id, deviceHealthBadge(d), <DeviceActions key={`${c.id}:${d.id}`} context={c} language={language} node={node} device={d} />, t(d.last_telemetry_at), t(d.last_event_at), <span className="em-mono">{d.thingsboard_id ?? '—'}</span>,
         <div className="em-form">{canConfig && !archived && <DeviceCapabilityPolicy key={`${d.id}:${(d.enabled_capabilities ?? []).join(',')}`} device={d} language={language} onSaved={onReload} />}
           {Array.isArray(d.capabilities) && d.capabilities.includes('BARRIER.OPEN') && <>{(d.access_units ?? []).map((a: Row) => <span className="em-actions" key={a.unitId}><span className="em-mono">{a.unitId} · {(a.allowedCapabilities ?? []).join(', ')}</span>{canManage && !archived && <button className="em-btn bad" disabled={!!busy} onClick={() => setConfirm({ kind: 'removeAccess', id: d.id, extra: a.unitId })}>{L('removeAccess')}</button>}</span>)}
           {canManage && !archived && <span className="em-actions"><input aria-label={L('unitId')} placeholder={L('unitId')} value={access[d.id] ?? ''} onChange={e => setAccess({ ...access, [d.id]: e.target.value })} /><button className="em-btn" disabled={!!busy || !access[d.id]?.trim()} onClick={() => setConfirm({ kind: 'access', id: d.id, extra: access[d.id].trim() })}>{L('allowOpen')}</button></span>}</>}</div>]))}
@@ -187,6 +209,8 @@ export default function Detail({ c, language, mode, detail, buildings, blocks, o
         <label>{L('interval_hb')}<input type="number" min={5} value={cfgForm.hb} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, hb: e.target.value })} /></label>
         <label>{L('interval_inv')}<input type="number" min={30} value={cfgForm.inv} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, inv: e.target.value })} /></label>
         <label>{L('interval_tel')}<input type="number" min={1} value={cfgForm.tel} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, tel: e.target.value })} /></label>
+         <label>{L('deviceStaleThreshold')}<input type="number" min={30} max={3600} value={cfgForm.deviceStale} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, deviceStale: e.target.value })} /><small>{L('seconds')}</small></label>
+         <label>{L('deviceOfflineThreshold')}<input type="number" min={Math.max(60,Number(cfgForm.deviceStale)||30)} max={86400} value={cfgForm.deviceOffline} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, deviceOffline: e.target.value })} /><small>{L('seconds')}</small></label>
       </div>
       <label>{L('description')}<textarea rows={2} value={cfgForm.description} disabled={!canConfig || archived} onChange={e => setCfgForm({ ...cfgForm, description: e.target.value })} /></label>
       <fieldset style={{ border: '1px solid var(--ln)', borderRadius: 8 }}><legend>{L('modules')}</legend>{!modulesKnown && <small>{L('modulesUnknown')}</small>}{MODULES.map(m => <label className="em-opt" key={m}><input type="checkbox" disabled={!canConfig || archived || !modulesKnown} checked={cfgForm.modules.includes(m)} onChange={() => setCfgForm({ ...cfgForm, modules: cfgForm.modules.includes(m) ? cfgForm.modules.filter(x => x !== m) : [...cfgForm.modules, m] })} />{L('m_' + m)}</label>)}</fieldset>

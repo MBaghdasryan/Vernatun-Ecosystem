@@ -133,7 +133,8 @@ router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
  const node=await authenticatedNode(req);
  const body=z.object({edgeId:edgeIdSchema,tenantId:id,buildingId:id,timestamp:edgeTimestamp.optional(),
   devices:z.array(z.object({deviceId:z.string().trim().min(1).max(200),thingsboardId:z.string().max(200).nullable().optional(),
-    profile:z.string().trim().min(1).max(100),label:z.string().max(200).nullable().optional(),active:z.boolean().optional(),
+     profile:z.string().trim().min(1).max(100),label:z.string().max(200).nullable().optional(),active:z.boolean().optional(),
+     gatewayAvailable:z.boolean().nullable().optional(),
     capabilities:z.array(z.string().trim().max(80)).max(30).optional()})).max(1000)
  }).parse(req.body);
  verifyRequestIdentity(req,node,body);
@@ -146,13 +147,20 @@ router.post('/inventory',machineAuth,async(req:MachineRequest,res)=>{
    await client.query(`INSERT INTO edge_device_inventory
     (edge_node_id,organization_id,building_id,edge_device_id,thingsboard_id,name,profile,device_type,label,
       capabilities,enabled_capabilities,reported_online,last_seen_at,metadata,updated_at)
-     VALUES($1,$2,$3,$4,$5,$4,$6,$7,$8,$9,$10,$11,now(),'{}',now())
+       VALUES($1,$2,$3,$4,$5,$4,$6,$7,$8,$9,$10,NULL,NULL,
+        CASE WHEN $11::boolean IS NULL AND $12::boolean IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('adapterMetadata',
+         jsonb_strip_nulls(jsonb_build_object('thingsboardActive',$11::boolean,'gatewayAvailable',$12::boolean))) END,now())
      ON CONFLICT(edge_node_id,building_id,edge_device_id) DO UPDATE SET
      thingsboard_id=EXCLUDED.thingsboard_id,name=EXCLUDED.name,profile=EXCLUDED.profile,
      device_type=EXCLUDED.device_type,label=EXCLUDED.label,capabilities=EXCLUDED.capabilities,
-     reported_online=EXCLUDED.reported_online,last_seen_at=now(),updated_at=now()`,
+      reported_online=NULL,
+       metadata=CASE WHEN $11::boolean IS NULL AND $12::boolean IS NULL THEN COALESCE(edge_device_inventory.metadata,'{}'::jsonb)
+       ELSE jsonb_set(COALESCE(edge_device_inventory.metadata,'{}'::jsonb),'{adapterMetadata}',
+        (CASE WHEN jsonb_typeof(edge_device_inventory.metadata->'adapterMetadata')='object'
+         THEN edge_device_inventory.metadata->'adapterMetadata' ELSE '{}'::jsonb END)
+          ||jsonb_strip_nulls(jsonb_build_object('thingsboardActive',$11::boolean,'gatewayAvailable',$12::boolean)),true) END,updated_at=now()`,
    [node.id,node.organization_id,node.building_id,device.deviceId,device.thingsboardId??null,
-     device.profile,deviceType(device.profile),device.label??null,JSON.stringify(capabilities),enabledCapabilities,device.active??null]);
+      device.profile,deviceType(device.profile),device.label??null,JSON.stringify(capabilities),enabledCapabilities,device.active??null,device.gatewayAvailable??null]);
   }
   await client.query(`UPDATE edge_nodes SET last_seen_at=now(),last_inventory_at=now(),status=CASE WHEN status='DISABLED' THEN status ELSE 'ONLINE' END,updated_at=now() WHERE id=$1`,[node.id]);
   await client.query('COMMIT');
@@ -219,6 +227,7 @@ router.post('/events/batch',machineAuth,async(req:MachineRequest,res)=>{
     typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'info',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
+    if(result.rowCount)await client.query('UPDATE edge_device_inventory SET last_seen_at=now() WHERE id=$1',[device]);
   }
   await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_event_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');
@@ -244,6 +253,7 @@ router.post('/alarms/batch',machineAuth,async(req:MachineRequest,res)=>{
     typeof item.severity==='string'&&['info','warning','critical','emergency'].includes(item.severity)?item.severity:'warning',
     sourceTime(item.timestamp??item.ts),JSON.stringify(item)]);
    inserted+=result.rowCount??0;
+    if(result.rowCount)await client.query('UPDATE edge_device_inventory SET last_seen_at=now() WHERE id=$1',[device]);
   }
   await client.query('UPDATE edge_nodes SET last_seen_at=now(),last_alarm_at=now(),updated_at=now() WHERE id=$1',[node.id]);
   await client.query('COMMIT');

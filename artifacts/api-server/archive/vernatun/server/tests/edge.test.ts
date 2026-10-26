@@ -8,7 +8,7 @@ import {pool} from '../db.js';
 import {config} from '../config.js';
 import {isEdgeConnected} from '../edge-sockets.js';
 import {edgeTimestamp,edgeTimestampedRecord} from '../edge-timestamp.js';
-import {normalizeEdgeStatus,edgeStatusReasons} from '../edge-management-policy.js';
+import {deviceHealth,edgeThresholds,normalizeEdgeStatus,edgeStatusReasons} from '../edge-management-policy.js';
 
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))
  throw new Error('Edge integration tests require the isolated vernatun_test database');
@@ -121,11 +121,16 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  assert.equal(heartbeat.status,200);
  const inventory=await platform.call('/edge/v1/inventory','POST',{
   edgeId,tenantId:organizationId,buildingId,devices:[{
-   deviceId:'qa-barrier-1',profile:'Vernatun Barrier',label:'QA barrier',active:true,
+    deviceId:'qa-barrier-1',profile:'Vernatun Barrier',label:'QA barrier',active:false,
   }],
  },machineHeaders);
  assert.equal(inventory.status,200);
  assert.equal(inventory.data.devices,1);
+  const inventoryRow=(await pool.query(`SELECT reported_online,last_seen_at,metadata FROM edge_device_inventory
+   WHERE edge_node_id=(SELECT id FROM edge_nodes WHERE edge_id=$1) AND edge_device_id='qa-barrier-1'`,[edgeId])).rows[0];
+  assert.equal(inventoryRow.reported_online,null,'ThingsBoard active must not be stored as authoritative device health');
+  assert.equal(inventoryRow.last_seen_at,null,'inventory discovery alone is not proof of live device activity');
+  assert.equal(inventoryRow.metadata.adapterMetadata.thingsboardActive,false,'raw adapter metadata must remain available');
 
  const payload={edgeId,tenantId:organizationId,buildingId};
  for(const timestamp of ['2026-10-25T22:00:00Z','2026-10-25T22:00:00.344Z',
@@ -137,8 +142,8 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
   assert.equal((await platform.call('/edge/v1/'+endpoint,'POST',{...payload,timestamp:'invalid',devices:[]},machineHeaders)).status,400);
  }
  for(const endpoint of ['telemetry','events','alarms']){
-  const body={...payload,items:[{deviceId:'qa-barrier-1',eventId:'qa-event-'+endpoint,alarmId:'qa-alarm',
-   timestamp:'2026-10-25T22:00:00.344086+00:00',temperature:21}]};
+   const body={...payload,items:[{deviceId:'qa-barrier-1',eventId:'qa-event-'+endpoint,alarmId:'qa-alarm',
+    timestamp:new Date().toISOString(),temperature:21,...(endpoint==='telemetry'?{online:true}:{})}]};
   assert.equal((await platform.call('/edge/v1/'+endpoint+'/batch','POST',body,machineHeaders)).status,200,endpoint);
   body.items[0].timestamp='invalid';
   assert.equal((await platform.call('/edge/v1/'+endpoint+'/batch','POST',body,machineHeaders)).status,400,endpoint);
@@ -194,6 +199,12 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  assert.equal(storedBootstrap.token_hash,createHash('sha256').update(bootstrapToken).digest('hex'));
 
  const device=(await pool.query('SELECT id FROM edge_device_inventory WHERE edge_node_id=$1 AND edge_device_id=$2',[node.id,'qa-barrier-1'])).rows[0];
+  const consoleDevices=await platform.call(`/edge-console/nodes/${node.id}/devices`);
+  assert.equal(consoleDevices.status,200);
+  const consoleBarrier=consoleDevices.data.find((d:any)=>d.edge_device_id==='qa-barrier-1');
+  assert.equal(consoleBarrier.health_status,'ONLINE');
+  assert.equal(consoleBarrier.thingsboard_active,false,'the adapter active flag must be visible only as metadata');
+  assert.equal(consoleBarrier.reported_online,null);
  const assigned=await platform.call(`/edge-console/devices/${device.id}/access`,'PUT',{
   unitId,allowedCapabilities:['BARRIER.OPEN'],
  });
@@ -203,6 +214,8 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
  assert.equal(residentDevices.data.length,1);
  assert.equal(residentDevices.data[0].id,device.id);
  assert.deepEqual(residentDevices.data[0].permittedCapabilities,['BARRIER.OPEN']);
+  const residentStatus=await owner.call(`/me/buildings/${buildingId}/devices`);
+  assert.equal(residentStatus.data.find((d:any)=>d.id===device.id).health_status,'ONLINE');
  const crossBuilding=await owner.call('/me/buildings/00000000-0000-4000-8000-000000000000/devices');
  assert.equal(crossBuilding.status,403,'resident cannot query another building');
   const manager=await new Client().login('manager'),family=await new Client().login('family');
@@ -271,11 +284,21 @@ test('Edge v1 bootstrap, Agent identity binding, hash-only credentials, inventor
    assert.equal(denied.data.authorizationReason,'safety_capability_hard_denied');
   }
   assert.equal((await family.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'No family delegation'})).status,403);
-  await pool.query('UPDATE edge_device_inventory SET reported_online=false WHERE id=$1',[device.id]);
+   assert.equal((await manager.call(commandPath+'/actions')).data.actions.find((a:any)=>a.capability==='BARRIER.OPEN').enabled,true,
+    'fresh telemetry must make a verified Barrier available even when ThingsBoard active is false');
+   assert.equal((await pool.query('SELECT reported_online,metadata FROM edge_device_inventory WHERE id=$1',[device.id])).rows[0].metadata.adapterMetadata.thingsboardActive,false);
+   const offlineTelemetry=await platform.call('/edge/v1/telemetry/batch','POST',{
+    ...payload,items:[{deviceId:'qa-barrier-1',online:false,timestamp:new Date().toISOString()}],
+   },machineHeaders);
+   assert.equal(offlineTelemetry.status,200);
+   const offlineActions=await manager.call(commandPath+'/actions');
+   assert.equal(offlineActions.data.actions.find((a:any)=>a.capability==='BARRIER.OPEN').enabled,false);
   const offline=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'Offline acceptance'});
   assert.equal(offline.status,409);assert.equal(offline.data.errorCode,'device_offline');
   assert.equal(received.length,2,'offline and denied commands must never be dispatched');
-  await pool.query('UPDATE edge_device_inventory SET reported_online=true WHERE id=$1',[device.id]);
+   assert.equal((await platform.call('/edge/v1/telemetry/batch','POST',{
+    ...payload,items:[{deviceId:'qa-barrier-1',online:true,timestamp:new Date().toISOString()}],
+   },machineHeaders)).status,200);
   const policy=await platform.call(`/edge-console/devices/${device.id}/capabilities`,'PUT',{enabledCapabilities:[]});
   assert.equal(policy.status,200);
   const disabled=await manager.call(commandPath+'/commands','POST',{capability:'BARRIER.OPEN',reason:'Disabled policy acceptance'});
@@ -368,6 +391,16 @@ test('Human workspace drafts, one-time tokens, real diagnostics, config and cros
  assert.equal(orgFleet.status,200);
  assert.ok(orgFleet.data.nodes.every((v:any)=>v.organization_id===orgContext.organization_id));
  const now=Date.now(),healthy={registration_state:'REGISTERED',last_heartbeat_at:new Date(now),credential_active:true,local_authorization_status:'OK',queue_depth:0};
+  const deviceThresholds={deviceStaleAfterSeconds:120,deviceOfflineAfterSeconds:300};
+  assert.equal(deviceHealth({edgeOnline:true},deviceThresholds,now).healthStatus,'UNKNOWN');
+  assert.equal(deviceHealth({edgeOnline:true,lastTelemetryAt:new Date(now-30_000)},deviceThresholds,now).healthStatus,'ONLINE');
+  assert.equal(deviceHealth({edgeOnline:true,lastEventAt:new Date(now-180_000)},deviceThresholds,now).healthStatus,'STALE');
+  assert.equal(deviceHealth({edgeOnline:true,lastAlarmAt:new Date(now-301_000)},deviceThresholds,now).healthStatus,'OFFLINE');
+  assert.equal(deviceHealth({edgeOnline:true,explicitOnline:'false',lastTelemetryAt:new Date(now)},deviceThresholds,now).healthStatus,'OFFLINE');
+  assert.equal(deviceHealth({edgeOnline:true,gatewayAvailable:false,lastTelemetryAt:new Date(now)},deviceThresholds,now).healthStatus,'OFFLINE');
+  assert.equal(deviceHealth({edgeOnline:false,lastTelemetryAt:new Date(now)},deviceThresholds,now).healthStatus,'OFFLINE');
+  const customThresholds=edgeThresholds({management_config:{deviceStaleAfterSeconds:240,deviceOfflineAfterSeconds:600}});
+  assert.equal(deviceHealth({edgeOnline:true,lastTelemetryAt:new Date(now-200_000)},customThresholds,now).healthStatus,'ONLINE');
  assert.equal(normalizeEdgeStatus(healthy,true,now),'ONLINE');
   assert.deepEqual(edgeStatusReasons(healthy,true,now),[]);
  assert.equal(normalizeEdgeStatus(healthy,false,now),'OFFLINE');

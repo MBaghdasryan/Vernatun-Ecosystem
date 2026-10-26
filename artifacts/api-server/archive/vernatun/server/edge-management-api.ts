@@ -5,10 +5,11 @@ import {pool} from './db.js';
 import {ApiError,context,requireAuth,requirePermission} from './access.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {transaction,record} from './operations.js';
-import {closeEdgeConnection} from './edge-sockets.js';
+import {closeEdgeConnection,isEdgeConnected} from './edge-sockets.js';
 import {availableDeviceActions,requestEdgeCommand} from './edge-command-service.js';
 import edgeWorkspaceRouter from './edge-workspace-api.js';
-import {reportedCapabilitiesForProfile} from '@workspace/api-zod';
+import {getDeviceActionProfile,reportedCapabilitiesForProfile} from '@workspace/api-zod';
+import {deviceHealth,edgeThresholds,edgeTransportOnline} from './edge-management-policy.js';
 
 const router=Router();
 router.use(edgeWorkspaceRouter);
@@ -294,9 +295,23 @@ router.post('/edge-console/blocks/:id/bootstrap-tokens',async(req,res)=>{
 });
 router.get('/edge-console/nodes/:id/devices',async(req,res)=>{
  const {node}=await nodeInScope(req,uuid.parse(req.params.id),'edge.inventory.read');
- res.json((await pool.query(`SELECT id,edge_device_id,thingsboard_id,name,profile,device_type,label,unit_id,
-  capabilities,reported_online,last_seen_at,last_telemetry_at FROM edge_device_inventory
-  WHERE edge_node_id=$1 ORDER BY name`,[node.id])).rows);
+  const rows=(await pool.query(`SELECT d.id,d.edge_device_id,d.thingsboard_id,d.name,d.profile,d.device_type,d.label,d.unit_id,
+   d.capabilities,d.reported_online,d.last_seen_at,d.last_telemetry_at,d.metadata->'adapterMetadata' AS adapter_metadata,
+   (SELECT t.value FROM edge_telemetry_current t WHERE t.device_inventory_id=d.id AND lower(t.telemetry_key)='online' LIMIT 1) AS telemetry_online,
+   (SELECT max(e.received_at) FROM edge_events e WHERE e.device_inventory_id=d.id) AS last_event_at,
+   (SELECT max(a.received_at) FROM edge_alarms a WHERE a.device_inventory_id=d.id) AS last_alarm_at
+   FROM edge_device_inventory d WHERE d.edge_node_id=$1 ORDER BY d.name`,[node.id])).rows;
+  const connected=isEdgeConnected(node.id),edgeOnline=edgeTransportOnline(node,connected),thresholds=edgeThresholds(node);
+  res.json(rows.map(device=>{
+   const health=deviceHealth({edgeOnline,gatewayAvailable:device.adapter_metadata?.gatewayAvailable,
+    explicitOnline:device.telemetry_online,lastTelemetryAt:device.last_telemetry_at,
+    lastEventAt:device.last_event_at,lastAlarmAt:device.last_alarm_at},thresholds);
+   const adapterVerified=getDeviceActionProfile(device.profile)?.actions.some(action=>action.adapterVerified)??false;
+   return {...device,reported_online:null,thingsboard_active:device.adapter_metadata?.thingsboardActive??device.reported_online??null,
+    gateway_available:typeof device.adapter_metadata?.gatewayAvailable==='boolean'?device.adapter_metadata.gatewayAvailable:null,
+    adapter_status:adapterVerified?'VERIFIED':'UNVERIFIED',
+    online:health.online,health_status:health.healthStatus,health_reason:health.reason,last_seen_at:health.lastSeenAt,edge_online:edgeOnline};
+  }));
 });
 router.get('/edge-console/alarms',async(req,res)=>{
  const c=await organizationScope(req,'edge.alarms.read');
@@ -454,17 +469,33 @@ router.get('/me/buildings/:buildingId/devices',async(req,res)=>{
  const c=await requirePermission(req,'device.read.own'),buildingId=uuid.parse(req.params.buildingId);
  if(!['unit_owner','renter','family'].includes(c.role_key)||!c.unit_id||c.building_id!==buildingId||!c.organization_id)
   throw new ApiError(403,'resident_device_scope_required');
- const rows=await pool.query(`SELECT d.id,d.edge_device_id,d.name,d.profile,d.device_type,d.label,d.capabilities,d.enabled_capabilities,
-  d.reported_online,d.last_seen_at,n.status AS edge_status,a.allowed_capabilities
+  const rows=await pool.query(`SELECT d.id,d.edge_node_id,d.edge_device_id,d.name,d.profile,d.device_type,d.label,d.capabilities,d.enabled_capabilities,
+   d.reported_online,d.last_seen_at,d.last_telemetry_at,d.metadata->'adapterMetadata' AS adapter_metadata,
+   (SELECT t.value FROM edge_telemetry_current t WHERE t.device_inventory_id=d.id AND lower(t.telemetry_key)='online' LIMIT 1) AS telemetry_online,
+   (SELECT max(e.received_at) FROM edge_events e WHERE e.device_inventory_id=d.id) AS last_event_at,
+   (SELECT max(x.received_at) FROM edge_alarms x WHERE x.device_inventory_id=d.id) AS last_alarm_at,
+   n.status AS edge_status,n.registration_state,n.last_heartbeat_at,n.local_authorization_status,n.management_config,n.archived_at,
+   EXISTS(SELECT 1 FROM edge_credentials ec WHERE ec.edge_node_id=n.id AND ec.status='active'
+    AND ec.revoked_at IS NULL AND (ec.expires_at IS NULL OR ec.expires_at>now())) AS credential_active,a.allowed_capabilities
   FROM edge_device_access a JOIN edge_device_inventory d ON d.id=a.device_id
   JOIN edge_nodes n ON n.id=d.edge_node_id
   WHERE a.unit_id=$1 AND a.organization_id=$2 AND a.building_id=$3
    AND n.registration_state='REGISTERED' AND n.status<>'DISABLED'
    ORDER BY d.name LIMIT 100`,[c.unit_id,c.organization_id,buildingId]);
- res.json(await Promise.all(rows.rows.map(async row=>({...row,availability:await availableDeviceActions(c,row.id,buildingId),
+  res.json(await Promise.all(rows.rows.map(async row=>{
+   const edgeOnline=edgeTransportOnline(row,isEdgeConnected(row.edge_node_id));
+   const health=deviceHealth({edgeOnline,gatewayAvailable:row.adapter_metadata?.gatewayAvailable,
+    explicitOnline:row.telemetry_online,lastTelemetryAt:row.last_telemetry_at,
+    lastEventAt:row.last_event_at,lastAlarmAt:row.last_alarm_at},edgeThresholds(row));
+   return {...row,reported_online:null,thingsboard_active:row.adapter_metadata?.thingsboardActive??row.reported_online??null,
+   gateway_available:typeof row.adapter_metadata?.gatewayAvailable==='boolean'?row.adapter_metadata.gatewayAvailable:null,
+   adapter_status:getDeviceActionProfile(row.profile)?.actions.some(action=>action.adapterVerified)?'VERIFIED':'UNVERIFIED',
+   online:health.online,health_status:health.healthStatus,health_reason:health.reason,last_seen_at:health.lastSeenAt,edge_online:edgeOnline,
+   availability:await availableDeviceActions(c,row.id,buildingId),
   permittedCapabilities:c.role_key==='unit_owner'||c.role_key==='renter'
   ?row.allowed_capabilities.filter((cap:string)=>cap==='BARRIER.OPEN'&&c.permissions.includes('device.barrier.open.own')&&row.capabilities.includes(cap)&&row.enabled_capabilities.includes(cap))
-  :[]}))));
+   :[]};
+  })));
 });
 router.post('/me/buildings/:buildingId/devices/:deviceId/commands',async(req,res)=>{
  const c=await requirePermission(req,'device.read.own'),buildingId=uuid.parse(req.params.buildingId),deviceId=uuid.parse(req.params.deviceId);

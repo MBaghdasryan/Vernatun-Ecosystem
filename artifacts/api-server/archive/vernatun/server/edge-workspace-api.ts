@@ -1,19 +1,22 @@
 import {Router,type Request} from 'express';
 import {randomBytes,createHash} from 'node:crypto';
 import {z} from 'zod';
+import {getDeviceActionProfile} from '@workspace/api-zod';
 import {CreateEdgeDraftBody,UpdateEdgeNodeMetadataBody,GenerateEdgeDraftTokenBody,UpdateEdgeBoundBuildingsBody} from '@workspace/api-zod';
 import {pool} from './db.js';
 import {ApiError,context,requirePermission,type Context} from './access.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {transaction,record} from './operations.js';
 import {isEdgeConnected} from './edge-sockets.js';
-import {edgeHealth,edgeThresholds,edgeModules,lockedEdgeCapabilities,normalizeEdgeStatus,edgeStatusReasons} from './edge-management-policy.js';
+import {edgeHealth,edgeThresholds,edgeModules,lockedEdgeCapabilities,normalizeEdgeStatus,edgeStatusReasons,deviceHealth,edgeTransportOnline} from './edge-management-policy.js';
 
 const router=Router(),uuid=z.string().uuid();
 const configuration=z.object({
  heartbeatSeconds:z.number().int().min(10).max(300).optional(),
  inventorySeconds:z.number().int().min(30).max(86400).optional(),
  telemetrySeconds:z.number().int().min(5).max(3600).optional(),
+ deviceStaleAfterSeconds:z.number().int().min(30).max(3600).optional(),
+ deviceOfflineAfterSeconds:z.number().int().min(60).max(86400).optional(),
  enabledModules:z.array(z.enum(edgeModules)).max(edgeModules.length).optional(),
 });
 const createSchema=CreateEdgeDraftBody.merge(configuration).extend({
@@ -133,6 +136,9 @@ router.post('/edge-console/nodes',async(req,res)=>{
  const v=createSchema.parse(req.body),org=c.organization_id??v.organizationId;
  if(!org)throw new ApiError(400,'organization_required');
  if(c.organization_id&&v.organizationId&&v.organizationId!==c.organization_id)throw new ApiError(403,'organization_scope_mismatch');
+  if((v.deviceOfflineAfterSeconds??edgeHealth.deviceOfflineAfterSeconds)<
+    (v.deviceStaleAfterSeconds??edgeHealth.deviceStaleAfterSeconds))
+   throw new ApiError(400,'invalid_device_health_thresholds');
  const result=await transaction(async db=>{
   await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[v.edgeId]);
   const existing=await db.query('SELECT 1 FROM edge_nodes WHERE edge_id=$1',[v.edgeId]);
@@ -150,8 +156,9 @@ router.post('/edge-console/nodes',async(req,res)=>{
   }
   if(!buildings.length)throw new ApiError(400,'building_not_found');
   if(c.building_id&&buildings.some(b=>b.id!==c.building_id))throw new ApiError(403,'building_scope_mismatch');
-  const cfg={heartbeatSeconds:v.heartbeatSeconds??30,inventorySeconds:v.inventorySeconds??300,
-   telemetrySeconds:v.telemetrySeconds??30,enabledModules:v.enabledModules??[]};
+   const cfg={heartbeatSeconds:v.heartbeatSeconds??30,inventorySeconds:v.inventorySeconds??300,
+    telemetrySeconds:v.telemetrySeconds??30,deviceStaleAfterSeconds:v.deviceStaleAfterSeconds??edgeHealth.deviceStaleAfterSeconds,
+    deviceOfflineAfterSeconds:v.deviceOfflineAfterSeconds??edgeHealth.deviceOfflineAfterSeconds,enabledModules:v.enabledModules??[]};
   const node=(await db.query(`INSERT INTO edge_nodes(edge_id,organization_id,building_id,block_id,protocol_version,
    name,site_code,description,management_config,project_name,environment,registration_state)
    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'PENDING_REGISTRATION') RETURNING *`,
@@ -206,6 +213,9 @@ router.patch('/edge-console/nodes/:id',async(req,res)=>{
   const current=(await db.query('SELECT * FROM edge_nodes WHERE id=$1 FOR UPDATE',[node.id])).rows[0];
   if(current.archived_at)throw new ApiError(409,'edge_node_archived');
   const cfg={...current.management_config,...Object.fromEntries(Object.entries(v).filter(([k])=>k in configuration.shape))};
+   if(Number(cfg.deviceOfflineAfterSeconds??edgeHealth.deviceOfflineAfterSeconds)<
+     Number(cfg.deviceStaleAfterSeconds??edgeHealth.deviceStaleAfterSeconds))
+    throw new ApiError(400,'invalid_device_health_thresholds');
   const updated=(await db.query(`UPDATE edge_nodes SET name=$2,site_code=$3,description=$4,management_config=$5,project_name=$6,environment=$7,
    config_version=config_version+1,updated_at=now() WHERE id=$1 RETURNING *`,
    [node.id,v.name??current.name,v.siteCode??current.site_code,v.description??current.description,JSON.stringify(cfg),v.projectName??current.project_name,v.environment??current.environment])).rows[0];
@@ -279,6 +289,9 @@ router.get('/edge-console/nodes/:id',async(req,res)=>{
   pool.query(`SELECT b.id,b.name,b.address,b.id=$2::uuid AS is_primary FROM edge_node_buildings nb JOIN buildings b ON b.id=nb.building_id
    WHERE nb.edge_node_id=$1 ORDER BY b.name`,[id,node.building_id]),
   can(c,'edge.inventory.read')?pool.query(`SELECT d.*,b.name AS building_name,
+    d.metadata->'adapterMetadata' AS adapter_metadata,
+    (SELECT t.value FROM edge_telemetry_current t WHERE t.device_inventory_id=d.id
+     AND lower(t.telemetry_key)='online' LIMIT 1) AS telemetry_online,
    COALESCE((SELECT jsonb_agg(jsonb_build_object('unitId',a.unit_id,'allowedCapabilities',a.allowed_capabilities))
     FROM edge_device_access a WHERE a.device_id=d.id),'[]'::jsonb) AS access_units,
    (SELECT max(e.received_at) FROM edge_events e WHERE e.device_inventory_id=d.id) AS last_event_at,
@@ -308,10 +321,21 @@ router.get('/edge-console/nodes/:id',async(req,res)=>{
    WHEN expires_at<=now() THEN 'EXPIRED' ELSE 'PENDING' END AS status
    FROM edge_bootstrap_tokens WHERE edge_id=$1 ORDER BY created_at DESC LIMIT 20`,[node.edge_id]):{rows:[]},
  ]);
- const connected=isEdgeConnected(id);
+  const connected=isEdgeConnected(id),edgeOnline=edgeTransportOnline(node,connected);
+  const deviceRows=devices.rows.map(d=>{
+   const health=deviceHealth({edgeOnline,gatewayAvailable:d.adapter_metadata?.gatewayAvailable,
+    explicitOnline:d.telemetry_online,lastTelemetryAt:d.last_telemetry_at,
+    lastEventAt:d.last_event_at,lastAlarmAt:d.last_alarm_at},edgeThresholds(node));
+   const adapterVerified=getDeviceActionProfile(d.profile)?.actions.some(action=>action.adapterVerified)??false;
+   return {...d,reported_online:null,thingsboard_active:d.adapter_metadata?.thingsboardActive??d.reported_online??null,
+    gateway_available:typeof d.adapter_metadata?.gatewayAvailable==='boolean'?d.adapter_metadata.gatewayAvailable:null,
+    adapter_status:adapterVerified?'VERIFIED':'UNVERIFIED',
+    online:health.online,health_status:health.healthStatus,health_reason:health.reason,last_seen_at:health.lastSeenAt,
+    edge_online:edgeOnline};
+  });
   res.json({node:{...node,status:normalizeEdgeStatus(node,connected),status_reasons:edgeStatusReasons(node,connected),web_socket_open:connected,building_count:buildings.rows.length,
-  device_count:devices.rows.length,active_alarms:alarms.rows.filter(a=>a.status==='active').length},
-  buildings:buildings.rows,devices:devices.rows,alarms:alarms.rows,telemetry:telemetry.rows,events:events.rows,
+   device_count:deviceRows.length,active_alarms:alarms.rows.filter(a=>a.status==='active').length},
+   buildings:buildings.rows,devices:deviceRows,alarms:alarms.rows,telemetry:telemetry.rows,events:events.rows,
   commands:commands.rows,audit:audit.rows,tokens:tokens.rows,configuration:configResult(node),
   limits:{devices:500,history:100,tokens:20}});
 });
