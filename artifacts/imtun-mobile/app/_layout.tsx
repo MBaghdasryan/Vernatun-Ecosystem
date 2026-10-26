@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -15,16 +16,21 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl, setCsrfTokenGetter } from '@workspace/api-client-react';
 import { palette } from '@/constants/colors';
+import { clearPrivateDocumentCache } from '@/lib/resident/privateDocument';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export const csrfSessionRef: { current: string | null } = { current: null };
-const configuredApiUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim() ||
-  process.env.EXPO_PUBLIC_DOMAIN?.trim();
+// Development must never inherit a production API URL from an exported build
+// setting. Web uses Metro's local-only proxy so cookies remain same-origin.
+const configuredApiUrl = __DEV__
+  ? (Platform.OS === 'web' && typeof window !== 'undefined'
+    ? `${window.location.origin}/__imtun_dev_api`
+    : process.env.EXPO_PUBLIC_DEV_API_URL?.trim())
+  : (process.env.EXPO_PUBLIC_API_URL?.trim() || process.env.EXPO_PUBLIC_DOMAIN?.trim());
 if (!configuredApiUrl) {
-  throw new Error('Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN to connect to Vernatun API.');
+  throw new Error('API endpoint missing. Start the development workflow, or configure the release API URL.');
 }
 setBaseUrl(
   /^https?:\/\//i.test(configuredApiUrl)
@@ -50,6 +56,11 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    // Remove private bytes left by an interrupted native share before use.
+    clearPrivateDocumentCache();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
