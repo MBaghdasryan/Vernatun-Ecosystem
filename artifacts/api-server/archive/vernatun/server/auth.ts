@@ -29,8 +29,9 @@ const userFields='id,email,name,locale,currency';
 auth.get('/session',async(req,res)=>{
  req.session.csrf??=randomBytes(32).toString('hex');
  const available=req.user?await contexts(req.user.id):[];
- if(available.length===1&&!req.session.contextId)req.session.contextId=available[0].id;
  const restricted=!!req.user?.mustChangePassword;
+ if(restricted)req.session.contextId=undefined;
+ else if(!available.some(c=>c.id===req.session.contextId))req.session.contextId=available.length===1?available[0].id:undefined;
  res.json({user:req.user??null,contexts:restricted?[]:available,contextId:restricted?null:req.session.contextId??null,
   csrf:req.session.csrf,demo:config.NODE_ENV!=='production',mfaAvailable:true});
 });
@@ -50,7 +51,7 @@ auth.post('/login',limit,(req,res,next)=>{
      req.session.createdAt=new Date().toISOString();
      if(mfaVerified)req.session.mfaVerifiedAt=new Date().toISOString();
      const available=await contexts(user.id);
-     if(available.length===1)req.session.contextId=available[0].id;
+      req.session.contextId=user.mustChangePassword?undefined:available.length===1?available[0].id:undefined;
      await audit(user.id,null,'auth.login','user',user.id);
      const contextsForResponse=user.mustChangePassword?[]:available;
      const contextId=user.mustChangePassword?null:req.session.contextId??null;

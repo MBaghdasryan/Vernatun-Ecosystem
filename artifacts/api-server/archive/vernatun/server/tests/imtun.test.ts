@@ -104,6 +104,11 @@ test('Switching owner to a different renter context never unions scopes or permi
   }
   await pool.query("UPDATE role_assignments SET starts_at=now()-interval '2 days',expires_at=now()-interval '1 day' WHERE id=$1",[assignment]);
   assert.equal((await owner.call('/units')).status,403);
+  const refreshed=(await owner.call('/auth/session')).data;
+  const remaining=refreshed.contexts.find((c:any)=>c.id===refreshed.contextId);
+  assert.ok(remaining);
+  assert.equal(remaining.unit_id,f.ua);
+  assert.equal(remaining.unit_number,(await pool.query('SELECT number FROM units WHERE id=$1',[f.ua])).rows[0].number);
  }finally{
   await owner.call('/auth/context','POST',{id:owner.contextId});
   await pool.query('DELETE FROM role_assignments WHERE id=$1',[assignment]);

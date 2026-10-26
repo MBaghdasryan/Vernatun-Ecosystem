@@ -37,3 +37,4 @@
 - [Resident route registration](resident-route-registration.md) — imports and section registries do not prove that web/native renderers mount a feature.
 - [Discussion and agenda lineage](discussion-proposal-lineage.md) — keep request conversion separate from reviewed agenda proposals while preserving source, meeting, vote, and request links.
 - [Expo dev proxy](expo-dev-proxy.md) — outer routing can intercept bare `/api`; a Metro wrapper must preserve Connect's third callback.
+- [ImTun Expo development routing](imtun-expo-dev-routing.md) — override shared production API origins with Replit-managed dev and Expo Go hosts in the local mobile workflow.
