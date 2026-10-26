@@ -14,6 +14,8 @@ function minor(value:string){if(!/^-?\d+(\.\d{1,2})?$/.test(value))throw new Err
 export function businessRowMatchesSearch(row:Row,search:string){return Object.values(row).join(' ').toLowerCase().includes(search.toLowerCase())}
 export function BusinessTable({rows,columns,language,onSelect,initialFilter=location.pathname.endsWith('/defects')?(new URLSearchParams(location.search).get('status')??''):''}:{rows:Row[];columns:[string,string][];language:Language;onSelect?:(r:Row)=>void;initialFilter?:string}){
  const [search,setSearch]=useState(''),[sort,setSort]=useState(columns[0]?.[0]??'id'),[ascending,setAscending]=useState(true),[page,setPage]=useState(0),[filter,setFilter]=useState(initialFilter);
+  const rowsKey=rows.map(r=>String(r.id??'')).join('\u0000');
+  useEffect(()=>{setPage(0)},[rowsKey]);
  const statusOptions=new Set<string>(rows.map(r=>String(r.status??'')).filter(Boolean));
  if(location.pathname.endsWith('/defects'))['assigned','in_progress','review','accepted'].forEach(s=>statusOptions.add(s));
  if(initialFilter)statusOptions.add(initialFilter);
