@@ -18,6 +18,10 @@ const viewingEvents:Record<string,[string,string,string]>={
  viewing_confirmed:['Դիտումը հաստատվեց','Просмотр подтверждён','Viewing confirmed'],
  viewing_declined:['Դիտումը մերժվեց','Просмотр отклонён','Viewing declined'],
  viewing_cancelled:['Դիտումը չեղարկվեց','Просмотр отменён','Viewing cancelled'],
+ payer_responsibility_pending:['Ստացվել է վճարողի պատասխանատվության առաջարկ','Получено предложение об ответственности плательщика','Payer responsibility proposed'],
+ payer_responsibility_accepted:['Ընդունվել է վճարողի պատասխանատվության առաջարկը','Предложение об ответственности плательщика принято','Payer responsibility accepted'],
+ payer_responsibility_declined:['Մերժվել է վճարողի պատասխանատվության առաջարկը','Предложение об ответственности плательщика отклонено','Payer responsibility declined'],
+ payer_responsibility_revoked:['Հետ է կանչվել վճարողի պատասխանատվությունը','Ответственность плательщика отозвана','Payer responsibility revoked'],
 };
 export function eventLabel(code:string,cat:Row|undefined,language:Language){
  const known=(cat?.events??[]).find((e:Row)=>e.code===code);

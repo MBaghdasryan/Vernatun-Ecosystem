@@ -18,8 +18,28 @@ notificationCenter.put('/notifications/preferences',async(req,res)=>{const f=pre
  RETURNING email_enabled,in_app_enabled,categories,version`,[req.user!.id,f.email_enabled,f.in_app_enabled,JSON.stringify(f.categories)])).rows[0];
 }))});
 const resources:Record<string,[string,string,string]>={request:['resident_requests','requests','requests'],invoice:['invoices','finance','finance'],payment:['payments','finance','finance'],bank_transaction:['bank_transactions','finance','finance'],meeting:['meetings','community','meetings'],announcement:['announcements','community','announcements'],pass:['visitor_passes','access','passes'],lease:['leases','finance','leases'],support:['support_cases','','support-cases'],onboarding:['onboarding_steps','','onboarding']};
+const payerOwnerEvents=new Set(['payer_responsibility_accepted','payer_responsibility_declined','payer_responsibility_revoked']);
+async function payerResponsibilityTargets(n:any,userId:string,options:Context[]){
+ const d=(await pool.query(`SELECT d.organization_id,d.unit_id,d.owner_assignment_id,d.owner_user_id,d.recipient_id,
+  d.starts_on::text,p.payer_user_id,u.building_id
+  FROM resident_payer_delegations d JOIN payer_assignments p ON p.id=d.payer_assignment_id
+  JOIN units u ON u.id=d.unit_id
+  WHERE d.id=$1 AND d.organization_id=$2`,[n.entity_id,n.organization_id])).rows[0];
+ if(!d)return [];
+ const owner=payerOwnerEvents.has(n.event_code);
+ if(!owner&&n.event_code!=='payer_responsibility_pending')return [];
+ if((owner&&(d.owner_user_id!==userId||d.payer_user_id!==d.owner_user_id))||(!owner&&d.recipient_id!==userId))return [];
+ const recipientEligible=owner?false:Boolean((await pool.query(
+  'SELECT resident_payer_recipient_valid($1,$2,$3,$4::date) AS ok',
+  [d.organization_id,d.unit_id,userId,d.starts_on])).rows[0]?.ok);
+ return options.filter(c=>c.organization_id===d.organization_id&&c.building_id===d.building_id&&
+  c.unit_id===d.unit_id&&
+  (owner?c.id===d.owner_assignment_id&&c.role_key==='unit_owner':
+   recipientEligible&&['renter','family'].includes(c.role_key))).map(c=>({c,view:'preferences'}));
+}
 async function targets(n:any,userId:string,options:Context[]){
  if(n.entity_type==='system')return options.filter(c=>c.organization_id===n.organization_id).map(c=>({c,view:'settings'}));
+ if(n.entity_type==='payer_responsibility')return payerResponsibilityTargets(n,userId,options);
  if(n.entity_type==='resident_conversation'){
   const row=(await pool.query(`SELECT c.id,c.organization_id,c.building_id,c.unit_id,c.owner_user_id AS author_user_id,
    p.owner_user_id AS listing_owner_id,p.unit_id AS listing_unit_id
@@ -76,7 +96,7 @@ notificationCenter.get('/notifications/unread-count',async(req,res)=>{
 notificationCenter.get('/notifications/:id/destination',async(req,res)=>{const entry=(await list(req,uuid.parse(req.params.id)))[0];if(!entry)throw new ApiError(404,'not_found');
  const desired=req.query.contextId?uuid.parse(req.query.contextId):req.session.contextId;
  const target=entry.t.find(x=>x.c.id===desired)??(!req.query.contextId?entry.t[0]:undefined);if(!target)throw new ApiError(403,'forbidden');
- const {c,view}=target,product=c.permissions.includes('requests.own')?'imtun':view==='finance'?'os':c.product;
+ const {c,view}=target,product=view==='preferences'?'imtun':c.permissions.includes('requests.own')?'imtun':view==='finance'?'os':c.product;
  if(!['imtun','hayat','os','console'].includes(product??''))throw new ApiError(403,'forbidden');
   const query=entry.n.entity_type==='request'?`?requestId=${entry.n.entity_id}`:
    entry.n.entity_type==='resident_conversation'?`?recordKind=conversations&recordId=${entry.n.entity_id}`:'';

@@ -6,6 +6,7 @@
 - [Platform completion scope](platform-completion-scope.md) — active completion spec preserves shared architecture; screenshot logos do not override product/user branding.
 - [Subscription rollout](subscription-rollout.md) — restored organizations retain legacy access until a real subscription/policy is explicitly activated.
 - [Email provider boundary](email-provider-boundary.md) — Resend is selected; provider adapters must remain replaceable without rewriting business logic.
+- [Payer responsibility notifications](payer-notification-policy.md) — resolve consent notices by live unit role and delegation, not broad invoice permissions.
 - [Delivery evidence policy](delivery-evidence-policy.md) — acceptance is not delivery; no opens/clicks tracking; Svix verification may return void.
 - [HAYAT offline policy](hayat-offline-policy.md) — local work stays user/context-bound; reconnect never starts submission or grants server access.
 - [Managed runtime ownership](runtime-ownership.md) — artifact-relative commands and one direct process owner prevent orphan listeners during managed restarts.

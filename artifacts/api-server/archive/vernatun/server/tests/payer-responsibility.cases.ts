@@ -33,16 +33,42 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   const workspace=(await f.owner.call('/resident/payer-responsibilities')).data;
   assert.ok(workspace.recipients.some((r:any)=>r.id===f.seed.accounts.family.id));
   const body={payerAssignmentId:payerId,recipientId:f.seed.accounts.family.id,startsOn:next,clientId:randomUUID()};
+  const minute=new Date().getUTCHours()*60+new Date().getUTCMinutes(),clock=(n:number)=>String(Math.floor(((n+1440)%1440)/60)).padStart(2,'0')+':'+String((n+1440)%60).padStart(2,'0');
+  await pool.query(`INSERT INTO notification_preferences(user_id,quiet_enabled,quiet_start,quiet_end,timezone)
+   VALUES($1,true,$2,$3,'UTC') ON CONFLICT(user_id) DO UPDATE SET quiet_enabled=true,quiet_start=$2,quiet_end=$3,timezone='UTC'`,
+   [f.seed.accounts.family.id,clock(minute-30),clock(minute+30)]);
   const proposed=await f.owner.call('/resident/payer-responsibilities','POST',body);
   assert.equal(proposed.status,201,JSON.stringify(proposed.data));
   assert.equal(proposed.data.status,'pending');assert.equal(await effective(next),f.seed.accounts.unit_owner.id);
+  let notice=(await pool.query(`SELECT id,visible_after FROM notifications WHERE user_id=$1 AND entity_type='payer_responsibility'
+   AND entity_id=$2 AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,proposed.data.id])).rows[0];
+  assert.ok(notice);assert.ok(new Date(notice.visible_after).getTime()>Date.now());
+  const emailIntent=(await pool.query('SELECT state,not_before FROM notification_email_outbox WHERE notification_id=$1',[notice.id])).rows[0];
+  assert.equal(emailIntent.state,'pending_domain');assert.equal(new Date(emailIntent.not_before).getTime(),new Date(notice.visible_after).getTime());
+  // The canonical queue defers this event during quiet hours; advance the isolated
+  // test row so the authorized destination can be checked before the window ends.
+  await pool.query('UPDATE notifications SET visible_after=now()-interval \'1 second\' WHERE id=$1',[notice.id]);
+  const visibleNotice=(await f.family.call('/notifications')).data.find((n:any)=>n.id===notice.id);
+  assert.equal(visibleNotice.access_denied,false);assert.equal(visibleNotice.category,'finance');
+  assert.equal(Object.hasOwn(visibleNotice,'entity_id'),false);
+  const destination=await f.family.call('/notifications/'+notice.id+'/destination');
+  assert.equal(destination.status,200);assert.equal(destination.data.destination,'/imtun/preferences');
   const replay=await f.owner.call('/resident/payer-responsibilities','POST',body);assert.equal(replay.data.id,proposed.data.id);
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2
+   AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,proposed.data.id])).rows[0].n,1);
   assert.equal((await f.owner.call('/resident/payer-responsibilities','POST',{...body,recipientId:randomUUID()})).status,409);
   assert.equal((await review(f.owner,proposed.data,'accept')).status,403);
   assert.equal((await f.family.call('/resident/payer-responsibilities','POST',{...body,clientId:randomUUID()})).status,403);
   assert.equal((await f.owner.call('/resident/payer-responsibilities?buildingId='+randomUUID())).status,403);
   const consent=await review(f.family,proposed.data,'accept');assert.equal(consent.status,200,JSON.stringify(consent.data));accepted=consent.data;
   assert.equal((await review(f.family,proposed.data,'accept')).data.version,accepted.version);
+  notice=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_type='payer_responsibility'
+   AND entity_id=$2 AND event_code='payer_responsibility_accepted'`,[f.seed.accounts.unit_owner.id,accepted.id])).rows[0];
+  assert.ok(notice);
+  const ownerDestination=await f.owner.call('/notifications/'+notice.id+'/destination');
+  assert.equal(ownerDestination.status,200);assert.equal(ownerDestination.data.destination,'/imtun/preferences');
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2
+   AND event_code='payer_responsibility_accepted'`,[f.seed.accounts.unit_owner.id,accepted.id])).rows[0].n,1);
   assert.equal(await effective(next),f.seed.accounts.family.id);
   const invoice=await calculate(next);assert.equal(invoice.status,201,JSON.stringify(invoice.data));
   assert.equal(invoice.data.payer_user_id,f.seed.accounts.family.id);
@@ -53,12 +79,37 @@ export function registerPayerResponsibilityTests(get:()=>Fixture){
   assert.ok((await f.family.call('/resident/payer-responsibilities')).data.invoices.some((r:any)=>r.id===invoice.data.id));
   assert.ok(!(await f.owner.call('/resident/payer-responsibilities')).data.invoices.some((r:any)=>r.id===invoice.data.id));
   const revoked=await review(f.owner,accepted,'revoke');assert.equal(revoked.status,200);
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2
+   AND event_code='payer_responsibility_revoked'`,[f.seed.accounts.unit_owner.id,accepted.id])).rows[0].n,1);
   assert.equal(await effective(month(1)),f.seed.accounts.unit_owner.id);
   const unchanged=(await pool.query('SELECT payer_user_id FROM payer_assignments WHERE id=$1',[payerId])).rows[0];
   assert.equal(unchanged.payer_user_id,f.seed.accounts.unit_owner.id);
   const history=(await pool.query('SELECT payer_user_id FROM invoices WHERE id=ANY($1::uuid[]) ORDER BY id',[[before.data.id,invoice.data.id]])).rows;
   assert.deepEqual(history.map(r=>r.payer_user_id).sort(),[f.seed.accounts.unit_owner.id,f.seed.accounts.family.id].sort());
   assert.equal((await create(next)).status,409); // includes already-created draft/published charges
+  await pool.query(`UPDATE notification_preferences SET in_app_enabled=true,email_enabled=true,quiet_enabled=false,
+   categories=$2::jsonb WHERE user_id=$1`,
+   [f.seed.accounts.family.id,JSON.stringify({finance:{in_app:false,email:false}})]);
+  const declinedOffer=await create(month(6),month(6));assert.equal(declinedOffer.status,201,JSON.stringify(declinedOffer.data));
+  const muted=(await pool.query(`SELECT id,in_app_enabled FROM notifications WHERE user_id=$1 AND entity_id=$2
+   AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,declinedOffer.data.id])).rows[0];
+  assert.equal(muted.in_app_enabled,false);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM notification_email_outbox WHERE notification_id=$1',[muted.id])).rows[0].n,0);
+  const declined=await review(f.family,declinedOffer.data,'decline');assert.equal(declined.status,200);
+  await pool.query(`UPDATE notification_preferences SET categories='{}'::jsonb WHERE user_id=$1`,[f.seed.accounts.family.id]);
+  assert.equal((await review(f.family,declinedOffer.data,'decline')).data.version,declined.data.version);
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND entity_id=$2
+   AND event_code='payer_responsibility_declined'`,[f.seed.accounts.unit_owner.id,declinedOffer.data.id])).rows[0].n,1);
+  const familyAssignment=(await pool.query(`SELECT id FROM role_assignments WHERE user_id=$1 AND unit_id=$2
+   AND role_key='family' AND active ORDER BY id LIMIT 1`,[f.seed.accounts.family.id,unitId])).rows[0];
+  await pool.query('UPDATE role_assignments SET active=false WHERE id=$1',[familyAssignment.id]);
+  try{
+   const pendingNoticeId=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_id=$2
+    AND event_code='payer_responsibility_pending'`,[f.seed.accounts.family.id,proposed.data.id])).rows[0].id;
+   assert.equal((await f.family.call('/notifications/'+pendingNoticeId+'/destination')).status,403);
+  }finally{
+   await pool.query('UPDATE role_assignments SET active=true WHERE id=$1',[familyAssignment.id]);
+  }
  });
  test('payer consent invalidates batch previews, respects eligibility and blocks already-created future bills',async()=>{
   const f=get(),p=month(2),pending=await create(p,p);assert.equal(pending.status,201,JSON.stringify(pending.data));

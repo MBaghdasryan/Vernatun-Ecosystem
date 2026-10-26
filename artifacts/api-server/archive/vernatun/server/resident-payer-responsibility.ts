@@ -78,12 +78,16 @@ residentPayerResponsibility.get('/payer-responsibilities',async(req,res)=>{
  AND resident_payer_recipient_valid($1,$2,u.id,$4::date) ORDER BY u.name,u.id`,
  [s.organizationId,s.unitId,user,dates.next])).rows:[];
  const delegations=(await pool.query(`SELECT ${columns},
- (d.recipient_id=$3 AND d.status='pending') AS "canAccept",
- ((d.owner_user_id=$3 OR d.recipient_id=$3) AND d.status IN('pending','accepted')) AS "canRevoke"
+ (d.recipient_id=$3 AND $4 IN('renter','family') AND d.status='pending') AS "canAccept",
+ ((d.owner_user_id=$3 AND $4='unit_owner' AND d.owner_assignment_id=$5 AND p.payer_user_id=d.owner_user_id OR
+   d.recipient_id=$3 AND $4 IN('renter','family')) AND d.status IN('pending','accepted')) AS "canRevoke"
  FROM resident_payer_delegations d JOIN payer_assignments p ON p.id=d.payer_assignment_id
  JOIN services s ON s.id=p.service_id JOIN users ou ON ou.id=d.owner_user_id JOIN users ru ON ru.id=d.recipient_id
- WHERE d.organization_id=$1 AND d.unit_id=$2 AND(d.owner_user_id=$3 OR d.recipient_id=$3)
- ORDER BY d.created_at DESC,d.id LIMIT 100`,[s.organizationId,s.unitId,user])).rows;
+ WHERE d.organization_id=$1 AND d.unit_id=$2 AND(
+  d.owner_user_id=$3 AND $4='unit_owner' AND d.owner_assignment_id=$5 AND p.payer_user_id=d.owner_user_id OR
+  d.recipient_id=$3 AND $4 IN('renter','family')
+  AND resident_payer_recipient_valid($1,$2,$3,d.starts_on))
+ ORDER BY d.created_at DESC,d.id LIMIT 100`,[s.organizationId,s.unitId,user,s.c.role_key,s.c.id])).rows;
  // This read-only view does not grant billing.own, expose anyone else's bills,
  // or create a new checkout. Existing provider authorization stays untouched.
  const invoices=(await pool.query(`SELECT id,period::text,amount_minor::text AS "amountMinor",currency,status
@@ -112,6 +116,8 @@ residentPayerResponsibility.post('/payer-responsibilities',async(req,res)=>{
   owner_assignment_id,owner_user_id,recipient_id,starts_on,ends_on,client_id,request)
   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,status,version`,
   [s.organizationId,s.unitId,p.id,s.c.id,user,b.recipientId,b.startsOn,b.endsOn??null,b.clientId,JSON.stringify(b)])).rows[0];
+  await db.query("SELECT emit_notification($1,$2,'payer_responsibility_pending','payer_responsibility',$3,$4)",
+   [b.recipientId,s.organizationId,r.id,'payer_responsibility:pending:'+r.id]);
   await record(db,req,s.c,'payer_responsibility.propose','payer_responsibility',r.id,{serviceId:p.service_id,startsOn:b.startsOn,endsOn:b.endsOn??null});return r;
  }));
 });
@@ -127,23 +133,34 @@ residentPayerResponsibility.put('/payer-responsibilities/:id',async(req,res)=>{
   const d=(await db.query('SELECT *,starts_on::text,ends_on::text FROM resident_payer_delegations WHERE id=$1 FOR UPDATE',[id])).rows[0];
   if(b.action!=='revoke'&&d.recipient_id!==user)throw new ApiError(403,'recipient_required');
   const target={accept:'accepted',decline:'declined',revoke:'revoked'}[b.action];
-  if(d.status===target)return {id:d.id,status:d.status,version:d.version};
-  if(d.version!==b.version)throw new ApiError(409,'stale_version');
-  if(b.action==='revoke'?!['pending','accepted'].includes(d.status):d.status!=='pending')throw new ApiError(409,'invalid_transition');
-  if(b.action==='accept'){
-   await assertFuture(db,s,d.starts_on);await allowed(db,s,p.service_id);await recipient(db,s,user,d.starts_on);
+  if((b.action==='accept'||b.action==='decline')&&!['renter','family'].includes(s.c.role_key))throw new ApiError(403,'recipient_required');
+  if(b.action==='revoke'&&d.recipient_id===user&&!['renter','family'].includes(s.c.role_key))throw new ApiError(403,'recipient_required');
+  if((b.action==='accept'||b.action==='decline'||b.action==='revoke'&&d.recipient_id===user))
+   await recipient(db,s,user,d.starts_on);
+  if((b.action==='accept'||b.action==='revoke'&&d.owner_user_id===user)){
+   if(b.action==='revoke'&&(s.c.role_key!=='unit_owner'||s.c.id!==d.owner_assignment_id))throw new ApiError(403,'owner_required');
+   if(b.action==='accept')await assertFuture(db,s,d.starts_on);
    const owner=(await db.query(`SELECT a.id FROM role_assignments a JOIN users u ON u.id=a.user_id
     JOIN memberships m ON m.user_id=u.id AND m.organization_id=a.organization_id
     WHERE a.id=$1 AND a.user_id=$2 AND a.organization_id=$3 AND a.unit_id=$4 AND a.role_key='unit_owner'
     AND a.active AND m.active AND NOT u.blocked AND a.starts_at<=now() AND(a.expires_at IS NULL OR a.expires_at>now())`,
     [d.owner_assignment_id,d.owner_user_id,s.organizationId,s.unitId])).rowCount;
    if(!owner||p.payer_user_id!==d.owner_user_id)throw new ApiError(409,'owner_not_eligible');
+  }
+  if(d.status===target)return {id:d.id,status:d.status,version:d.version};
+  if(d.version!==b.version)throw new ApiError(409,'stale_version');
+  if(b.action==='revoke'?!['pending','accepted'].includes(d.status):d.status!=='pending')throw new ApiError(409,'invalid_transition');
+  if(b.action==='accept'){
+   await allowed(db,s,p.service_id);
    await unbilled(db,p.id,d.starts_on,d.ends_on);
   }
   const r=(await db.query(`UPDATE resident_payer_delegations SET status=$2,version=version+1,
   accepted_at=CASE WHEN $2='accepted' THEN now() ELSE accepted_at END,
   closed_at=CASE WHEN $2 IN('revoked','declined') THEN now() ELSE NULL END
   WHERE id=$1 RETURNING id,status,version`,[id,target])).rows[0];
+  const eventCode={accept:'payer_responsibility_accepted',decline:'payer_responsibility_declined',revoke:'payer_responsibility_revoked'}[b.action];
+  await db.query('SELECT emit_notification($1,$2,$3,$4,$5,$6)',
+   [d.owner_user_id,s.organizationId,eventCode,'payer_responsibility',id,'payer_responsibility:'+b.action+':'+id]);
   await record(db,req,s.c,'payer_responsibility.'+b.action,'payer_responsibility',id);return r;
  }));
 });
