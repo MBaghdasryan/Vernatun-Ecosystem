@@ -28,7 +28,7 @@ const accounts=[
  {role:'support',email:`support-${suffix}@example.test`,name:'Test Support'},
 ];
 const queryUsers=async emails=>(await client.query(
- 'SELECT id,email,password_hash,account_status FROM users WHERE lower(email)=ANY($1::text[]) ORDER BY lower(email)',
+  'SELECT id,email,password_hash,account_status,must_change_password FROM users WHERE lower(email)=ANY($1::text[]) ORDER BY lower(email)',
  [emails.map(email=>email.toLowerCase())],
 )).rows;
 const makePath=name=>join(directory,`${name}.json`);
@@ -76,6 +76,7 @@ try{
    const users=await queryUsers(accounts.map(account=>account.email));
    assert.equal(users.length,2);
    assert.deepEqual(users.map(user=>user.account_status),['active','active']);
+    assert.deepEqual(users.map(user=>user.must_change_password),[true,true]);
    for(const user of users){
     const credential=file.accounts.find(account=>account.email===user.email);
     assert.ok(credential?.password);
@@ -98,6 +99,28 @@ try{
      [admin.id,'test-only-encrypted-secret'],
     );
     try{
+      const pendingChange=await verifyGlobalAccounts({
+       client,accounts,
+       expectedDatabase:identity.database,
+       expectedSchema:identity.schema,
+      });
+      assert.equal(pendingChange.status,'fail');
+      assert.equal(pendingChange.accounts[0].checks.passwordChanged,'fail');
+
+      const replacementPassword=`replacement-${suffix}`;
+      const replacementHash=await bcrypt.hash(replacementPassword,12);
+      const userIds=users.map(user=>user.id);
+      await client.query(
+       'UPDATE users SET password_hash=$1,must_change_password=false WHERE id=ANY($2::uuid[])',
+       [replacementHash,userIds],
+      );
+      await client.query(
+       `INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id)
+        SELECT id,'auth.password.first_login.change','user',id::text
+        FROM users WHERE id=ANY($1::uuid[])`,
+       [userIds],
+      );
+
      const verification=await verifyGlobalAccounts({
       client,accounts,
       expectedDatabase:identity.database,

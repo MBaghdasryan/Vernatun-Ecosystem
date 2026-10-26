@@ -48,7 +48,31 @@ const ACCOUNT_CHECK_SQL = `
       FROM users u
       JOIN mfa_credentials m ON m.user_id = u.id
       WHERE lower(u.email) = t.email
-    ), false) AS mfa_enabled
+    ), false) AS mfa_enabled,
+    EXISTS (
+      SELECT 1
+      FROM users u
+      WHERE lower(u.email) = t.email
+        AND u.must_change_password = false
+        AND EXISTS (
+          SELECT 1
+          FROM audit_events provisioned
+          JOIN audit_events changed
+            ON changed.actor_user_id = u.id
+           AND changed.entity_type = 'user'
+           AND changed.entity_id = u.id::text
+           AND changed.action IN (
+             'auth.password.first_login.change',
+             'auth.password.change',
+             'auth.password.reset'
+           )
+           AND changed.created_at >= provisioned.created_at
+          WHERE provisioned.action = 'auth.global_account.provision'
+            AND provisioned.entity_type = 'user'
+            AND provisioned.entity_id = u.id::text
+            AND provisioned.details->>'role' = t.role_key
+        )
+    ) AS password_changed
   FROM targets t
   ORDER BY t.role_key
 `;
@@ -95,6 +119,7 @@ function reportFromRows(rows) {
       account: passFail(found),
       active: passFail(found && row.active === true),
       globalRole: passFail(found && Number(row.global_role_count) === 1),
+      passwordChanged: passFail(found && row.password_changed === true),
     };
     if (role === 'platform_admin') checks.mfa = passFail(found && row.mfa_enabled === true);
 

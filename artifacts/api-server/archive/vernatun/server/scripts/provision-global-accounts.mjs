@@ -158,8 +158,8 @@ export async function provisionGlobalAccounts({
       const password = randomBytes(32).toString('base64url');
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await client.query(
-        `INSERT INTO users(email,name,password_hash,account_status)
-         VALUES($1,$2,$3,'active') RETURNING id`,
+        `INSERT INTO users(email,name,password_hash,account_status,must_change_password)
+         VALUES($1,$2,$3,'active',true) RETURNING id`,
         [account.email, account.name, passwordHash],
       );
       const userId = user.rows[0]?.id;

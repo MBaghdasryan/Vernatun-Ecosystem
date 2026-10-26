@@ -9,7 +9,12 @@ const supportEmail = 'private-support@example.test';
 const databaseUrl = 'postgresql://private-user:private-db-password@127.0.0.1/vernatun_test';
 const scriptPath = fileURLToPath(new URL('../scripts/verify-global-accounts.mjs', import.meta.url));
 
-function fixtureRows({ adminMfa = true, adminActive = true } = {}) {
+function fixtureRows({
+  adminMfa = true,
+  adminActive = true,
+  adminPasswordChanged = true,
+  supportPasswordChanged = true,
+} = {}) {
   return [
     {
       role_key: 'platform_admin',
@@ -17,6 +22,7 @@ function fixtureRows({ adminMfa = true, adminActive = true } = {}) {
       active: adminActive,
       global_role_count: 1,
       mfa_enabled: adminMfa,
+      password_changed: adminPasswordChanged,
     },
     {
       role_key: 'support',
@@ -24,6 +30,7 @@ function fixtureRows({ adminMfa = true, adminActive = true } = {}) {
       active: true,
       global_role_count: 1,
       mfa_enabled: false,
+      password_changed: supportPasswordChanged,
     },
   ];
 }
@@ -59,12 +66,12 @@ test('verification is read-only and reports expected roles without account or cr
       {
         role: 'platform_admin',
         status: 'pass',
-        checks: { account: 'pass', active: 'pass', globalRole: 'pass', mfa: 'pass' },
+        checks: { account: 'pass', active: 'pass', globalRole: 'pass', passwordChanged: 'pass', mfa: 'pass' },
       },
       {
         role: 'support',
         status: 'pass',
-        checks: { account: 'pass', active: 'pass', globalRole: 'pass' },
+        checks: { account: 'pass', active: 'pass', globalRole: 'pass', passwordChanged: 'pass' },
       },
     ],
   });
@@ -137,6 +144,20 @@ test('admin MFA or inactive account makes the verification fail', async () => {
   });
   assert.equal(ambiguousAdmin.accounts[0].checks.account, 'fail');
   assert.equal(ambiguousAdmin.status, 'fail');
+});
+
+test('a temporary password cannot pass verification before it is changed', async () => {
+  const report = await verifyGlobalAccounts({
+    client: fakeClient(fixtureRows({ adminPasswordChanged: false, supportPasswordChanged: false })),
+    accounts: [
+      { role: 'platform_admin', email: adminEmail },
+      { role: 'support', email: supportEmail },
+    ],
+  });
+
+  assert.equal(report.status, 'fail');
+  assert.equal(report.accounts[0].checks.passwordChanged, 'fail');
+  assert.equal(report.accounts[1].checks.passwordChanged, 'fail');
 });
 
 test('production verification guard fails without echoing addresses or database credentials', () => {
