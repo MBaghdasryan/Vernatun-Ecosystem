@@ -11,7 +11,8 @@
     "check:android-bundle": "node scripts/check-android-bundle.mjs",
     "test:dev-routing": "node --test scripts/dev-routing.test.cjs",
     "test:dev-proxy": "node --test scripts/dev-api-proxy.test.cjs",
-    "test:private-documents": "node --test scripts/private-document.test.cjs"
+    "test:private-documents": "node --test scripts/private-document.test.cjs",
+    "test:withdrawn-listing-recovery": "node --test scripts/withdrawn-listing-recovery.test.cjs"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
