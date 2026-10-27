@@ -167,6 +167,31 @@ async function fillForm(harness) {
 }
 
 for (const platform of ['ios', 'android']) {
+  test(`${platform}: cancelling the viewing confirmation sends nothing and keeps the active form usable`, async () => {
+    const h = createHarness(platform);
+    await fillForm(h);
+
+    h.find('submit-viewing-request').props.onPress();
+    const cancel = h.alert[2].find(button => button.text === 'No');
+    assert.ok(cancel, 'The native confirmation should offer a cancel action');
+    assert.equal(cancel.style, 'cancel', 'The No action should use native cancel behavior');
+    await cancel.onPress?.();
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(h.createCalls, 0, 'Cancelling must not send a viewing request');
+    h.render();
+    assert.ok(h.find('viewing-date-time'), 'The active listing form should remain available');
+    assert.equal(h.find('viewing-date-time').props.value, '2035-10-27 12:00');
+    assert.equal(h.find('viewing-owner-consent').props.value, true);
+
+    h.find('submit-viewing-request').props.onPress();
+    const confirm = h.alert[2].find(button => button.text === 'Request a viewing');
+    assert.ok(confirm, 'The renter should be able to reopen the confirmation');
+    await confirm.onPress();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.createCalls, 1, 'The active form should still submit after cancelling once');
+  });
+
   test(`${platform}: renter sees the withdrawn-listing explanation and can return to current results`, async () => {
     const h = createHarness(platform);
     await fillForm(h);
