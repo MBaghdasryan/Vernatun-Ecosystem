@@ -35,7 +35,7 @@ export default function Market({ d, l }: { d: ResidentContinuity; l: Language })
       >
         <Feather name="map" size={25} color={palette.mutedForeground} />
         <Text style={{ color: palette.foreground, fontWeight: '700', textAlign: 'center' }}>{tt(l, 'Քարտեզը կհայտնվի այստեղ', 'Здесь появится карта объявлений', 'The listing map will appear here')}</Text>
-        <Text style={{ color: palette.mutedForeground, textAlign: 'center', fontSize: 12 }}>{tt(l, 'Քարտեզի մատակարարը դեռ միացված չէ։ Մինչ այդ հայտարարության հասցեն կարող եք բացել արտաքին քարտեզում։', 'Картографический провайдер пока не подключён. Пока можно открыть адрес объявления во внешнем приложении карт.', 'A map provider is not connected yet. You can still open a listing address in the external maps app.')}</Text>
+        <Text style={{ color: palette.mutedForeground, textAlign: 'center', fontSize: 12 }}>{tt(l, 'Ընտրված է MapLibre և MapTiler, բայց քարտեզը դեռ միացված չէ։ Քարտեզում կհայտնվեն միայն ստուգված տեղադրությունները։ Մինչ այդ հայտարարության հասցեն կարող եք բացել արտաքին քարտեզում։', 'Выбраны MapLibre и MapTiler, но карта ещё не подключена. На карте будут показаны только проверенные местоположения. Пока адрес объявления можно открыть во внешнем приложении карт.', 'MapLibre and MapTiler are selected, but the map is not configured yet. Only verified locations will appear on the map. For now, you can open a listing address in an external maps app.')}</Text>
       </View>
     </Card>
     <Card><Text style={{ color: palette.foreground, fontWeight: '800', fontSize: 16 }}>{tt(l, 'Պահված որոնումներ (անձնական)', 'Сохранённые поиски (личные)', 'Saved searches (private)')}</Text>

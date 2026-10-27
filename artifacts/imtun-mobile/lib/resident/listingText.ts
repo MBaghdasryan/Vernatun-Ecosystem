@@ -29,6 +29,12 @@ export const minorToMajor=(v:unknown)=>{const s=String(v??'');if(!/^\d+$/.test(s
 export const majorToMinor=(s:string):string|null=>{const m=/^(\d{1,12})(?:[.,](\d{1,2}))?$/.exec(s.trim());return m?(BigInt(m[1])*100n+BigInt((m[2]??'').padEnd(2,'0')||'0')).toString():null};
 export const optInt=(s:string,min:number,max:number):number|undefined|null=>{if(!s.trim())return undefined;const n=Number(s);return Number.isInteger(n)&&n>=min&&n<=max?n:null};
 export const optNum=(s:string,min:number,max:number):number|undefined|null=>{if(!s.trim())return undefined;const n=Number(s.replace(',','.'));return Number.isFinite(n)&&n>=min&&n<=max?n:null};
+export const verifiedListingCoordinates=(d:Record<string,unknown>):{latitude:number;longitude:number}|null=>{
+ if(d.locationVerificationStatus!=='verified')return null;
+ const {latitude,longitude}=d;
+ if(typeof latitude!=='number'||typeof longitude!=='number'||!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)return null;
+ return {latitude,longitude};
+};
 export const fmtView=(d:Record<string,unknown>,l:Language)=>d.viewingAt?L(l,LT.viewing)+': '+new Date(String(d.viewingAt)).toLocaleString(l)+(d.viewingStatus?' · '+L(l,LT.vs[String(d.viewingStatus)]??LT.viewing):''):'';
 export const CURRENCIES=['AMD','RUB','USD'];
 export const listingSummary=(d:Record<string,unknown>,l:Language)=>[
