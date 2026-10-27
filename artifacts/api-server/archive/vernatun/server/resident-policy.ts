@@ -109,6 +109,11 @@ export function actionsFor(row:any,s:ResidentScope,userId:string){
  if(kind==='conversations'&&!s.administrative)a.push('read');
  return a;
 }
+export function validListingCoordinates(data:any):data is {latitude:number;longitude:number}{
+ return typeof data?.latitude==='number'&&typeof data?.longitude==='number'&&
+  Number.isFinite(data.latitude)&&Number.isFinite(data.longitude)&&
+  Math.abs(data.latitude)<=90&&Math.abs(data.longitude)<=180;
+}
 // Match governance's draft visibility boundary in every record serializer,
 // including lists and responses to unrelated resident actions.
 export const publishedProposalSql=`EXISTS(SELECT 1 FROM agenda_items pa JOIN meetings pm ON pm.id=pa.meeting_id
@@ -116,6 +121,14 @@ export const publishedProposalSql=`EXISTS(SELECT 1 FROM agenda_items pa JOIN mee
  AND pm.building_id=r.building_id AND pm.mode='weighted' AND pm.was_published) AS proposal_visible`;
 export function publicRecord(row:any,s:ResidentScope,userId:string){
  const {pushToken:_,...data}=row.data??{};
+ const own=row.owner_user_id===userId;
+ if(row.kind==='listings'){
+  const storedStatus=['pending','verified','rejected'].includes(row.location_verification_status)
+   ?row.location_verification_status:'pending';
+  const verified=storedStatus==='verified'&&validListingCoordinates(data);
+  data.locationVerificationStatus=verified?'verified':storedStatus==='rejected'?'rejected':'pending';
+  if(!s.administrative&&!own&&!verified){delete data.latitude;delete data.longitude;}
+ }
  // Idempotency inputs belong to staff, not to the public discussion payload.
  for(const k of ['requestConversion','proposalConversion']){
   if(data[k])data[k]={id:data[k].id,...(data[k].meetingId?{meetingId:data[k].meetingId}:{})};
@@ -124,7 +137,7 @@ export function publicRecord(row:any,s:ResidentScope,userId:string){
   (!s.c.permissions.includes('meetings.manage')&&!row.proposal_visible))delete data.proposalConversion;
  if(row.kind==='mobile-devices')data.pushRegistered=!!row.data?.pushToken;
  return {id:row.id,kind:row.kind,title:row.title,body:row.body,status:row.status,version:row.version,createdAt:new Date(row.created_at).toISOString(),
-  own:row.owner_user_id===userId,data,actions:actionsFor(row,s,userId),linkedRequestId:row.linked_request_id??null,
+  own,data,actions:actionsFor(row,s,userId),linkedRequestId:row.linked_request_id??null,
   accepted:row.accepted??false,saved:row.saved??false,supported:row.supported??false,supportCount:Number(row.support_count??0),
   ...(row.kind==='listings'?{photos:row.photos??[]}: {})};
 }

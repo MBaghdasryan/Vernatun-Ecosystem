@@ -103,7 +103,7 @@ export function registerResidentContinuityTests(get:()=>Fixture){
   const filtered=await owner.call('/resident/records/listings?search=Compare&offerType=sale');assert.equal(filtered.status,200);
   assert.ok(filtered.data.items.some((r:any)=>r.id===ids[0]));assert.ok(!filtered.data.items.some((r:any)=>r.id===ids[1]));
   const compared=await owner.call('/resident/property-comparison?ids='+ids.join(','));assert.equal(compared.status,200);assert.equal(compared.data.length,2);
-  assert.equal(compared.data[0].latitude,40.18);assert.equal(compared.data[0].longitude,44.51);
+  assert.equal(compared.data[0].latitude,null);assert.equal(compared.data[0].longitude,null);
   assert.equal((await owner.call('/resident/records/listings','POST',{title:'Bad location',body:'',saleType:'sale',priceMinor:'100',currency:'AMD',latitude:100})).status,400);
   assert.equal((await owner.call('/resident/property-comparison?ids='+ids[0]+','+randomUUID())).status,404);
   assert.ok(!(await family.call('/resident/continuity')).data.savedSearches.some((r:any)=>r.id===saved.data.id));

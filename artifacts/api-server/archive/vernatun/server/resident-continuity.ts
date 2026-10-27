@@ -6,7 +6,7 @@ import {config} from './config.js';
 import {ApiError,requireAuth} from './access.js';
 import {transaction,record} from './operations.js';
 import {assertEmailConfigured,deliverEmail} from './email.js';
-import {enabled,writable,readRecord} from './resident-policy.js';
+import {enabled,writable,readRecord,validListingCoordinates} from './resident-policy.js';
 import {ownScope,neighbors,notificationSettings,bookingColumns,chatEnabled} from './resident-continuity-store.js';
 import {residentActivation} from './resident-activation.js';
 
@@ -115,8 +115,9 @@ residentContinuity.get('/property-comparison',async(req,res)=>{
  const address=(await pool.query('SELECT address FROM buildings WHERE id=$1 AND organization_id=$2',[s.buildingId,s.organizationId])).rows[0].address;
  const result=[];for(const id of [...new Set(ids)]){
   const r=await readRecord(pool,s,'listings',id,req.user!.id);
-  result.push({id:r.id,title:r.title,description:r.body,priceMinor:r.data.priceMinor??null,currency:r.data.currency??null,address,
-   latitude:typeof r.data.latitude==='number'?r.data.latitude:null,longitude:typeof r.data.longitude==='number'?r.data.longitude:null});
+  const location= r.location_verification_status==='verified'&&validListingCoordinates(r.data)
+   ?{latitude:r.data.latitude,longitude:r.data.longitude}:{latitude:null,longitude:null};
+  result.push({id:r.id,title:r.title,description:r.body,priceMinor:r.data.priceMinor??null,currency:r.data.currency??null,address,...location});
  }res.json(result);
 });
 residentContinuity.post('/platform-tickets',async(req,res)=>{

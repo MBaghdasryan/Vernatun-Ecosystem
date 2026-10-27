@@ -7,7 +7,7 @@ import {idempotent,record,transaction} from './operations.js';
 import {prepareOperationalRequest,commitPreparedRequest,requestHistoryWithContext} from './core-operation-store.js';
 import {activeLeasePredicate} from './lease-policy.js';
 import {notifyResidentViewing} from './resident-viewing-notifications.js';
-import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,publishedProposalSql,type ResidentKind} from './resident-policy.js';
+import {actionsFor,adminOnlyKinds,assertEnabled,payloadSchemas,publicRecord,readRecord,residentKinds,residentScope,writable,publishedProposalSql,validListingCoordinates,type ResidentKind} from './resident-policy.js';
 
 export const residentRecords=Router();
 residentRecords.use(requireAuth);
@@ -241,6 +241,29 @@ residentRecords.post('/records/:kind',async(req,res)=>{
  res.status(201).json(publicRecord(created,s,req.user!.id));
 });
 
+residentRecords.put('/records/listings/:id/location-review',async(req,res)=>{
+ const s=await residentScope(req);assertEnabled(s,'listings');
+ if(!s.administrative)throw new ApiError(403,'forbidden');
+ const listingId=id.parse(req.params.id),b=z.object({
+  decision:z.enum(['verified','rejected']),version:z.number().int().positive(),
+  note:z.string().trim().max(2000).optional(),
+ }).strict().parse(req.body);
+ if(b.decision==='rejected'&&!b.note)throw new ApiError(400,'reason_required');
+ res.json(await transaction(async db=>{
+  const row=await readRecord(db,s,'listings',listingId,req.user!.id,true);
+  if(row.version!==b.version)throw new ApiError(409,'stale_version');
+  if(b.decision==='verified'&&!validListingCoordinates(row.data))throw new ApiError(409,'invalid_location');
+  await db.query(`UPDATE resident_product_records SET location_verification_status=$2,
+   location_reviewed_at=now(),location_reviewed_by=$3,location_review_note=$4,
+   version=version+1,updated_at=now() WHERE id=$1`,
+   [row.id,b.decision,req.user!.id,b.note??'']);
+  await record(db,req,{...s.c,organization_id:s.organizationId},'resident.listings.location_review',
+   'resident_record',row.id,{decision:b.decision,recordVersion:row.version});
+  const next=await readRecord(db,s,'listings',row.id,req.user!.id);
+  return publicRecord(next,s,req.user!.id);
+ }));
+});
+
 residentRecords.patch('/records/:kind/:id',async(req,res)=>{
  const s=await residentScope(req),kind=residentKinds.parse(req.params.kind);assertEnabled(s,kind);writable(s);
  if(kind==='directory')throw new ApiError(405,'method_not_allowed');
@@ -259,8 +282,16 @@ residentRecords.patch('/records/:kind/:id',async(req,res)=>{
    await record(db,req,{...s.c,organization_id:s.organizationId},'resident.agreement.version','resident_record',next.id,{previousId:row.id});
    return publicRecord(next,s,req.user!.id);
   }
-  const next=(await db.query('UPDATE resident_product_records SET title=$2,body=$3,data=$4,version=version+1,updated_at=now() WHERE id=$1 RETURNING *',
-   [row.id,title,body,JSON.stringify(data)])).rows[0];
+  const priorListingData=row.data as Record<string,unknown>,nextListingData=data as Record<string,unknown>;
+  const coordinatesChanged=kind==='listings'&&
+   (priorListingData.latitude!==nextListingData.latitude||priorListingData.longitude!==nextListingData.longitude);
+  const next=(await db.query(`UPDATE resident_product_records SET title=$2,body=$3,data=$4,
+   location_verification_status=CASE WHEN $5 THEN 'pending' ELSE location_verification_status END,
+   location_reviewed_by=CASE WHEN $5 THEN NULL ELSE location_reviewed_by END,
+   location_reviewed_at=CASE WHEN $5 THEN NULL ELSE location_reviewed_at END,
+   location_review_note=CASE WHEN $5 THEN '' ELSE location_review_note END,
+   version=version+1,updated_at=now() WHERE id=$1 RETURNING *`,
+   [row.id,title,body,JSON.stringify(data),coordinatesChanged])).rows[0];
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.'+kind+'.update','resident_record',row.id);
   return publicRecord(next,s,req.user!.id);
  }));

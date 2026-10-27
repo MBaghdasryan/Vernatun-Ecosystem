@@ -249,6 +249,67 @@ test('marketplace requires explicit owner draft, submission and staff approval',
  assert.equal((await family.call('/resident/records/listings')).data.items.length,1);
  assert.equal((await family.call('/resident/records/listings/'+listing.data.id+'/messages')).status,405);
 });
+test('listing locations are server-reviewed and only verified coordinates reach residents',async()=>{
+ const path='/resident/records/listings';
+ const payload={title:'Verified location listing',body:'Contact through this app',saleType:'sale',priceMinor:'12000000',currency:'AMD',latitude:40.18,longitude:44.51};
+ assert.equal((await owner.call(path,'POST',{...payload,locationVerificationStatus:'verified'})).status,400);
+ const created=await owner.call(path,'POST',payload);assert.equal(created.status,201,JSON.stringify(created.data));
+ assert.equal(created.data.data.locationVerificationStatus,'pending');
+ assert.equal((await owner.call(path+'/'+created.data.id,'PATCH',{...payload,version:1,locationVerificationStatus:'verified'})).status,400);
+ const submitted=await owner.call(path+'/'+created.data.id+'/actions','POST',{action:'submit',version:1});
+ assert.equal(submitted.status,200,JSON.stringify(submitted.data));
+ const active=await admin.call(path+'/'+created.data.id+'/actions'+query,'POST',{action:'approve',version:2});
+ assert.equal(active.status,200,JSON.stringify(active.data));
+ const pendingList=(await family.call(path)).data.items.find((r:any)=>r.id===created.data.id);
+ assert.equal(pendingList.data.locationVerificationStatus,'pending');
+ assert.equal(pendingList.data.latitude,undefined);assert.equal(pendingList.data.longitude,undefined);
+ assert.equal((await family.call(path+'/'+created.data.id+'/location-review','PUT',{decision:'verified',version:3})).status,403);
+ const verified=await admin.call(path+'/'+created.data.id+'/location-review'+query,'PUT',{decision:'verified',version:3});
+ assert.equal(verified.status,200,JSON.stringify(verified.data));
+ assert.equal(verified.data.data.locationVerificationStatus,'verified');
+ assert.equal(verified.data.data.latitude,payload.latitude);assert.equal(verified.data.data.longitude,payload.longitude);
+ const verifiedState=(await pool.query(`SELECT location_verification_status,location_reviewed_by,location_reviewed_at
+  FROM resident_product_records WHERE id=$1`,[created.data.id])).rows[0];
+ assert.equal(verifiedState.location_verification_status,'verified');
+ assert.equal(verifiedState.location_reviewed_by,seed.accounts.org_admin.id);
+ assert.ok(verifiedState.location_reviewed_at);
+ const visible=(await family.call(path)).data.items.find((r:any)=>r.id===created.data.id);
+ assert.equal(visible.data.locationVerificationStatus,'verified');
+ assert.equal(visible.data.latitude,payload.latitude);assert.equal(visible.data.longitude,payload.longitude);
+ const comparison=await family.call('/resident/property-comparison?ids='+created.data.id);
+ assert.equal(comparison.status,200,JSON.stringify(comparison.data));
+ assert.equal(comparison.data[0].latitude,payload.latitude);assert.equal(comparison.data[0].longitude,payload.longitude);
+
+ const editable=(await owner.call(path,'POST',{...payload,title:'Recheck after editing'})).data;
+ const reviewedDraft=await admin.call(path+'/'+editable.id+'/location-review'+query,'PUT',{decision:'verified',version:1});
+ assert.equal(reviewedDraft.status,200,JSON.stringify(reviewedDraft.data));
+ const changed=await owner.call(path+'/'+editable.id,'PATCH',{...payload,version:2,latitude:40.2});
+ assert.equal(changed.status,200,JSON.stringify(changed.data));
+ assert.equal(changed.data.data.locationVerificationStatus,'pending');
+ assert.equal(changed.data.data.latitude,40.2);
+
+ const malformed=(await owner.call(path,'POST',{...payload,title:'Malformed legacy location'})).data;
+ await pool.query(`UPDATE resident_product_records SET status='active',data=$2
+  WHERE id=$1`,[malformed.id,JSON.stringify({...payload,latitude:91})]);
+ const verifyMalformed=await admin.call(path+'/'+malformed.id+'/location-review'+query,'PUT',{decision:'verified',version:1});
+ assert.equal(verifyMalformed.status,409);assert.equal(verifyMalformed.data.error,'invalid_location');
+ const rejected=await admin.call(path+'/'+malformed.id+'/location-review'+query,'PUT',{decision:'rejected',version:1,note:'Coordinates are outside valid bounds'});
+ assert.equal(rejected.status,200,JSON.stringify(rejected.data));
+ assert.equal(rejected.data.data.locationVerificationStatus,'rejected');
+ const rejectedState=(await pool.query(`SELECT location_verification_status,location_reviewed_by,location_reviewed_at,location_review_note
+  FROM resident_product_records WHERE id=$1`,[malformed.id])).rows[0];
+ assert.equal(rejectedState.location_verification_status,'rejected');
+ assert.equal(rejectedState.location_reviewed_by,seed.accounts.org_admin.id);
+ assert.equal(rejectedState.location_review_note,'Coordinates are outside valid bounds');
+ assert.ok(rejectedState.location_reviewed_at);
+ const hidden=(await family.call(path)).data.items.find((r:any)=>r.id===malformed.id);
+ assert.equal(hidden.data.locationVerificationStatus,'rejected');
+ assert.equal(hidden.data.latitude,undefined);assert.equal(hidden.data.longitude,undefined);
+ const rejectedCompare=await family.call('/resident/property-comparison?ids='+created.data.id+','+malformed.id);
+ const rejectedRow=rejectedCompare.data.find((r:any)=>r.id===malformed.id);
+ assert.equal(rejectedRow.latitude,null);assert.equal(rejectedRow.longitude,null);
+ assert.equal((await dispatcher.call(path+'/'+created.data.id+'/location-review'+query,'PUT',{decision:'rejected',version:4,note:'No access'})).status,403);
+});
 test('listing photos are sanitized, scoped, versioned and immutable after submission',async()=>{
  const payload={title:'Apartment with terrace',body:'Private viewing only',saleType:'sale',priceMinor:'22000000',currency:'USD',area:82.5,rooms:3,floor:4};
  const draft=(await owner.call('/resident/records/listings','POST',payload)).data;
