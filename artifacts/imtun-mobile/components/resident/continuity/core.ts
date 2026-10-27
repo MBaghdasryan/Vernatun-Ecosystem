@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { getResidentContinuity } from '@workspace/api-client-react';
+import { getResidentContinuity, useGetMobileAuthSession } from '@workspace/api-client-react';
 import { L, type Language } from '@/lib/resident/text';
 import { useContextId } from '@/lib/resident/hooks';
 export const tt = (l: Language, hy: string, ru: string, en: string) => L(l, [hy, ru, en]);
 export const contKey = (ctx: string | null) => ['resident-continuity', ctx] as const;
 export function useContinuity() {
   const ctx = useContextId();
-  return useQuery({ queryKey: contKey(ctx), enabled: !!ctx, queryFn: () => getResidentContinuity() });
+  const session = useGetMobileAuthSession();
+  const userId = session.data?.user?.id ?? null;
+  return useQuery({ queryKey: [...contKey(ctx), userId], enabled: !!ctx && !!userId, queryFn: () => getResidentContinuity() });
 }
 export const httpStatus = (e: unknown): number => { const s = typeof e === 'object' && e !== null && 'status' in e ? Number((e as { status: unknown }).status) : NaN; return s; };
 export const fmt = (l: Language, v: string) => new Date(v).toLocaleString(l === 'hy' ? 'hy-AM' : l === 'ru' ? 'ru-RU' : 'en-GB');

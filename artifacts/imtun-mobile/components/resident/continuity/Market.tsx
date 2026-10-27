@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createResidentSavedSearch, deleteResidentSavedSearch, getResidentPropertyComparison, getResidentRecords } from '@workspace/api-client-react';
 import type { ResidentContinuity, ResidentRecord, ResidentSearchInput } from '@workspace/api-client-react';
+import { createResidentSavedSearch, deleteResidentSavedSearch, getResidentPropertyComparison, getResidentRecords, useGetMobileAuthSession } from '@workspace/api-client-react';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import type { Language } from '@/lib/resident/text';
 import { useContextId } from '@/lib/resident/hooks';
@@ -13,16 +13,16 @@ import RecordCard from '../RecordCard';
 import { contKey, tt } from './core';
 type Offer = ResidentSearchInput['offerType'];
 export default function Market({ d, l }: { d: ResidentContinuity; l: Language }) { const palette = useAppPalette();
-  const qc = useQueryClient(); const ctx = useContextId();
+  const qc = useQueryClient(); const ctx = useContextId(); const session = useGetMobileAuthSession(); const userId = session.data?.user?.id ?? null;
   const a = useAction(l, () => {
     void qc.invalidateQueries({ queryKey: contKey(ctx) });
-    void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx] });
+    void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx, userId] });
   });
   const [query, setQuery] = useState(''); const [offer, setOffer] = useState<Offer>('all'); const [name, setName] = useState(''); const [sel, setSel] = useState<string[]>([]); const [go, setGo] = useState(false); const [detailId, setDetailId] = useState<string | null>(null); const [unavailableIds, setUnavailableIds] = useState<string[]>([]); const [resultsVersion, setResultsVersion] = useState(0);
-  const q = useQuery({ queryKey: ['resident-cx-listings', ctx, query, offer, resultsVersion], enabled: d.canMarketplace && !!ctx, queryFn: () => getResidentRecords('listings', { ...(query ? { search: query } : {}), offerType: offer }) });
+  const q = useQuery({ queryKey: ['resident-cx-listings', ctx, userId, query, offer, resultsVersion], enabled: d.canMarketplace && !!ctx && !!userId, queryFn: () => getResidentRecords('listings', { ...(query ? { search: query } : {}), offerType: offer }) });
   const items = useMemo(() => (q.data?.items ?? []).filter(r => !unavailableIds.includes(r.id)), [q.data, unavailableIds]);
   const ids = sel.filter(i => items.some(r => r.id === i)); const idsKey = ids.join(',');
-  const cmp = useQuery({ queryKey: ['resident-cx-compare', ctx, idsKey], enabled: go && ids.length >= 2, queryFn: () => getResidentPropertyComparison({ ids: idsKey }) });
+  const cmp = useQuery({ queryKey: ['resident-cx-compare', ctx, userId, idsKey], enabled: go && !!userId && ids.length >= 2, queryFn: () => getResidentPropertyComparison({ ids: idsKey }) });
   if (!d.canMarketplace) return <Empty text={tt(l, 'Հայտարարությունների տախտակը միացված չէ։', 'Доска объявлений не включена.', 'The marketplace is not enabled.')} />;
   const toggle = (id: string) => { setGo(false); setSel(s => s.includes(id) ? s.filter(x => x !== id) : s.length < 4 ? [...s, id] : s); };
   return <>
@@ -60,13 +60,13 @@ export default function Market({ d, l }: { d: ResidentContinuity; l: Language })
             setDetailId(null);
             setUnavailableIds(ids => ids.includes(r.id) ? ids : [...ids, r.id]);
             setResultsVersion(version => version + 1);
-            qc.setQueriesData<{ items: ResidentRecord[]; hasMore: boolean }>(
-              { queryKey: ['resident-cx-listings', ctx] },
+             qc.setQueriesData<{ items: ResidentRecord[]; hasMore: boolean }>(
+               { queryKey: ['resident-cx-listings', ctx, userId] },
               current => current ? { ...current, items: current.items.filter(listing => listing.id !== r.id) } : current,
             );
-            void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx] });
+             void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx, userId] });
           }} after={() => {
-           void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx] });
+            void qc.invalidateQueries({ queryKey: ['resident-cx-listings', ctx, userId] });
            void qc.invalidateQueries({ queryKey: contKey(ctx) });
          }} />}
        </View>; })}

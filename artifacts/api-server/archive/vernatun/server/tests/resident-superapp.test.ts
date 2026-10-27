@@ -955,6 +955,10 @@ test('owner and renter phones complete the marketplace and discussion journey in
   await renterPage.getByTestId('marketplace-saved-search-name').fill(`${marker} search`);
   await renterPage.getByTestId('marketplace-save-search').click();
   await renterPage.getByText(`${marker} search · ${marker} · all`,{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await renterPage.reload({waitUntil:'domcontentloaded'});
+  await openMarketplace(renterPage,'renter');
+  await renterPage.getByTestId('marketplace-search-query').waitFor({state:'visible',timeout:30_000});
+  await renterPage.getByText(`${marker} search · ${marker} · all`,{exact:true}).waitFor({state:'visible',timeout:30_000});
   const saved=(await mobileRenter.call('/resident/continuity')).data.savedSearches.find((item:any)=>item.name===`${marker} search`);
   assert.ok(saved,'The renter phone must persist its search before reapplying it');
   await renterPage.getByTestId('marketplace-search-query').fill('no matching QA listing');
@@ -1103,11 +1107,22 @@ test('owner and renter phones complete the marketplace and discussion journey in
   await ownerPage.getByTestId(`discussion-lineage-${discussion.id}`).click();
   await ownerPage.getByText('Pending review',{exact:true}).waitFor({state:'visible',timeout:30_000});
   await ownerPage.getByText(`source ${source.id.slice(0,8)}`,{exact:true}).first().waitFor({state:'visible'});
+   await openMarketplace(ownerPage,'owner');
+   await ownerPage.getByTestId('marketplace-search-query').waitFor({state:'visible',timeout:30_000});
+   await ownerPage.getByText('No saved searches',{exact:true}).waitFor({state:'visible',timeout:30_000});
+   await ownerPage.getByTestId('marketplace-search-query').fill(`${marker} owner-only`);
+   await ownerPage.getByTestId('marketplace-saved-search-name').fill(`${marker} owner search`);
+   await ownerPage.getByTestId('marketplace-save-search').click();
+   await ownerPage.getByText(`${marker} owner search · ${marker} owner-only · all`,{exact:true}).waitFor({state:'visible',timeout:30_000});
+   await ownerPage.reload({waitUntil:'domcontentloaded'});
+   await openMarketplace(ownerPage,'owner');
+   await ownerPage.getByTestId('marketplace-search-query').waitFor({state:'visible',timeout:30_000});
+   await ownerPage.getByText(`${marker} owner search · ${marker} owner-only · all`,{exact:true}).waitFor({state:'visible',timeout:30_000});
   assert.deepEqual(expoLogs.filter(line=>line.startsWith('Browser error:')),[]);
  }finally{
   await ownerPhone?.close();await renterPhone?.close();await browser?.close();
   if(expo.exitCode===null){expo.kill('SIGTERM');await Promise.race([new Promise<void>(r=>expo.once('exit',()=>r())),delay(5000)]);if(expo.exitCode===null)expo.kill('SIGKILL');}
  }
 });
-registerResidentContinuityTests(()=>({owner,family,admin,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));
+registerResidentContinuityTests(()=>({owner,family,admin,secondOrg,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));
 registerPayerResponsibilityTests(()=>({owner,family,admin,accountant:()=>new Client().login('accountant'),manager:()=>new Client().login('manager'),renter:()=>new Client().login('renter'),buildingId,query,seed}));

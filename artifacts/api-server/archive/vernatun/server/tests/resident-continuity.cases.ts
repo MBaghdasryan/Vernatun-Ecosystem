@@ -9,7 +9,7 @@ interface Client{
  call(path:string,method?:string,body?:unknown):Promise<{status:number;data:any}>;
  bytes(path:string,method?:string,body?:Buffer):Promise<{status:number;body:Buffer;type:string|null;cache:string|null}>;
 }
-type Fixture={owner:Client;family:Client;admin:Client;manager:()=>Promise<Client>;buildingId:string;query:string;seed:{accounts:Record<string,{id:string}>}};
+type Fixture={owner:Client;family:Client;admin:Client;secondOrg:Client;manager:()=>Promise<Client>;buildingId:string;query:string;seed:{accounts:Record<string,{id:string}>;fixtures:Record<string,string>}};
 const settings={directory:true,discussions:true,chat:true,marketplace:true,services:true,activationRequired:false,financeTransparency:false};
 export function registerResidentContinuityTests(get:()=>Fixture){
  test('household reads canonical current-unit members and does not expose the family of another resident',async()=>{
@@ -109,6 +109,42 @@ export function registerResidentContinuityTests(get:()=>Fixture){
   assert.ok(!(await family.call('/resident/continuity')).data.savedSearches.some((r:any)=>r.id===saved.data.id));
   assert.equal((await family.call('/resident/saved-searches/'+saved.data.id,'DELETE')).status,404);
   assert.equal((await owner.call('/resident/saved-searches/'+saved.data.id,'DELETE')).status,204);
+ });
+ test('saved searches stay private across residents and the same resident’s home switch',async()=>{
+  const {owner,family,admin,secondOrg,buildingId,query,seed}=get();
+  const firstHome=(await family.call('/auth/session')).data.contexts.find((c:any)=>c.building_id===buildingId);
+  assert.ok(firstHome,'The family resident must have the seeded home context');
+  assert.equal((await admin.call('/resident/settings'+query,'PUT',settings)).status,200);
+  const ownerSearch=await owner.call('/resident/saved-searches','POST',{name:'Owner-only search',query:'owner criteria',offerType:'sale'});
+  const familySearch=await family.call('/resident/saved-searches','POST',{name:'Family home search',query:'family criteria',offerType:'rent'});
+  assert.equal(ownerSearch.status,201);assert.equal(familySearch.status,201);
+  assert.deepEqual((await owner.call('/resident/continuity')).data.savedSearches.map((s:any)=>s.id),[ownerSearch.data.id]);
+  assert.deepEqual((await family.call('/resident/continuity')).data.savedSearches.map((s:any)=>s.id),[familySearch.data.id]);
+
+  const familyId=seed.accounts.family.id,orgB=(await pool.query('SELECT organization_id FROM buildings WHERE id=$1',[seed.fixtures.bb])).rows[0].organization_id;
+  await pool.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2) ON CONFLICT(user_id,organization_id) DO NOTHING',[familyId,orgB]);
+  await pool.query(`INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id)
+   VALUES($1,$2,'family',$3,$4)`,[familyId,orgB,seed.fixtures.bb,seed.fixtures.ub]);
+  assert.equal((await secondOrg.call('/resident/settings?buildingId='+seed.fixtures.bb,'PUT',settings)).status,200);
+  const familyContexts=(await family.call('/auth/session')).data.contexts;
+  const secondHome=familyContexts.find((c:any)=>c.building_id===seed.fixtures.bb);
+  assert.ok(secondHome,'The family resident must be able to switch to the second home');
+  assert.equal((await family.call('/auth/context','POST',{id:secondHome.id})).status,200);
+  const secondHomeSearch=await family.call('/resident/saved-searches','POST',{name:'Second home search',query:'second home criteria',offerType:'all'});
+  assert.equal(secondHomeSearch.status,201);
+  const secondHomeState=(await family.call('/resident/continuity')).data.savedSearches;
+  assert.deepEqual(secondHomeState.map((s:any)=>s.id),[secondHomeSearch.data.id]);
+  assert.equal(secondHomeState[0].query,'second home criteria');
+
+  assert.equal((await family.call('/auth/context','POST',{id:firstHome.id})).status,200);
+  const restored=(await family.call('/resident/continuity')).data.savedSearches;
+  assert.deepEqual(restored.map((s:any)=>s.id),[familySearch.data.id]);
+  assert.equal(restored[0].query,'family criteria');
+  assert.deepEqual((await owner.call('/resident/continuity')).data.savedSearches.map((s:any)=>s.id),[ownerSearch.data.id]);
+  assert.equal((await family.call('/resident/saved-searches/'+familySearch.data.id,'DELETE')).status,204);
+  assert.equal((await owner.call('/resident/saved-searches/'+ownerSearch.data.id,'DELETE')).status,204);
+  assert.equal((await family.call('/auth/context','POST',{id:secondHome.id})).status,200);
+  assert.equal((await family.call('/resident/saved-searches/'+secondHomeSearch.data.id,'DELETE')).status,204);
  });
  test('platform tickets are canonical but private; AI questions persist without invented answers',async()=>{
   const {owner,family,seed}=get();
