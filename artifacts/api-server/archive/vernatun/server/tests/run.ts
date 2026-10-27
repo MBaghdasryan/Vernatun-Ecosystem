@@ -65,6 +65,8 @@ const checks=process.argv.includes('--browser-only')
   ? [['--test','server/tests/global-account-recovery.test.mjs']]
   : process.argv.includes('--security-only')
   ? [['--test','server/tests/security.test.ts']]
+  : process.argv.includes('--owner-registration-only')
+  ? [['--test','server/tests/owner-registration.test.ts']]
  : process.argv.includes('--edge-only')
  ? [['--test','server/tests/edge.test.ts']]
  : process.argv.includes('--phase8-only')

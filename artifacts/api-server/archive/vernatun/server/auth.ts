@@ -14,6 +14,7 @@ import {pool,audit} from './db.js';
 import {config} from './config.js';
 import {ApiError,contexts,requireAuth} from './access.js';
 import {sessionDevice} from './system-sessions.js';
+import {ownerRegistrationAuth} from './owner-registration.js';
 const digest=(token:string)=>createHash('sha256').update(token).digest('hex');
 const dummyHash=await bcrypt.hash(randomBytes(24).toString('hex'),12);
 passport.use(new Strategy({usernameField:'email'},async(email,password,done)=>{try{const r=await pool.query('SELECT * FROM users WHERE email=$1',[email.trim().toLowerCase()]);const u=r.rows[0];const valid=await bcrypt.compare(password,u?.password_hash??dummyHash);if(!u||!valid||u.blocked)return done(null,false);return done(null,{id:u.id,email:u.email,name:u.name,locale:u.locale,currency:u.currency,mustChangePassword:u.must_change_password})}catch(e){done(e)}}));
@@ -23,6 +24,7 @@ passport.serializeUser((req:Request,u:Express.User,done:(error:unknown,id?:strin
 });
 passport.deserializeUser(async(id:string,done)=>{try{const r=await pool.query('SELECT id,email,name,locale,currency,must_change_password AS "mustChangePassword" FROM users WHERE id=$1 AND NOT blocked',[id]);done(null,r.rows[0]??false)}catch(e){done(e)}});
 export const auth=Router();
+auth.use(ownerRegistrationAuth);
 const limit=rateLimit({windowMs:15*60*1000,limit:20,store:new PostgresRateStore(),standardHeaders:'draft-7',legacyHeaders:false,message:{error:'rate_limited'}});
 const passwordSchema=z.string().min(12).max(72).refine(v=>Buffer.byteLength(v,'utf8')<=72,'password_too_long');
 const userFields='id,email,name,locale,currency';

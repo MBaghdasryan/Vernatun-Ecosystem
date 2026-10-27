@@ -2748,6 +2748,193 @@ export interface MobileAuthContextResult {
   contextId: string;
 }
 
+export interface OwnerRegistrationUnit {
+  id: string;
+  number: string;
+}
+
+export interface OwnerRegistrationBuilding {
+  organizationId: string;
+  organizationName: string;
+  buildingId: string;
+  buildingName: string;
+  address: string;
+  units: OwnerRegistrationUnit[];
+}
+
+export interface OwnerRegistrationCatalog {
+  buildings: OwnerRegistrationBuilding[];
+}
+
+export type OwnerRegistrationInputLocale = typeof OwnerRegistrationInputLocale[keyof typeof OwnerRegistrationInputLocale];
+
+
+export const OwnerRegistrationInputLocale = {
+  hy: 'hy',
+  ru: 'ru',
+  en: 'en',
+} as const;
+
+export interface OwnerRegistrationInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 12
+     * @maxLength 72
+     */
+  password: string;
+  unitId: string;
+  locale?: OwnerRegistrationInputLocale;
+}
+
+export type OwnerRegistrationCreatedStatus = typeof OwnerRegistrationCreatedStatus[keyof typeof OwnerRegistrationCreatedStatus];
+
+
+export const OwnerRegistrationCreatedStatus = {
+  verification_required: 'verification_required',
+} as const;
+
+export interface OwnerRegistrationCreated {
+  status: OwnerRegistrationCreatedStatus;
+}
+
+export type OwnerAccessRequestStatusStatus = typeof OwnerAccessRequestStatusStatus[keyof typeof OwnerAccessRequestStatusStatus];
+
+
+export const OwnerAccessRequestStatusStatus = {
+  pending_email: 'pending_email',
+  pending_approval: 'pending_approval',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface OwnerAccessRequestStatus {
+  id: string;
+  status: OwnerAccessRequestStatusStatus;
+  requestedAt: string;
+  /** @nullable */
+  reviewedAt?: string | null;
+  reviewNote?: string;
+  organizationName: string;
+  buildingName: string;
+  unitNumber: string;
+}
+
+export interface OwnerRegistrationStatus {
+  email: string;
+  emailVerified: boolean;
+  requests: OwnerAccessRequestStatus[];
+}
+
+export interface OwnerAccessClaimInput {
+  unitId: string;
+}
+
+export type OwnerAccessClaimCreatedStatus = typeof OwnerAccessClaimCreatedStatus[keyof typeof OwnerAccessClaimCreatedStatus];
+
+
+export const OwnerAccessClaimCreatedStatus = {
+  pending_email: 'pending_email',
+  pending_approval: 'pending_approval',
+} as const;
+
+export interface OwnerAccessClaimCreated {
+  id: string;
+  status: OwnerAccessClaimCreatedStatus;
+}
+
+export type OwnerRegistrationVerificationSentStatus = typeof OwnerRegistrationVerificationSentStatus[keyof typeof OwnerRegistrationVerificationSentStatus];
+
+
+export const OwnerRegistrationVerificationSentStatus = {
+  verification_sent: 'verification_sent',
+} as const;
+
+export interface OwnerRegistrationVerificationSent {
+  status: OwnerRegistrationVerificationSentStatus;
+}
+
+export interface OwnerRegistrationVerifyInput {
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+}
+
+export interface OwnerAccessRequest {
+  id: string;
+  requestedAt: string;
+  applicantName: string;
+  applicantEmail: string;
+  buildingName: string;
+  buildingAddress: string;
+  unitNumber: string;
+}
+
+export interface OwnerAccessRequestList {
+  requests: OwnerAccessRequest[];
+}
+
+export type OwnerAccessRequestDecisionInputDecision = typeof OwnerAccessRequestDecisionInputDecision[keyof typeof OwnerAccessRequestDecisionInputDecision];
+
+
+export const OwnerAccessRequestDecisionInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface OwnerAccessRequestDecisionInput {
+  decision: OwnerAccessRequestDecisionInputDecision;
+  /** @maxLength 500 */
+  note?: string;
+}
+
+export type OwnerAccessRequestDecisionResultStatus = typeof OwnerAccessRequestDecisionResultStatus[keyof typeof OwnerAccessRequestDecisionResultStatus];
+
+
+export const OwnerAccessRequestDecisionResultStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface OwnerAccessRequestDecisionResult {
+  id: string;
+  status: OwnerAccessRequestDecisionResultStatus;
+}
+
+export type OwnerRenterInvitationInputPermissionsItem = typeof OwnerRenterInvitationInputPermissionsItem[keyof typeof OwnerRenterInvitationInputPermissionsItem];
+
+
+export const OwnerRenterInvitationInputPermissionsItem = {
+  requestsown: 'requests.own',
+  requestscreate: 'requests.create',
+  announcementsread: 'announcements.read',
+  propertiesown: 'properties.own',
+  accesscreate: 'access.create',
+} as const;
+
+export interface OwnerRenterInvitationInput {
+  /** @maxLength 254 */
+  email: string;
+  /** @maxLength 30 */
+  phone?: string;
+  expiresAt: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  permissions: OwnerRenterInvitationInputPermissionsItem[];
+}
+
+export interface OwnerRenterInvitationCreated {
+  id: string;
+  invitationId: string;
+  url: string;
+}
+
 export interface HayatQueueRow {
   id: string;
   subject: string;

@@ -172,7 +172,7 @@ function AuthenticatedShell(props:Parameters<typeof AppShell>[0]){
  const product=location.pathname.split('/')[1];
  const iamView=location.pathname.split('/')[2];
  if((product==='console'&&['users','roles','permissions'].includes(iamView))||(product==='os'&&['people','roles'].includes(iamView)&&props.c.permissions.includes('roles.assign')))
-  return <IAMWorkspace key={props.c.id+':'+iamView} language={language} platform={product==='console'} view={iamView} brand={<Brand product={product as Product}/>} headerTools={<WorkspaceHeaderTools key={props.c.id} c={props.c} language={language} product={product as Product}/>} onSwitch={props.onSwitch} onLogout={props.onLogout} Modal={Modal} ErrorNotice={ErrorNotice}/>;
+  return <IAMWorkspace key={props.c.id+':'+iamView} language={language} platform={product==='console'} view={iamView} context={props.c} brand={<Brand product={product as Product}/>} headerTools={<WorkspaceHeaderTools key={props.c.id} c={props.c} language={language} product={product as Product}/>} onSwitch={props.onSwitch} onLogout={props.onLogout} Modal={Modal} ErrorNotice={ErrorNotice}/>;
  if(product==='hayat'||!Object.keys(products).includes(product)&&primaryProduct(props.c.role_key)==='hayat')
   return <HayatApp {...props} language={language} currency={currency} setLanguage={setLanguage}
    security={<SecurityPage c={props.c}/>} records={view=><Records key={view} view={view} c={props.c}/>}/>;

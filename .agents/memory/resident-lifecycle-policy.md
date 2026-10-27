@@ -26,3 +26,9 @@ Discussion support is informal, not a legal vote. Converting a topic requires an
 **Why:** The product requires real requests or proposals within existing governance, without a second Workflow/voting engine or a fabricated apartment/resident author for shared-area work.
 
 **How to apply:** Keep publication and owner eligibility in existing governance. Draft meeting/agenda metadata must remain private even through discussion backlinks and action/list payloads; a backlink is not permission to inspect an unpublished meeting. Cancellation is not evidence of publication: a meeting can be cancelled before it was ever published. Preserve building-scoped system provenance for shared-area requests and do not grant operational staff resident-settings or private-chat administration just to process a discussion.
+
+Owner self-registration creates only a pending access request: verify the email, then require the management company to approve the selected unit before assigning `unit_owner` access. Family and renter accounts remain invitation-only; owner-issued renter payment delegation is accepted by the recipient and does not transfer ownership or change the merchant.
+
+**Why:** The user selected management-company approval for owner verification and confirmed that family/renter users must enter through the owner's invitation.
+
+**How to apply:** Keep registration role-free until approval, re-check the organization's active customer/module status at approval, and do not expose unit data before a server-authorized resident context exists.

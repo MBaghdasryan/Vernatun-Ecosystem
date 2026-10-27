@@ -144,6 +144,28 @@ export const GetResidentHouseholdResponse = zod.object({
 })
 
 
+export const createOwnerRenterInvitationBodyEmailMax = 254;
+
+export const createOwnerRenterInvitationBodyPhoneMax = 30;
+
+export const createOwnerRenterInvitationBodyPermissionsMax = 5;
+
+
+
+export const CreateOwnerRenterInvitationBody = zod.object({
+  "email": zod.string().email().max(createOwnerRenterInvitationBodyEmailMax),
+  "phone": zod.string().max(createOwnerRenterInvitationBodyPhoneMax).optional(),
+  "expiresAt": zod.coerce.date(),
+  "permissions": zod.array(zod.enum(['requests.own', 'requests.create', 'announcements.read', 'properties.own', 'access.create'])).min(1).max(createOwnerRenterInvitationBodyPermissionsMax)
+})
+
+export const CreateOwnerRenterInvitationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "invitationId": zod.string().uuid(),
+  "url": zod.string().url()
+})
+
+
 export const RevokeResidentDelegationParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
@@ -2966,6 +2988,123 @@ export const SearchWorkspaceResponse = zod.object({
 })),
   "hasMore": zod.boolean()
 }))
+})
+
+
+/**
+ * @summary List active Vernatun customer buildings available for owner access requests
+ */
+export const GetOwnerRegistrationCatalogResponse = zod.object({
+  "buildings": zod.array(zod.object({
+  "organizationId": zod.string().uuid(),
+  "organizationName": zod.string(),
+  "buildingId": zod.string().uuid(),
+  "buildingName": zod.string(),
+  "address": zod.string(),
+  "units": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "number": zod.string()
+}))
+}))
+})
+
+
+/**
+ * @summary Register an owner account and request access to one apartment
+ */
+export const createOwnerRegistrationBodyNameMin = 2;
+export const createOwnerRegistrationBodyNameMax = 100;
+
+export const createOwnerRegistrationBodyEmailMax = 254;
+
+export const createOwnerRegistrationBodyPasswordMin = 12;
+export const createOwnerRegistrationBodyPasswordMax = 72;
+
+
+
+export const CreateOwnerRegistrationBody = zod.object({
+  "name": zod.string().min(createOwnerRegistrationBodyNameMin).max(createOwnerRegistrationBodyNameMax),
+  "email": zod.string().email().max(createOwnerRegistrationBodyEmailMax),
+  "password": zod.string().min(createOwnerRegistrationBodyPasswordMin).max(createOwnerRegistrationBodyPasswordMax),
+  "unitId": zod.string().uuid(),
+  "locale": zod.enum(['hy', 'ru', 'en']).optional()
+})
+
+export const CreateOwnerRegistrationResponse = zod.object({
+  "status": zod.enum(['verification_required'])
+})
+
+
+export const GetOwnerRegistrationStatusResponse = zod.object({
+  "email": zod.string().email(),
+  "emailVerified": zod.boolean(),
+  "requests": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending_email', 'pending_approval', 'approved', 'rejected']),
+  "requestedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewNote": zod.string().optional(),
+  "organizationName": zod.string(),
+  "buildingName": zod.string(),
+  "unitNumber": zod.string()
+}))
+})
+
+
+export const CreateOwnerAccessClaimBody = zod.object({
+  "unitId": zod.string().uuid()
+})
+
+export const CreateOwnerAccessClaimResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending_email', 'pending_approval'])
+})
+
+
+export const ResendOwnerRegistrationCodeResponse = zod.object({
+  "status": zod.enum(['verification_sent'])
+})
+
+
+export const verifyOwnerRegistrationEmailBodyCodeRegExp = new RegExp('^[0-9]{6}$');
+
+
+export const VerifyOwnerRegistrationEmailBody = zod.object({
+  "code": zod.string().regex(verifyOwnerRegistrationEmailBodyCodeRegExp)
+})
+
+export const VerifyOwnerRegistrationEmailResponse = zod.void()
+
+
+export const ListOwnerAccessRequestsResponse = zod.object({
+  "requests": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "requestedAt": zod.coerce.date(),
+  "applicantName": zod.string(),
+  "applicantEmail": zod.string().email(),
+  "buildingName": zod.string(),
+  "buildingAddress": zod.string(),
+  "unitNumber": zod.string()
+}))
+})
+
+
+export const DecideOwnerAccessRequestParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const decideOwnerAccessRequestBodyNoteMax = 500;
+
+
+
+export const DecideOwnerAccessRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject']),
+  "note": zod.string().max(decideOwnerAccessRequestBodyNoteMax).optional()
+})
+
+export const DecideOwnerAccessRequestResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['approved', 'rejected'])
 })
 
 

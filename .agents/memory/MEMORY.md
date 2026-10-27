@@ -11,7 +11,7 @@
 - [HAYAT offline policy](hayat-offline-policy.md) — local work stays user/context-bound; reconnect never starts submission or grants server access.
 - [Managed runtime ownership](runtime-ownership.md) — artifact-relative commands and one direct process owner prevent orphan listeners during managed restarts.
 - [Browser QA transport](binary-upload-qa.md) — response-first upload guards; prefer a streaming QA bridge when driver interception contradicts direct API checks.
-- [Resident lifecycle policy](resident-lifecycle-policy.md) — lease enforcement, building opt-ins, common-area provenance and nonlegal discussion support.
+- [Resident lifecycle policy](resident-lifecycle-policy.md) — owner access requires UK approval; family/renter access is invite-only, alongside lease and privacy rules.
 - [Financial ledger locking](finance-ledger-locking.md) — lock immutable parents before re-reading balances; same-invoice tests can hide credit races.
 - [Payment domain policy](payment-domain-policy.md) — Ameriabank SaaS, per-organization ArCa property payments, Telcell utilities; no cross-domain merchant fallback.
 - [Rate-limit namespaces](rate-limit-namespaces.md) — independent persistent limiters must not share request budgets.

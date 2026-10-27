@@ -27,6 +27,24 @@ paths:
     $ref: './payer-responsibility.yaml#/paths/~1resident~1payer-responsibilities~1{id}'
   /resident/household:
     $ref: './resident-continuity.yaml#/paths/~1resident~1household'
+  /resident/owner-renter-invitations:
+    post:
+      operationId: createOwnerRenterInvitation
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerRenterInvitationInput" }
+      responses:
+        "201":
+          description: Time-bounded renter invitation created for the owner's own unit.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerRenterInvitationCreated" }
+        "401": { description: Authentication required }
+        "403": { description: "Owner scope, permission, recent authentication or activation required" }
+        "404": { description: Unit or building is outside the owner scope }
   /delegations/{id}/revoke:
     $ref: './resident-continuity.yaml#/paths/~1delegations~1{id}~1revoke'
   /resident/service-bookings/{id}/options:
@@ -879,6 +897,119 @@ paths:
               schema: { $ref: "#/components/schemas/WorkspaceSearchResult" }
         "401": { description: Authentication required }
         "403": { description: No active authorized context }
+  /auth/owner-registration/catalog:
+    get:
+      operationId: getOwnerRegistrationCatalog
+      summary: List active Vernatun customer buildings available for owner access requests
+      responses:
+        "200":
+          description: Active subscribed organizations and non-demo building units with the community module enabled.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerRegistrationCatalog" }
+  /auth/owner-registration:
+    post:
+      operationId: createOwnerRegistration
+      summary: Register an owner account and request access to one apartment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerRegistrationInput" }
+      responses:
+        "201":
+          description: Account created; email verification is required before company review.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerRegistrationCreated" }
+        "409": { description: Email already registered or request already exists }
+        "429": { description: Rate limit exceeded }
+  /auth/owner-registration/status:
+    get:
+      operationId: getOwnerRegistrationStatus
+      security: [{ SessionCookie: [] }]
+      responses:
+        "200":
+          description: Current account email verification and owner access request statuses.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerRegistrationStatus" }
+        "401": { description: Authentication required }
+  /auth/owner-registration/claims:
+    post:
+      operationId: createOwnerAccessClaim
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerAccessClaimInput" }
+      responses:
+        "201":
+          description: Owner access request created; email verification may be required.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerAccessClaimCreated" }
+        "401": { description: Authentication required }
+        "404": { description: Unit is not available through an active Vernatun customer }
+  /auth/owner-registration/resend-code:
+    post:
+      operationId: resendOwnerRegistrationCode
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      responses:
+        "202":
+          description: Verification email accepted for delivery.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerRegistrationVerificationSent" }
+        "401": { description: Authentication required }
+        "429": { description: Rate limit exceeded }
+  /auth/owner-registration/verify-email:
+    post:
+      operationId: verifyOwnerRegistrationEmail
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerRegistrationVerifyInput" }
+      responses:
+        "204": { description: Email verified; pending requests are now available for company approval }
+        "400": { description: Verification code is invalid or expired }
+        "401": { description: Authentication required }
+  /owner-access-requests:
+    get:
+      operationId: listOwnerAccessRequests
+      security: [{ SessionCookie: [] }]
+      responses:
+        "200":
+          description: Owner requests for the authenticated management company's organization.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerAccessRequestList" }
+        "401": { description: Authentication required }
+        "403": { description: Organization administrator permission required }
+  /owner-access-requests/{id}/decision:
+    post:
+      operationId: decideOwnerAccessRequest
+      security: [{ SessionCookie: [], CsrfToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerAccessRequestDecisionInput" }
+      responses:
+        "200":
+          description: Request approved or rejected within the current organization scope.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerAccessRequestDecisionResult" }
+        "401": { description: Authentication required }
+        "403": { description: Organization administrator permission required }
+        "404": { description: Request not found in the current organization }
+        "409": { description: Request is no longer pending or organization is unavailable }
   /auth/session:
     get:
       operationId: getMobileAuthSession
@@ -5391,6 +5522,153 @@ components:
       required: [contextId]
       properties:
         contextId: { type: string, format: uuid }
+    OwnerRegistrationCatalog:
+      type: object
+      required: [buildings]
+      additionalProperties: false
+      properties:
+        buildings:
+          type: array
+          items: { $ref: "#/components/schemas/OwnerRegistrationBuilding" }
+    OwnerRegistrationBuilding:
+      type: object
+      required: [organizationId, organizationName, buildingId, buildingName, address, units]
+      additionalProperties: false
+      properties:
+        organizationId: { type: string, format: uuid }
+        organizationName: { type: string }
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        address: { type: string }
+        units:
+          type: array
+          items: { $ref: "#/components/schemas/OwnerRegistrationUnit" }
+    OwnerRegistrationUnit:
+      type: object
+      required: [id, number]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string }
+    OwnerRegistrationInput:
+      type: object
+      required: [name, email, password, unitId]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 72 }
+        unitId: { type: string, format: uuid }
+        locale: { type: string, enum: [hy, ru, en] }
+    OwnerRegistrationCreated:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { type: string, enum: [verification_required] }
+    OwnerRegistrationStatus:
+      type: object
+      required: [email, emailVerified, requests]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email }
+        emailVerified: { type: boolean }
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/OwnerAccessRequestStatus" }
+    OwnerAccessRequestStatus:
+      type: object
+      required: [id, status, requestedAt, organizationName, buildingName, unitNumber]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending_email, pending_approval, approved, rejected] }
+        requestedAt: { type: string, format: date-time }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewNote: { type: string }
+        organizationName: { type: string }
+        buildingName: { type: string }
+        unitNumber: { type: string }
+    OwnerAccessClaimInput:
+      type: object
+      required: [unitId]
+      additionalProperties: false
+      properties:
+        unitId: { type: string, format: uuid }
+    OwnerAccessClaimCreated:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending_email, pending_approval] }
+    OwnerRegistrationVerificationSent:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { type: string, enum: [verification_sent] }
+    OwnerRegistrationVerifyInput:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code: { type: string, pattern: "^[0-9]{6}$" }
+    OwnerAccessRequestList:
+      type: object
+      required: [requests]
+      additionalProperties: false
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/OwnerAccessRequest" }
+    OwnerAccessRequest:
+      type: object
+      required: [id, requestedAt, applicantName, applicantEmail, buildingName, buildingAddress, unitNumber]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        requestedAt: { type: string, format: date-time }
+        applicantName: { type: string }
+        applicantEmail: { type: string, format: email }
+        buildingName: { type: string }
+        buildingAddress: { type: string }
+        unitNumber: { type: string }
+    OwnerAccessRequestDecisionInput:
+      type: object
+      required: [decision]
+      additionalProperties: false
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        note: { type: string, maxLength: 500 }
+    OwnerAccessRequestDecisionResult:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [approved, rejected] }
+    OwnerRenterInvitationInput:
+      type: object
+      required: [email, expiresAt, permissions]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        phone: { type: string, maxLength: 30 }
+        expiresAt: { type: string, format: date-time }
+        permissions:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { type: string, enum: [requests.own, requests.create, announcements.read, properties.own, access.create] }
+    OwnerRenterInvitationCreated:
+      type: object
+      required: [id, invitationId, url]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        invitationId: { type: string, format: uuid }
+        url: { type: string, format: uri }
     HayatQueueRow:
       type: object
       required: [id, subject, description, status, version, created_at, number, building_id, building_name]

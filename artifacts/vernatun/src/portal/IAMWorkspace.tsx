@@ -1,12 +1,14 @@
 import {useEffect,useState,type ComponentType,type ReactNode} from 'react';
 import {request,ApiClientError} from './client';
 import {roleName,index,type Language} from './i18n';
+import type {RoleContext} from './types';
 import EmployeeAssignment from './EmployeeAssignment';
+import OwnerAccessQueue from './OwnerAccessQueue';
 import './iam.css';
 
-type Props={language:Language;platform:boolean;view:string;brand:ReactNode;headerTools?:ReactNode;onSwitch:()=>void;onLogout:()=>void;
+type Props={language:Language;platform:boolean;view:string;brand:ReactNode;headerTools?:ReactNode;context:RoleContext;onSwitch:()=>void;onLogout:()=>void;
  Modal:ComponentType<{title:string;onClose:()=>void;children:ReactNode}>;ErrorNotice:ComponentType<{error:unknown}>};
-export default function IAMWorkspace({language,platform,view,brand,headerTools,onSwitch,onLogout,Modal,ErrorNotice}:Props){
+export default function IAMWorkspace({language,platform,view,brand,headerTools,context,onSwitch,onLogout,Modal,ErrorNotice}:Props){
  const L=index(language),tr=(hy:string,ru:string,en:string)=>[hy,ru,en][L],base=platform?'/console':'/os';
  const [catalog,setCatalog]=useState<any>(),[profiles,setProfiles]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]),[total,setTotal]=useState(0);
  const [q,setQ]=useState(''),[search,setSearch]=useState(''),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0);
@@ -46,6 +48,7 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,o
     <form className="iam-row" onSubmit={e=>{e.preventDefault();setOffset(0);setSearch(q)}}><label>{tr('Որոնում','Поиск','Search')}<input value={q} onChange={e=>setQ(e.target.value)} maxLength={100}/></label><button className="p-button">{tr('Գտնել','Найти','Search')}</button></form>
     <div className="iam-table"><table><thead><tr><th>{tr('Անուն','Имя','Name')}</th><th>Email</th><th>{tr('Հաշվի վիճակ','Статус аккаунта','Account status')}</th><th>MFA</th></tr></thead><tbody>{rows.map(u=><tr key={u.id}><td>{button(u.name,()=>setUserId(u.id))}</td><td>{u.email}</td><td>{statusLabel(u.account_status)}</td><td>{u.mfa_enabled?tr('Միացված','Включена','Enabled'):tr('Անջատված','Выключена','Disabled')}</td></tr>)}</tbody></table></div>
     {!rows.length&&<p>{tr('Գրառումներ չկան','Записей нет','No records')}</p>}<div className="iam-row">{button('←',()=>setOffset(Math.max(0,offset-50)),offset===0)}<span>{offset+1}–{offset+rows.length} / {total}</span>{button('→',()=>setOffset(offset+50),offset+rows.length>=total)}</div>
+     {!platform&&view==='people'&&<OwnerAccessQueue language={language} context={context} ErrorNotice={ErrorNotice} Modal={Modal}/>}
     </section>}
    {(view==='roles'||view==='permissions')&&<>
     <section className="p-card"><h2>{tr('Համակարգային դերեր · անփոփոխ','Системные роли · неизменяемые','System roles · immutable')}</h2><p>{tr('Համակարգային դերերը մնում են անփոփոխ։ Կոնկրետ օգտատիրոջ իրավունքները փոխեք «Օգտատերեր» բաժնի օգտատիրոջ քարտում։','Системные роли остаются неизменными. Индивидуальные права меняются в карточке пользователя в разделе «Пользователи».','System roles remain unchanged. Edit an individual user’s permissions from their card in the Users section.')}</p><label>{roles}<select value={matrixRole} onChange={e=>setMatrixRole(e.target.value)}>{Object.keys(catalog.roles).map(r=><option key={r} value={r}>{roleName(language,r)}</option>)}</select></label><div className="iam-permissions">{catalog.permissions.map((p:string)=><div key={p}><input type="checkbox" aria-label={p} checked={catalog.roles[matrixRole].permissions.includes(p)} readOnly disabled/> <code>{p}</code></div>)}</div></section>

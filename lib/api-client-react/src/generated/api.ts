@@ -271,6 +271,19 @@ import type {
   OperationalRow,
   OrganizationBrandingState,
   OutgoingWebhookStateInput,
+  OwnerAccessClaimCreated,
+  OwnerAccessClaimInput,
+  OwnerAccessRequestDecisionInput,
+  OwnerAccessRequestDecisionResult,
+  OwnerAccessRequestList,
+  OwnerRegistrationCatalog,
+  OwnerRegistrationCreated,
+  OwnerRegistrationInput,
+  OwnerRegistrationStatus,
+  OwnerRegistrationVerificationSent,
+  OwnerRegistrationVerifyInput,
+  OwnerRenterInvitationCreated,
+  OwnerRenterInvitationInput,
   PayerResponsibilityResult,
   PayerResponsibilityWorkspace,
   PayerServicePolicy,
@@ -902,6 +915,88 @@ export function useGetResidentHousehold<TData = Awaited<ReturnType<typeof getRes
 
 
 
+
+export const getCreateOwnerRenterInvitationUrl = () => {
+
+
+
+
+  return `/api/resident/owner-renter-invitations`
+}
+
+export const createOwnerRenterInvitation = async (ownerRenterInvitationInput: OwnerRenterInvitationInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerRenterInvitationCreated> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OwnerRenterInvitationCreated>(getCreateOwnerRenterInvitationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ownerRenterInvitationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOwnerRenterInvitationMutationKey = () => ['createOwnerRenterInvitation'] as const;
+
+export const getCreateOwnerRenterInvitationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerRenterInvitation>>, TError,CreateOwnerRenterInvitationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOwnerRenterInvitation>>, TError,CreateOwnerRenterInvitationMutationVariables, TContext> => {
+
+const mutationKey = getCreateOwnerRenterInvitationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOwnerRenterInvitation>>, CreateOwnerRenterInvitationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOwnerRenterInvitation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOwnerRenterInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof createOwnerRenterInvitation>>>
+    export type CreateOwnerRenterInvitationMutationBody = BodyType<OwnerRenterInvitationInput>
+    export type CreateOwnerRenterInvitationMutationError = ErrorType<void>
+    export type CreateOwnerRenterInvitationMutationVariables = {data: BodyType<OwnerRenterInvitationInput>}
+
+    export const useCreateOwnerRenterInvitation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerRenterInvitation>>, TError,CreateOwnerRenterInvitationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOwnerRenterInvitation>>,
+        TError,
+        CreateOwnerRenterInvitationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateOwnerRenterInvitationMutationOptions(options));
+    }
 
 export const getRevokeResidentDelegationUrl = (id: string,) => {
 
@@ -10259,6 +10354,628 @@ export function useSearchWorkspace<TData = Awaited<ReturnType<typeof searchWorks
 
 
 
+
+export const getGetOwnerRegistrationCatalogUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration/catalog`
+}
+
+/**
+ * @summary List active Vernatun customer buildings available for owner access requests
+ */
+export const getOwnerRegistrationCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerRegistrationCatalog> => {
+
+  return customFetch<OwnerRegistrationCatalog>(getGetOwnerRegistrationCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerRegistrationCatalogQueryKey = () => {
+    return [
+    `/api/auth/owner-registration/catalog`
+    ] as const;
+    }
+
+
+export const getGetOwnerRegistrationCatalogQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerRegistrationCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>> = ({ signal }) => getOwnerRegistrationCatalog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerRegistrationCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>>
+export type GetOwnerRegistrationCatalogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List active Vernatun customer buildings available for owner access requests
+ */
+
+export function useGetOwnerRegistrationCatalog<TData = Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerRegistrationCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOwnerRegistrationUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration`
+}
+
+/**
+ * @summary Register an owner account and request access to one apartment
+ */
+export const createOwnerRegistration = async (ownerRegistrationInput: OwnerRegistrationInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerRegistrationCreated> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OwnerRegistrationCreated>(getCreateOwnerRegistrationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ownerRegistrationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOwnerRegistrationMutationKey = () => ['createOwnerRegistration'] as const;
+
+export const getCreateOwnerRegistrationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerRegistration>>, TError,CreateOwnerRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOwnerRegistration>>, TError,CreateOwnerRegistrationMutationVariables, TContext> => {
+
+const mutationKey = getCreateOwnerRegistrationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOwnerRegistration>>, CreateOwnerRegistrationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOwnerRegistration(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOwnerRegistrationMutationResult = NonNullable<Awaited<ReturnType<typeof createOwnerRegistration>>>
+    export type CreateOwnerRegistrationMutationBody = BodyType<OwnerRegistrationInput>
+    export type CreateOwnerRegistrationMutationError = ErrorType<void>
+    export type CreateOwnerRegistrationMutationVariables = {data: BodyType<OwnerRegistrationInput>}
+
+    /**
+ * @summary Register an owner account and request access to one apartment
+ */
+export const useCreateOwnerRegistration = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerRegistration>>, TError,CreateOwnerRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOwnerRegistration>>,
+        TError,
+        CreateOwnerRegistrationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateOwnerRegistrationMutationOptions(options));
+    }
+
+export const getGetOwnerRegistrationStatusUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration/status`
+}
+
+export const getOwnerRegistrationStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerRegistrationStatus> => {
+
+  return customFetch<OwnerRegistrationStatus>(getGetOwnerRegistrationStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerRegistrationStatusQueryKey = () => {
+    return [
+    `/api/auth/owner-registration/status`
+    ] as const;
+    }
+
+
+export const getGetOwnerRegistrationStatusQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerRegistrationStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerRegistrationStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerRegistrationStatus>>> = ({ signal }) => getOwnerRegistrationStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerRegistrationStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerRegistrationStatus>>>
+export type GetOwnerRegistrationStatusQueryError = ErrorType<void>
+
+
+
+export function useGetOwnerRegistrationStatus<TData = Awaited<ReturnType<typeof getOwnerRegistrationStatus>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerRegistrationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerRegistrationStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOwnerAccessClaimUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration/claims`
+}
+
+export const createOwnerAccessClaim = async (ownerAccessClaimInput: OwnerAccessClaimInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerAccessClaimCreated> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OwnerAccessClaimCreated>(getCreateOwnerAccessClaimUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ownerAccessClaimInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOwnerAccessClaimMutationKey = () => ['createOwnerAccessClaim'] as const;
+
+export const getCreateOwnerAccessClaimMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerAccessClaim>>, TError,CreateOwnerAccessClaimMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOwnerAccessClaim>>, TError,CreateOwnerAccessClaimMutationVariables, TContext> => {
+
+const mutationKey = getCreateOwnerAccessClaimMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOwnerAccessClaim>>, CreateOwnerAccessClaimMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOwnerAccessClaim(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOwnerAccessClaimMutationResult = NonNullable<Awaited<ReturnType<typeof createOwnerAccessClaim>>>
+    export type CreateOwnerAccessClaimMutationBody = BodyType<OwnerAccessClaimInput>
+    export type CreateOwnerAccessClaimMutationError = ErrorType<void>
+    export type CreateOwnerAccessClaimMutationVariables = {data: BodyType<OwnerAccessClaimInput>}
+
+    export const useCreateOwnerAccessClaim = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwnerAccessClaim>>, TError,CreateOwnerAccessClaimMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOwnerAccessClaim>>,
+        TError,
+        CreateOwnerAccessClaimMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateOwnerAccessClaimMutationOptions(options));
+    }
+
+export const getResendOwnerRegistrationCodeUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration/resend-code`
+}
+
+export const resendOwnerRegistrationCode = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerRegistrationVerificationSent> => {
+
+  return customFetch<OwnerRegistrationVerificationSent>(getResendOwnerRegistrationCodeUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResendOwnerRegistrationCodeMutationKey = () => ['resendOwnerRegistrationCode'] as const;
+
+export const getResendOwnerRegistrationCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendOwnerRegistrationCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resendOwnerRegistrationCode>>, TError,void, TContext> => {
+
+const mutationKey = getResendOwnerRegistrationCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendOwnerRegistrationCode>>, void> = () => {
+
+
+          return  resendOwnerRegistrationCode(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResendOwnerRegistrationCodeMutationResult = NonNullable<Awaited<ReturnType<typeof resendOwnerRegistrationCode>>>
+
+    export type ResendOwnerRegistrationCodeMutationError = ErrorType<void>
+
+
+    export const useResendOwnerRegistrationCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendOwnerRegistrationCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resendOwnerRegistrationCode>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getResendOwnerRegistrationCodeMutationOptions(options));
+    }
+
+export const getVerifyOwnerRegistrationEmailUrl = () => {
+
+
+
+
+  return `/api/auth/owner-registration/verify-email`
+}
+
+export const verifyOwnerRegistrationEmail = async (ownerRegistrationVerifyInput: OwnerRegistrationVerifyInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getVerifyOwnerRegistrationEmailUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ownerRegistrationVerifyInput)
+  }
+);}
+
+
+
+
+
+export const getVerifyOwnerRegistrationEmailMutationKey = () => ['verifyOwnerRegistrationEmail'] as const;
+
+export const getVerifyOwnerRegistrationEmailMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>, TError,VerifyOwnerRegistrationEmailMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>, TError,VerifyOwnerRegistrationEmailMutationVariables, TContext> => {
+
+const mutationKey = getVerifyOwnerRegistrationEmailMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>, VerifyOwnerRegistrationEmailMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyOwnerRegistrationEmail(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyOwnerRegistrationEmailMutationResult = NonNullable<Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>>
+    export type VerifyOwnerRegistrationEmailMutationBody = BodyType<OwnerRegistrationVerifyInput>
+    export type VerifyOwnerRegistrationEmailMutationError = ErrorType<void>
+    export type VerifyOwnerRegistrationEmailMutationVariables = {data: BodyType<OwnerRegistrationVerifyInput>}
+
+    export const useVerifyOwnerRegistrationEmail = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>, TError,VerifyOwnerRegistrationEmailMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyOwnerRegistrationEmail>>,
+        TError,
+        VerifyOwnerRegistrationEmailMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyOwnerRegistrationEmailMutationOptions(options));
+    }
+
+export const getListOwnerAccessRequestsUrl = () => {
+
+
+
+
+  return `/api/owner-access-requests`
+}
+
+export const listOwnerAccessRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerAccessRequestList> => {
+
+  return customFetch<OwnerAccessRequestList>(getListOwnerAccessRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOwnerAccessRequestsQueryKey = () => {
+    return [
+    `/api/owner-access-requests`
+    ] as const;
+    }
+
+
+export const getListOwnerAccessRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listOwnerAccessRequests>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerAccessRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOwnerAccessRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwnerAccessRequests>>> = ({ signal }) => listOwnerAccessRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOwnerAccessRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOwnerAccessRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listOwnerAccessRequests>>>
+export type ListOwnerAccessRequestsQueryError = ErrorType<void>
+
+
+
+export function useListOwnerAccessRequests<TData = Awaited<ReturnType<typeof listOwnerAccessRequests>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerAccessRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOwnerAccessRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideOwnerAccessRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/owner-access-requests/${id}/decision`
+}
+
+export const decideOwnerAccessRequest = async (id: string,
+    ownerAccessRequestDecisionInput: OwnerAccessRequestDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerAccessRequestDecisionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OwnerAccessRequestDecisionResult>(getDecideOwnerAccessRequestUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ownerAccessRequestDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideOwnerAccessRequestMutationKey = () => ['decideOwnerAccessRequest'] as const;
+
+export const getDecideOwnerAccessRequestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideOwnerAccessRequest>>, TError,DecideOwnerAccessRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideOwnerAccessRequest>>, TError,DecideOwnerAccessRequestMutationVariables, TContext> => {
+
+const mutationKey = getDecideOwnerAccessRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideOwnerAccessRequest>>, DecideOwnerAccessRequestMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideOwnerAccessRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideOwnerAccessRequestMutationResult = NonNullable<Awaited<ReturnType<typeof decideOwnerAccessRequest>>>
+    export type DecideOwnerAccessRequestMutationBody = BodyType<OwnerAccessRequestDecisionInput>
+    export type DecideOwnerAccessRequestMutationError = ErrorType<void>
+    export type DecideOwnerAccessRequestMutationVariables = {id: string;data: BodyType<OwnerAccessRequestDecisionInput>}
+
+    export const useDecideOwnerAccessRequest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideOwnerAccessRequest>>, TError,DecideOwnerAccessRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideOwnerAccessRequest>>,
+        TError,
+        DecideOwnerAccessRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideOwnerAccessRequestMutationOptions(options));
+    }
 
 export const getGetMobileAuthSessionUrl = () => {
 

@@ -28,6 +28,35 @@ residentLifecycle.post('/delegations',async(req,res)=>{
  });
  res.status(201).json({...created,...await sendInvitation(req,c,created.invitationId,token)});
 });
+residentLifecycle.post('/resident/owner-renter-invitations',async(req,res)=>{
+ const c=await requirePermission(req,'residents.delegate');requireRecentAuthentication(req);
+ if(c.role_key!=='unit_owner'||!c.unit_id||!c.building_id||!c.organization_id)throw new ApiError(403,'forbidden');
+ const b=z.object({
+  email:z.string().email().max(254),
+  phone:z.string().trim().regex(/^\+?[0-9 ()-]{7,30}$/).optional(),
+  expiresAt:time,
+  permissions:z.array(z.enum(['requests.own','requests.create','announcements.read','properties.own','access.create'])).min(1).max(5),
+ }).strict().parse(req.body);
+ expiry(b.expiresAt,c.expires_at);
+ if(b.permissions.some(p=>!c.permissions.includes(p))||
+  b.permissions.includes('requests.create')&&!b.permissions.includes('requests.own'))throw new ApiError(400,'validation_error');
+ assertEmailConfigured();
+ const token=randomBytes(32).toString('hex');
+ const created=await transaction(async db=>{
+  const delegation=(await db.query(`INSERT INTO resident_delegations
+   (organization_id,owner_assignment_id,unit_id,permission_keys,expires_at,contact_phone)
+   VALUES($1,$2,$3,$4,$5,$6) RETURNING id,version`,
+   [c.organization_id,c.id,c.unit_id,[...new Set(b.permissions)],b.expiresAt,b.phone??null])).rows[0];
+  const invitation=(await db.query(`INSERT INTO invitations
+   (organization_id,email,role_key,building_id,unit_id,token_hash,invited_by,expires_at,delegation_id)
+   VALUES($1,$2,'renter',$3,$4,$5,$6,LEAST($7::timestamptz,now()+interval '48 hours'),$8)
+   RETURNING id`,
+   [c.organization_id,b.email.toLowerCase(),c.building_id,c.unit_id,hash(token),req.user!.id,b.expiresAt,delegation.id])).rows[0];
+  await record(db,req,c,'resident.renter_invitation.create','resident_delegation',delegation.id,{invitationId:invitation.id});
+  return {...delegation,invitationId:invitation.id};
+ });
+ res.status(201).json({...created,...await sendInvitation(req,c,created.invitationId,token)});
+});
 residentLifecycle.post('/delegations/:id/expiration',async(req,res)=>{
  const c=await requirePermission(req,'residents.delegate');requireRecentAuthentication(req);
  const b=z.object({version,expiresAt:time}).strict().parse(req.body);expiry(b.expiresAt,c.expires_at);
