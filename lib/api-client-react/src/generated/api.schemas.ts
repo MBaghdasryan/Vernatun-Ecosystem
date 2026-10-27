@@ -4408,6 +4408,8 @@ export interface DiscussionLineage {
   discussionId: string;
   /** @nullable */
   sourceMessageId: string | null;
+  /** @maxLength 280 */
+  sourceExcerpt: string;
   /** @nullable */
   requestId: string | null;
   /** @nullable */
@@ -5343,8 +5345,15 @@ export type GetResidentDiscussionTarget200 = {
   title: string;
   status: string;
   target: GetResidentDiscussionTarget200Target;
-  meetingId?: string;
-  meetingTitle?: string;
+  /** @nullable */
+  meetingId?: string | null;
+  /** @nullable */
+  meetingTitle?: string | null;
+  /**
+     * @maxLength 280
+     * @nullable
+     */
+  sourceExcerpt: string | null;
 };
 
 export type GetResidentMessagesParams = {

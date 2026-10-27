@@ -18,9 +18,13 @@ export default function DiscussionLinks({rec,l}:{rec:ResidentRecord;l:Language})
   {target?<Card>
    {q.isPending?<Skeleton/>:null}
    {q.isError?<ErrorBox message={L(l,S.fail)} retryLabel={L(l,S.retry)} onRetry={()=>q.refetch()}/>:null}
-   {q.data?<><Text style={{fontSize:17,fontWeight:'800'}}>{q.data.title}</Text>
+    {q.data?<><Text style={{fontSize:17,fontWeight:'800',color:palette.foreground}}>{q.data.title}</Text>
     {q.data.meetingTitle?<Text style={{ color: palette.foreground }}>{q.data.meetingTitle}</Text>:null}
     <Text style={{ color: palette.foreground }}>{statusLabel[q.data.status]?L(l,statusLabel[q.data.status]):q.data.status}</Text>
+     {q.data.sourceExcerpt?<View style={{backgroundColor:palette.muted,borderRadius:10,padding:12,gap:5}}>
+      <Text style={{fontSize:12,fontWeight:'700',color:palette.mutedForeground}}>{L(l,['Մեջբերում քննարկումից','Фрагмент обсуждения','Excerpt from discussion'])}</Text>
+      <Text style={{color:palette.foreground,lineHeight:20}}>{q.data.sourceExcerpt}</Text>
+     </View>:null}
     <Text style={{ color: palette.foreground }}>ID: {q.data.id}</Text>
     {target==='proposal'?<Text style={{ color: palette.foreground }}>{L(l,['Աջակցությունը իրավական քվե չէ։','Поддержка обсуждения не является юридическим голосованием.','Discussion support is not a legal vote.'])}</Text>:null}
    </>:null}

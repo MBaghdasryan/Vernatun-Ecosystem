@@ -1345,13 +1345,18 @@ export const GetResidentDiscussionTargetQueryParams = zod.object({
   "buildingId": zod.coerce.string().uuid().optional().describe('Only administrators can choose a building; residents always use their authenticated context.')
 })
 
+export const getResidentDiscussionTargetResponseSourceExcerptMax = 280;
+
+
+
 export const GetResidentDiscussionTargetResponse = zod.object({
   "id": zod.string(),
   "title": zod.string(),
   "status": zod.string(),
   "target": zod.enum(['request', 'proposal']),
-  "meetingId": zod.string().optional(),
-  "meetingTitle": zod.string().optional()
+  "meetingId": zod.string().nullish(),
+  "meetingTitle": zod.string().nullish(),
+  "sourceExcerpt": zod.string().max(getResidentDiscussionTargetResponseSourceExcerptMax).nullable()
 })
 
 
@@ -1462,11 +1467,16 @@ export const GetDiscussionLineageParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const getDiscussionLineageResponseSourceExcerptMax = 280;
+
+
+
 export const GetDiscussionLineageResponseItem = zod.object({
   "id": zod.string().uuid(),
   "linkType": zod.enum(['request', 'agenda_proposal']),
   "discussionId": zod.string().uuid(),
   "sourceMessageId": zod.string().uuid().nullable(),
+  "sourceExcerpt": zod.string().max(getDiscussionLineageResponseSourceExcerptMax),
   "requestId": zod.string().uuid().nullable(),
   "requestSubject": zod.string().nullish(),
   "requestStatus": zod.string().nullish(),

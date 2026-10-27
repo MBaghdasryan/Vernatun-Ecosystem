@@ -131,8 +131,11 @@ test('discussion-to-request preserves the selected message and does not create a
  const input={key,sourceMessageId:message.data.id,subject:'Repair entrance light',description:'Please replace the failed lamp.'};
  const created=await owner.call(path,'POST',input);assert.equal(created.status,201,JSON.stringify(created.data));
  const replay=await owner.call(path,'POST',input);assert.equal(replay.status,201);assert.equal(replay.data.requestId,created.data.requestId);
+  const target=await owner.call(`/resident/discussions/${topic.data.id}/links/request`);
+  assert.equal(target.status,200,JSON.stringify(target.data));assert.equal(target.data.sourceExcerpt,message.data.body);
  const links=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(links.status,200,JSON.stringify(links.data));
  assert.equal(links.data.length,1);assert.equal(links.data[0].discussionId,topic.data.id);assert.equal(links.data[0].sourceMessageId,message.data.id);
+  assert.equal(links.data[0].sourceExcerpt,message.data.body);
  assert.equal(links.data[0].requestId,created.data.requestId);assert.equal(links.data[0].proposalId,null);assert.equal(links.data[0].meetingId,null);
  assert.equal(links.data[0].workOrderId,null);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_agenda_proposals WHERE id IN (SELECT proposal_id FROM resident_discussion_lineage WHERE discussion_id=$1)',[topic.data.id])).rows[0].n,0);
@@ -429,6 +432,75 @@ test('viewings persist explicit requests and only the listing owner can confirm 
  await owner.call('/resident/records/listings/'+listing.id+'/actions','POST',{action:'close',version:listing.version});
  assert.equal((await owner.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
  assert.equal((await family.call('/resident/records/conversations/'+pending.id+'/actions','POST',{action:'cancel_viewing',version:1})).data.data.viewingStatus,'cancelled');
+});
+test('owner-to-renter listing, confirmed viewing, and separate discussion request/proposal journey',async()=>{
+ const renter=await new Client().login('renter');
+ const title=`Acceptance listing ${randomUUID().slice(0,8)}`;
+ const draft=await owner.call('/resident/records/listings','POST',{title,body:'Viewing by appointment',saleType:'rent',priceMinor:'95000',currency:'AMD'});
+ assert.equal(draft.status,201,JSON.stringify(draft.data));
+ assert.equal((await owner.call(`/resident/records/listings/${draft.data.id}/actions`,'POST',{action:'submit',version:draft.data.version})).data.status,'submitted');
+ const active=await admin.call(`/resident/records/listings/${draft.data.id}/actions${query}`,'POST',{action:'approve',version:draft.data.version+1});
+ assert.equal(active.status,200,JSON.stringify(active.data));assert.equal(active.data.status,'active');
+ const visible=await renter.call('/resident/records/listings?search='+encodeURIComponent(title));
+ assert.equal(visible.status,200,JSON.stringify(visible.data));assert.equal(visible.data.items.length,1);
+ const viewing=await renter.call('/resident/records/conversations','POST',{
+  title:`Viewing ${title}`,body:'Please confirm a visit.',parentId:draft.data.id,
+  viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true
+ });
+ assert.equal(viewing.status,201,JSON.stringify(viewing.data));
+ const viewingPath=`/resident/records/conversations/${viewing.data.id}`;
+ const confirmed=await owner.call(viewingPath+'/actions','POST',{action:'confirm_viewing',version:viewing.data.version});
+ assert.equal(confirmed.status,200,JSON.stringify(confirmed.data));
+ assert.equal((await renter.call(viewingPath)).data.data.viewingStatus,'confirmed');
+
+ const requestDiscussion=await renter.call('/resident/records/discussions','POST',{
+  title:'Kitchen leak near the sink',body:'There is a leak beneath the kitchen sink.',category:'building'
+ });
+ assert.equal(requestDiscussion.status,201,JSON.stringify(requestDiscussion.data));
+ const requestMessage=await renter.call(`/resident/records/discussions/${requestDiscussion.data.id}/messages`,'POST',{
+  body:'Water is collecting under the cabinet and the pipe needs inspection.',clientId:randomUUID()
+ });
+ assert.equal(requestMessage.status,201,JSON.stringify(requestMessage.data));
+ const request=await renter.call(`/resident/records/discussions/${requestDiscussion.data.id}/requests`,'POST',{
+  key:randomUUID(),sourceMessageId:requestMessage.data.id,subject:'Inspect kitchen sink leak',description:'Please inspect and repair the pipe.'
+ });
+ assert.equal(request.status,201,JSON.stringify(request.data));
+ const requestLink=await renter.call(`/resident/discussions/${requestDiscussion.data.id}/links/request`);
+ assert.equal(requestLink.status,200,JSON.stringify(requestLink.data));
+ assert.equal(requestLink.data.sourceExcerpt,requestMessage.data.body);
+ const requestLineage=await renter.call(`/resident/records/discussions/${requestDiscussion.data.id}/lineage`);
+ assert.equal(requestLineage.data[0].requestId,request.data.requestId);
+ assert.equal(requestLineage.data[0].sourceExcerpt,requestMessage.data.body);
+ assert.equal(requestLineage.data[0].proposalId,null);
+
+ const proposalDiscussion=await renter.call('/resident/records/discussions','POST',{
+  title:'Add better lighting to the courtyard',body:'The courtyard needs brighter lighting for safety.',category:'building'
+ });
+ assert.equal(proposalDiscussion.status,201,JSON.stringify(proposalDiscussion.data));
+ const proposalMessage=await renter.call(`/resident/records/discussions/${proposalDiscussion.data.id}/messages`,'POST',{
+  body:'Please consider adding two lights beside the main walkway.',clientId:randomUUID()
+ });
+ assert.equal(proposalMessage.status,201,JSON.stringify(proposalMessage.data));
+ const proposal=await renter.call(`/resident/records/discussions/${proposalDiscussion.data.id}/agenda-proposals`,'POST',{
+  key:randomUUID(),sourceMessageId:proposalMessage.data.id,title:'Add courtyard lighting',description:'Review installing two lights.'
+ });
+ assert.equal(proposal.status,201,JSON.stringify(proposal.data));assert.equal(proposal.data.status,'pending_review');
+ const proposalLink=await renter.call(`/resident/discussions/${proposalDiscussion.data.id}/links/proposal`);
+ assert.equal(proposalLink.status,200,JSON.stringify(proposalLink.data));
+ assert.equal(proposalLink.data.id,proposal.data.proposalId);
+ assert.equal(proposalLink.data.sourceExcerpt,proposalMessage.data.body);
+ assert.equal((await owner.call(`/resident/discussions/${proposalDiscussion.data.id}/links/proposal`)).status,404);
+ const pending=await manager.call(`/governance/agenda-proposals?status=pending_review${query}`);
+ assert.ok(pending.data.some((item:any)=>item.id===proposal.data.proposalId));
+ const reviewed=await manager.call(`/governance/agenda-proposals/${proposal.data.proposalId}/review`,'POST',{
+  key:randomUUID(),version:proposal.data.version,action:'approve'
+ });
+ assert.equal(reviewed.status,200,JSON.stringify(reviewed.data));assert.equal(reviewed.data.status,'approved');
+ const reviewedLink=await renter.call(`/resident/discussions/${proposalDiscussion.data.id}/links/proposal`);
+ assert.equal(reviewedLink.data.status,'approved');
+ assert.equal(reviewedLink.data.sourceExcerpt,proposalMessage.data.body);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM agenda_items WHERE source_discussion_id=$1',[proposalDiscussion.data.id])).rows[0].n,0);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_requests WHERE source_discussion_id=$1',[proposalDiscussion.data.id])).rows[0].n,0);
 });
 test('confirming a viewing serializes with cancellation and listing closure',async()=>{
  const payload={title:'Concurrent viewing listing',body:'Available for scheduled visits',saleType:'sale',priceMinor:'18000000',currency:'USD'};

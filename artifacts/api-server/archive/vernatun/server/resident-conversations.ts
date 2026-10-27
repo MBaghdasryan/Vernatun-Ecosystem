@@ -13,18 +13,57 @@ residentConversations.get('/discussions/:id/links/:target',async(req,res)=>{
  const s=await residentScope(req,true);assertEnabled(s,'discussions');
  if(!s.settings.discussions||!s.c.modules?.includes('community'))throw new ApiError(403,'module_disabled');
  const target=z.enum(['request','proposal']).parse(req.params.target);
- if(target==='proposal')await requirePermission(req,'meetings.read');
  if(target==='request'&&!s.c.modules.includes('requests'))throw new ApiError(403,'module_disabled');
  res.json(await transaction(async db=>{
   const row=await readRecord(db,s,'discussions',uuid.parse(req.params.id),req.user!.id);
-  const result=target==='request'?(await db.query(`SELECT r.id,r.subject AS title,r.status FROM resident_requests r
-   WHERE r.id=$1 AND r.source_discussion_id=$2 AND r.organization_id=$3 AND r.building_id=$4`,
-   [row.linked_request_id,row.id,s.organizationId,s.buildingId])).rows[0]:
-   (await db.query(`SELECT a.id,a.title,m.status,m.was_published,m.id AS "meetingId",m.title AS "meetingTitle" FROM agenda_items a
-    JOIN meetings m ON m.id=a.meeting_id WHERE a.source_discussion_id=$1 AND m.organization_id=$2 AND m.building_id=$3`,
-    [row.id,s.organizationId,s.buildingId])).rows[0];
+   if(target==='proposal'&&!s.c.permissions.includes('meetings.read')&&!s.c.permissions.includes('meetings.manage')){
+    const ownProposal=await db.query(`SELECT p.id FROM resident_discussion_lineage l
+     JOIN resident_agenda_proposals p ON p.id=l.proposal_id
+     WHERE l.discussion_id=$1 AND l.organization_id=$2 AND l.building_id=$3 AND p.submitted_by=$4 LIMIT 1`,
+     [row.id,s.organizationId,s.buildingId,req.user!.id]);
+    if(!ownProposal.rowCount)await requirePermission(req,'meetings.read');
+   }
+   let result:any;
+   if(target==='request'){
+    result=(await db.query(`SELECT r.id,r.subject AS title,r.status,
+     LEFT(COALESCE(l.source_text,$5),280) AS "sourceExcerpt"
+     FROM resident_requests r
+     LEFT JOIN resident_discussion_lineage l ON l.request_id=r.id AND l.discussion_id=$1
+      AND l.organization_id=$2 AND l.building_id=$3
+     WHERE (l.discussion_id=$1 OR r.source_discussion_id=$1) AND r.organization_id=$2 AND r.building_id=$3
+      AND ($4::uuid IS NULL OR r.id=$4)
+     ORDER BY l.created_at DESC NULLS LAST,r.created_at DESC LIMIT 1`,
+     [row.id,s.organizationId,s.buildingId,row.linked_request_id,row.body])).rows[0];
+   }else{
+    // A resident-created proposal stays a proposal until a manager reviews it.
+    // Its submitter can follow that review without exposing pending proposals
+    // from unrelated residents or unpublished official agenda items.
+    result=(await db.query(`SELECT p.id,p.title,p.status,p.meeting_id AS "meetingId",m.title AS "meetingTitle",
+     COALESCE(m.was_published,false) AS was_published,LEFT(l.source_text,280) AS "sourceExcerpt",
+     true AS resident_proposal
+     FROM resident_discussion_lineage l
+     JOIN resident_agenda_proposals p ON p.id=l.proposal_id
+     LEFT JOIN meetings m ON m.id=p.meeting_id
+     WHERE l.discussion_id=$1 AND l.organization_id=$2 AND l.building_id=$3
+      AND l.link_type='agenda_proposal' AND
+      (p.submitted_by=$4 OR $5 OR (p.status IN ('included','decided') AND m.was_published))
+     ORDER BY l.created_at DESC LIMIT 1`,
+     [row.id,s.organizationId,s.buildingId,req.user!.id,s.c.permissions.includes('meetings.manage')])).rows[0];
+    if(!result){
+     // Preserve links created by the older direct-to-draft agenda flow, while
+     // continuing to hide drafts from residents until their meeting is published.
+     result=(await db.query(`SELECT a.id,a.title,m.status,m.was_published,m.id AS "meetingId",m.title AS "meetingTitle",
+      LEFT(COALESCE(l.source_text,d.body),280) AS "sourceExcerpt"
+      FROM agenda_items a JOIN meetings m ON m.id=a.meeting_id
+      JOIN resident_product_records d ON d.id=a.source_discussion_id AND d.kind='discussions'
+      LEFT JOIN resident_discussion_lineage l ON l.discussion_id=d.id AND l.meeting_id=m.id
+      WHERE a.source_discussion_id=$1 AND m.organization_id=$2 AND m.building_id=$3
+      ORDER BY a.id LIMIT 1`,
+      [row.id,s.organizationId,s.buildingId])).rows[0];
+    }
+   }
   if(!result)throw new ApiError(404,'not_found');
-  if(target==='proposal'&&!result.was_published&&!s.c.permissions.includes('meetings.manage'))throw new ApiError(404,'not_found');
+   if(target==='proposal'&&!result.resident_proposal&&!result.was_published&&!s.c.permissions.includes('meetings.manage'))throw new ApiError(404,'not_found');
   const {was_published:_,...summary}=result;
   return {...summary,target};
  }));

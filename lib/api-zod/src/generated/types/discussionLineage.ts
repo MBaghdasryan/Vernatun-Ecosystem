@@ -14,6 +14,8 @@ export interface DiscussionLineage {
   discussionId: string;
   /** @nullable */
   sourceMessageId: string | null;
+  /** @maxLength 280 */
+  sourceExcerpt: string;
   /** @nullable */
   requestId: string | null;
   /** @nullable */

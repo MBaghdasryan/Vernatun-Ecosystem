@@ -91,7 +91,7 @@ residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
  const discussionId=id.parse(req.params.id);
  res.json(await transaction(async db=>{
   await readRecord(db,s,'discussions',discussionId,req.user!.id);
-  const rows=(await db.query(`SELECT l.id,l.link_type,l.discussion_id,l.source_message_id,l.request_id,l.proposal_id,
+  const rows=(await db.query(`SELECT l.id,l.link_type,l.discussion_id,l.source_message_id,LEFT(l.source_text,280) AS source_excerpt,l.request_id,l.proposal_id,
    l.meeting_id,l.created_at,r.subject AS request_subject,r.status AS request_status,w.id AS work_order_id,w.status AS work_order_status,
    p.title AS proposal_title,p.status AS proposal_status,p.decision,m.title AS meeting_title,m.status AS meeting_status,
    COALESCE((SELECT json_agg(v.vote_id ORDER BY v.created_at) FROM resident_discussion_vote_links v
@@ -103,10 +103,11 @@ residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
    LEFT JOIN resident_agenda_proposals p ON p.id=l.proposal_id
    LEFT JOIN meetings m ON m.id=l.meeting_id
    WHERE l.discussion_id=$1 AND l.organization_id=$2 AND l.building_id=$3
-    AND (l.request_id IS NULL OR $5 OR r.author_user_id=$4 OR r.unit_id=$6)
-   ORDER BY l.created_at,l.id`,[discussionId,s.organizationId,s.buildingId,req.user!.id,s.administrative,s.unitId])).rows;
+     AND (l.request_id IS NULL OR $5 OR r.author_user_id=$4 OR r.unit_id=$6)
+     AND (l.proposal_id IS NULL OR p.submitted_by=$4 OR $7 OR (p.status IN ('included','decided') AND m.was_published))
+    ORDER BY l.created_at,l.id`,[discussionId,s.organizationId,s.buildingId,req.user!.id,s.administrative,s.unitId,s.c.permissions.includes('meetings.manage')])).rows;
   return rows.map(r=>({
-   id:r.id,linkType:r.link_type,discussionId:r.discussion_id,sourceMessageId:r.source_message_id,
+    id:r.id,linkType:r.link_type,discussionId:r.discussion_id,sourceMessageId:r.source_message_id,sourceExcerpt:r.source_excerpt,
    requestId:r.request_id,requestSubject:r.request_subject??null,requestStatus:r.request_status??null,
    workOrderId:r.work_order_id??null,workOrderStatus:r.work_order_status??null,
    proposalId:r.proposal_id,proposalTitle:r.proposal_title??null,proposalStatus:r.proposal_status??null,

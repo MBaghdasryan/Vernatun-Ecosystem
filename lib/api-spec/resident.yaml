@@ -417,14 +417,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [id, title, status, target]
+                required: [id, title, status, target, sourceExcerpt]
                 properties:
                   id: {type: string}
                   title: {type: string}
                   status: {type: string}
                   target: {type: string, enum: [request, proposal]}
-                  meetingId: {type: string}
-                  meetingTitle: {type: string}
+                  meetingId: {type: [string, 'null']}
+                  meetingTitle: {type: [string, 'null']}
+                  sourceExcerpt: {type: [string, 'null'], maxLength: 280}
   /resident/records/{kind}/{id}/messages:
     parameters:
       - {$ref: '#/components/parameters/Kind'}
@@ -686,12 +687,13 @@ components:
         version: {type: integer}
     DiscussionLineage:
       type: object
-      required: [id, linkType, discussionId, sourceMessageId, requestId, proposalId, meetingId, voteIds, createdAt]
+      required: [id, linkType, discussionId, sourceMessageId, requestId, proposalId, meetingId, voteIds, createdAt, sourceExcerpt]
       properties:
         id: {type: string, format: uuid}
         linkType: {type: string, enum: [request, agenda_proposal]}
         discussionId: {type: string, format: uuid}
         sourceMessageId: {type: [string, 'null'], format: uuid}
+        sourceExcerpt: {type: string, maxLength: 280}
         requestId: {type: [string, 'null'], format: uuid}
         requestSubject: {type: [string, 'null']}
         requestStatus: {type: [string, 'null']}

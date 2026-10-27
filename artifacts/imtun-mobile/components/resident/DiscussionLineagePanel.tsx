@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getDiscussionLineage } from '@workspace/api-client-react';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
 import { useContextId } from '@/lib/resident/hooks';
-import { L, type Language } from '@/lib/resident/text';
+import { L, statusLabel, type Language } from '@/lib/resident/text';
 import { ErrorBox, Skeleton } from './Ui';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -17,6 +17,7 @@ const T: Record<string, LocalText> = {
   votes: ['Գրանցված քվեներ', 'Записанные голоса', 'Recorded votes'],
   work: ['Աշխատանք', 'Работы', 'Work order'],
   decision: ['Որոշում', 'Решение', 'Decision'],
+  source: ['Մեջբերում քննարկումից', 'Фрагмент обсуждения', 'Excerpt from discussion'],
   passed: ['Ընդունվել է', 'Принято', 'Passed'],
   failed: ['Չի ընդունվել', 'Не принято', 'Not passed'],
 };
@@ -38,12 +39,16 @@ export default function DiscussionLineagePanel({ discussionId, l }: { discussion
       return <View key={item.id} style={s.item}>
         <Text style={s.heading}>{item.linkType === 'request' ? L(l, T.request) : L(l, T.proposal)}</Text>
         <Text style={s.text}>{item.requestSubject ?? item.proposalTitle ?? '—'}</Text>
-        {item.requestStatus ? <Text style={s.meta}>{item.requestStatus}</Text> : null}
-        {item.proposalStatus ? <Text style={s.meta}>{item.proposalStatus}</Text> : null}
+         {item.requestStatus ? <Text style={s.meta}>{statusLabel[item.requestStatus] ? L(l, statusLabel[item.requestStatus]) : item.requestStatus}</Text> : null}
+         {item.proposalStatus ? <Text style={s.meta}>{statusLabel[item.proposalStatus] ? L(l, statusLabel[item.proposalStatus]) : item.proposalStatus}</Text> : null}
         {item.meetingId ? <Text style={s.meta}>{L(l, T.meeting)}: {item.meetingTitle ?? item.meetingId.slice(0, 8)} · {item.meetingStatus}</Text> : null}
         {item.voteIds.length ? <Text style={s.meta}>{L(l, T.votes)}: {item.voteIds.length}</Text> : null}
         {decision && typeof decision.passed === 'boolean' ? <Text style={s.meta}>{L(l, T.decision)}: {L(l, decision.passed ? T.passed : T.failed)}</Text> : null}
         {item.workOrderId ? <Text style={s.meta}>{L(l, T.work)}: {item.workOrderStatus ?? item.workOrderId.slice(0, 8)}</Text> : null}
+         <View style={s.source}>
+           <Text style={s.sourceLabel}>{L(l, T.source)}</Text>
+           <Text style={s.text}>{item.sourceExcerpt}</Text>
+         </View>
         {item.sourceMessageId ? <Text style={s.meta}>source {item.sourceMessageId.slice(0, 8)}</Text> : null}
       </View>;
     })}
@@ -56,4 +61,6 @@ const make_s = (palette: Palette) => StyleSheet.create({
   heading: { fontWeight: '800', color: palette.foreground, fontSize: 13 },
   text: { color: palette.foreground, fontSize: 13 },
   meta: { color: palette.mutedForeground, fontSize: 11 },
+  source: { marginTop: 6, borderTopWidth: 1, borderTopColor: palette.divider, paddingTop: 7, gap: 3 },
+  sourceLabel: { color: palette.mutedForeground, fontSize: 11, fontWeight: '700' },
 });

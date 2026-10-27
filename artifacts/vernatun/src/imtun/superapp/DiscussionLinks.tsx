@@ -13,7 +13,7 @@ export default function DiscussionLinks({rec,l,scope,buildingId}:{rec:ResidentRe
   {!!rec.data.proposalConversion&&<button className="sx-link" onClick={()=>setTarget('proposal')}>{L(l,['Բացել օրակարգի առաջարկը','Открыть предложение повестки','Open agenda proposal'])}</button>}
   {target&&<section className="im-card" aria-live="polite">
    {q.isPending&&<p>{L(l,S.loading)}</p>}{q.isError&&<p role="alert">{L(l,S.fail)} <button onClick={()=>q.refetch()}>{L(l,S.retry)}</button></p>}
-   {q.data&&<><h4>{q.data.title}</h4><p>{q.data.meetingTitle}</p><p>{statusLabel[q.data.status]?L(l,statusLabel[q.data.status]):q.data.status}</p><small>ID: {q.data.id}</small>{target==='proposal'&&<p>{L(l,['Աջակցությունը իրավական քվե չէ։','Поддержка обсуждения не является юридическим голосованием.','Discussion support is not a legal vote.'])}</p>}</>}
+    {q.data&&<><h4>{q.data.title}</h4><p>{q.data.meetingTitle}</p><p>{statusLabel[q.data.status]?L(l,statusLabel[q.data.status]):q.data.status}</p>{q.data.sourceExcerpt&&<div className="im-card"><strong>{L(l,['Մեջբերում քննարկումից','Фрагмент обсуждения','Excerpt from discussion'])}</strong><p>{q.data.sourceExcerpt}</p></div>}<small>ID: {q.data.id}</small>{target==='proposal'&&<p>{L(l,['Աջակցությունը իրավական քվե չէ։','Поддержка обсуждения не является юридическим голосованием.','Discussion support is not a legal vote.'])}</p>}</>}
    <button className="sx-link" onClick={()=>setTarget(undefined)}>{L(l,['Փակել','Закрыть','Close'])}</button>
   </section>}
  </div>;
