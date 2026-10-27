@@ -31,7 +31,7 @@ const C: Record<string, LocalText> = {
   cancel: ['Չեղարկել', 'Отмена', 'Cancel'],
   sent: ['Ուղարկված է', 'Отправлено', 'Submitted'],
 };
-export default function RecordCard({ kind, rec, l, after }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; after: () => void }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
+export default function RecordCard({ kind, rec, l, after, onListingUnavailable }: { kind: ResidentRecordKind; rec: ResidentRecord; l: Language; after: () => void; onListingUnavailable?: () => void }) { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const a = useAction(l, after);
   const [mode, setMode] = useState<'none' | 'edit' | 'thread' | 'inquire' | 'reason' | 'viewing' | 'request' | 'proposal' | 'lineage'>('none');
   const [note, setNote] = useState(''); const [reason, setReason] = useState(''); const [pending, setPending] = useState('');
@@ -119,7 +119,7 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
         <Btn kind="secondary" label={L(l, C.cancel)} onPress={() => setMode('none')} />
       </View>
     </View>}
-    {mode === 'viewing' && <ViewingForm rec={rec} l={l} after={after} onDone={() => setMode('none')} />}
+    {mode === 'viewing' && <ViewingForm rec={rec} l={l} after={after} onDone={() => setMode('none')} onUnavailable={onListingUnavailable ?? (() => setMode('none'))} />}
     {mode === 'inquire' && <RecordForm kind="conversations" l={l} parent={rec} after={after} onDone={() => setMode('none')} submitLabel={inquire} />}
   </Card>;
 }

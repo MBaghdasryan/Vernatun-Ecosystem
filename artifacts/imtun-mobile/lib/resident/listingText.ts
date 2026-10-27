@@ -19,6 +19,8 @@ export const LT={
  consent:['Համաձայն եմ, որ իմ դիտման հարցումը տեսնի հարևանս՝ սեփականատերը','Согласен, что владелец-сосед увидит мой запрос на просмотр','I agree the owner, my neighbor, will see this viewing request'] as T,
  confirmSend:['Ուղարկե՞լ դիտման հարցումը','Отправить запрос на просмотр?','Send this viewing request?'] as T,
  sent:['Հարցումն ուղարկվեց','Запрос отправлен','Viewing request sent'] as T,
+  changed:['Հայտարարությունը փոխվել է և այլևս հասանելի չէ։ Վերադարձեք ընթացիկ հայտարարություններին։','Объявление изменилось и больше недоступно. Вернитесь к актуальным объявлениям.','This listing has changed and is no longer available. Return to current results.'] as T,
+  currentResults:['Վերադառնալ հայտարարություններին','Вернуться к объявлениям','Back to current results'] as T,
  vs:{requested:['Սպասում է','Ожидает ответа','Requested'] as T,confirmed:['Հաստատված','Подтверждён','Confirmed'] as T,declined:['Մերժված','Отклонён','Declined'] as T,cancelled:['Չեղարկված','Отменён','Cancelled'] as T} as Record<string,T>,
  done:{confirm_viewing:['Դիտումը հաստատվեց','Просмотр подтверждён','Viewing confirmed'] as T,decline_viewing:['Դիտումը մերժվեց','Просмотр отклонён','Viewing declined'] as T,cancel_viewing:['Դիտումը չեղարկվեց','Просмотр отменён','Viewing cancelled'] as T} as Record<string,T>,
  priceReq:['Գինը պարտադիր է','Укажите цену','Price is required'] as T,

@@ -1018,6 +1018,36 @@ test('owner and renter phones complete the marketplace and discussion journey in
   const refreshedRenterPage=await openPhone(renterPhone,'renter',mobileRenter);
   await statusOnPhone(refreshedRenterPage,declinedViewingId,'Declined');
 
+  const staleTitle=`${marker} withdrawn rental`;
+  const staleListingId=await makeListing(staleTitle,'rent','160000');
+  await openMarketplace(refreshedRenterPage,'renter');
+  await refreshedRenterPage.getByTestId('marketplace-search-query').fill(staleTitle);
+  await refreshedRenterPage.getByTestId(`marketplace-details-${staleListingId}`).waitFor({state:'visible',timeout:30_000});
+  await refreshedRenterPage.getByTestId(`marketplace-details-${staleListingId}`).click();
+  await refreshedRenterPage.getByTestId(`listing-viewing-${staleListingId}`).last().click();
+  await refreshedRenterPage.getByTestId('viewing-date-time').fill(fillLocalDate(4));
+  await refreshedRenterPage.getByTestId('viewing-owner-consent').click();
+  assert.ok(await refreshedRenterPage.getByTestId('submit-viewing-request').isEnabled(),'The open listing should allow a request before it is withdrawn');
+  const staleListing=(await mobileOwner.call(`/resident/records/listings/${staleListingId}`)).data;
+  const withdrawn=await mobileOwner.call(`/resident/records/listings/${staleListingId}/actions`,'POST',{action:'close',version:staleListing.version});
+  assert.equal(withdrawn.status,200,JSON.stringify(withdrawn.data));assert.equal(withdrawn.data.status,'closed');
+  await refreshedRenterPage.getByTestId('viewing-listing-unavailable').waitFor({state:'visible',timeout:15_000});
+  assert.equal(await refreshedRenterPage.getByTestId('submit-viewing-request').count(),0,'The stale viewing form must not offer submission');
+  const rejectedStaleRequest=await mobileRenter.call('/resident/records/conversations','POST',{
+   title:`Viewing ${staleTitle}`,body:'Please confirm a visit.',parentId:staleListingId,
+   viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true,
+  });
+  assert.notEqual(rejectedStaleRequest.status,201,'The server must reject a viewing request for a withdrawn listing');
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM resident_product_records
+   WHERE kind='conversations' AND parent_id=$1 AND owner_user_id=$2`,[staleListingId,seed.accounts.renter.id])).rows[0].n,0);
+  await refreshedRenterPage.getByTestId('viewing-back-to-results').click();
+  await refreshedRenterPage.getByTestId('viewing-back-to-results').waitFor({state:'detached',timeout:15_000});
+  await refreshedRenterPage.getByTestId('marketplace-search-query').waitFor({state:'visible'});
+  assert.equal(await refreshedRenterPage.getByTestId('viewing-date-time').count(),0,'Returning to current results must close the stale viewing form');
+  const currentResults=await mobileRenter.call('/resident/records/listings?search='+encodeURIComponent(staleTitle));
+  assert.equal(currentResults.status,200,JSON.stringify(currentResults.data));
+  assert.ok(!currentResults.data.items.some((item:any)=>item.id===staleListingId),'Withdrawn listings must not be returned as current results');
+
   const discussionTitle=`${marker} discussion`,sourceText=`${marker}: please repair the shared entrance light.`;
   await ownerPage.getByText('Discussions',{exact:true}).click();
   await ownerPage.waitForURL(/tab=discussions/);
@@ -1050,7 +1080,7 @@ test('owner and renter phones complete the marketplace and discussion journey in
   await ownerPage.getByTestId('discussion-submit-request').click();
   await ownerPage.getByText('Submitted',{exact:true}).waitFor({state:'visible',timeout:30_000});
   await requestLineage.click();
-  await ownerPage.getByText('pending_review',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await ownerPage.getByText('Pending review',{exact:true}).waitFor({state:'visible',timeout:30_000});
   const trail=(await mobileOwner.call(`/resident/records/discussions/${discussion.id}/lineage`)).data;
   assert.equal(trail.length,2);
   assert.equal(trail[0].sourceMessageId,source.id);assert.equal(trail[1].sourceMessageId,source.id);
@@ -1071,7 +1101,7 @@ test('owner and renter phones complete the marketplace and discussion journey in
    throw new Error(`Discussion lineage missing after refresh. URL=${ownerPage.url()} Capabilities=${JSON.stringify(workspace.capabilities)} Text=${(await ownerPage.locator('body').innerText()).slice(-3000)}`,{cause:error});
   }
   await ownerPage.getByTestId(`discussion-lineage-${discussion.id}`).click();
-  await ownerPage.getByText('pending_review',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await ownerPage.getByText('Pending review',{exact:true}).waitFor({state:'visible',timeout:30_000});
   await ownerPage.getByText(`source ${source.id.slice(0,8)}`,{exact:true}).first().waitFor({state:'visible'});
   assert.deepEqual(expoLogs.filter(line=>line.startsWith('Browser error:')),[]);
  }finally{
