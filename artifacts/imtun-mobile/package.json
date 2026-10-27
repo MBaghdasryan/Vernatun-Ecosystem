@@ -8,6 +8,7 @@
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:android-bundle": "node scripts/check-android-bundle.mjs",
     "test:dev-proxy": "node --test scripts/dev-api-proxy.test.cjs",
     "test:private-documents": "node --test scripts/private-document.test.cjs"
   },
