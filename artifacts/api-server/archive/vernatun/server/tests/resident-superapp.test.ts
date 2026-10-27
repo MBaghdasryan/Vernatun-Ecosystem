@@ -136,17 +136,31 @@ test('discussion-to-request preserves the selected message and does not create a
   assert.equal(target.status,200,JSON.stringify(target.data));assert.equal(target.data.sourceExcerpt,message.data.body);
  const links=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(links.status,200,JSON.stringify(links.data));
  assert.equal(links.data.length,1);assert.equal(links.data[0].discussionId,topic.data.id);assert.equal(links.data[0].sourceMessageId,message.data.id);
-  assert.equal(links.data[0].sourceExcerpt,message.data.body);
+ assert.equal(links.data[0].sourceExcerpt,message.data.body);
  assert.equal(links.data[0].requestId,created.data.requestId);assert.equal(links.data[0].proposalId,null);assert.equal(links.data[0].meetingId,null);
  assert.equal(links.data[0].workOrderId,null);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_agenda_proposals WHERE id IN (SELECT proposal_id FROM resident_discussion_lineage WHERE discussion_id=$1)',[topic.data.id])).rows[0].n,0);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM work_orders WHERE request_id=$1',[created.data.requestId])).rows[0].n,0);
+});
+test('discussion lineage truncates source excerpts without splitting Unicode characters',async()=>{
+ const topic=await owner.call('/resident/records/discussions','POST',{title:'Unicode excerpt source',body:'A source for safe excerpt truncation.',category:'building'});assert.equal(topic.status,201,JSON.stringify(topic.data));
+ const source='x'.repeat(278)+'😀'+'tail'.repeat(20);
+ const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:source,clientId:randomUUID()});assert.equal(message.status,201,JSON.stringify(message.data));
+ const created=await owner.call(`/resident/records/discussions/${topic.data.id}/requests`,'POST',{key:randomUUID(),sourceMessageId:message.data.id,subject:'Unicode excerpt request',description:'Confirm safe excerpt display.'});assert.equal(created.status,201,JSON.stringify(created.data));
+ const lineage=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(lineage.status,200,JSON.stringify(lineage.data));
+ const excerpt=lineage.data[0].sourceExcerpt;
+ assert.equal(Array.from(excerpt).length,280);
+ assert.ok(excerpt.endsWith('😀…'));
 });
 test('staff request details expose a scoped discussion source and staff can open its thread',async()=>{
  const topic=await owner.call('/resident/records/discussions','POST',{title:'Lobby door repair source',body:'Original discussion body.',category:'building'});assert.equal(topic.status,201,JSON.stringify(topic.data));
  const text='The entry door has not latched correctly since the repair. '.repeat(12);
  const message=await owner.call(`/resident/records/discussions/${topic.data.id}/messages`,'POST',{body:text,clientId:randomUUID()});assert.equal(message.status,201);
  const created=await owner.call(`/resident/records/discussions/${topic.data.id}/requests`,'POST',{key:randomUUID(),sourceMessageId:message.data.id,subject:'Repair lobby door',description:'Please inspect the entrance door.'});assert.equal(created.status,201,JSON.stringify(created.data));
+  const lineage=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(lineage.status,200);
+  assert.equal(lineage.data[0].sourceExcerpt.length,280);
+  assert.ok(lineage.data[0].sourceExcerpt.startsWith('The entry door'));
+  assert.ok(!/[\u0000-\u001f\u007f-\u009f]/.test(lineage.data[0].sourceExcerpt));
  for(const staff of [dispatcher,manager]){
   const list=await staff.call('/requests');assert.equal(list.status,200);
   const row=list.data.find((r:any)=>r.id===created.data.requestId);

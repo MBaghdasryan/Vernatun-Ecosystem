@@ -13,6 +13,12 @@ export const residentRecords=Router();
 residentRecords.use(requireAuth);
 const id=z.string().uuid();
 const sessionRef=(sid:string)=>createHash('sha256').update(sid).digest('hex');
+const discussionSourceExcerpt=(value:unknown)=>{
+ const text=String(value??'').replace(/[\u0000-\u001f\u007f-\u009f]+/g,' ').replace(/\s+/g,' ').trim();
+ const maxExcerpt=280;
+ const characters=Array.from(text);
+ return characters.length>maxExcerpt?characters.slice(0,maxExcerpt-1).join('').trimEnd()+'…':text;
+};
 
 residentRecords.post('/records/discussions/:id/requests',async(req,res)=>{
  const s=await residentScope(req);assertEnabled(s,'discussions');writable(s);
@@ -93,11 +99,13 @@ residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
  const discussionId=id.parse(req.params.id);
  res.json(await transaction(async db=>{
   await readRecord(db,s,'discussions',discussionId,req.user!.id);
-  const rows=(await db.query(`SELECT l.id,l.link_type,l.discussion_id,l.source_message_id,LEFT(l.source_text,280) AS source_excerpt,l.request_id,l.proposal_id,
+  const rows=(await db.query(`SELECT l.id,l.link_type,l.discussion_id,l.source_message_id,l.source_text,l.request_id,l.proposal_id,
    l.meeting_id,l.created_at,r.subject AS request_subject,r.status AS request_status,w.id AS work_order_id,w.status AS work_order_status,
    p.title AS proposal_title,p.status AS proposal_status,p.decision,m.title AS meeting_title,m.status AS meeting_status,
+   COALESCE(m.was_published,false) AS meeting_was_published,
    COALESCE((SELECT json_agg(v.vote_id ORDER BY v.created_at) FROM resident_discussion_vote_links v
     JOIN meeting_ballots mb ON mb.id=v.vote_id JOIN meeting_eligibility e ON e.id=mb.eligibility_id
+    JOIN meetings vm ON vm.id=e.meeting_id AND vm.was_published
     WHERE v.lineage_id=l.id AND ($5 OR mb.owner_id=$4)),'[]') AS vote_ids
    FROM resident_discussion_lineage l
    LEFT JOIN resident_requests r ON r.id=l.request_id
@@ -109,11 +117,14 @@ residentRecords.get('/records/discussions/:id/lineage',async(req,res)=>{
      AND (l.proposal_id IS NULL OR p.submitted_by=$4 OR $7 OR (p.status IN ('included','decided') AND m.was_published))
     ORDER BY l.created_at,l.id`,[discussionId,s.organizationId,s.buildingId,req.user!.id,s.administrative,s.unitId,s.c.permissions.includes('meetings.manage')])).rows;
   return rows.map(r=>({
-    id:r.id,linkType:r.link_type,discussionId:r.discussion_id,sourceMessageId:r.source_message_id,sourceExcerpt:r.source_excerpt,
+   id:r.id,linkType:r.link_type,discussionId:r.discussion_id,sourceMessageId:r.source_message_id,
+   sourceExcerpt:discussionSourceExcerpt(r.source_text),
    requestId:r.request_id,requestSubject:r.request_subject??null,requestStatus:r.request_status??null,
    workOrderId:r.work_order_id??null,workOrderStatus:r.work_order_status??null,
    proposalId:r.proposal_id,proposalTitle:r.proposal_title??null,proposalStatus:r.proposal_status??null,
-   meetingId:r.meeting_id,meetingTitle:r.meeting_title??null,meetingStatus:r.meeting_status??null,
+   meetingId:r.meeting_was_published?r.meeting_id:null,
+   meetingTitle:r.meeting_was_published?(r.meeting_title??null):null,
+   meetingStatus:r.meeting_was_published?(r.meeting_status??null):null,
    voteIds:r.vote_ids??[],decision:r.decision??null,createdAt:r.created_at
   }));
  }));

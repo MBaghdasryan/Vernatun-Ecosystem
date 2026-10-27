@@ -687,7 +687,7 @@ components:
         version: {type: integer}
     DiscussionLineage:
       type: object
-      required: [id, linkType, discussionId, sourceMessageId, requestId, proposalId, meetingId, voteIds, createdAt, sourceExcerpt]
+      required: [id, linkType, discussionId, sourceMessageId, sourceExcerpt, requestId, proposalId, meetingId, voteIds, createdAt]
       properties:
         id: {type: string, format: uuid}
         linkType: {type: string, enum: [request, agenda_proposal]}

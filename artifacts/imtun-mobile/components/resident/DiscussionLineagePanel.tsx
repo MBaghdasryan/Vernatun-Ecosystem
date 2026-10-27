@@ -17,7 +17,7 @@ const T: Record<string, LocalText> = {
   votes: ['Գրանցված քվեներ', 'Записанные голоса', 'Recorded votes'],
   work: ['Աշխատանք', 'Работы', 'Work order'],
   decision: ['Որոշում', 'Решение', 'Decision'],
-  source: ['Մեջբերում քննարկումից', 'Фрагмент обсуждения', 'Excerpt from discussion'],
+  source: ['Մեջբերված քննարկման տեքստը', 'Фрагмент обсуждения', 'Discussion excerpt'],
   passed: ['Ընդունվել է', 'Принято', 'Passed'],
   failed: ['Չի ընդունվել', 'Не принято', 'Not passed'],
 };
@@ -39,8 +39,8 @@ export default function DiscussionLineagePanel({ discussionId, l }: { discussion
       return <View key={item.id} style={s.item}>
         <Text style={s.heading}>{item.linkType === 'request' ? L(l, T.request) : L(l, T.proposal)}</Text>
         <Text style={s.text}>{item.requestSubject ?? item.proposalTitle ?? '—'}</Text>
-         {item.requestStatus ? <Text style={s.meta}>{statusLabel[item.requestStatus] ? L(l, statusLabel[item.requestStatus]) : item.requestStatus}</Text> : null}
-         {item.proposalStatus ? <Text style={s.meta}>{statusLabel[item.proposalStatus] ? L(l, statusLabel[item.proposalStatus]) : item.proposalStatus}</Text> : null}
+        {item.requestStatus ? <Text style={s.meta}>{statusLabel[item.requestStatus] ? L(l, statusLabel[item.requestStatus]) : item.requestStatus}</Text> : null}
+        {item.proposalStatus ? <Text style={s.meta}>{statusLabel[item.proposalStatus] ? L(l, statusLabel[item.proposalStatus]) : item.proposalStatus}</Text> : null}
         {item.meetingId ? <Text style={s.meta}>{L(l, T.meeting)}: {item.meetingTitle ?? item.meetingId.slice(0, 8)} · {item.meetingStatus}</Text> : null}
         {item.voteIds.length ? <Text style={s.meta}>{L(l, T.votes)}: {item.voteIds.length}</Text> : null}
         {decision && typeof decision.passed === 'boolean' ? <Text style={s.meta}>{L(l, T.decision)}: {L(l, decision.passed ? T.passed : T.failed)}</Text> : null}
