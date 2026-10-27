@@ -592,6 +592,59 @@ test('owner-to-renter listing, confirmed viewing, and separate discussion reques
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM agenda_items WHERE source_discussion_id=$1',[proposalDiscussion.data.id])).rows[0].n,0);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM resident_requests WHERE source_discussion_id=$1',[proposalDiscussion.data.id])).rows[0].n,0);
 });
+test('listing closure wins a queued renter viewing request without creating a notice',async()=>{
+ const renter=await new Client().login('renter');
+ const listing=(await owner.call('/resident/records/listings','POST',{
+  title:'Closure race listing',body:'Available for scheduled visits',saleType:'rent',priceMinor:'120000',currency:'AMD',
+ })).data;
+ const submitted=await owner.call(`/resident/records/listings/${listing.id}/actions`,'POST',{action:'submit',version:listing.version});
+ assert.equal(submitted.status,200,JSON.stringify(submitted.data));
+ const active=await admin.call(`/resident/records/listings/${listing.id}/actions${query}`,'POST',{action:'approve',version:submitted.data.version});
+ assert.equal(active.status,200,JSON.stringify(active.data));assert.equal(active.data.status,'active');
+
+ const ownerId=seed.accounts.unit_owner.id,renterId=seed.accounts.renter.id;
+ const noticeCountBefore=Number((await pool.query(`SELECT count(*)::int AS n FROM notifications
+  WHERE user_id=$1 AND event_code='viewing_requested'`,[ownerId])).rows[0].n);
+ const lock=await pool.connect();
+ let transactionOpen=true;
+ let closePromise:Promise<any>|undefined,requestPromise:Promise<any>|undefined;
+ const waitForBlockedReads=async(expected:number)=>{
+  const deadline=Date.now()+5000;
+  while(Date.now()<deadline){
+   const waiting=Number((await pool.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+    WHERE datname=current_database() AND wait_event_type='Lock'
+     AND query LIKE '%FROM resident_product_records r WHERE r.id=%'`)).rows[0].n);
+   if(waiting>=expected)return;
+   await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  throw new Error(`Expected ${expected} listing transaction(s) to wait on the test lock`);
+ };
+ try{
+  await lock.query('BEGIN');
+  await lock.query('SELECT id FROM resident_product_records WHERE id=$1 FOR UPDATE',[listing.id]);
+  // Hold the listing lock while both API transactions queue. The close is
+  // deliberately first so the renter must observe its committed status.
+  closePromise=owner.call(`/resident/records/listings/${listing.id}/actions`,'POST',{action:'close',version:active.data.version});
+  await waitForBlockedReads(1);
+  requestPromise=renter.call('/resident/records/conversations','POST',{
+   title:'Viewing after closure',body:'Please confirm a visit.',parentId:listing.id,
+   viewingAt:new Date(Date.now()+3*86400000).toISOString(),viewingConsent:true,
+  });
+  await waitForBlockedReads(2);
+  await lock.query('COMMIT');transactionOpen=false;
+  const [closed,request]=await Promise.all([closePromise,requestPromise]);
+  assert.equal(closed.status,200,JSON.stringify(closed.data));assert.equal(closed.data.status,'closed');
+  assert.equal(request.status,404,JSON.stringify(request.data));
+  assert.equal(Number((await pool.query(`SELECT count(*)::int AS n FROM resident_product_records
+   WHERE kind='conversations' AND parent_id=$1 AND owner_user_id=$2`,[listing.id,renterId])).rows[0].n),0);
+  assert.equal(Number((await pool.query(`SELECT count(*)::int AS n FROM notifications
+   WHERE user_id=$1 AND event_code='viewing_requested'`,[ownerId])).rows[0].n),noticeCountBefore);
+ }finally{
+  if(transactionOpen)await lock.query('ROLLBACK').catch(()=>{});
+  await Promise.allSettled([closePromise,requestPromise].filter((promise):promise is Promise<any>=>!!promise));
+  lock.release();
+ }
+});
 test('confirming a viewing serializes with cancellation and listing closure',async()=>{
  const payload={title:'Concurrent viewing listing',body:'Available for scheduled visits',saleType:'sale',priceMinor:'18000000',currency:'USD'};
  const makeRequest=async()=>{
