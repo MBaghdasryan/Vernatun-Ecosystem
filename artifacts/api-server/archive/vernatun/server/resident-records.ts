@@ -36,6 +36,7 @@ residentRecords.post('/records/discussions/:id/requests',async(req,res)=>{
  res.status(201).json(await transaction(async db=>idempotent(db,req,b.key,{...b,discussionId},async()=>{
   const discussion=await readRecord(db,s,'discussions',discussionId,req.user!.id,true);
   if(discussion.status!=='open')throw new ApiError(409,'discussion_closed');
+   if(discussion.linked_request_id)throw new ApiError(409,'discussion_already_converted');
   const source=b.sourceMessageId
    ?(await db.query('SELECT body FROM resident_product_messages WHERE id=$1 AND record_id=$2',[b.sourceMessageId,discussionId])).rows[0]
    :{body:discussion.body};
@@ -52,6 +53,7 @@ residentRecords.post('/records/discussions/:id/requests',async(req,res)=>{
    const prior=(await db.query('SELECT discussion_id,source_message_id,source_text FROM resident_discussion_lineage WHERE request_id=$1',[request.id])).rows[0];
    if(prior.discussion_id!==discussionId||prior.source_message_id!==(b.sourceMessageId??null)||prior.source_text!==sourceText)throw new ApiError(409,'idempotency_conflict');
   }
+   await db.query('UPDATE resident_product_records SET linked_request_id=$2 WHERE id=$1',[discussionId,request.id]);
   await record(db,req,{...s.c,organization_id:s.organizationId},'resident.discussion.convert_request','resident_record',discussionId,{requestId:request.id,sourceMessageId:b.sourceMessageId??null});
   return {requestId:request.id,discussionId,sourceMessageId:b.sourceMessageId??null,status:request.status};
  })));

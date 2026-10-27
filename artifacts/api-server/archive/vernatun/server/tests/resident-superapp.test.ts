@@ -131,6 +131,7 @@ test('discussion-to-request preserves the selected message and does not create a
  const input={key,sourceMessageId:message.data.id,subject:'Repair entrance light',description:'Please replace the failed lamp.'};
  const created=await owner.call(path,'POST',input);assert.equal(created.status,201,JSON.stringify(created.data));
  const replay=await owner.call(path,'POST',input);assert.equal(replay.status,201);assert.equal(replay.data.requestId,created.data.requestId);
+  assert.equal((await pool.query('SELECT linked_request_id FROM resident_product_records WHERE id=$1',[topic.data.id])).rows[0].linked_request_id,created.data.requestId);
   const target=await owner.call(`/resident/discussions/${topic.data.id}/links/request`);
   assert.equal(target.status,200,JSON.stringify(target.data));assert.equal(target.data.sourceExcerpt,message.data.body);
  const links=await owner.call(`/resident/records/discussions/${topic.data.id}/lineage`);assert.equal(links.status,200,JSON.stringify(links.data));
@@ -490,7 +491,8 @@ test('owner-to-renter listing, confirmed viewing, and separate discussion reques
  assert.equal(proposalLink.data.id,proposal.data.proposalId);
  assert.equal(proposalLink.data.sourceExcerpt,proposalMessage.data.body);
  assert.equal((await owner.call(`/resident/discussions/${proposalDiscussion.data.id}/links/proposal`)).status,404);
- const pending=await manager.call(`/governance/agenda-proposals?status=pending_review${query}`);
+  const pending=await manager.call(`/governance/agenda-proposals?status=pending_review&buildingId=${buildingId}`);
+  assert.equal(pending.status,200,JSON.stringify(pending.data));
  assert.ok(pending.data.some((item:any)=>item.id===proposal.data.proposalId));
  const reviewed=await manager.call(`/governance/agenda-proposals/${proposal.data.proposalId}/review`,'POST',{
   key:randomUUID(),version:proposal.data.version,action:'approve'

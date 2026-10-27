@@ -28,11 +28,12 @@ residentConversations.get('/discussions/:id/links/:target',async(req,res)=>{
     result=(await db.query(`SELECT r.id,r.subject AS title,r.status,
      LEFT(COALESCE(l.source_text,$5),280) AS "sourceExcerpt"
      FROM resident_requests r
+      LEFT JOIN units u ON u.id=r.unit_id
      LEFT JOIN resident_discussion_lineage l ON l.request_id=r.id AND l.discussion_id=$1
       AND l.organization_id=$2 AND l.building_id=$3
-     WHERE (l.discussion_id=$1 OR r.source_discussion_id=$1) AND r.organization_id=$2 AND r.building_id=$3
-      AND ($4::uuid IS NULL OR r.id=$4)
-     ORDER BY l.created_at DESC NULLS LAST,r.created_at DESC LIMIT 1`,
+      WHERE (l.discussion_id=$1 OR r.source_discussion_id=$1 OR r.id=$4)
+       AND r.organization_id=$2 AND COALESCE(r.building_id,u.building_id)=$3
+      ORDER BY (l.discussion_id=$1) DESC,l.created_at DESC NULLS LAST,r.created_at DESC LIMIT 1`,
      [row.id,s.organizationId,s.buildingId,row.linked_request_id,row.body])).rows[0];
    }else{
     // A resident-created proposal stays a proposal until a manager reviews it.
