@@ -28,6 +28,7 @@ function createHarness(platform, { raceOnCreate = false } = {}) {
   let availabilityChecks = 0;
   let returnedToResults = 0;
   let closedByOwner = false;
+  const accessibilityAnnouncements = [];
 
   const React = {
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }),
@@ -38,11 +39,20 @@ function createHarness(platform, { raceOnCreate = false } = {}) {
         hookValues[index] = typeof value === 'function' ? value(hookValues[index]) : value;
       }];
     },
+    useEffect(effect, deps) {
+      const index = hookIndex++;
+      const previous = hookValues[index];
+      if (!previous || deps.some((value, depIndex) => !Object.is(value, previous.deps[depIndex]))) {
+        hookValues[index] = { deps };
+        effect();
+      }
+    },
   };
 
   const modules = {
     react: React,
     'react-native': {
+      AccessibilityInfo: { announceForAccessibility: message => accessibilityAnnouncements.push(message) },
       Alert: { alert: (...args) => { alert = args; } },
       Platform: { OS: platform },
       Text: 'Text',
@@ -144,6 +154,7 @@ function createHarness(platform, { raceOnCreate = false } = {}) {
     render,
     find: testID => find(rendered, testID),
     get alert() { return alert; },
+    get accessibilityAnnouncements() { return accessibilityAnnouncements; },
     get createCalls() { return createCalls; },
     get availabilityChecks() { return availabilityChecks; },
     get returnedToResults() { return returnedToResults; },
@@ -208,13 +219,16 @@ for (const platform of ['ios', 'android']) {
     h.render();
     const explanation = h.find('viewing-listing-unavailable');
     assert.ok(explanation, 'The renter should see the listing-changed explanation');
-    assert.equal(explanation.props.accessibilityRole, 'alert');
+    assert.equal(explanation.props.accessibilityLabel, listingText.changed[2], 'The unavailable message should have an explicit screen-reader label');
+    assert.ok(h.accessibilityAnnouncements.includes(listingText.changed[2]), 'The changed-listing explanation and recovery guidance should be announced');
     assert.ok(h.text(listingText.changed[2]));
     assert.equal(h.find('submit-viewing-request'), null, 'A withdrawn listing must not remain submittable');
     assert.equal(h.createCalls, 0, 'No viewing request should be sent after the owner closes the listing');
     assert.equal(h.availabilityChecks, 1, 'The native confirmation must recheck listing availability');
 
-    h.find('viewing-back-to-results').props.onPress();
+    const recovery = h.find('viewing-back-to-results');
+    assert.equal(recovery.props.label, listingText.currentResults[2], 'The recovery action should have a clear accessible button name');
+    recovery.props.onPress();
     assert.equal(h.returnedToResults, 1, 'Recovery should invoke the marketplace current-results action');
   });
 
@@ -227,10 +241,14 @@ for (const platform of ['ios', 'android']) {
     await new Promise(resolve => setImmediate(resolve));
 
     h.render();
-    assert.ok(h.find('viewing-listing-unavailable'), 'A server conflict should show the listing-changed explanation');
+    const explanation = h.find('viewing-listing-unavailable');
+    assert.ok(explanation, 'A server conflict should show the listing-changed explanation');
+    assert.ok(h.accessibilityAnnouncements.includes(listingText.changed[2]), 'A server conflict should announce the changed-listing guidance');
     assert.equal(h.createCalls, 1, 'The request can reach the server only in the close-during-submit race');
     assert.equal(h.find('submit-viewing-request'), null);
-    h.find('viewing-back-to-results').props.onPress();
+    const recovery = h.find('viewing-back-to-results');
+    assert.equal(recovery.props.label, listingText.currentResults[2]);
+    recovery.props.onPress();
     assert.equal(h.returnedToResults, 1);
   });
 }

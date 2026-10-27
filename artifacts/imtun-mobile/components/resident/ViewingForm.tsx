@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Alert, Platform, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { AccessibilityInfo, Alert, Platform, Text, View } from 'react-native';
 import { createResidentRecord, getResidentRecord } from '@workspace/api-client-react';
 import type { ResidentRecord } from '@workspace/api-client-react';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,9 @@ export default function ViewingForm({ rec, l, after, onDone, onUnavailable }: { 
   const valid = !!t && !isNaN(t.getTime()) && t.getTime() > Date.now();
   const status = Number((availability.error as { status?: number } | null)?.status);
   const listingUnavailable = unavailable || availability.data?.status !== 'active' && !!availability.data || availability.isError && status === 404;
+  useEffect(() => {
+    if (listingUnavailable) AccessibilityInfo.announceForAccessibility(L(l, LT.changed));
+  }, [listingUnavailable, l]);
   const checkListing = async () => {
     try {
       const current = await getResidentRecord('listings', rec.id);
@@ -52,7 +55,7 @@ export default function ViewingForm({ rec, l, after, onDone, onUnavailable }: { 
     Alert.alert(L(l, LT.confirmSend), t.toLocaleString(l), [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, LT.reqView), onPress: submit }]);
   };
   if (listingUnavailable) return <View style={{ gap: 10 }}>
-    <Text testID="viewing-listing-unavailable" accessibilityRole="alert">{L(l, LT.changed)}</Text>
+    <Text testID="viewing-listing-unavailable" accessibilityLabel={L(l, LT.changed)}>{L(l, LT.changed)}</Text>
     <Btn testID="viewing-back-to-results" kind="secondary" label={L(l, LT.currentResults)} onPress={onUnavailable} />
   </View>;
   if (availability.isPending) return <View style={{ gap: 10 }}><Text>{L(l, ['Ստուգվում է հայտարարությունը…', 'Проверяем объявление…', 'Checking listing…'])}</Text></View>;
