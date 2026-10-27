@@ -10,6 +10,7 @@ import { csrfSessionRef } from './_layout';
 import SavedProfiles from '@/components/SavedProfiles';
 import { rememberSavedProfile } from '@/lib/savedProfiles';
 import OwnerOnboarding from '@/components/OwnerOnboarding';
+import { isImTunResidentContext } from '@/lib/resident/navigation';
 
 type EntryRole = 'owner' | 'family' | 'renter';
 type EntryLanguage = 'hy' | 'ru' | 'en';
@@ -18,11 +19,6 @@ const entryCopy = {
   ru: { kicker: 'ПОРЯДОК В ДОМЕ НАЧИНАЕТСЯ ЗДЕСЬ', welcome: 'Войти в ImTun', explain: 'Выберите роль, чтобы увидеть подходящий вариант входа. Доступ определяет сервер.', owner: 'Собственник', family: 'Член семьи', renter: 'Арендатор', ownerSub: 'Регистрация и запрос доступа', invited: 'Вход только по приглашению', familyNote: 'Члены семьи получают доступ только по приглашению собственника.', renterNote: 'Арендаторы входят только по приглашению собственника.', email: 'Электронная почта', password: 'Пароль', remember: 'Запомнить аккаунт на этом устройстве (без пароля)', code: 'Код подтверждения', codeToggle: 'Ввести код подтверждения', submit: 'Войти', ownerRegister: 'Зарегистрироваться как собственник', secure: 'Вход защищён сессией', busy: 'Выполняется вход…' },
   en: { kicker: 'A BETTER-RUN HOME STARTS HERE', welcome: 'Sign in to ImTun', explain: 'Choose a role to filter the sign-in experience. The server determines actual access.', owner: 'Owner', family: 'Family member', renter: 'Renter', ownerSub: 'Register and request access', invited: 'Invitation-only sign-in', familyNote: 'Family members can join only with an invitation from the owner.', renterNote: 'Renters can join only with an invitation from the owner.', email: 'Email address', password: 'Password', remember: 'Remember this account on this device (never the password)', code: 'Verification code', codeToggle: 'Enter a verification code', submit: 'Sign in', ownerRegister: 'Register as an owner', secure: 'Sign-in is protected by a secure session', busy: 'Signing in…' },
 } as const;
-
-function isImTunResident(context: MobileAuthContext) {
-  const productLabels = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
-  return productLabels.includes('imtun') || context.role_key.toLowerCase().includes('resident');
-}
 
 function matchesEntryRole(context: MobileAuthContext, role: EntryRole) {
   const key = context.role_key.toLowerCase();
@@ -70,7 +66,7 @@ export default function EntryScreen() { const palette = useAppPalette(); const s
   const [entryRole, setEntryRole] = useState<EntryRole>('owner');
   const [entryLanguage, setEntryLanguage] = useState<EntryLanguage>('hy');
   const [onboarding, setOnboarding] = useState<'register' | 'claim' | 'status' | null>(null);
-  const allResidentContexts = useMemo(() => (session.data?.contexts ?? []).filter(isImTunResident), [session.data?.contexts]);
+  const allResidentContexts = useMemo(() => (session.data?.contexts ?? []).filter(isImTunResidentContext), [session.data?.contexts]);
   const contexts = useMemo(() => allResidentContexts.filter((context) => matchesEntryRole(context, entryRole)), [allResidentContexts, entryRole]);
   const selected = contexts.find((context) => context.id === session.data?.contextId);
   const copy = entryCopy[entryLanguage];

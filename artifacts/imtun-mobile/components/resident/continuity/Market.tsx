@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Feather } from '@expo/vector-icons';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createResidentSavedSearch, deleteResidentSavedSearch, getResidentPropertyComparison, getResidentRecords } from '@workspace/api-client-react';
@@ -24,6 +25,18 @@ export default function Market({ d, l }: { d: ResidentContinuity; l: Language })
     <Card>
       <Field label={tt(l, 'Որոնում', 'Поиск', 'Search')} value={query} onChange={setQuery} maxLength={120} />
       <Segment<Offer> label={tt(l, 'Տեսակ', 'Тип предложения', 'Offer type')} value={offer} options={[['all', tt(l, 'Բոլորը', 'Все', 'All')], ['sale', tt(l, 'Վաճառք', 'Продажа', 'Sale')], ['rent', tt(l, 'Վարձ', 'Аренда', 'Rent')]]} onChange={setOffer} />
+    </Card>
+    <Card>
+      <Text style={{ color: palette.foreground, fontWeight: '800', fontSize: 16 }}>{tt(l, 'Քարտեզ', 'Карта объявлений', 'Listing map')}</Text>
+      <View
+        accessibilityLabel={tt(l, 'Ներկառուցված քարտեզը դեռ միացված չէ', 'Встроенная карта пока не подключена', 'Embedded map is not connected yet')}
+        testID="marketplace-map-shell"
+        style={{ minHeight: 176, marginTop: 10, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: palette.border, borderRadius: 14, backgroundColor: palette.surface }}
+      >
+        <Feather name="map" size={25} color={palette.mutedForeground} />
+        <Text style={{ color: palette.foreground, fontWeight: '700', textAlign: 'center' }}>{tt(l, 'Քարտեզը կհայտնվի այստեղ', 'Здесь появится карта объявлений', 'The listing map will appear here')}</Text>
+        <Text style={{ color: palette.mutedForeground, textAlign: 'center', fontSize: 12 }}>{tt(l, 'Քարտեզի մատակարարը դեռ միացված չէ։ Մինչ այդ հայտարարության հասցեն կարող եք բացել արտաքին քարտեզում։', 'Картографический провайдер пока не подключён. Пока можно открыть адрес объявления во внешнем приложении карт.', 'A map provider is not connected yet. You can still open a listing address in the external maps app.')}</Text>
+      </View>
     </Card>
     <Card><Text style={{ color: palette.foreground, fontWeight: '800', fontSize: 16 }}>{tt(l, 'Պահված որոնումներ (անձնական)', 'Сохранённые поиски (личные)', 'Saved searches (private)')}</Text>
       <Field label={tt(l, 'Անվանում', 'Название', 'Name')} value={name} onChange={setName} maxLength={80} />

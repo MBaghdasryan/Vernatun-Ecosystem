@@ -10,12 +10,7 @@ import { armenianCurrency, friendlyError } from '@/constants/armenian';
 import { useLang, useWorkspace } from '@/lib/resident/hooks';
 import { roleLabel, tr, useSection } from '@/lib/resident/shell';
 import { Row } from '@/components/resident/Ui';
-import { residentSectionAllowed } from '@/lib/resident/navigation';
-
-function isResidentContext(context: MobileAuthContext) {
-  const product = [context.product, ...(context.products ?? [])].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
-  return product.includes('imtun') || context.role_key.toLowerCase().includes('resident');
-}
+import { isImTunResidentContext, residentSectionAllowed } from '@/lib/resident/navigation';
 
 export default function ProfileScreen() { const palette = useAppPalette(); const styles = React.useMemo(() => make_styles(palette), [palette]);
   const router = useRouter();
@@ -26,7 +21,7 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
   const [contextSheet, setContextSheet] = useState(false);
   const [error, setError] = useState('');
   csrfSessionRef.current = session.data?.csrf ?? csrfSessionRef.current;
-  const contexts = useMemo(() => (session.data?.contexts ?? []).filter(isResidentContext), [session.data?.contexts]);
+  const contexts = useMemo(() => (session.data?.contexts ?? []).filter(isImTunResidentContext), [session.data?.contexts]);
   const active = contexts.find((context) => context.id === session.data?.contextId);
   const user = session.data?.user;
   const l = useLang(); const ws = useWorkspace(); const go = useSection();

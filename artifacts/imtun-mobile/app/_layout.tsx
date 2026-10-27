@@ -46,7 +46,8 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const palette = useAppPalette();
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Հետ', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
+    <Stack initialRouteName="index" screenOptions={{ headerBackTitle: 'Հետ', headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );

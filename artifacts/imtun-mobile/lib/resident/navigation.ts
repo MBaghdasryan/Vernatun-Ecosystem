@@ -4,6 +4,14 @@ import { kinds, superViews } from './text';
 
 export type ResidentRole = 'owner' | 'renter' | 'family' | 'resident';
 
+export function isImTunResidentContext(context: MobileAuthContext): boolean {
+  const products = [context.product, ...(context.products ?? [])]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+  return products.includes('imtun') || context.role_key.toLowerCase().includes('resident');
+}
+
 /** Role only changes presentation order and copy; it never grants a module. */
 export function residentRole(context?: MobileAuthContext): ResidentRole {
   const role = (context?.role_key ?? '').toLowerCase();

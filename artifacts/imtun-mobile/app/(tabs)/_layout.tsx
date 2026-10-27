@@ -1,17 +1,17 @@
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { useAppPalette, useAppTheme } from '@/hooks/useAppTheme';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useLang } from '@/lib/resident/hooks';
 import { tabLabels, tr } from '@/lib/resident/shell';
 import { useGetMobileAuthSession } from '@workspace/api-client-react';
 import { useWorkspace } from '@/lib/resident/hooks';
 import { domainAvailable } from '@/lib/resident/domain';
-import { residentRole, residentSectionAllowed, type ResidentRole } from '@/lib/resident/navigation';
+import { isImTunResidentContext, residentRole, residentSectionAllowed, type ResidentRole } from '@/lib/resident/navigation';
 
 type TabRoute = 'index' | 'access' | 'bills' | 'requests' | 'community' | 'profile' | 'more';
 const routeMeta: Record<TabRoute, { icon: keyof typeof Feather.glyphMap; systemIcon: string; systemSelected: string }> = {
@@ -114,6 +114,22 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
+  const palette = useAppPalette();
+  const session = useGetMobileAuthSession();
+  const activeResidentContext = session.data?.contexts.find((context) =>
+    context.id === session.data?.contextId && isImTunResidentContext(context),
+  );
+
+  if (session.isPending && !session.data) {
+    return <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background }]}>
+      <ActivityIndicator color={palette.primary} />
+    </View>;
+  }
+
+  if (!session.data?.user || !activeResidentContext) {
+    return <Redirect href="/" />;
+  }
+
   if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }
