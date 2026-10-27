@@ -2,7 +2,12 @@ import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
+import {createServer} from 'node:net';
+import {resolve} from 'node:path';
+import {existsSync} from 'node:fs';
+import {spawn,type ChildProcess} from 'node:child_process';
 import sharp from 'sharp';
+import {chromium,type Browser,type BrowserContext,type Page} from 'playwright';
 import {readPrivateFile,deletePrivateFile} from '../private-files.js';
 import {app} from '../app.js';
 import {pool} from '../db.js';
@@ -32,15 +37,23 @@ class Client{
   return {status:r.status,body:Buffer.from(await r.arrayBuffer()),type:r.headers.get('content-type'),cache:r.headers.get('cache-control')};
  }
 }
-let owner:Client,family:Client,admin:Client,manager:Client,ops:Client,dispatcher:Client,secondOrg:Client,buildingId:string,query:string;
+let owner:Client,family:Client,admin:Client,manager:Client,ops:Client,dispatcher:Client,secondOrg:Client,journeyRenter:Client|undefined,buildingId:string,query:string;
 const photoKeys:string[]=[];
+const openPort=async()=>new Promise<number>((resolvePort,reject)=>{
+ const probe=createServer();probe.once('error',reject);probe.listen(0,'127.0.0.1',()=>{const address=probe.address();if(!address||typeof address==='string')return reject(new Error('Could not allocate a test port'));const port=address.port;probe.close(error=>error?reject(error):resolvePort(port));});
+});
+const fillLocalDate=(daysAhead:number)=>{
+ const date=new Date(Date.now()+daysAhead*86400000);
+ const pad=(n:number)=>String(n).padStart(2,'0');
+ return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 before(async()=>{
  await new Promise<void>(r=>server.listening?r():server.on('listening',r));
  base='http://127.0.0.1:'+(server.address() as {port:number}).port;
  const schema=(await pool.query('SELECT current_schema() AS name')).rows[0].name;
  assert.match(schema,/^qa_[a-f0-9]{20}$/);assert.equal(schema,process.env.PRIVATE_FILES_TEST_RUN);
  await pool.query('DELETE FROM auth_rate_limits');
- owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');manager=await new Client().login('manager');ops=await new Client().login('manager');dispatcher=await new Client().login('dispatcher');secondOrg=await new Client().login('second_org');
+ owner=await new Client().login('unit_owner');family=await new Client().login('family');admin=await new Client().login('org_admin');manager=await new Client().login('manager');ops=await new Client().login('manager');dispatcher=await new Client().login('dispatcher');secondOrg=await new Client().login('second_org');journeyRenter=await new Client().login('renter');
  buildingId=seed.fixtures.ba;query='?buildingId='+buildingId;
 });
 after(async()=>{try{for(const key of photoKeys)await deletePrivateFile('photos',key)}finally{server.close();server.closeAllConnections();await pool.end()}});
@@ -465,7 +478,7 @@ test('viewings persist explicit requests and only the listing owner can confirm 
   assert.equal(destination.data.destination,`/imtun/marketplace?recordKind=conversations&recordId=${request.id}`);
  assert.equal((await family.call(path+'/actions','POST',{action:'confirm_viewing',version:1})).status,403);
  assert.equal((await admin.call(path+'/actions'+query,'POST',{action:'confirm_viewing',version:1})).status,403);
- const stranger=await new Client().login('renter');
+ const stranger=journeyRenter!;
  assert.equal((await stranger.call(path)).status,404);
  assert.equal((await stranger.call(path+'/messages')).status,404);
  const owned=(await owner.call(path)).data;
@@ -845,6 +858,225 @@ test('search separates resident kinds and exact record links preserve ownership 
   assert.ok(!after.data.groups.some((g:any)=>g.kind==='resident:conversations'));
  }finally{
   await pool.query('UPDATE resident_building_settings SET chat=true WHERE building_id=$1 AND organization_id=$2',[buildingId,org]);
+ }
+});
+test('owner and renter phones complete the marketplace and discussion journey in an isolated app', {timeout:260_000}, async()=>{
+ const mobileOwner=owner,mobileRenter=journeyRenter;
+ assert.ok(mobileRenter,'The pre-existing renter fixture session must be available to the phone journey');
+ const roleSettings={directory:true,discussions:true,chat:true,marketplace:true,services:true};
+ assert.equal((await admin.call('/resident/settings'+query,'PUT',roleSettings)).status,200);
+ for(const client of [mobileOwner,mobileRenter]){
+  const profile=(await client.call('/resident/workspace')).data.profile;
+  assert.equal((await client.call('/resident/profile','PUT',{...profile,language:'en'})).status,200);
+ }
+ const marker='PhoneJourney-'+randomUUID().slice(0,8);
+ const makeListing=async(title:string,saleType:'sale'|'rent',priceMinor:string)=>{
+  const draft=await mobileOwner.call('/resident/records/listings','POST',{title,body:'Fresh mobile marketplace QA fixture',saleType,priceMinor,currency:'USD',rooms:2});
+  assert.equal(draft.status,201,JSON.stringify(draft.data));
+  const submitted=await mobileOwner.call(`/resident/records/listings/${draft.data.id}/actions`,'POST',{action:'submit',version:draft.data.version});
+  assert.equal(submitted.data.status,'submitted');
+  const active=await admin.call(`/resident/records/listings/${draft.data.id}/actions${query}`,'POST',{action:'approve',version:submitted.data.version});
+  assert.equal(active.data.status,'active');
+  return draft.data.id as string;
+ };
+ const rentTitle=`${marker} rental`,saleTitle=`${marker} sale`;
+ const rentalId=await makeListing(rentTitle,'rent','155000'),saleId=await makeListing(saleTitle,'sale','24500000');
+ const apiPort=(server.address() as {port:number}).port,webPort=await openPort();
+ const origin=`http://localhost:${webPort}`,mobileDir=resolve(process.cwd(),'../../../imtun-mobile');
+ const expoLogs:string[]=[];
+ const expo:ChildProcess=spawn('corepack',['pnpm','exec','expo','start','--web','--localhost','--port',String(webPort)],{
+  cwd:mobileDir,stdio:['ignore','pipe','pipe'],env:{...process.env,NODE_ENV:'development',PORT:String(webPort),
+   REPLIT_EXPO_DEV_DOMAIN:`localhost:${webPort}`,IMTUN_DEV_API_ROUTER_PORT:String(apiPort),EXPO_NO_TELEMETRY:'1',CI:'1',BROWSER:'none'},
+ });
+ const recordLogs=(chunk:Buffer)=>{expoLogs.push(chunk.toString());if(expoLogs.join('').length>12_000)expoLogs.splice(0,Math.max(1,expoLogs.length-20));};
+ expo.stdout?.on('data',recordLogs);expo.stderr?.on('data',recordLogs);
+ let browser:Browser|undefined,ownerPhone:BrowserContext|undefined,renterPhone:BrowserContext|undefined;
+ const delay=(ms:number)=>new Promise(r=>setTimeout(r,ms));
+ try{
+  let ready=false;
+  for(let attempt=0;attempt<120;attempt++){
+   if(expo.exitCode!==null)throw new Error(`ImTun phone preview exited early: ${expoLogs.join('').slice(-5000)}`);
+   try{const response=await fetch(origin);if(response.ok){ready=true;break}}catch{}
+   await delay(500);
+  }
+  assert.ok(ready,`ImTun phone preview did not start: ${expoLogs.join('').slice(-5000)}`);
+  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||
+   (existsSync('/repl/tools/bin/chromium')?'/repl/tools/bin/chromium':undefined)});
+  const newPhone=()=>browser!.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  ownerPhone=await newPhone();renterPhone=await newPhone();
+  const addSession=async(context:BrowserContext,client:Client)=>{
+   const separator=client.cookie.indexOf('=');
+   assert.ok(separator>0,'The isolated API client should have a session cookie');
+   await context.addCookies([{name:client.cookie.slice(0,separator),value:client.cookie.slice(separator+1),url:origin,httpOnly:true,sameSite:'Lax'}]);
+  };
+  await addSession(ownerPhone,mobileOwner);await addSession(renterPhone,mobileRenter);
+  const openPhone=async(context:BrowserContext,role:'owner'|'renter',client:Client)=>{
+   const page=await context.newPage();
+   page.on('pageerror',error=>expoLogs.push(`Browser error: ${error.message}`));
+   page.on('console',message=>{if(message.type()==='error')expoLogs.push(`Browser console: ${message.text()}`);});
+   page.on('requestfailed',request=>expoLogs.push(`Browser request failed: ${request.url()} ${request.failure()?.errorText??''}`));
+   page.on('response',response=>{
+    if(response.request().method()==='POST'&&response.url().includes('/messages'))void response.text().then(text=>expoLogs.push(`Message POST ${response.status()}: ${text.slice(0,400)}`)).catch(()=>{});
+   });
+   await page.goto(origin,{waitUntil:'domcontentloaded'});
+   if(role==='renter'){
+    const renterRole=page.getByTestId('available-role-renter');
+    if(await renterRole.isVisible().catch(()=>false))await renterRole.click();
+   }
+   const contextChoice=page.getByTestId(`context-${client.contextId}`);
+   try{await contextChoice.waitFor({state:'visible',timeout:5_000});await contextChoice.click();}
+   catch{ /* An already-selected home goes straight to the resident tabs. */ }
+   await page.getByTestId('home-context-button').waitFor({state:'visible',timeout:30_000});
+   await page.getByTestId('home-context-button').waitFor({state:'visible',timeout:30_000});
+   return page;
+  };
+  const renterPage=await openPhone(renterPhone,'renter',mobileRenter);
+  const openChats=async(page:Page)=>{
+   const communityTab=page.getByTestId('tab-community');
+   if(!(await communityTab.isVisible()))await page.goBack();
+   await communityTab.waitFor({state:'visible',timeout:30_000});
+   await communityTab.click();
+   await page.getByText('Chats',{exact:true}).click();
+  };
+  const confirmAction=async(page:Page,selector:string)=>{
+   await Promise.all([page.waitForEvent('dialog').then(dialog=>dialog.accept()),page.getByTestId(selector).click()]);
+  };
+  const openMarketplace=async(page:Page,role:'owner'|'renter')=>{
+   if(role==='renter')await page.getByTestId('tab-more').click();
+   else {await page.getByTestId('tab-profile').click();await page.getByTestId('profile-more').click();}
+   await page.getByTestId('more-marketplace').click();
+  };
+  await openMarketplace(renterPage,'renter');
+  try{await renterPage.getByTestId('marketplace-search-query').waitFor({state:'visible',timeout:30_000});}
+  catch(error){throw new Error(`Marketplace phone route did not render. URL=${renterPage.url()} Text=${(await renterPage.locator('body').innerText()).slice(0,3000)} Browser logs=${expoLogs.join('\n').slice(-7000)}`,{cause:error});}
+  await renterPage.getByTestId('marketplace-search-query').fill(marker);
+  await renterPage.getByTestId(`marketplace-compare-listing-${rentalId}`).waitFor({state:'visible',timeout:30_000});
+  await renterPage.getByTestId(`marketplace-compare-listing-${saleId}`).waitFor({state:'visible',timeout:30_000});
+  await renterPage.getByTestId('marketplace-saved-search-name').fill(`${marker} search`);
+  await renterPage.getByTestId('marketplace-save-search').click();
+  await renterPage.getByText(`${marker} search · ${marker} · all`,{exact:true}).waitFor({state:'visible',timeout:30_000});
+  const saved=(await mobileRenter.call('/resident/continuity')).data.savedSearches.find((item:any)=>item.name===`${marker} search`);
+  assert.ok(saved,'The renter phone must persist its search before reapplying it');
+  await renterPage.getByTestId('marketplace-search-query').fill('no matching QA listing');
+  await renterPage.getByTestId(`marketplace-apply-search-${saved.id}`).waitFor({state:'visible'});
+  await renterPage.getByTestId(`marketplace-apply-search-${saved.id}`).click();
+  await renterPage.getByTestId(`marketplace-compare-listing-${rentalId}`).waitFor({state:'visible'});
+  await renterPage.getByTestId(`marketplace-compare-listing-${saleId}`).waitFor({state:'visible'});
+  await renterPage.getByTestId(`marketplace-compare-listing-${rentalId}`).click();
+  await renterPage.getByTestId(`marketplace-compare-listing-${saleId}`).click();
+  await renterPage.getByTestId('marketplace-compare-selected').click();
+  await renterPage.getByText(rentTitle,{exact:true}).last().waitFor({state:'visible'});
+  const viewRequestButton=renterPage.getByTestId(`listing-viewing-${rentalId}`).last();
+  const requestViewing=async()=>{
+   const dateInput=renterPage.getByTestId('viewing-date-time');
+   if(!(await dateInput.isVisible())){
+    if(!(await viewRequestButton.isVisible()))await renterPage.getByTestId(`marketplace-details-${rentalId}`).first().click();
+    await viewRequestButton.click();
+   }
+   await renterPage.getByTestId('viewing-date-time').fill(fillLocalDate(4));
+   await renterPage.getByTestId('viewing-owner-consent').click();
+   const submit=renterPage.getByTestId('submit-viewing-request');
+   assert.ok(await submit.isEnabled(),'The phone should enable submission after a future time and explicit consent');
+   await Promise.all([renterPage.waitForEvent('dialog').then(dialog=>dialog.accept()),submit.click()]);
+   try{await renterPage.getByText(/Viewing request sent|Հարցումն ուղարկվեց/).waitFor({state:'visible',timeout:20_000});}
+   catch(error){throw new Error(`Viewing request was not confirmed in the renter UI: ${(await renterPage.locator('body').innerText()).slice(-3000)}`,{cause:error});}
+  };
+  const findRequest=async()=>{
+  const rows=(await pool.query(`SELECT id FROM resident_product_records WHERE kind='conversations' AND parent_id=$1
+   AND owner_user_id=$2 ORDER BY created_at DESC,id LIMIT 1`,[rentalId,seed.accounts.renter.id])).rows;
+   assert.ok(rows.length,'The renter phone should have submitted a viewing request');
+   return rows[rows.length-1].id as string;
+  };
+  const statusOnPhone=async(page:Page,id:string,status:'Requested'|'Confirmed'|'Declined')=>{
+   const label=page.getByText(new RegExp(`· ${status}$`));
+   if(new URL(page.url()).pathname!=='/community')await openChats(page);
+   try{await label.waitFor({state:'visible',timeout:30_000});}
+   catch(error){
+    const state=(await pool.query(`SELECT status,data->>'viewingStatus' AS viewing_status FROM resident_product_records WHERE id=$1`,[id])).rows[0];
+    throw new Error(`Viewing status missing on phone after navigation. URL=${page.url()} Text=${(await page.locator('body').innerText()).slice(-2500)} API state=${JSON.stringify(state)}`,{cause:error});
+   }
+  };
+  await requestViewing();
+  const firstViewingId=await findRequest();
+  const ownerPage=await openPhone(ownerPhone,'owner',mobileOwner);
+  await openChats(ownerPage);
+  await statusOnPhone(ownerPage,firstViewingId,'Requested');
+  await confirmAction(ownerPage,`resident-record-conversations-${firstViewingId}-action-confirm_viewing`);
+  await ownerPage.getByText(/· Confirmed$/).waitFor({state:'visible',timeout:20_000});
+  await statusOnPhone(renterPage,firstViewingId,'Confirmed');
+  await openMarketplace(renterPage,'renter');
+  await renterPage.getByTestId('marketplace-search-query').fill(marker);
+  await renterPage.getByTestId(`marketplace-details-${rentalId}`).waitFor({state:'visible',timeout:30_000});
+  await renterPage.getByTestId(`marketplace-details-${rentalId}`).first().click();
+  await requestViewing();
+  const declinedViewingId=await findRequest();
+  await openChats(ownerPage);
+  const decline=ownerPage.getByTestId(`resident-record-conversations-${declinedViewingId}-action-decline_viewing`);
+  await decline.waitFor({state:'visible',timeout:30_000});
+  await confirmAction(ownerPage,`resident-record-conversations-${declinedViewingId}-action-decline_viewing`);
+  await ownerPage.getByText(/· Declined$/).waitFor({state:'visible',timeout:20_000});
+  const refreshedRenterPage=await openPhone(renterPhone,'renter',mobileRenter);
+  await statusOnPhone(refreshedRenterPage,declinedViewingId,'Declined');
+
+  const discussionTitle=`${marker} discussion`,sourceText=`${marker}: please repair the shared entrance light.`;
+  await ownerPage.getByText('Discussions',{exact:true}).click();
+  await ownerPage.waitForURL(/tab=discussions/);
+  await ownerPage.getByTestId('resident-add-discussions').click();
+  await ownerPage.getByTestId('discussion-title').fill(discussionTitle);
+  await ownerPage.getByTestId('discussion-body').fill(`${marker} discussion notes`);
+  await ownerPage.getByTestId('discussion-save').click();
+  await ownerPage.getByText(discussionTitle,{exact:true}).waitFor({state:'visible',timeout:30_000});
+  const discussion=(await mobileOwner.call('/resident/records/discussions?search='+encodeURIComponent(discussionTitle))).data.items.find((item:any)=>item.title===discussionTitle);
+  assert.ok(discussion,'The discussion should be saved by the owner phone');
+  await ownerPage.getByTestId(`resident-thread-${discussion.id}`).click();
+  await ownerPage.getByTestId(`discussion-message-${discussion.id}`).fill(sourceText);
+  const sendMessage=ownerPage.getByTestId(`discussion-send-${discussion.id}`);
+  assert.ok(await sendMessage.isEnabled(),'The phone should enable sending after source text is entered');
+  const messageResponse=ownerPage.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes(`/resident/records/discussions/${discussion.id}/messages`),{timeout:20_000});
+  await Promise.all([messageResponse,sendMessage.click()]);
+  await ownerPage.getByText(sourceText,{exact:true}).waitFor({state:'visible',timeout:30_000});
+  const source=(await pool.query(`SELECT id,body FROM resident_product_messages WHERE record_id=$1 AND body=$2 ORDER BY created_at DESC LIMIT 1`,
+   [discussion.id,sourceText])).rows[0];
+  assert.ok(source,`The discussion source message should persist. UI=${(await ownerPage.locator('body').innerText()).slice(-2000)} Network=${expoLogs.filter(x=>x.includes('Message POST')).join('\n')}`);
+  const requestLineage=ownerPage.getByTestId(`discussion-lineage-${discussion.id}`);
+  await requestLineage.waitFor({state:'visible'});
+  await ownerPage.getByTestId(`discussion-convert-proposal-${source.id}`).click();
+  await ownerPage.getByTestId('discussion-submit-proposal').click();
+  await ownerPage.getByText('Submitted',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  const proposalTrail=(await mobileOwner.call(`/resident/records/discussions/${discussion.id}/lineage`)).data;
+  assert.ok(proposalTrail.some((item:any)=>item.proposalStatus==='pending_review'),'The proposal must remain separately moderated');
+  await ownerPage.getByTestId(`resident-thread-${discussion.id}`).click();
+  await ownerPage.getByTestId(`discussion-convert-request-${source.id}`).click();
+  await ownerPage.getByTestId('discussion-submit-request').click();
+  await ownerPage.getByText('Submitted',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await requestLineage.click();
+  await ownerPage.getByText('pending_review',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  const trail=(await mobileOwner.call(`/resident/records/discussions/${discussion.id}/lineage`)).data;
+  assert.equal(trail.length,2);
+  assert.equal(trail[0].sourceMessageId,source.id);assert.equal(trail[1].sourceMessageId,source.id);
+  const storedSource=(await pool.query('SELECT count(*)::int AS n FROM resident_discussion_lineage WHERE discussion_id=$1 AND source_message_id=$2 AND source_text=$3',
+   [discussion.id,source.id,sourceText])).rows[0].n;
+  assert.equal(storedSource,2,'Both distinct conversions must retain the selected source text');
+  assert.equal(new Set(trail.map((item:any)=>item.linkType)).size,2);
+  assert.ok(trail.some((item:any)=>item.requestId&&item.requestSubject));
+  assert.ok(trail.some((item:any)=>item.proposalId&&item.proposalStatus==='pending_review'&&!item.meetingId));
+  await ownerPage.reload();
+  await ownerPage.getByTestId('tab-community').click();
+  await ownerPage.getByText('Home community',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await ownerPage.getByTestId('tab-discussions').waitFor({state:'visible',timeout:30_000});
+  await ownerPage.getByTestId('tab-discussions').click();
+  try{await ownerPage.getByTestId(`discussion-lineage-${discussion.id}`).waitFor({state:'visible',timeout:30_000});}
+  catch(error){
+   const workspace=(await mobileOwner.call('/resident/workspace')).data;
+   throw new Error(`Discussion lineage missing after refresh. URL=${ownerPage.url()} Capabilities=${JSON.stringify(workspace.capabilities)} Text=${(await ownerPage.locator('body').innerText()).slice(-3000)}`,{cause:error});
+  }
+  await ownerPage.getByTestId(`discussion-lineage-${discussion.id}`).click();
+  await ownerPage.getByText('pending_review',{exact:true}).waitFor({state:'visible',timeout:30_000});
+  await ownerPage.getByText(`source ${source.id.slice(0,8)}`,{exact:true}).first().waitFor({state:'visible'});
+  assert.deepEqual(expoLogs.filter(line=>line.startsWith('Browser error:')),[]);
+ }finally{
+  await ownerPhone?.close();await renterPhone?.close();await browser?.close();
+  if(expo.exitCode===null){expo.kill('SIGTERM');await Promise.race([new Promise<void>(r=>expo.once('exit',()=>r())),delay(5000)]);if(expo.exitCode===null)expo.kill('SIGKILL');}
  }
 });
 registerResidentContinuityTests(()=>({owner,family,admin,manager:async()=>manager??(manager=await new Client().login('manager')),buildingId,query,seed}));

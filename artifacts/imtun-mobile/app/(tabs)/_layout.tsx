@@ -39,10 +39,10 @@ function useResidentTabs(): { role: ResidentRole; order: TabRoute[]; labels: Rec
     || domainAvailable(context, 'meetings'));
   const showAccess = visible(residentSectionAllowed(context, workspace.data, 'access'));
   const desired: Record<ResidentRole, TabRoute[]> = {
-    owner: ['index', 'bills', 'access', 'requests', 'profile'],
-    renter: ['index', 'access', 'requests', 'bills', 'more'],
+    owner: ['index', 'bills', 'access', 'requests', 'community', 'profile'],
+    renter: ['index', 'access', 'requests', 'bills', 'community', 'more'],
     family: ['index', 'access', 'requests', 'community', 'more'],
-    resident: ['index', 'bills', 'access', 'requests', 'profile'],
+    resident: ['index', 'bills', 'access', 'requests', 'community', 'profile'],
   };
   const allowed: Record<TabRoute, boolean> = {
     index: true, access: showAccess, bills: showBills, requests: showRequests,
@@ -107,7 +107,7 @@ function ClassicTabLayout() {
       }}
     >
       {[...order, ...all.filter((route) => !order.includes(route))].map((route) => (
-        <Tabs.Screen key={route} name={route} options={{ title: labels[route], href: order.includes(route) ? undefined : null, tabBarIcon: icon(routeMeta[route].icon) }} />
+        <Tabs.Screen key={route} name={route} options={{ title: labels[route], href: order.includes(route) ? undefined : null, tabBarIcon: icon(routeMeta[route].icon), tabBarButtonTestID: `tab-${route}` }} />
       ))}
     </Tabs>
   );

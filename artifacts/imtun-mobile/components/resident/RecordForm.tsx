@@ -35,15 +35,15 @@ export default function RecordForm({ kind, l, after, rec, parent, onDone, submit
     onDone();
   });
   return <View style={{ gap: 12 }}>
-    <Field label={L(l, S.title)} value={v.title} onChange={set('title')} maxLength={200} />
-    <Field label={L(l, S.body)} value={v.body} onChange={set('body')} multiline maxLength={5000} />
+    <Field testID={kind === 'discussions' ? 'discussion-title' : undefined} label={L(l, S.title)} value={v.title} onChange={set('title')} maxLength={200} />
+    <Field testID={kind === 'discussions' ? 'discussion-body' : undefined} label={L(l, S.body)} value={v.body} onChange={set('body')} multiline maxLength={5000} />
     {(extra[kind] ?? []).map(([k, lab]) => <Field key={k} label={L(l, lab)} value={v[k] ?? ''} onChange={set(k)} keyboard={k === 'priceMinor' ? 'number-pad' : undefined} />)}
     {kind === 'feedback' && <Segment label={L(l, ['Կատեգորիա', 'Категория', 'Category'])} value={v.fbCat} options={feedbackCats.map(([k, t]) => [k, L(l, t)] as [string, string])} onChange={set('fbCat')} />}
     {kind === 'vehicles' && <Segment label={L(l, ['Տեսակ', 'Тип', 'Type'])} value={v.vehicleType} options={vt.map(([k, t]) => [k, L(l, t)] as [string, string])} onChange={set('vehicleType')} />}
     {kind === 'listings' && <Segment label={L(l, ['Տեսակ', 'Тип', 'Type'])} value={v.saleType} options={[['sale', L(l, ['Վաճառք', 'Продажа', 'Sale'])], ['rent', L(l, ['Վարձակալություն', 'Аренда', 'Rent'])]]} onChange={set('saleType')} />}
     {kind === 'listings' && <><Field label={L(l, ['Լայնություն (−90…90, կամընտիր)', 'Широта (−90…90, необязательно)', 'Latitude (−90…90, optional)'])} value={v.lat} onChange={set('lat')} keyboard="numbers-and-punctuation" /><Field label={L(l, ['Երկայնություն (−180…180, կամընտիր)', 'Долгота (−180…180, необязательно)', 'Longitude (−180…180, optional)'])} value={v.lon} onChange={set('lon')} keyboard="numbers-and-punctuation" />{coordsFromText(v.lat, v.lon) === 'invalid' ? <ErrorBox message={L(l, ['Լրացրեք երկու ճիշտ արժեք կամ թողեք դատարկ։', 'Укажите оба корректных значения или оставьте пустыми.', 'Enter two valid values or leave both empty.'])} /> : null}</>}
     {kind === 'subscriptions' && <Field label={L(l, S.qty)} value={v.qty} onChange={set('qty')} keyboard="number-pad" />}
-    <Btn label={L(l, submitLabel ?? S.save)} onPress={submit} busy={a.busy} disabled={!v.title.trim()} />
+    <Btn testID={kind === 'discussions' ? 'discussion-save' : undefined} label={L(l, submitLabel ?? S.save)} onPress={submit} busy={a.busy} disabled={!v.title.trim()} />
     <Btn label={L(l, ['Չեղարկել', 'Отмена', 'Cancel'])} kind="secondary" onPress={onDone} />
     {a.err ? <ErrorBox message={a.err} /> : null}
   </View>;

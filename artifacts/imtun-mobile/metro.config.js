@@ -8,6 +8,7 @@ config.server.enhanceMiddleware = (middleware, server) => {
   if (process.env.NODE_ENV === 'production' || !process.env.REPLIT_EXPO_DEV_DOMAIN) return next;
   const proxy = createDevApiProxy({
     origins: [`https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`, `http://localhost:${process.env.PORT}`],
+    routerPort: Number(process.env.IMTUN_DEV_API_ROUTER_PORT) || 80,
   });
   return (req, res, done) => proxy(req, res, () => next(req, res, done));
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Platform, Text, View } from 'react-native';
 import { createResidentRecord } from '@workspace/api-client-react';
 import type { ResidentRecord } from '@workspace/api-client-react';
 import { L, type Language } from '@/lib/resident/text';
@@ -12,9 +12,17 @@ export default function ViewingForm({ rec, l, after, onDone }: { rec: ResidentRe
   const a = useAction(l, after);
   const t = parseViewingLocal(at);
   const valid = !!t && !isNaN(t.getTime()) && t.getTime() > Date.now();
+  const submit = () => void a.run(async () => {
+    await createResidentRecord('conversations', { title: rec.title, body: '', parentId: rec.id, viewingAt: t!.toISOString(), viewingConsent: true } as never);
+    setSentAt(t!.toISOString()); setOk(L(l, LT.sent)); setAt(''); setYes(false);
+  });
   const send = () => {
     setErr(''); if (!valid || !t) return setErr(L(l, LT.badNum));
-    Alert.alert(L(l, LT.confirmSend), t.toLocaleString(l), [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, LT.reqView), onPress: () => void a.run(async () => { await createResidentRecord('conversations', { title: rec.title, body: '', parentId: rec.id, viewingAt: t.toISOString(), viewingConsent: true } as never); setSentAt(t.toISOString()); setOk(L(l, LT.sent)); setAt(''); setYes(false); }) }]);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`${L(l, LT.confirmSend)}\n${t.toLocaleString(l)}`)) submit();
+      return;
+    }
+    Alert.alert(L(l, LT.confirmSend), t.toLocaleString(l), [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, LT.reqView), onPress: submit }]);
   };
   return <View style={{ gap: 10 }}>
     <Field testID="viewing-date-time" label={L(l, LT.when) + ' (YYYY-MM-DD HH:mm)'} value={at} onChange={setAt} maxLength={16} />

@@ -85,6 +85,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/phase1.test.ts']]
  : process.argv.includes('--resident-superapp-only')
  ? [['--test','server/tests/resident-superapp.test.ts']]
+ : process.argv.includes('--resident-marketplace-mobile-only')
+ ? [['--test','--test-name-pattern=owner and renter phones','server/tests/resident-superapp.test.ts']]
  : process.argv.includes('--imtun-only')
  ? [['--test','server/tests/imtun.test.ts']]
  : process.argv.includes('--hayat-only')

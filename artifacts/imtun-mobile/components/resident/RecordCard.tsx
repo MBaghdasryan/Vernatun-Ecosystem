@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { actOnResidentRecord, createAgendaProposalFromDiscussion, createRequestFromDiscussion, removeResidentRecord } from '@workspace/api-client-react';
 import type { ResidentRecord, ResidentRecordKind } from '@workspace/api-client-react';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
@@ -54,7 +54,14 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
     setMode(next);
   };
   const doAct = (x: string) => {
-    if (LT.act[x]) return Alert.alert(L(l, LT.act[x]), undefined, [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, LT.act[x]), onPress: () => { setNote(''); void a.run(async () => { await actOnResidentRecord(kind, rec.id, { action: x as never, version: rec.version }); setNote(L(l, LT.done[x])); }); } }]);
+    if (LT.act[x]) {
+      const confirm = () => { setNote(''); void a.run(async () => { await actOnResidentRecord(kind, rec.id, { action: x as never, version: rec.version }); setNote(L(l, LT.done[x])); }); };
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.confirm(L(l, LT.act[x]))) confirm();
+        return;
+      }
+      return Alert.alert(L(l, LT.act[x]), undefined, [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, LT.act[x]), onPress: confirm }]);
+    }
     if (x === 'edit') return setMode('edit');
     if (reasonNeeded.includes(x)) { setPending(x); return setMode('reason'); }
     if (x === 'delete' || x === 'revoke') return Alert.alert(L(l, S.confirm), undefined, [{ text: L(l, ['Ոչ', 'Нет', 'No']), style: 'cancel' }, { text: L(l, actLabel[x]), style: 'destructive', onPress: () => void a.run(() => removeResidentRecord(kind, rec.id, { version: rec.version })) }]);
@@ -72,12 +79,12 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
     {kind === 'listings' ? <ListingPhotos rec={rec} l={l} after={after} /> : null}
     <DiscussionLinks rec={rec} l={l}/>
     <View style={st.row}>
-      {acts.map(x => <View key={x} style={{ flexGrow: 1 }}><Btn kind={x === 'delete' || x === 'revoke' ? 'danger' : 'secondary'} label={actLabel[x] ? L(l, actLabel[x]) : LT.act[x] ? L(l, LT.act[x]) : L(l, S.open2)} onPress={() => doAct(x)} busy={a.busy} /></View>)}
-      {hasMsg && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, S.msgs)} onPress={() => setMode(mode === 'thread' ? 'none' : 'thread')} /></View>}
+      {acts.map(x => <View key={x} style={{ flexGrow: 1 }}><Btn testID={`resident-record-${kind}-${rec.id}-action-${x}`} kind={x === 'delete' || x === 'revoke' ? 'danger' : 'secondary'} label={actLabel[x] ? L(l, actLabel[x]) : LT.act[x] ? L(l, LT.act[x]) : L(l, S.open2)} onPress={() => doAct(x)} busy={a.busy} /></View>)}
+      {hasMsg && <View style={{ flexGrow: 1 }}><Btn testID={`resident-thread-${rec.id}`} kind="secondary" label={L(l, S.msgs)} onPress={() => setMode(mode === 'thread' ? 'none' : 'thread')} /></View>}
       {kind === 'discussions' && rec.actions.includes('request') && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, actLabel.request)} onPress={() => beginConversion('request', { text: rec.body })} /></View>}
       {kind === 'discussions' && rec.actions.includes('proposal') && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, actLabel.proposal)} onPress={() => beginConversion('proposal', { text: rec.body })} /></View>}
-      {kind === 'discussions' && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, C.lineage)} onPress={() => setMode(mode === 'lineage' ? 'none' : 'lineage')} /></View>}
-      {kind === 'listings' && rec.actions.includes('inquire') && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, LT.reqView)} onPress={() => setMode('viewing')} /></View>}
+      {kind === 'discussions' && <View style={{ flexGrow: 1 }}><Btn testID={`discussion-lineage-${rec.id}`} kind="secondary" label={L(l, C.lineage)} onPress={() => setMode(mode === 'lineage' ? 'none' : 'lineage')} /></View>}
+      {kind === 'listings' && rec.actions.includes('inquire') && <View style={{ flexGrow: 1 }}><Btn testID={`listing-viewing-${rec.id}`} kind="secondary" label={L(l, LT.reqView)} onPress={() => setMode('viewing')} /></View>}
       {kind === 'listings' && rec.actions.includes('inquire') && <View style={{ flexGrow: 1 }}><Btn kind="secondary" label={L(l, inquire)} onPress={() => setMode('inquire')} /></View>}
     </View>
     {note ? <Text style={st.meta} accessibilityRole="alert">{note}</Text> : null}
@@ -91,7 +98,7 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
       <Field label={L(l, C.subject)} value={requestSubject} onChange={setRequestSubject} maxLength={160} />
       <Field label={L(l, C.requestDetails)} value={requestDetails} onChange={setRequestDetails} multiline maxLength={4000} />
       <View style={st.row}>
-        <Btn label={L(l, C.submitRequest)} busy={a.busy} disabled={requestSubject.trim().length < 3 || !source.text.trim()} onPress={() => void a.run(async () => {
+        <Btn testID="discussion-submit-request" label={L(l, C.submitRequest)} busy={a.busy} disabled={requestSubject.trim().length < 3 || !source.text.trim()} onPress={() => void a.run(async () => {
           await createRequestFromDiscussion(rec.id, { key: newUuid(), subject: requestSubject.trim(), description: requestDetails.trim(), ...(source.id ? { sourceMessageId: source.id } : {}) });
           setNote(L(l, C.sent)); setMode('none');
         })} />
@@ -105,7 +112,7 @@ export default function RecordCard({ kind, rec, l, after }: { kind: ResidentReco
       <Field label={L(l, C.proposalDetails)} value={proposalDetails} onChange={setProposalDetails} multiline maxLength={4000} />
       <Text style={st.meta}>{L(l, C.proposalReviewNote)}</Text>
       <View style={st.row}>
-        <Btn label={L(l, C.submitProposal)} busy={a.busy} disabled={proposalTitle.trim().length < 3 || !source.text.trim()} onPress={() => void a.run(async () => {
+        <Btn testID="discussion-submit-proposal" label={L(l, C.submitProposal)} busy={a.busy} disabled={proposalTitle.trim().length < 3 || !source.text.trim()} onPress={() => void a.run(async () => {
           await createAgendaProposalFromDiscussion(rec.id, { key: newUuid(), title: proposalTitle.trim(), description: proposalDetails.trim(), ...(source.id ? { sourceMessageId: source.id } : {}) });
           setNote(L(l, C.sent)); setMode('none');
         })} />

@@ -74,6 +74,12 @@ export default function EntryScreen() { const palette = useAppPalette(); const s
   csrfSessionRef.current = session.data?.csrf ?? csrfSessionRef.current;
 
   useEffect(() => {
+    const active = session.data?.contexts.find((context) => context.id === session.data?.contextId);
+    const role = active ? roleFromContext(active) : null;
+    if (role) setEntryRole(role);
+  }, [session.data?.contextId, session.data?.contexts]);
+
+  useEffect(() => {
     if (selected) router.replace('/(tabs)');
   }, [selected, router]);
 

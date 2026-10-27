@@ -27,7 +27,7 @@ export default function RecordsList({ kind, l }: { kind: ResidentRecordKind; l: 
       {!['contacts', 'help', 'agreements', 'mobile-devices'].includes(kind) && <Field label={L(l, S.search)} value={search} onChange={setSearch} />}
       {kind === 'mobile-devices' && <DeviceRegister l={l} after={refresh} />}
       {kind === 'listings' && <ListingFilters f={lf} set={setLf} l={l} />}
-      {creatable.includes(kind) && kind !== 'subscriptions' && kind !== 'mobile-devices' && (kind !== 'listings' || ws.data.building.role === 'unit_owner') && (adding ? <Card>{kind === 'listings' ? <ListingForm l={l} after={refresh} onDone={() => setAdding(false)} /> : <RecordForm kind={kind} l={l} after={refresh} onDone={() => setAdding(false)} />}</Card> : <Btn label={L(l, S.add)} onPress={() => setAdding(true)} />)}
+      {creatable.includes(kind) && kind !== 'subscriptions' && kind !== 'mobile-devices' && (kind !== 'listings' || ws.data.building.role === 'unit_owner') && (adding ? <Card>{kind === 'listings' ? <ListingForm l={l} after={refresh} onDone={() => setAdding(false)} /> : <RecordForm kind={kind} l={l} after={refresh} onDone={() => setAdding(false)} />}</Card> : <Btn testID={`resident-add-${kind}`} label={L(l, S.add)} onPress={() => setAdding(true)} />)}
       {q.isPending && <Skeleton />}
       {q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}
       {q.data && !q.data.items.length && <Empty text={L(l, S.empty)} />}

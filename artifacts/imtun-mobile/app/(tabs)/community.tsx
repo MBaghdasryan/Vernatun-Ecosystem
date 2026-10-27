@@ -10,13 +10,13 @@ import Meetings from '@/components/resident/domain/Meetings';
 import Announcements from '@/components/resident/domain/Announcements';
 import { useDomainAccess } from '@/components/resident/domain/useDomain';
 import { L } from '@/lib/resident/text';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useGetMobileAuthSession } from '@workspace/api-client-react';
 import { residentRole } from '@/lib/resident/navigation';
 
 type Tab = 'news' | 'chats' | 'discussions' | 'voting';
 export default function CommunityScreen() { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
-  const l = useLang(); const ctx = useContextId(); const ws = useWorkspace(); const session = useGetMobileAuthSession(); const current = session.data?.contexts.find((item) => item.id === session.data?.contextId); const initialRole = residentRole(current);
+  const l = useLang(); const router = useRouter(); const ctx = useContextId(); const ws = useWorkspace(); const session = useGetMobileAuthSession(); const current = session.data?.contexts.find((item) => item.id === session.data?.contextId); const initialRole = residentRole(current);
   const { tab: initialTab } = useLocalSearchParams<{ tab?: string }>();
   const preferredTab: Tab = initialRole === 'family' ? 'chats' : 'news';
   const [tab, setTab] = useState<Tab>(initialTab === 'chats' || initialTab === 'discussions' || initialTab === 'voting' ? initialTab : preferredTab);
@@ -35,14 +35,15 @@ export default function CommunityScreen() { const palette = useAppPalette(); con
   const activeTab = available.includes(tab) ? tab : available[0] ?? 'news';
   const insets = useSafeAreaInsets(); const top = Platform.OS === 'web' ? 67 : insets.top + 8;
   const unread = ws.data?.home.summary.unreadMessages ?? undefined;
+  const selectTab = (next: Tab) => { setTab(next); router.setParams({ tab: next }); };
   return <ScrollView style={st.root} contentContainerStyle={[st.c, { paddingTop: top }]} keyboardShouldPersistTaps="handled">
      <Text style={st.h} accessibilityRole="header">{tr(l, roleTitle(ws.data?.building.role))}</Text>
-     {available.length ? <Tabs value={activeTab} onChange={setTab} options={[
+      {available.length ? <Tabs value={activeTab} options={[
        ...(ann.allowed ? [['news', tr(l, ['Լուրեր', 'Объявления', 'News'])] as [Tab, string]] : []),
        ...(ws.data?.capabilities.conversations === true ? [['chats', tr(l, ['Զրույցներ', 'Чаты', 'Chats']), unread || undefined] as [Tab, string, number?]] : []),
        ...(ws.data?.capabilities.discussions === true ? [['discussions', tr(l, ['Քննարկումներ', 'Обсуждения', 'Discussions'])] as [Tab, string]] : []),
        ...(meet.allowed ? [['voting', tr(l, ['Քվեարկություն', 'Голосования', 'Voting'])] as [Tab, string]] : []),
-     ]} /> : <Card><Text style={{ color: palette.mutedForeground }}>{L(l, ['Համայնքի բաժինները հասանելի չեն', 'Разделы сообщества недоступны', 'Community sections are unavailable'])}</Text></Card>}
+      ]} onChange={selectTab} /> : <Card><Text style={{ color: palette.mutedForeground }}>{L(l, ['Համայնքի բաժինները հասանելի չեն', 'Разделы сообщества недоступны', 'Community sections are unavailable'])}</Text></Card>}
      <View key={(ctx ?? 'none') + activeTab} style={{ gap: 12 }}>
        {activeTab === 'news' && ann.allowed && <Announcements l={l} />}
        {activeTab === 'chats' && <RecordsList kind="conversations" l={l} />}

@@ -18,10 +18,10 @@ export default function Thread({ kind, rec, l, onConvertSource }: { kind: Reside
     <Text style={st.h}>{L(l, S.msgs)}</Text>
     {q.isPending && <Skeleton />}
     {q.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => q.refetch()} />}
-    {q.data?.map(m => <View key={m.id} style={[st.msg, m.own && st.own]}><Text style={st.meta}>{m.sender} · {new Date(m.createdAt).toLocaleString(l)}</Text><Text style={st.body}>{m.body}</Text>{kind === 'discussions' && onConvertSource ? <View style={st.actions}><Btn kind="secondary" label={L(l, ['Դարձնել հայտ','В заявку','Create request'])} onPress={() => onConvertSource('request', m.id, m.body)} /><Btn kind="secondary" label={L(l, ['Առաջարկել օրակարգ','Предложить в повестку','Suggest agenda'])} onPress={() => onConvertSource('proposal', m.id, m.body)} /></View> : null}</View>)}
+    {q.data?.map(m => <View key={m.id} style={[st.msg, m.own && st.own]}><Text style={st.meta}>{m.sender} · {new Date(m.createdAt).toLocaleString(l)}</Text><Text style={st.body}>{m.body}</Text>{kind === 'discussions' && onConvertSource ? <View style={st.actions}><Btn testID={`discussion-convert-request-${m.id}`} kind="secondary" label={L(l, ['Դարձնել հայտ','В заявку','Create request'])} onPress={() => onConvertSource('request', m.id, m.body)} /><Btn testID={`discussion-convert-proposal-${m.id}`} kind="secondary" label={L(l, ['Առաջարկել օրակարգ','Предложить в повестку','Suggest agenda'])} onPress={() => onConvertSource('proposal', m.id, m.body)} /></View> : null}</View>)}
     {q.data && !q.data.length && <Text style={st.meta}>{L(l, S.empty)}</Text>}
-    <TextInput accessibilityLabel={L(l, S.msg)} style={st.input} value={text} onChangeText={setText} placeholder={L(l, S.msg)} placeholderTextColor={palette.placeholder} maxLength={5000} multiline />
-    <Btn label={L(l, S.send)} onPress={send} busy={a.busy} disabled={!text.trim()} />
+    <TextInput testID={kind === 'discussions' ? `discussion-message-${rec.id}` : undefined} accessibilityLabel={L(l, S.msg)} style={st.input} value={text} onChangeText={setText} placeholder={L(l, S.msg)} placeholderTextColor={palette.placeholder} maxLength={5000} multiline />
+    <Btn testID={kind === 'discussions' ? `discussion-send-${rec.id}` : undefined} label={L(l, S.send)} onPress={send} busy={a.busy} disabled={!text.trim()} />
     {a.err ? <ErrorBox message={a.err} /> : null}
   </View>;
 }
