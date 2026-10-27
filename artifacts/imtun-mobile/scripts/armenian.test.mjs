@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { armenianCurrency, formatArmenianDate, isCompletedRequestStatus, localizeRequestStatus, requestCount } from '../constants/armenian.ts';
+import { parseViewingLocal } from '../lib/resident/listingText.ts';
 
 test('formats dates in Armenian and handles invalid API values', () => {
   assert.equal(formatArmenianDate('2026-10-21T12:00:00Z'), '21 հոկ.');
@@ -20,4 +21,17 @@ test('formats counts and currency names in Armenian', () => {
   assert.equal(requestCount(3), '3 հայտ');
   assert.equal(armenianCurrency('AMD'), 'ՀՀ դրամ');
   assert.equal(armenianCurrency('USD'), 'ԱՄՆ դոլար');
+});
+
+test('viewing request local date rejects impossible dates and parses valid local time', () => {
+  const parsed = parseViewingLocal('2026-10-28 14:30');
+  assert.ok(parsed instanceof Date);
+  assert.equal(parsed.getFullYear(), 2026);
+  assert.equal(parsed.getMonth(), 9);
+  assert.equal(parsed.getDate(), 28);
+  assert.equal(parsed.getHours(), 14);
+  assert.equal(parsed.getMinutes(), 30);
+  assert.equal(parseViewingLocal('2026-02-31 14:30'), null);
+  assert.equal(parseViewingLocal('2026-10-28 24:00'), null);
+  assert.equal(parseViewingLocal('28-10-2026 14:30'), null);
 });

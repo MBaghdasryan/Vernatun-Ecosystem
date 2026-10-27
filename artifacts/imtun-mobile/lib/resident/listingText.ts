@@ -36,6 +36,13 @@ export const verifiedListingCoordinates=(d:Record<string,unknown>):{latitude:num
  return {latitude,longitude};
 };
 export const fmtView=(d:Record<string,unknown>,l:Language)=>d.viewingAt?L(l,LT.viewing)+': '+new Date(String(d.viewingAt)).toLocaleString(l)+(d.viewingStatus?' · '+L(l,LT.vs[String(d.viewingStatus)]??LT.viewing):''):'';
+export const parseViewingLocal=(value:string):Date|null=>{
+ const m=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(value.trim());
+ if(!m)return null;
+ const [year,month,day,hour,minute]=m.slice(1).map(Number);
+ const date=new Date(year,month-1,day,hour,minute);
+ return date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day&&date.getHours()===hour&&date.getMinutes()===minute?date:null;
+};
 export const CURRENCIES=['AMD','RUB','USD'];
 export const listingSummary=(d:Record<string,unknown>,l:Language)=>[
  L(l,d.saleType==='rent'?LT.rent:LT.sale),
