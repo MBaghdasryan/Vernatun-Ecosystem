@@ -8,6 +8,7 @@ import {assignmentPermissions,permissionCatalog,permissionDecision,exceptionalGr
 import {unitReadDecision} from './iam-resource.js';
 import {policyState} from './mfa-policy.js';
 import {preserveAdministrator} from './assignment-management.js';
+import {systemPermissions} from './system-permissions.js';
 export const iam=Router();
 const uuid=z.string().uuid(),reason=z.string().trim().min(5).max(1000);
 const isPlatform=(c:Context)=>c.role_key==='platform_admin'&&!c.organization_id;
@@ -38,9 +39,68 @@ async function preserveGlobalAdministrator(db:any,a:any){
  if(!other.rowCount)throw new ApiError(409,'last_administrator');
 }
 const profileInput=z.object({name:z.string().trim().min(2).max(100),description:z.string().max(1000).default(''),
- baseRole:z.string(),permissions:z.array(z.string()).max(100),tenantAllowed:z.boolean().default(false),active:z.boolean().default(true),version:z.string().optional()}).strict();
+ baseRole:z.string(),permissions:z.array(z.string()).max(300),tenantAllowed:z.boolean().default(false),active:z.boolean().default(true),version:z.string().optional()}).strict();
+async function rolePermissions(roleKey:string,db:any=pool):Promise<string[]>{
+ return (await db.query('SELECT permission_key FROM role_permissions WHERE role_key=$1 ORDER BY permission_key',[roleKey])).rows.map((r:any)=>r.permission_key);
+}
+const protectedRoleKeys=new Set(['platform_admin','support']);
+const platformOnlyPermissions=new Set([
+ ...systemPermissions,'organizations.read','organizations.manage','platform.audit','platform.invite',
+ 'subscriptions.manage','support.assign','edge.fleet.read',
+]);
 iam.get('/iam/catalog',async(req,res)=>{
- await actor(req);res.json({permissions:permissionCatalog(),roles:roleCatalog,exceptionalGrantAllowlist});
+ const c=await actor(req);
+ const [permissions,rows]=await Promise.all([
+  permissionCatalog(),
+  pool.query(`SELECT r.key,r.shell,r.xmin::text AS version,
+   COALESCE((SELECT json_agg(rp.permission_key ORDER BY rp.permission_key)
+    FROM role_permissions rp WHERE rp.role_key=r.key),'[]'::json) AS permissions
+   FROM roles r ORDER BY r.key`),
+ ]);
+ const roles=Object.fromEntries(rows.rows.map((r:any)=>[r.key,{
+  shell:r.shell,version:r.version,permissions:r.permissions,
+  editable:isPlatform(c)&&!protectedRoleKeys.has(r.key),
+ }]));
+ res.json({permissions,roles,exceptionalGrantAllowlist});
+});
+iam.patch('/iam/roles/:roleKey',async(req,res)=>{
+ const initial=await actor(req);
+ if(!isPlatform(initial))throw new ApiError(403,'forbidden');
+ const roleKey=z.string().trim().min(1).max(80).parse(req.params.roleKey);
+ const b=z.object({
+  version:z.string().regex(/^\d+$/),
+  permissions:z.array(z.string().min(1).max(120)).max(300),
+  reason,
+ }).strict().parse(req.body);
+ const updated=await transaction(async db=>{
+  await lockIam(db);
+  const fresh=await actor(req);
+  if(!isPlatform(fresh))throw new ApiError(403,'forbidden');
+  const role=(await db.query('SELECT key,shell,xmin::text AS version FROM roles WHERE key=$1 FOR UPDATE',[roleKey])).rows[0];
+  if(!role)throw new ApiError(404,'not_found');
+  if(protectedRoleKeys.has(roleKey))throw new ApiError(403,'protected_role');
+  if(role.version!==b.version)throw new ApiError(409,'concurrent_change');
+  const permissions=[...new Set(b.permissions)].sort();
+  const known=new Set((await db.query('SELECT key FROM permissions')).rows.map((r:any)=>r.key as string));
+  if(permissions.some(p=>!known.has(p)))throw new ApiError(400,'unknown_permission');
+  if(permissions.some(p=>platformOnlyPermissions.has(p)))throw new ApiError(403,'protected_permission');
+  if(roleKey==='org_admin'&&!permissions.includes('roles.assign'))throw new ApiError(409,'last_administrator');
+  if(roleKey!=='org_admin'&&permissions.includes('roles.assign'))throw new ApiError(403,'protected_permission');
+  const before=await rolePermissions(roleKey,db);
+  if(before.join('\0')!==permissions.join('\0')){
+   await db.query('DELETE FROM role_permissions WHERE role_key=$1',[roleKey]);
+   for(const permission of permissions)
+    await db.query('INSERT INTO role_permissions(role_key,permission_key) VALUES($1,$2)',[roleKey,permission]);
+   await db.query('UPDATE roles SET shell=shell WHERE key=$1',[roleKey]);
+   const afterVersion=(await db.query('SELECT xmin::text AS version FROM roles WHERE key=$1',[roleKey])).rows[0].version;
+   await record(db,req,fresh,'iam.role_template.update','role',roleKey,{
+    before,after:permissions,reason:b.reason,
+   });
+   return {key:roleKey,shell:role.shell,version:afterVersion,permissions,editable:true,saved:true};
+  }
+  return {key:roleKey,shell:role.shell,version:role.version,permissions,editable:true,saved:true};
+ });
+ res.json(updated);
 });
 iam.get('/iam/profiles',async(req,res)=>{
  const c=await actor(req);
@@ -51,7 +111,7 @@ iam.get('/iam/profiles',async(req,res)=>{
 iam.post('/iam/profiles',async(req,res)=>{
  const c=await actor(req);scopeManager(c);const b=profileInput.parse(req.body);
  if(!organizationDelegableRoles.includes(b.baseRole as any)||!roleCatalog[b.baseRole as keyof typeof roleCatalog])throw new ApiError(400,'invalid_role');
- const base:readonly string[]=roleCatalog[b.baseRole as keyof typeof roleCatalog].permissions;
+ const base=await rolePermissions(b.baseRole);
  if(b.permissions.some(p=>!base.includes(p))||(!isPlatform(c)&&b.tenantAllowed))throw new ApiError(403,'forbidden');
  res.status(201).json(await transaction(async db=>{
   await lockIam(db);const fresh=await actor(req);scopeManager(fresh);
@@ -69,7 +129,7 @@ iam.patch('/iam/profiles/:id',async(req,res)=>{
   if(!old||old.organization_id!==(isPlatform(c)?null:c.organization_id))throw new ApiError(404,'not_found');
   if(old.version!==b.version)throw new ApiError(409,'concurrent_change');
   if(old.base_role!==b.baseRole)throw new ApiError(400,'immutable_base_role');
-  const base:readonly string[]=roleCatalog[b.baseRole as keyof typeof roleCatalog].permissions;
+  const base=await rolePermissions(b.baseRole,db);
   if(b.permissions.some(p=>!base.includes(p))||(!isPlatform(c)&&b.tenantAllowed))throw new ApiError(403,'forbidden');
   // Profiles cannot restrict administrator recovery authority.
   if(b.baseRole==='org_admin'&&(!b.active||!b.permissions.includes('roles.assign')))throw new ApiError(409,'last_administrator');
@@ -145,9 +205,9 @@ async function explainAccess(req:Request,res:Response){
  const {c,a}=await target(req,uuid.parse(req.params.id),true);
  const active=(await contexts(a.user_id)).find(x=>x.id===a.id);
  const input=z.object({method:z.enum(['GET','POST','PATCH','DELETE']),unitId:uuid.optional(),sessionId:z.string().regex(/^[a-f0-9]{32}$/).optional()}).strict().parse(req.method==='POST'?req.body:{method:'GET'});
- const catalog=permissionCatalog(),method=input.method;
+ const catalog=await permissionCatalog(),method=input.method;
  const evaluations=await Promise.all(catalog.map(async permission=>({permission,...(active?await permissionDecision(active,permission,method):{allowed:false,reason:'inactive_context'})})));
- const evaluated=await assignmentPermissions({...a,permissions:[...roleCatalog[a.role_key as keyof typeof roleCatalog].permissions]});
+ const evaluated=await assignmentPermissions({...a,permissions:await rolePermissions(a.role_key)});
  let resource:null|Record<string,unknown>=null;
  if(input.unitId){
   const decision=await unitReadDecision(active,input.unitId);
@@ -178,7 +238,7 @@ iam.post('/iam/assignments/:id/policy',async(req,res)=>{
    if(a.user_id===req.user!.id||(!isPlatform(c)&&(!a.organization_id||c.role_key!=='org_admin'||['platform_admin','support'].includes(a.role_key))))throw new ApiError(403,'forbidden');
   if(!a.active||a.version!==b.version)throw new ApiError(409,'concurrent_change');
   if(b.expiresAt&&Date.parse(b.expiresAt)<=Date.now())throw new ApiError(400,'invalid_dates');
-  const base:readonly string[]=roleCatalog[a.role_key as keyof typeof roleCatalog].permissions;
+   const base=await rolePermissions(a.role_key,db);
    if(b.denies.some(p=>!base.includes(p))||b.grants.some(p=>!base.includes(p)))throw new ApiError(403,'forbidden');
    let profilePermissions:readonly string[]=base;
   if(b.profileId){

@@ -248,3 +248,45 @@ test('profiles and per-user overrides cannot bypass module, subscription or requ
   assert.equal(explanation.data.resource.reason,'mfa_enrollment_required');
  }finally{await pool.query('DELETE FROM mfa_policies WHERE id=$1',[policy.id])}
 });
+test('platform administrator can save audited system-role permission templates safely',async()=>{
+ const platform=await new Client().login('platform_admin'),liveManager=await new Client().login('manager');
+ const initial=await platform.call('/iam/catalog');assert.equal(initial.status,200);
+ const original:string[]=initial.data.roles.manager.permissions;
+ const changed=original.filter(p=>p!=='properties.read');
+ const version=initial.data.roles.manager.version;
+ try{
+  const saved=await platform.call('/iam/roles/manager','PATCH',{
+   version,permissions:changed,reason:'Verify controlled role template editing',
+  });
+  assert.equal(saved.status,200,JSON.stringify(saved.data));
+  assert.ok(!saved.data.permissions.includes('properties.read'));
+  const {contexts}=await import('../access.js');
+  const changedContext=(await contexts(seeded.accounts.manager.id)).find((c:any)=>c.role_key==='manager');
+  assert.ok(changedContext);assert.ok(!changedContext.permissions.includes('properties.read'));
+  assert.equal((await liveManager.call('/properties')).status,403);
+  assert.equal((await platform.call('/iam/roles/manager','PATCH',{
+   version,permissions:original,reason:'Stale template version must conflict',
+  })).status,409);
+  assert.equal((await platform.call('/iam/roles/manager','PATCH',{
+   version:saved.data.version,permissions:[...changed,'organizations.manage'],reason:'Must not grant platform authority',
+  })).status,403);
+  assert.equal((await org.call('/iam/roles/manager','PATCH',{
+   version:saved.data.version,permissions:original,reason:'Organization admins cannot edit shared templates',
+  })).status,403);
+  assert.equal((await platform.call('/iam/roles/platform_admin','PATCH',{
+   version:initial.data.roles.platform_admin.version,permissions:[],reason:'Protected recovery role',
+  })).status,403);
+  const orgAdminRole=initial.data.roles.org_admin;
+  assert.equal((await platform.call('/iam/roles/org_admin','PATCH',{
+   version:orgAdminRole.version,permissions:orgAdminRole.permissions.filter((p:string)=>p!=='roles.assign'),
+   reason:'Must retain organization recovery authority',
+  })).status,409);
+  const audit=(await pool.query("SELECT details FROM audit_events WHERE action='iam.role_template.update' AND entity_id='manager' ORDER BY created_at DESC LIMIT 1")).rows[0];
+  assert.ok(audit);assert.ok(audit.details.before.includes('properties.read'));assert.ok(!audit.details.after.includes('properties.read'));
+ }finally{
+  const current=await platform.call('/iam/catalog');
+  await platform.call('/iam/roles/manager','PATCH',{
+   version:current.data.roles.manager.version,permissions:original,reason:'Restore role template after isolated test',
+  });
+ }
+});

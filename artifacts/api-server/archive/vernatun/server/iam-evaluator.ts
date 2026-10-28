@@ -1,5 +1,5 @@
 import {pool} from './db.js';
-import {moduleForPermission,roleCatalog} from './roles.js';
+import {moduleForPermission} from './roles.js';
 import {subscriptionPolicy} from './subscription-policy.js';
 
 // Per-assignment grants can restore permissions removed by a custom profile,
@@ -33,4 +33,6 @@ export async function permissionDecision(c:{permissions:string[];organization_id
  }
  return {allowed:true,reason:'permission_allowed'};
 }
-export const permissionCatalog=()=>[...new Set(Object.values(roleCatalog).flatMap(r=>[...r.permissions]))].sort();
+export async function permissionCatalog(){
+ return (await pool.query('SELECT key FROM permissions ORDER BY key')).rows.map(r=>r.key as string);
+}

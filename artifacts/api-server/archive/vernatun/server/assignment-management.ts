@@ -4,7 +4,6 @@ import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,context,requirePermission,type Context} from './access.js';
 import {transaction,record} from './operations.js';
-import {roleCatalog} from './roles.js';
 
 export const assignmentManagement=Router();
 const uuid=z.string().uuid();
@@ -66,8 +65,8 @@ assignmentManagement.get('/roles/:id',async(req,res)=>{
  const a=(await pool.query(`SELECT ${projection} FROM role_assignments a JOIN users u ON u.id=a.user_id
  WHERE a.id=$1 AND ($2 OR a.organization_id=$3)`,[uuid.parse(req.params.id),platform(c),c.organization_id])).rows[0];
  if(!a)throw new ApiError(404,'not_found');inScope(c,a);
- res.json({assignment:a,editable:editable(req,a),editableRoles:staffRoles,
- permissions:roleCatalog[a.role_key as keyof typeof roleCatalog]?.permissions??[]});
+  const permissions=(await pool.query('SELECT permission_key FROM role_permissions WHERE role_key=$1 ORDER BY permission_key',[a.role_key])).rows.map(r=>r.permission_key);
+  res.json({assignment:a,editable:editable(req,a),editableRoles:staffRoles,permissions});
 });
 // IAM selectors expose identifiers and labels only, not tenant business records.
 assignmentManagement.get('/roles/:id/options',async(req,res)=>{

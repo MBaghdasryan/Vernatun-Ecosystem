@@ -59,6 +59,8 @@ const checks=process.argv.includes('--browser-only')
  ? [['--test','server/tests/platform-support-meetings.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
+ : process.argv.includes('--iam-template-only')
+ ? [['--test','server/tests/assignment-management.test.ts']]
   : process.argv.includes('--global-account-provisioning-only')
   ? [['--test','server/tests/global-account-provisioning.test.mjs']]
   : process.argv.includes('--global-account-recovery-only')
@@ -137,6 +139,8 @@ try{
   ? [['server/migrate.ts','--through=024'],['server/seed.ts'],['server/seed-modules.ts'],['server/iam-preservation.ts','--capture'],['server/migrate.ts'],['server/iam-preservation.ts']]
   : process.argv.includes('--iam-only')
   ? [['server/migrate.ts','--through=023'],['server/seed.ts'],['server/seed-modules.ts'],['server/iam-preservation.ts','--capture'],['server/migrate.ts'],['server/iam-preservation.ts']]
+  : process.argv.includes('--iam-template-only')
+  ? [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts']]
   : [['server/migrate.ts'],['server/seed.ts'],['server/seed-modules.ts']];
  const setupResults=[...setup];
  if(isSevenChains){

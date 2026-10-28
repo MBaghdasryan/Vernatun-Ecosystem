@@ -31,7 +31,7 @@
 - [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.
 - [Edge integration contract](edge-integration-contract.md) — preserve v1; versioned v2 assigns each Edge node to a block with explicit building/device scope.
 - [Physical command policy](edge-device-command-policy.md) — platform administration is not execution authority; accepted RPC is not confirmed device movement.
-- [Per-user IAM overrides](per-user-iam-overrides.md) — platform admins edit globally; organization admins edit within their organization, without bypassing base-role or resource guards.
+- [IAM role and user permissions](per-user-iam-overrides.md) — platform admins can edit shared role templates; preserve protected platform roles, audit changes, and retain scoped per-user overrides.
 - [Browser QA origin](browser-qa-origin.md) — authenticated browser tests must use the same local origin configured as the API's test APP_ORIGIN.
 - [Zero-count filter options](zero-count-filter-options.md) — keep URL-selected status choices available even when the current result count is zero.
 - [Migration lineage](migration-lineage.md) — compare GitHub deployment history before numbering migrations; preserve upstream bytes and never silently rewrite production history.
