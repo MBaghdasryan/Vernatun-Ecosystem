@@ -484,3 +484,17 @@ mtime_ms = 1792967204221
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/04cae88e-ed9a-4365-a86f-c84b978ef2ed/fea76231-9eb4-47ce-999a-16e028334eaa"
 storage_version_token = "1792967221614180"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "XeSiCFMedXOBUu0z-ar25"
+uri = "file://generated-artifacts/HAYAT-Vernatun-API-ImTun-source-handoff.zip"
+type = "unspecified"
+title = "Исходники Vernatun API и ImTun для HAYAT"
+description = "OpenAPI, обработчики маршрутов, тесты и выбранные исходники ImTun с общим API-клиентом. Архив проверен: .env, локальные тестовые учётные данные, реальные данные жителей и ключи подписи не включены."
+logical_id = "20a574b2-4746-44ec-be97-c5c732b3d6dc"
+content_hash = "sha256:a3884e72bbfd2c32e7f4d576f21d8375e835077fc5d8f8a4303a8b1a4cbf84ed"
+size = 3174936
+mtime_ms = 1793208362340
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/20a574b2-4746-44ec-be97-c5c732b3d6dc/df47af40-30ce-452f-9f53-35112bd930b2"
+storage_version_token = "1793208452843073"
+content_type = "application/octet-stream"
