@@ -12,6 +12,7 @@ import {
 } from '@workspace/api-client-react';
 import type { OwnerRegistrationBuilding } from '@workspace/api-client-react';
 import { useAppPalette, type Palette } from '@/hooks/useAppTheme';
+import { useRouter } from 'expo-router';
 
 type Language = 'hy' | 'ru' | 'en';
 type Props = {
@@ -42,9 +43,11 @@ const words = {
 
 export default function OwnerOnboarding({ mode, email: initialEmail = '', language = 'hy', onBack, onAuthenticate, onDone }: Props) {
   const palette = useAppPalette();
+  const router = useRouter();
   const st = useMemo(() => makeStyles(palette), [palette]);
   const [lang, setLang] = useState<Language>(language);
   const t = words[lang];
+  const openLegal = (document: 'privacy' | 'terms') => router.push({ pathname: '/legal/[document]', params: { document, lang } });
   const catalog = useGetOwnerRegistrationCatalog({ query: { enabled: mode !== 'status', queryKey: ['owner-registration-catalog'] } });
   const createRegistration = useCreateOwnerRegistration();
   const createClaim = useCreateOwnerAccessClaim();
@@ -171,6 +174,11 @@ export default function OwnerOnboarding({ mode, email: initialEmail = '', langua
         {onDone && currentRequests.some(request => request.status === 'approved') ? <Pressable accessibilityRole="button" testID="owner-onboarding-done" onPress={onDone} style={st.primary}><Text style={st.primaryText}>{t.continue}</Text><Feather name="arrow-right" size={18} color={palette.primaryForeground} /></Pressable> : null}
       </> : null}
       <Text style={st.footer}><Feather name="lock" size={12} color={palette.subdued} /> {t.secure}</Text>
+      <View style={st.legalLinks}>
+        <Pressable accessibilityRole="button" testID="owner-privacy" onPress={() => openLegal('privacy')}><Text style={st.legalLink}>{lang === 'hy' ? 'Գաղտնիություն' : lang === 'ru' ? 'Конфиденциальность' : 'Privacy'}</Text></Pressable>
+        <Text style={st.legalDot}>·</Text>
+        <Pressable accessibilityRole="button" testID="owner-terms" onPress={() => openLegal('terms')}><Text style={st.legalLink}>{lang === 'hy' ? 'Օգտագործման պայմաններ' : lang === 'ru' ? 'Условия использования' : 'Terms of use'}</Text></Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -192,5 +200,5 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   skeleton: { padding: 12, gap: 11 }, skeletonLine: { height: 13, width: '80%', borderRadius: 6, backgroundColor: p.skeleton }, mailIcon: { width: 52, height: 52, borderRadius: 17, backgroundColor: p.accent, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginVertical: 8 }, sentTo: { alignSelf: 'center', color: p.foreground, fontWeight: '700', marginBottom: 13 }, codeInput: { textAlign: 'center', fontSize: 22, letterSpacing: 8, fontWeight: '800' },
   linkButton: { minHeight: 43, alignItems: 'center', justifyContent: 'center', marginTop: 8 }, link: { color: p.primary, fontWeight: '800', fontSize: 12 }, successText: { color: p.success, fontSize: 12, textAlign: 'center', padding: 7 },
   statusHero: { alignItems: 'flex-start', marginTop: 12 }, statusIcon: { width: 57, height: 57, borderRadius: 19, backgroundColor: p.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 19 }, requestRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 11, borderBottomWidth: 1, borderColor: p.divider }, requestIcon: { width: 37, height: 37, borderRadius: 12, backgroundColor: p.accent, alignItems: 'center', justifyContent: 'center' },
-  secondary: { minHeight: 43, borderColor: p.border, borderWidth: 1, borderRadius: 11, marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, secondaryText: { color: p.foreground, fontWeight: '700', fontSize: 12 }, footer: { color: p.subdued, fontSize: 10, textAlign: 'center', marginTop: 24 },
+  secondary: { minHeight: 43, borderColor: p.border, borderWidth: 1, borderRadius: 11, marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, secondaryText: { color: p.foreground, fontWeight: '700', fontSize: 12 }, footer: { color: p.subdued, fontSize: 10, textAlign: 'center', marginTop: 24 }, legalLinks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 10 }, legalLink: { color: p.mutedForeground, fontSize: 11, fontWeight: '700', textDecorationLine: 'underline' }, legalDot: { color: p.subdued, fontSize: 11 },
 });

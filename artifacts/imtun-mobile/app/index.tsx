@@ -52,6 +52,7 @@ const roleGuardCopy = {
 
 export default function EntryScreen() { const palette = useAppPalette(); const styles = React.useMemo(() => make_styles(palette), [palette]);
   const router = useRouter();
+  const openLegal = (document: 'privacy' | 'terms') => router.push({ pathname: '/legal/[document]', params: { document, lang: entryLanguage } });
   const client = useQueryClient();
   const session = useGetMobileAuthSession();
   const login = useLoginMobileAuth();
@@ -182,6 +183,11 @@ export default function EntryScreen() { const palette = useAppPalette(); const s
       {entryRole === 'owner' ? <Pressable accessibilityRole="button" testID="owner-register-open" onPress={() => { setOnboarding('register'); setMessage(''); }} style={styles.createOwner}><Feather name="plus" size={16} color={palette.primary} /><Text style={styles.createOwnerText}>{copy.ownerRegister}</Text></Pressable> : null}
       <Text style={styles.secureNote}><Feather name="lock" size={12} color={palette.subdued} /> {copy.secure}</Text>
     </View>
+    <View style={styles.legalLinks}>
+      <Pressable accessibilityRole="button" testID="entry-privacy" onPress={() => openLegal('privacy')}><Text style={styles.legalLink}>{entryLanguage === 'hy' ? 'Գաղտնիություն' : entryLanguage === 'ru' ? 'Конфиденциальность' : 'Privacy'}</Text></Pressable>
+      <Text style={styles.legalSeparator}>·</Text>
+      <Pressable accessibilityRole="button" testID="entry-terms" onPress={() => openLegal('terms')}><Text style={styles.legalLink}>{entryLanguage === 'hy' ? 'Օգտագործման պայմաններ' : entryLanguage === 'ru' ? 'Условия использования' : 'Terms of use'}</Text></Pressable>
+    </View>
   </ScrollView>;
 }
 
@@ -204,4 +210,5 @@ const make_styles = (palette: Palette) => StyleSheet.create({
   secondaryButton: { minHeight: 46, borderWidth: 1, borderColor: palette.border, borderRadius: 11, paddingHorizontal: 16, justifyContent: 'center', marginTop: 14, backgroundColor: palette.surface }, secondaryText: { color: palette.foreground, fontWeight: '700', textAlign: 'center' },
   center: { flex: 1, backgroundColor: palette.background, paddingHorizontal: 30, alignItems: 'center', justifyContent: 'center' }, lockIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center', marginTop: 26, marginBottom: 16 },
   loading: { flex: 1, backgroundColor: palette.background, justifyContent: 'center', padding: 25 }, skeleton: { width: '100%', height: 18, borderRadius: 8, backgroundColor: palette.skeleton, marginBottom: 14 },
+  legalLinks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18 }, legalLink: { color: palette.mutedForeground, fontSize: 11, fontWeight: '700', textDecorationLine: 'underline' }, legalSeparator: { color: palette.subdued, fontSize: 11 },
 });

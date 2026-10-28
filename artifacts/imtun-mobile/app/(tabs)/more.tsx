@@ -29,6 +29,7 @@ export default function MoreScreen() { const palette = useAppPalette(); const st
   const menuDomains = domainOrder[role].filter((key) => (domainViews as readonly string[]).includes(key) && residentSectionAllowed(context, ws.data, key));
   const menuSuper = superOrder[role].filter((key) => residentSectionAllowed(context, ws.data, key));
   const go = (section: string) => router.push({ pathname: '/resident/[section]', params: { section } });
+  const openLegal = (document: 'privacy' | 'terms') => router.push({ pathname: '/legal/[document]', params: { document, lang: l } });
   const title = role === 'owner'
     ? L(l, ['Տան կառավարում', 'Управление домом', 'Property management'])
     : role === 'renter' ? L(l, ['Իմ վարձակալությունը', 'Моя аренда', 'My rental'])
@@ -58,6 +59,15 @@ export default function MoreScreen() { const palette = useAppPalette(); const st
       </View>
       {!menuDomains.length && !menuSuper.length ? <EmptyState icon="grid" title={L(l, ['Այս միջավայրի համար հասանելի ծառայություններ չկան', 'Для этого контекста нет доступных сервисов', 'No services are available for this context'])} /> : null}
     </>}
+    <Text style={st.kicker}>{L(l, ['ԻՐԱՎԱԿԱՆ ՏԵՂԵԿՈՒԹՅՈՒՆ', 'ПРАВОВАЯ ИНФОРМАЦИЯ', 'LEGAL INFORMATION'])}</Text>
+    <View style={st.grid}>
+      <Pressable accessibilityRole="button" accessibilityLabel={L(l, ['Գաղտնիության քաղաքականություն', 'Политика конфиденциальности', 'Privacy policy'])} testID="more-privacy" onPress={() => openLegal('privacy')} style={st.tile}>
+        <Feather name="shield" size={21} color={palette.primary} /><Text style={st.t}>{L(l, ['Գաղտնիություն', 'Конфиденциальность', 'Privacy'])}</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={L(l, ['Օգտագործման պայմաններ', 'Условия использования', 'Terms of use'])} testID="more-terms" onPress={() => openLegal('terms')} style={st.tile}>
+        <Feather name="file-text" size={21} color={palette.primary} /><Text style={st.t}>{L(l, ['Օգտագործման պայմաններ', 'Условия использования', 'Terms of use'])}</Text>
+      </Pressable>
+    </View>
   </ScrollView>;
 }
 const make_st = (palette: Palette) => StyleSheet.create({

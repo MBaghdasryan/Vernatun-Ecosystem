@@ -25,6 +25,7 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
   const active = contexts.find((context) => context.id === session.data?.contextId);
   const user = session.data?.user;
   const l = useLang(); const ws = useWorkspace(); const go = useSection();
+  const openLegal = (document: 'privacy' | 'terms') => router.push({ pathname: '/legal/[document]', params: { document, lang: l } });
   const b = ws.data?.building; const sum = ws.data?.home.summary;
   const can = (section: string) => residentSectionAllowed(active, ws.data, section);
   const canReadRequests = !!active?.permissions.includes('requests.own');
@@ -97,6 +98,11 @@ export default function ProfileScreen() { const palette = useAppPalette(); const
       </View>
       <View style={styles.listCard}>
         <View style={[styles.listIcon, { backgroundColor: palette.alternateSurface }]}><Feather name="globe" size={18} color={palette.foreground} /></View><View style={{ flex: 1 }}><Text style={styles.itemLabel}>{tr(l, ['Լեզու և արժույթ', 'Язык и валюта', 'Language & currency'])}</Text><Text style={styles.itemDescription}>{tr(l, ['Հայերեն', 'Русский', 'English'])} · {armenianCurrency(user?.currency)}</Text></View>
+      </View>
+      <Text style={styles.section}>{tr(l, ['ԻՐԱՎԱԿԱՆ ՓԱՍՏԱԹՂԹԵՐ', 'ПРАВОВЫЕ ДОКУМЕНТЫ', 'LEGAL DOCUMENTS'])}</Text>
+      <View style={{ gap: 8 }}>
+        <Row icon="shield" tone="plain" title={tr(l, ['Գաղտնիության քաղաքականություն', 'Политика конфиденциальности', 'Privacy policy'])} onPress={() => openLegal('privacy')} testID="profile-privacy" />
+        <Row icon="file-text" tone="plain" title={tr(l, ['Օգտագործման պայմաններ', 'Условия использования', 'Terms of use'])} onPress={() => openLegal('terms')} testID="profile-terms" />
       </View>
       {error ? <View style={styles.errorBox}><Feather name="alert-circle" size={16} color={palette.destructive} /><Text style={styles.errorText}>{error}</Text></View> : null}
       <View style={styles.security}><View style={styles.securityIcon}><Feather name="shield" size={17} color={palette.success} /></View><View style={{ flex: 1 }}><Text style={styles.securityTitle}>{tr(l, ['Պաշտպանված սեսիա', 'Защищённый сеанс', 'Protected session'])}</Text><Text style={styles.securityText}>{tr(l, ['Տան հասանելիությունը որոշվում է սերվերի և ընտրված միջավայրի կողմից։', 'Доступ к дому определяется сервером и выбранным контекстом.', 'Home access is determined by the server and selected context.'])}</Text></View></View>
