@@ -86,6 +86,15 @@ export function request<T=unknown>(path:string,method='GET',body?:unknown):Promi
  return managed<T>(path,method,body);
 }
 
+export async function downloadFile(path:string):Promise<Blob>{
+ if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new ApiClientError('connection',0);
+ let response:Response;
+ try{response=await fetch(apiUrl('/api'+path),{method:'GET',credentials:apiCredentials(),signal:AbortSignal.timeout(30000)})}
+ catch{throw new ApiClientError('connection',0)}
+ if(!response.ok){await decode<unknown>(response);throw new ApiClientError('service_unavailable',response.status)}
+ return response.blob();
+}
+
 // The server also checks these headers: a cookie/context change in another tab
 // cannot send a queued operation under the wrong account.
 export async function verifySyncScope(scope:Scope){

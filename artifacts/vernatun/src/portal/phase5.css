@@ -31,4 +31,5 @@
 .portal-root .p5-tabs button[aria-pressed=true]{background:var(--p-navy);color:#fff}
 .portal-root .p5-checks{display:grid;gap:6px;max-height:160px;overflow:auto}
 .portal-root .p5-checks label{display:flex;gap:8px;align-items:center}
+.portal-root .p-main:has(.p5-org-console) .p-page-heading>div+.p-button{display:none}
 @media(max-width:900px){.portal-root .p5-split,.portal-root .p5-grid2{grid-template-columns:1fr}}

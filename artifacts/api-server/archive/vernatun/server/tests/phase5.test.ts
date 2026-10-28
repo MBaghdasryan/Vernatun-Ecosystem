@@ -21,7 +21,7 @@ class Client{
   const data=r.status===204?null:await r.json();if(data?.csrf)this.csrf=data.csrf;return {status:r.status,data};
  }
  async login(key:string){
-  const a=seeded.accounts[key];await this.call('/auth/session');const r=await this.call('/auth/login','POST',{email:a.email,password:a.password});assert.equal(r.status,200);
+  const a=seeded.accounts[key],initial=await this.call('/auth/session');const r=await this.call('/auth/login','POST',{email:a.email,password:a.password});assert.equal(r.status,200,JSON.stringify({response:r.data,initialStatus:initial.status,csrfLength:this.csrf.length,hasCookie:!!this.cookie}));
   if(!r.data.contextId){const c=r.data.contexts.find((c:any)=>c.role_key===a.role);assert.equal((await this.call('/auth/context','POST',{id:c.id})).status,200)}return this;
  }
 }
@@ -40,7 +40,7 @@ test('Organization card/profile has optimistic concurrency; suspension/archive r
  await pool.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2)',[seeded.accounts[account('org_admin')].id,id]);
  const assignment=(await pool.query("INSERT INTO role_assignments(user_id,organization_id,role_key) VALUES($1,$2,'org_admin') RETURNING id",[seeded.accounts[account('org_admin')].id,id])).rows[0].id;
  const card=(await admin.call('/platform/organizations/'+id)).data;assert.equal(card.status,'active');assert.equal(card.users.length,1);assert.ok(card.modules.length);assert.ok('onboarding' in card&&'audit' in card&&'policy' in card);
- const body={key:randomUUID(),version:1,name:'Phase5 client',legalName:'Legal QA',taxId:'QA',address:'QA address',contactEmail:'',contactPhone:'',timezone:'Asia/Yerevan',currency:'AMD',defaultLanguage:'ru'};
+  const body={key:randomUUID(),version:1,name:'Phase5 client',companyType:'management_company',legalName:'Legal QA',taxId:'QA',address:'QA address',contactEmail:'',contactPhone:'',timezone:'Asia/Yerevan',currency:'AMD',defaultLanguage:'ru'};
  const changed=await admin.call('/platform/organizations/'+id,'PATCH',body);assert.equal(changed.status,200);assert.equal(changed.data.version,2);
  assert.equal((await admin.call('/platform/organizations/'+id,'PATCH',body)).status,200);
  assert.equal((await admin.call('/platform/organizations/'+id,'PATCH',{...body,key:randomUUID()})).status,409);
@@ -56,6 +56,19 @@ test('Organization card/profile has optimistic concurrency; suspension/archive r
  const original=(await orgAdmin.call('/auth/session')).data.contexts.find((c:any)=>c.organization_id===org&&c.role_key==='org_admin');
  assert.equal((await orgAdmin.call('/auth/context','POST',{id:original.id})).status,200);
  assert.equal((await owner.call('/platform/organizations/'+org)).status,403);
+});
+test('Platform organization creation stores company profile and selected modules; date filter and CSV export are scoped',async()=>{
+ const tag=randomUUID(),body={key:tag,companyType:'developer',name:'Organization export QA '+tag,legalName:'QA Legal '+tag,taxId:'QA-058',address:'Yerevan',contactEmail:'qa@example.test',contactPhone:'+37400000000',timezone:'Asia/Yerevan',currency:'AMD',defaultLanguage:'ru',modules:['requests','smart_building']};
+ const created=await admin.call('/organizations','POST',body);assert.equal(created.status,201,JSON.stringify(created.data));assert.equal(created.data.company_type,'developer');assert.equal(created.data.legal_name,body.legalName);
+ const again=await admin.call('/organizations','POST',body);assert.equal(again.status,201);assert.equal(again.data.id,created.data.id);
+ const modules=(await pool.query('SELECT module,enabled FROM module_entitlements WHERE organization_id=$1 ORDER BY module',[created.data.id])).rows;
+ assert.equal(modules.find((m:any)=>m.module==='requests').enabled,true);assert.equal(modules.find((m:any)=>m.module==='smart_building').enabled,true);assert.equal(modules.find((m:any)=>m.module==='finance').enabled,false);
+ const day=(await pool.query("SELECT (created_at AT TIME ZONE 'Asia/Yerevan')::date::text AS day FROM organizations WHERE id=$1",[created.data.id])).rows[0].day;
+ const filtered=await admin.call('/paged/organizations?createdFrom='+day+'&createdTo='+day+'&q='+encodeURIComponent(tag));assert.equal(filtered.status,200);assert.ok(filtered.data.rows.some((r:any)=>r.id===created.data.id));
+ const outside=await admin.call('/paged/organizations?createdFrom=2099-01-01');assert.equal(outside.status,200);assert.equal(outside.data.total,0);
+ const exported=await fetch(base+'/api/platform/organizations/export.csv?createdFrom='+day+'&createdTo='+day+'&q='+encodeURIComponent(tag),{headers:{Cookie:admin.cookie}});assert.equal(exported.status,200);const csv=await exported.text();assert.ok(csv.includes(body.legalName));assert.ok(csv.includes('smart_building'));
+ assert.equal((await orgAdmin.call('/platform/organizations/export.csv')).status,403);
+ assert.equal((await admin.call('/organizations','POST',{...body,key:randomUUID(),companyType:'other'})).status,400);
 });
 test('Support queue/conversation is append-only, internal-private, tenant scoped, versioned and idempotent',async()=>{
  const b={key:randomUUID(),subject:'Phase5 support conversation',body:'Original public message',priority:'urgent',category:'technical'};

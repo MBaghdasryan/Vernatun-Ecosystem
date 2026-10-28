@@ -8,7 +8,7 @@ export async function recordDefinition(req:Parameters<typeof context>[0],resourc
  const c=await context(req);
  if(resource==='organizations'){
   await requirePermission(req,'organizations.read');
-  return {sql:'SELECT id,name,status,version,timezone,currency,is_demo,created_at FROM organizations',args:[],sorts:['name','currency','created_at','status'],initial:'created_at'};
+   return {sql:'SELECT id,name,company_type,status,version,timezone,currency,is_demo,created_at FROM organizations',args:[],sorts:['name','company_type','currency','created_at','status'],initial:'created_at'};
  }
  if(resource==='audit'){
   const platform=c.permissions.includes('platform.audit');await requirePermission(req,platform?'platform.audit':'audit.read');
@@ -41,16 +41,23 @@ export async function recordDefinition(req:Parameters<typeof context>[0],resourc
   args:scope(c),sorts:['number','building_name','area'],initial:'number'};
 }
 const paging=z.object({page:z.coerce.number().int().min(1).max(10000).default(1),pageSize:z.coerce.number().int().min(1).max(100).default(25),
- q:z.string().trim().max(160).default(''),sort:z.string().max(40).optional(),direction:z.enum(['asc','desc']).default('asc'),filter:z.enum(['all','true','false']).default('all')}).strict();
+ q:z.string().trim().max(160).default(''),sort:z.string().max(40).optional(),direction:z.enum(['asc','desc']).default('asc'),filter:z.enum(['all','true','false']).default('all'),
+ createdFrom:z.string().date().optional(),createdTo:z.string().date().optional()}).strict().refine(b=>!b.createdFrom||!b.createdTo||b.createdFrom<=b.createdTo,{path:['createdTo'],message:'invalid_date_range'});
 export const pagedRecords=Router();
 pagedRecords.get('/paged/:resource',async(req,res)=>{
  const d=await recordDefinition(req,req.params.resource),b=paging.parse(req.query),sort=b.sort??d.initial;
+ if((b.createdFrom||b.createdTo)&&req.params.resource!=='organizations')throw new ApiError(400,'invalid_date_filter');
  if(!d.sorts.includes(sort))throw new ApiError(400,'invalid_sort');
  const n=d.args.length,pattern='%'+b.q.replace(/[\\%_]/g,'\\$&')+'%';
- const where=`($${n+1}='' OR to_jsonb(t)::text ILIKE $${n+2}) AND ($${n+3}='all' OR to_jsonb(t)->>'active'=$${n+3})`;
- const args=[...d.args,b.q,pattern,b.filter];
+ const dateWhere=req.params.resource==='organizations'
+  ?` AND ($${n+4}::date IS NULL OR (t.created_at AT TIME ZONE 'Asia/Yerevan')::date >= $${n+4}::date)
+    AND ($${n+5}::date IS NULL OR (t.created_at AT TIME ZONE 'Asia/Yerevan')::date <= $${n+5}::date)`
+  :'';
+ const where=`($${n+1}='' OR to_jsonb(t)::text ILIKE $${n+2}) AND ($${n+3}='all' OR to_jsonb(t)->>'active'=$${n+3})${dateWhere}`;
+ const args=req.params.resource==='organizations'?[...d.args,b.q,pattern,b.filter,b.createdFrom??null,b.createdTo??null]:[...d.args,b.q,pattern,b.filter];
  const total=Number((await pool.query(`SELECT count(*) FROM (${d.sql}) t WHERE ${where}`,args)).rows[0].count);
- const rows=(await pool.query(`SELECT * FROM (${d.sql}) t WHERE ${where} ORDER BY "${sort}" ${b.direction} NULLS LAST,id ${b.direction} LIMIT $${n+4} OFFSET $${n+5}`,[...args,b.pageSize,(b.page-1)*b.pageSize])).rows;
+ const limitPosition=n+(req.params.resource==='organizations'?6:4);
+ const rows=(await pool.query(`SELECT * FROM (${d.sql}) t WHERE ${where} ORDER BY "${sort}" ${b.direction} NULLS LAST,id ${b.direction} LIMIT $${limitPosition} OFFSET $${limitPosition+1}`,[...args,b.pageSize,(b.page-1)*b.pageSize])).rows;
  res.json({rows,total,page:b.page,pageSize:b.pageSize,sort,direction:b.direction});
 });
 // Legacy lookup callers retain array shape, but no unlimited SQL result.
