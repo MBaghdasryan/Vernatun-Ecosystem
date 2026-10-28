@@ -1,0 +1,2 @@
+.brand-mark-cms img{position:static;width:100%;height:100%;max-width:100%;object-fit:contain}
+.brand-word-cms{width:auto;height:auto;max-width:180px;overflow:hidden;color:var(--cms-brand-primary,#0b2230);font-size:18px;font-weight:800;letter-spacing:-.045em;text-overflow:ellipsis;white-space:nowrap}

@@ -1,0 +1,27 @@
+.portal-root .platform-cms{display:grid;gap:16px}
+.portal-root .platform-cms-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.portal-root .platform-cms-heading h2{margin:0 0 5px}
+.portal-root .platform-cms-heading p{margin:0;color:var(--p-muted);font-size:13px}
+.portal-root .platform-cms-tabs,.portal-root .platform-cms-language-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.portal-root .platform-cms-tabs button,.portal-root .platform-cms-language-tabs button{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid var(--p-border);border-radius:9px;background:#fff;color:inherit}
+.portal-root .platform-cms-tabs button[aria-selected=true],.portal-root .platform-cms-language-tabs button[aria-selected=true]{border-color:var(--p-orange);background:#fff4e9;color:#9e4000}
+.portal-root .platform-cms-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.portal-root .platform-cms-fields label,.portal-root .platform-cms-editor>label{display:grid;gap:6px;font-size:12px;color:var(--p-muted)}
+.portal-root .platform-cms-fields input,.portal-root .platform-cms-editor input,.portal-root .platform-cms-editor textarea{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--p-border);border-radius:8px;background:#fff;color:var(--p-ink);font:inherit}
+.portal-root .platform-cms-fields input[type=color]{padding:4px;min-height:42px}
+.portal-root .platform-cms-editor textarea{resize:vertical;min-height:180px;line-height:1.55}
+.portal-root .platform-cms-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.portal-root .platform-cms-actions .p-button{display:inline-flex;align-items:center;gap:7px}
+.portal-root .platform-cms-published{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid var(--p-border);border-radius:10px;background:#f7f9fa}
+.portal-root .platform-cms-published code{font-size:12px;color:var(--p-muted)}
+.portal-root .platform-cms-pages{display:grid;grid-template-columns:minmax(200px,.65fr) minmax(0,1.6fr);gap:18px;align-items:start}
+.portal-root .platform-cms-list{display:grid;gap:8px;min-width:0}
+.portal-root .platform-cms-page-link{display:grid;gap:4px;width:100%;min-width:0;padding:11px;text-align:left;border:1px solid var(--p-border);border-radius:9px;background:#fff;color:inherit}
+.portal-root .platform-cms-page-link.selected{border-color:var(--p-orange);box-shadow:inset 3px 0 var(--p-orange)}
+.portal-root .platform-cms-page-link strong,.portal-root .platform-cms-page-link small{overflow-wrap:anywhere}
+.portal-root .platform-cms-page-link small{color:var(--p-muted)}
+.portal-root .platform-cms-editor{display:grid;gap:12px;min-width:0}
+.portal-root .platform-cms-editor .p-button{width:max-content;max-width:100%}
+.portal-root .platform-cms a.p-button{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.portal-root .platform-cms button:focus-visible,.portal-root .platform-cms a:focus-visible,.portal-root .platform-cms input:focus-visible,.portal-root .platform-cms textarea:focus-visible{outline:3px solid #ff8b38;outline-offset:2px}
+@media(max-width:720px){.portal-root .platform-cms-fields,.portal-root .platform-cms-pages{grid-template-columns:1fr}.portal-root .platform-cms-heading{align-items:flex-start}.portal-root .platform-cms-published{align-items:flex-start}}

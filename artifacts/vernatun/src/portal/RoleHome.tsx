@@ -19,6 +19,8 @@ type Result={items:Item[];total?:number}|'error';
 type Shortcut={label:L3;path:string;ok:boolean};
 
 const S={
+  platformTitle:['Վերնատուն հարթակի ակնարկ','Обзор платформы Vernatun','Vernatun platform overview'],
+  platformIntro:['Կազմակերպությունների, ներդրման և սպասարկման ընթացիկ պատկերը՝ առկա հարթակային տվյալներից։','Текущее состояние организаций, внедрения и поддержки по доступным данным платформы.','A current view of organizations, onboarding and support, based on available platform data.'],
  attention:['Ուշադրություն','Требует внимания','Needs attention'],calendar:['Մոտակա ժամկետներ','Ближайшие сроки','Upcoming dates'],
  quick:['Արագ գործողություններ','Быстрые действия','Quick actions'],unavailable:['Միացված չէ','Не подключено','Not configured'],
  empty:['Բաց կետեր չկան','Открытых пунктов нет','Nothing open'],error:['Չհաջողվեց բեռնել','Не удалось загрузить','Could not load'],
@@ -39,7 +41,8 @@ const S={
 
 const Q={
  orgs:['Կազմակերպություններ','Организации','Organizations'],subs:['Բաժանորդագրություններ','Подписки','Subscriptions'],onb:['Ներդրում','Внедрение','Onboarding'],
- cases:['Դիմումներ','Обращения','Support cases'],audit:['Աուդիտ','Аудит','Audit'],email:['Էլ. փոստ','Почта','Email'],users:['Օգտատերեր','Пользователи','Users'],
+  cases:['Դիմումներ','Обращения','Support cases'],audit:['Աուդիտ','Аудит','Audit'],email:['Էլ. փոստ','Почта','Email'],users:['Օգտատերեր','Пользователи','Users'],
+  cms:['Բրենդ և կայք','Бренд и сайт','Brand and website'],integrations:['Ինտեգրումներ','Интеграции','Integrations'],health:['Համակարգի վիճակ','Состояние системы','System health'],updates:['Թարմացումներ','Обновления','Updates'],
  access:['Ժամանակավոր հասանելիություն','Временный доступ','Temporary access'],imports:['Ներմուծում','Импорт','Imports'],
  props:['Շենքեր','Здания','Buildings'],people:['Աշխատակիցներ','Сотрудники','Employees'],invite:['Հրավերներ','Приглашения','Invitations'],modules:['Մոդուլներ','Модули','Modules'],roles:['Դերեր','Роли','Roles'],settings:['Կարգավորումներ','Настройки','Settings'],
  finance:['Հաշվարկներ','Начисления (пакеты)','Billing batches'],bank:['Բանկային համադրում','Банковская сверка','Bank reconciliation'],credits:['Կրեդիտներ','Кредиты','Credits'],invoices:['Հաշիվներ','Счета','Invoices'],budgets:['Բյուջեներ','Бюджеты','Budgets'],expensesQ:['Ծախսեր','Расходы','Expenses'],
@@ -111,7 +114,7 @@ export default function RoleHome({c,language,currency,product,kpis=true}:{c:Role
   add({key:'lease',title:S.lease,path:'/leases',complete:true,ok:product==='imtun'&&role==='renter'&&!!c.unit_id&&can('leases','leases.own'),calendar:true,map:r=>list(r).filter(x=>!x.cancelled_at&&new Date(x.ends_on).getTime()>=now-day).slice(0,1).map(x=>({id:x.id,title:[x.building_name,x.number].filter(Boolean).join(' · '),when:x.ends_on,tone:soon(x.ends_on,30)?'warn':'info',path:im('leases')}))});
   return f},[c.id,currency,language]);
  const shortcuts:Shortcut[]=({
-  platform_admin:[{label:Q.orgs,path:con('organizations'),ok:p('organizations.read')},{label:Q.subs,path:con('subscriptions'),ok:p('subscriptions.manage')},{label:Q.onb,path:con('onboarding'),ok:p('onboarding.manage')},{label:Q.cases,path:con('support-cases'),ok:p('support.cases')},{label:Q.users,path:con('users'),ok:p('organizations.manage')},{label:Q.audit,path:con('audit'),ok:p('platform.audit')||p('audit.read')},{label:Q.email,path:con('email'),ok:true}],
+   platform_admin:[{label:Q.orgs,path:con('organizations'),ok:p('organizations.read')},{label:Q.subs,path:con('subscriptions'),ok:p('subscriptions.manage')},{label:Q.onb,path:con('onboarding'),ok:p('onboarding.manage')},{label:Q.cases,path:con('support-cases'),ok:p('support.cases')},{label:Q.users,path:con('users'),ok:p('organizations.manage')},{label:Q.audit,path:con('audit'),ok:p('platform.audit')||p('audit.read')},{label:Q.email,path:con('email'),ok:true},{label:Q.integrations,path:'/console/system/integrations',ok:p('integrations.read')},{label:Q.health,path:'/console/system/health',ok:p('system.health.read')},{label:Q.updates,path:'/console/system/updates',ok:p('updates.read')},{label:Q.cms,path:'/console/system/cms',ok:p('platform.cms.manage')}],
   support:[{label:Q.onb,path:con('onboarding'),ok:p('onboarding.manage')},{label:Q.cases,path:con('support-cases'),ok:p('support.cases')},{label:Q.access,path:con('support'),ok:p('support.access.request')},{label:Q.imports,path:con('imports'),ok:!platform&&(p('imports.manage')||p('imports.finance'))}],
   org_admin:[{label:Q.props,path:os('properties'),ok:p('properties.read')},{label:Q.people,path:os('people'),ok:p('people.read')},{label:Q.invite,path:os('invitations'),ok:p('people.invite')},{label:Q.roles,path:os('roles'),ok:p('roles.assign')},{label:Q.modules,path:os('modules'),ok:p('modules.read')},{label:Q.audit,path:os('audit'),ok:p('audit.read')},{label:Q.imports,path:os('imports'),ok:p('imports.manage')},{label:Q.settings,path:os('settings'),ok:true}],
   accountant:[{label:Q.finance,path:os('finance?tab=batches'),ok:can('finance','billing.read')},{label:Q.bank,path:os('finance?tab=bank'),ok:orgWide&&can('finance','payments.reconcile')},{label:Q.credits,path:os('finance?tab=credits'),ok:orgWide&&can('finance','payments.reconcile')},{label:Q.invoices,path:os('invoices'),ok:can('invoices','billing.read')},{label:Q.budgets,path:os('budgets'),ok:can('budgets','expenses.read')},{label:Q.expensesQ,path:os('expenses'),ok:can('expenses','expenses.read')},{label:Q.imports,path:os('imports'),ok:p('imports.finance')}],
@@ -138,7 +141,10 @@ export default function RoleHome({c,language,currency,product,kpis=true}:{c:Role
  const notes=U[role]??[];
  const hasFinance=!!cards?.some(m=>financial.has(m.key));
  if(!kpis&&!feeds.length&&!shortcuts.length&&!notes.length)return null;
- return <section className={'rh rh-'+product} aria-label={tr(S.attention)}>
+  return <section className={'rh rh-'+product+(role==='platform_admin'?' rh-platform-admin':'')} aria-label={tr(S.attention)}>
+   {role==='platform_admin'&&<header className="rh-heading">
+    <div><span className="rh-kicker">VERNATUN · PLATFORM OPERATIONS</span><h1>{tr(S.platformTitle)}</h1><p>{tr(S.platformIntro)}</p></div>
+   </header>}
   {banner.length>0&&!hidden&&<div className="rh-banner" role="alert"><AlertTriangle size={22}/><div><strong>{tr(S.emergency)}: {banner.length}</strong><p>{banner[0].title}</p><small>{tr(S.emergencyHint)}</small></div><button className="rh-btn" onClick={()=>goTo(banner[0].path)}>{tr(S.open)}<ArrowRight size={16}/></button><button className="rh-link" onClick={()=>setHidden(true)}>{tr(S.hide)}</button></div>}
   {kpis&&hasFinance&&<label className="rh-period">{tr(S.period)}<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="">{tr(S.periodAll)}</option>{months.map(m=><option key={m} value={m}>{new Intl.DateTimeFormat(language,{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(m+'-01T00:00:00Z'))}</option>)}</select></label>}
   {kpis&&<div className="rh-kpis">{kpiError?<p className="rh-state">{tr(S.error)} <button className="rh-link" onClick={()=>setRev(v=>v+1)}><RefreshCw size={14}/>{tr(S.retry)}</button></p>:!cards?Array.from({length:4},(_,n)=><div className="rh-kpi rh-skel" key={n}/>):cards.map(m=>{const link=kpiLink[m.key]?.[product];const to=link&&p(link[1])?link[0]:undefined;const label=(insightStrings as Record<string,L3>)[m.key]?.[i]??m.key;const fin=financial.has(m.key);const value=m.dataState==='no_data'?tr(S.noData):m.currency?money(m.value,m.currency as Currency,language):m.value;const body=<><span title={m.definition} aria-label={`${label}: ${m.definition}`}>{label}</span><strong>{value}</strong><small>{fin?(m.dataState==='no_data'?'':(period?period:tr(S.periodAll))):tr(S.currentState)}</small>{to&&<ArrowRight size={15}/>}</>;return to?<button key={m.key} className="rh-kpi" onClick={()=>goTo(to)}>{body}</button>:<div key={m.key} className="rh-kpi">{body}</div>})}</div>}

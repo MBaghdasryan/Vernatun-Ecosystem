@@ -14,14 +14,16 @@ import {CachePanel,SessionsPanel,EnvironmentPanel,RetentionPanel,ADMIN_S,ENV_LAB
 import {IntegrationsPanel,WebhooksPanel} from './SystemConnections';
 import SystemModules from './SystemModules';
 import SystemUpdates from './SystemUpdates';
+import PlatformCms from './PlatformCms';
 
-type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups'|'api'|'integrations'|'webhooks'|'modules'|'updates';
+type Tab='overview'|'health'|'logs'|'errors'|'jobs'|'cache'|'sessions'|'environment'|'retention'|'backups'|'api'|'integrations'|'webhooks'|'modules'|'updates'|'cms';
 const L=(l:Language)=>l==='hy'?0:l==='ru'?1:2;
 const S:Record<string,[string,string,string]>={
  read_access_verified:['Հաստատված','Подтверждено','Verified'],probe_failed:['Ստուգումը ձախողվեց','Проверка не удалась','Probe failed'],probe_timeout:['Ժամանակը սպառվեց','Тайм-аут','Timed out'],
  emailEvidence:['Էլփոստի ցուցանիշները բոլոր մատակարարների պահպանված տվյալներն են, ոչ կենդանի ստուգում։ Ընդունումը առաքում չէ։ 24 ժամվա հաշվիչները հաշվում են եզակի նամակները՝ ըստ իրադարձության տեսակի․ մեկ նամակը կարող է լինել մի քանի հաշվիչում։ Անհայտ արդյունքը հաստատված ձախողում չէ։','Почтовые показатели — сохранённые данные всех провайдеров, не проверка соединения. Принятие не означает доставку. За 24 часа считаются уникальные письма по каждому типу события; одно письмо может попасть в несколько счётчиков. Неизвестный результат — не подтверждённый сбой.','Email metrics use retained evidence across all providers, not a live probe. Acceptance is not delivery. Each 24-hour event counter counts distinct messages; one message may appear in multiple counters. An unknown result is not a confirmed failure.'],
   system:['Համակարգ','Система','System'],overview:['Ամփոփում','Обзор','Overview'],health:['Վիճակ','Состояние','Health'],logs:['Մատյաններ','Журналы','Logs'],errors:['Սխալներ','Ошибки','Errors'],jobs:['Առաջադրանքներ','Задания','Jobs'],
   modules:['Մոդուլներ','Модули','Modules'],updates:['Թարմացումներ','Обновления','Updates'],
+  cms:['Բրենդ և կայքի բովանդակություն','Бренд и контент сайта','Brand and site content'],
  healthy:['Առողջ','Исправно','Healthy'],degraded:['Վատթարացած','Деградация','Degraded'],down:['Անջատված','Недоступно','Down'],unavailable:['Անհասանելի','Нет данных','Unavailable'],not_configured:['Կարգավորված չէ','Не настроено','Not configured'],
  warning:['Զգուշացում','Предупреждение','Warning'],critical:['Կրիտիկական','Критично','Critical'],
  running:['Ընթացքում','Выполняется','Running'],completed:['Ավարտված','Завершено','Completed'],failed:['Ձախողված','Ошибка','Failed'],interrupted:['Ընդհատված','Прервано','Interrupted'],
@@ -73,8 +75,8 @@ const MAX:Record<string,number>={endpoint:240,errorCode:60,job:60,q:100,requestI
 export const systemLabel=(l:Language)=>S.system[L(l)];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL=30000;
-type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read'|'api.read'|'integrations.read'|'plugins.read'|'updates.read';
-const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'},{key:'api',perm:'api.read'},{key:'integrations',perm:'integrations.read'},{key:'webhooks',perm:'api.read'},{key:'modules',perm:'plugins.read'},{key:'updates',perm:'updates.read'}];
+type Perm='system.health.read'|'logs.read'|'jobs.read'|'cache.read'|'sessions.read'|'environment.read'|'backups.read'|'api.read'|'integrations.read'|'plugins.read'|'updates.read'|'platform.cms.manage';
+const TABS:{key:Tab;perm:'system.read'|Perm}[]=[{key:'overview',perm:'system.read'},{key:'health',perm:'system.health.read'},{key:'logs',perm:'logs.read'},{key:'errors',perm:'logs.read'},{key:'jobs',perm:'jobs.read'},{key:'retention',perm:'logs.read'},{key:'cache',perm:'cache.read'},{key:'sessions',perm:'sessions.read'},{key:'environment',perm:'environment.read'},{key:'backups',perm:'backups.read'},{key:'api',perm:'api.read'},{key:'integrations',perm:'integrations.read'},{key:'webhooks',perm:'api.read'},{key:'modules',perm:'plugins.read'},{key:'updates',perm:'updates.read'},{key:'cms',perm:'platform.cms.manage'}];
 const statusOf=(e:unknown)=>typeof e==='object'&&e&&'status' in e?Number((e as {status:unknown}).status):0;
 
 // Polls on mount, every 30s, on window focus; aborts in-flight requests and drops
@@ -173,7 +175,7 @@ function Jobs({ck,l}:{ck:string;l:Language}){
   </section>}</div>;
 }
 
-export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'||s==='api'||s==='integrations'||s==='webhooks'||s==='modules'||s==='updates'?s:'overview'}
+export function systemTab(path:string):Tab{const s=path.split('/')[3];return s==='health'||s==='logs'||s==='errors'||s==='jobs'||s==='cache'||s==='sessions'||s==='environment'||s==='retention'||s==='backups'||s==='api'||s==='integrations'||s==='webhooks'||s==='modules'||s==='updates'||s==='cms'?s:'overview'}
 export default function SystemConsole({c,language}:{c:RoleContext;language:Language}){
   const l=language;const tx=(k:string)=>k==='backups'?backupsLabel(l):k==='api'?apiLabel(l):k==='integrations'?['Ինտեգրումներ','Интеграции','Integrations'][L(l)]:k==='webhooks'?['Ելքային webhook-ներ','Исходящие webhooks','Outgoing webhooks'][L(l)]:k==='modules'?['Մոդուլներ և ընդլայնումներ','Модули и расширения','Modules & Extensions'][L(l)]:k==='updates'?['Թարմացումներ','Обновления','Updates'][L(l)]:(S[k]??ADMIN_S[k])[L(l)];
  const [tab,setTab]=useState<Tab>(()=>systemTab(location.pathname));
@@ -203,6 +205,7 @@ export default function SystemConsole({c,language}:{c:RoleContext;language:Langu
     {current==='environment'&&<EnvironmentPanel key={ck+':v'} ck={ck} l={l}/>}
      {current==='modules'&&<SystemModules key={ck+':m'} language={l} canRead={c.permissions.includes('plugins.read')}/>}
      {current==='updates'&&<SystemUpdates key={ck+':u'} language={l} canRead={c.permissions.includes('updates.read')} canUpload={c.permissions.includes('updates.upload')} canStage={c.permissions.includes('updates.upload')} canInstall={c.permissions.includes('updates.install')} canRollback={c.permissions.includes('updates.rollback')} canBackups={c.permissions.includes('backups.read')}/>}
+      {current==='cms'&&<PlatformCms key={ck+':cms'} language={l}/>}
   </div>
  </div>;
 }

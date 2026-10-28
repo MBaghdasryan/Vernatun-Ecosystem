@@ -1,12 +1,14 @@
-import {useEffect} from 'react';
+import {useEffect,useState} from 'react';
 import {e} from './ecosystem-content';
 import {landingLanguage} from './landing-i18n';
 import {Logo} from './components/Shared';
 import SiteFooter from './components/SiteFooter';
+import {apiUrl} from './api-base';
 import './legal.css';
 
 type LegalKind='privacy'|'terms';
 type LegalSection={title:string;paragraphs:string[];items?:string[]};
+type PublishedLegalText={title:string;summary:string;body:string};
 
 function meta(name:string,content:string,property=false){
  const selector=property?`meta[property="${name}"]`:`meta[name="${name}"]`;
@@ -72,24 +74,36 @@ const documents:Record<LegalKind,{title:string;description:string;intro:string;s
 
 export default function LegalPage({kind}:{kind:LegalKind}){
  const page=documents[kind];
+ const locale=landingLanguage==='hy'?'hy':landingLanguage==='en'?'en':'ru';
+ const [published,setPublished]=useState<PublishedLegalText|null>(null);
+ useEffect(()=>{
+  let active=true;setPublished(null);
+  fetch(apiUrl('/api/public/site/pages/'+kind),{headers:{Accept:'application/json'}})
+   .then(async response=>response.ok?response.json():null)
+   .then(data=>{if(active&&data?.content?.[locale])setPublished(data.content[locale])})
+   .catch(()=>{});
+  return()=>{active=false};
+ },[kind,locale]);
+ const title=published?.title||page.title;
+ const description=published?.summary||page.description;
  const home=e('На главную','Գլխավոր էջ','Home');
  const privacy=e('Конфиденциальность','Գաղտնիություն','Privacy');
  const terms=e('Условия использования','Օգտագործման պայմաններ','Terms of use');
  useEffect(()=>{
   document.documentElement.lang=landingLanguage;
-  document.title=`${page.title} | Vernatun`;
-  meta('description',page.description);
+   document.title=`${title} | Vernatun`;
+   meta('description',description);
   meta('og:type','website',true);
-  meta('og:title',`${page.title} | Vernatun`,true);
-  meta('og:description',page.description,true);
+   meta('og:title',`${title} | Vernatun`,true);
+   meta('og:description',description,true);
   meta('og:url',`https://vernatun.io/${kind}`,true);
   meta('twitter:card','summary');
-  meta('twitter:title',`${page.title} | Vernatun`);
-  meta('twitter:description',page.description);
+   meta('twitter:title',`${title} | Vernatun`);
+   meta('twitter:description',description);
   let canonical=document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
   if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical)}
   canonical.href=`https://vernatun.io/${kind}`;
- },[kind,page]);
+  },[kind,page,title,description]);
  return <>
   <a className="skip-link" href="#legal-content">{e('Перейти к тексту','Անցնել տեքստին','Skip to content')}</a>
   <header className="legal-header">
@@ -104,13 +118,13 @@ export default function LegalPage({kind}:{kind:LegalKind}){
   </header>
   <main id="legal-content" className="legal-main">
    <div className="container legal-container">
-    <nav className="legal-breadcrumb" aria-label={e('Навигация','Նավիգացիա','Breadcrumb')}><a href="/">{home}</a><span aria-hidden="true">/</span><span>{page.title}</span></nav>
+     <nav className="legal-breadcrumb" aria-label={e('Навигация','Նավիգացիա','Breadcrumb')}><a href="/">{home}</a><span aria-hidden="true">/</span><span>{title}</span></nav>
     <article className="legal-document">
      <p className="eyebrow">{e('Информация Vernatun','Vernatun-ի տեղեկություններ','Vernatun information')}</p>
-     <h1>{page.title}</h1>
-     <p className="legal-intro">{page.intro}</p>
-     <aside className="legal-draft" role="note"><strong>{e('Черновик','Նախագիծ','Draft')}</strong><span>{page.notice}</span></aside>
-     <div className="legal-sections">{page.sections.map((section,index)=><section key={index}><h2>{section.title}</h2>{section.paragraphs.map((paragraph,i)=><p key={i}>{paragraph}</p>)}{section.items&&<ul>{section.items.map((item,i)=><li key={i}>{item}</li>)}</ul>}</section>)}</div>
+      <h1>{title}</h1>
+      <p className="legal-intro">{published?.summary||page.intro}</p>
+      {!published&&<aside className="legal-draft" role="note"><strong>{e('Черновик','Նախագիծ','Draft')}</strong><span>{page.notice}</span></aside>}
+      {published?<div className="legal-sections"><section><p className="legal-cms-body">{published.body}</p></section></div>:<div className="legal-sections">{page.sections.map((section,index)=><section key={index}><h2>{section.title}</h2>{section.paragraphs.map((paragraph,i)=><p key={i}>{paragraph}</p>)}{section.items&&<ul>{section.items.map((item,i)=><li key={i}>{item}</li>)}</ul>}</section>)}</div>}
     </article>
    </div>
   </main>

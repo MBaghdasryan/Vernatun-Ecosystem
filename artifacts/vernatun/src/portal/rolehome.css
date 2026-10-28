@@ -56,3 +56,157 @@ button.rh-kpi:hover{transform:translateY(-2px);border-color:var(--rh-accent)}
 .rh-btn-plain{background:var(--rh-accent);color:#fff}
 .rh-dir-all{margin-top:.7rem}
 @media (max-width:767px){.rh-table thead{display:none}.rh-table,.rh-table tbody,.rh-table tr,.rh-table td{display:block;width:100%}.rh-table tr{padding:.5rem 0;border-bottom:1px solid rgba(29,42,68,.1)}.rh-table td{border:0;padding:.15rem .5rem}.rh-table td::before{content:attr(data-label)": ";opacity:.6;font-size:.74rem}.rh-dirgrid{grid-template-columns:1fr}}
+
+/* Platform administrator overview — a focused operations desk, not a generic KPI wall. */
+.rh-platform-admin{
+ --rh-accent:#bd5b2b;
+ --rh-ink:#183b3a;
+ --rh-muted:#637775;
+ --rh-line:#d9e2dc;
+ --rh-paper:#f8f8f1;
+ --rh-card:#fffefa;
+ gap:1.1rem;
+ color:var(--rh-ink);
+}
+.rh-platform-admin .rh-heading{
+ display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;
+ padding:.55rem .1rem .25rem;
+}
+.rh-platform-admin .rh-kicker{
+ display:block;margin-bottom:.45rem;color:#a45530;font-size:.68rem;
+ font-weight:750;letter-spacing:.16em;
+}
+.rh-platform-admin .rh-heading h1{
+ margin:0;font-size:clamp(1.65rem,2.7vw,2.35rem);line-height:1.1;
+ letter-spacing:-.045em;font-weight:760;color:#183b3a;
+}
+.rh-platform-admin .rh-heading p{
+ max-width:56rem;margin:.55rem 0 0;color:#667875;font-size:.94rem;line-height:1.5;
+}
+.rh-platform-admin .rh-kpis{
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,178px),1fr));gap:.75rem;
+}
+.rh-platform-admin .rh-kpi{
+ min-height:116px;padding:1.05rem 1.1rem;border:1px solid #dce4de;
+ border-radius:13px;background:linear-gradient(145deg,#fffefa,#f4f6ef);
+ box-shadow:0 2px 7px rgba(23,59,57,.035);
+}
+.rh-platform-admin .rh-kpi>span{
+ color:#5d716d;font-size:.76rem;font-weight:650;letter-spacing:.015em;opacity:1;
+}
+.rh-platform-admin .rh-kpi strong{
+ color:#183b3a;font-size:1.72rem;line-height:1.12;font-variant-numeric:tabular-nums;
+}
+.rh-platform-admin .rh-kpi small{color:#73827d;font-size:.71rem;opacity:1}
+.rh-platform-admin button.rh-kpi:hover{border-color:#c96b3c;box-shadow:0 6px 18px rgba(40,67,56,.08)}
+.rh-platform-admin .rh-foot{margin:-.3rem 0 0;color:#74817d;font-size:.76rem;opacity:1}
+.rh-platform-admin .rh-grid{
+ grid-template-columns:minmax(0,1.35fr) minmax(300px,.9fr);gap:.9rem;align-items:stretch;
+}
+.rh-platform-admin .rh-panel{
+ min-width:0;padding:1.1rem 1.15rem;border:1px solid #dbe3dc;border-radius:14px;
+ background:#fffefa;box-shadow:0 3px 12px rgba(27,55,48,.035);
+}
+.rh-platform-admin .rh-panel h2{
+ margin:0 0 .85rem;color:#1b3d3a;font-size:.98rem;font-weight:730;letter-spacing:-.015em;
+}
+.rh-platform-admin .rh-panel h2 svg{color:#b85d32}
+.rh-platform-admin .rh-attention{grid-row:span 2}
+.rh-platform-admin .rh-group+.rh-group{border-top:1px solid #e8ece6}
+.rh-platform-admin .rh-group h3{
+ margin:0 0 .55rem;color:#536b67;font-size:.8rem;font-weight:700;opacity:1;
+}
+.rh-platform-admin .rh-group h3 b{
+ min-width:1.8rem;padding:.14rem .48rem;background:#eaf0e9;color:#244c44;
+ font-size:.72rem;font-weight:700;
+}
+.rh-platform-admin .rh-row{
+ grid-template-columns:5px minmax(0,1fr) auto auto;gap:.65rem;
+ margin:.16rem 0;padding:.62rem .5rem;border-radius:8px;
+}
+.rh-platform-admin .rh-row:hover{background:#f3f6f0}
+.rh-platform-admin .rh-row i{height:25px;width:4px;background:#89a39a}
+.rh-platform-admin .rh-row.tone-warn i{background:#ce8b37}
+.rh-platform-admin .rh-row.tone-urgent i{background:#b94932}
+.rh-platform-admin .rh-row strong{color:#24413d;font-size:.85rem}
+.rh-platform-admin .rh-row small,.rh-platform-admin .rh-row time{color:#71807b;font-size:.74rem;opacity:1}
+.rh-platform-admin .rh-cal{gap:.4rem}
+.rh-platform-admin .rh-cal li+li{border-top:1px solid #edf0eb}
+.rh-platform-admin .rh-cal button{grid-template-columns:5.2rem minmax(0,1fr);padding:.65rem .45rem}
+.rh-platform-admin .rh-cal button:hover{background:#f3f6f0}
+.rh-platform-admin .rh-cal time{color:#a95531;font-size:.76rem}
+.rh-platform-admin .rh-cal strong{color:#28443f;font-size:.84rem}
+.rh-platform-admin .rh-cal small{color:#73817d;font-size:.73rem;opacity:1}
+.rh-platform-admin .rh-quick{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.45rem}
+.rh-platform-admin .rh-quick button{
+ padding:.65rem .7rem;border-color:#dce4dd;border-radius:9px;
+ background:#fbfcf7;color:#29453f;font-size:.82rem;font-weight:600;
+}
+.rh-platform-admin .rh-quick button:hover{background:#f3f6ef;border-color:#bd744d;color:#9d4d2b}
+.rh-platform-admin .rh-unavailable{
+ margin-top:.85rem;padding:.7rem .8rem;border:1px solid #e8e4d6;border-radius:9px;
+ background:#f8f6ec;color:#665e48;
+}
+.rh-platform-admin .rh-unavailable h3{margin-bottom:.35rem;color:#5f604b;font-size:.78rem;opacity:1}
+.rh-platform-admin .rh-unavailable h3 svg{color:#aa7640}
+.rh-platform-admin .rh-unavailable p{font-size:.78rem;line-height:1.45}
+.rh-platform-admin .rh-banner{
+ border-color:#edc4b1;border-radius:12px;background:#fff2eb;color:#773b25;
+}
+.rh-platform-admin .rh-btn{background:#a74c2a;color:#fffaf5}
+.rh-platform-admin .rh-link{color:#a74c2a}
+.rh-platform-admin .rh-state{color:#71807b}
+.rh-platform-admin .rh-skel{
+ background:linear-gradient(100deg,#edf1eb 20%,#e2e9e1 40%,#edf1eb 60%);
+ background-size:200% 100%;
+}
+.rh-platform-admin .rh-dirgrid{gap:.9rem}
+.rh-platform-admin .rh-dir{
+ padding:1.1rem 1.15rem;border-radius:14px;background:#fffefa;
+ border-color:#dbe3dc;box-shadow:0 3px 12px rgba(27,55,48,.035);
+}
+.rh-platform-admin .rh-dir-sum{color:#657872;opacity:1}
+.rh-platform-admin .rh-table{color:#29443f;font-size:.8rem}
+.rh-platform-admin .rh-table th{
+ padding:.5rem .55rem;border-bottom:1px solid #dbe3dc;color:#788782;
+ font-size:.67rem;letter-spacing:.075em;opacity:1;
+}
+.rh-platform-admin .rh-table td{padding:.62rem .55rem;border-bottom:1px solid #edf0eb}
+.rh-platform-admin .rh-table tbody tr:hover,.rh-platform-admin .rh-table tbody tr.on{background:#f3f6f0}
+.rh-platform-admin .rh-table tbody tr.on td:first-child{box-shadow:inset 3px 0 0 #bf6037}
+.rh-platform-admin .rh-dir-sel{background:#f0f4ee;color:#526862}
+.rh-platform-admin .rh-btn-plain{background:#a74c2a;color:#fff}
+.rh-platform-admin .rh-dir-all{font-size:.82rem;font-weight:650}
+.rh-platform-admin .rh-period{
+ gap:.55rem;color:#5e716d;font-size:.8rem;font-weight:650;
+}
+.rh-platform-admin .rh-period select{
+ min-height:38px;border-color:#d7e0d9;border-radius:8px;background:#fffefa;color:#29443f;
+}
+.rh-platform-admin button:focus-visible,.rh-platform-admin select:focus-visible,
+.rh-platform-admin tr:focus-visible{
+ outline:3px solid #b85d32;outline-offset:3px;
+}
+@media(max-width:800px){
+ .rh-platform-admin .rh-grid{grid-template-columns:1fr}
+ .rh-platform-admin .rh-attention{grid-row:auto}
+}
+@media(max-width:767px){
+ .rh-platform-admin .rh-heading{padding:.2rem 0}
+ .rh-platform-admin .rh-heading h1{font-size:1.75rem}
+ .rh-platform-admin .rh-heading p{font-size:.86rem}
+ .rh-platform-admin .rh-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .rh-platform-admin .rh-kpi{min-height:102px;padding:.85rem}
+ .rh-platform-admin .rh-kpi strong{font-size:1.45rem}
+ .rh-platform-admin .rh-row{grid-template-columns:4px minmax(0,1fr) auto}
+ .rh-platform-admin .rh-row>svg{display:none}
+}
+@media(max-width:380px){
+ .rh-platform-admin .rh-kpis{grid-template-columns:1fr}
+ .rh-platform-admin .rh-banner{grid-template-columns:auto 1fr}
+ .rh-platform-admin .rh-banner .rh-btn,.rh-platform-admin .rh-banner .rh-link{grid-column:2}
+}
+@media(prefers-reduced-motion:reduce){
+ .rh-platform-admin .rh-skel{animation:none}
+ .rh-platform-admin .rh-kpi{transition:none}
+}
