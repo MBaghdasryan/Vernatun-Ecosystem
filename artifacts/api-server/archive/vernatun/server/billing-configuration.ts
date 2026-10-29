@@ -17,6 +17,33 @@ const positiveMinor=z.string().regex(/^[1-9]\d{0,13}$/);
 const periodDay=day.refine(v=>v.endsWith('-01'));
 const readFinance=async(req:Request)=>{const c=await context(req);await requirePermission(req,c.permissions.includes('billing.read')?'billing.read':'billing.calculate');if(!c.organization_id)throw new ApiError(403,'forbidden');return c};
 const manageFinance=async(req:Request)=>{const c=await requirePermission(req,'billing.calculate');if(!c.organization_id||c.unit_id)throw new ApiError(403,'forbidden');return c};
+export async function createVersionedTariff(req:Request,c:Context){
+ if(!c.organization_id||c.unit_id)throw new ApiError(403,'forbidden');
+ const b=z.object({serviceId:uuid,name:z.string().trim().min(2).max(160),amountMinor:positiveMinor,currency,
+  calculationMethod:method,rateUnit:z.string().trim().min(1).max(24),validFrom:day,validUntil:day.optional()}).strict().parse(req.body);
+ if(b.validUntil&&b.validUntil<b.validFrom)throw new ApiError(400,'invalid_date_range');
+ if(BigInt(b.amountMinor)>amountLimit)throw new ApiError(400,'invalid_amount');
+ return transaction(async db=>{
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[c.organization_id+b.serviceId]);
+  const service=(await db.query('SELECT id FROM services WHERE id=$1 AND organization_id=$2 FOR UPDATE',[b.serviceId,c.organization_id])).rows[0];
+  if(!service)throw new ApiError(404,'not_found');
+  const previous=(await db.query(`SELECT id,valid_from::text,valid_until::text FROM tariffs
+   WHERE organization_id=$1 AND service_id=$2 AND status='active' ORDER BY valid_from FOR UPDATE`,[c.organization_id,b.serviceId])).rows;
+  const closeIds:string[]=[];
+  for(const old of previous){
+   if(overlaps(b.validFrom,b.validUntil??null,old.valid_from,old.valid_until)){
+    if(old.valid_from<b.validFrom&&(!old.valid_until||old.valid_until>=b.validFrom)&&!old.valid_until)closeIds.push(old.id);
+    else throw new ApiError(409,'tariff_version_conflict');
+   }
+  }
+  const basis=b.calculationMethod==='PER_SQUARE_METER'?'area':'unit';
+  const row=(await db.query(`INSERT INTO tariffs(organization_id,service_id,amount_minor,currency,basis,name,calculation_method,rate_unit,valid_from,valid_until,status,created_by)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active',$11) RETURNING *`,
+  [c.organization_id,b.serviceId,b.amountMinor,b.currency,basis,b.name,b.calculationMethod,b.rateUnit,b.validFrom,b.validUntil??null,req.user!.id])).rows[0];
+  for(const id of closeIds)await db.query(`UPDATE tariffs SET valid_until=$2::date-1,status='superseded',replaced_by=$3 WHERE id=$1`,[id,b.validFrom,row.id]);
+  await record(db,req,c,closeIds.length?'finance.tariff.replaced':'finance.tariff.created','tariff',row.id,{previousTariffIds:closeIds});return row;
+ });
+}
 function inScope(c:Context,buildingId:string,unitId?:string|null){
  if(c.building_id&&c.building_id!==buildingId||c.unit_id&&c.unit_id!==unitId)throw new ApiError(404,'not_found');
 }
@@ -129,11 +156,14 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    if(priorIds.has(assignment.id)){fail('already_calculated');continue}
    let quantity='1',baseUnit='unit';
    if(first.calculation_method==='PER_SQUARE_METER'){
-    const area=paramsByUnit.get(unit.id)?.billing_area??unit.area;if(!area||Number(area)<=0){fail('missing_billing_area');continue}
+    const p=paramsByUnit.get(unit.id);
+    if(p&&(p.effective_from>period||p.effective_until&&p.effective_until<periodEnd)){fail('mid_period_unit_parameter_change_requires_review');continue}
+    const area=p?.billing_area??unit.area;if(!area||Number(area)<=0){fail('missing_billing_area');continue}
     quantity=String(area);baseUnit='m²';
    }else if(first.calculation_method==='PER_RESIDENT'){
     const p=paramsByUnit.get(unit.id);
     if(!p){fail('resident_count_unknown');continue}
+    if(p.effective_from>period||p.effective_until&&p.effective_until<periodEnd){fail('mid_period_unit_parameter_change_requires_review');continue}
     if(p.resident_count_mode!==first.occupancy_count_mode){fail('resident_count_mode_mismatch');continue}
     let count:number|undefined;
     if(first.occupancy_count_mode==='AUTO_ACTIVE_RESIDENTS'){
@@ -160,14 +190,19 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
     if(consumption<0n){fail('invalid_meter_reading');continue}
     quantity=(consumption/1000n).toString()+'.'+(consumption%1000n).toString().padStart(3,'0');baseUnit=first.meter_kind==='water'?'m³':first.meter_kind==='electricity'?'kWh':'m³';
    }else if(first.calculation_method==='PER_DAY'){
-    quantity=String(daysInMonth(period));baseUnit='day';
+    quantity=String(activeDays);baseUnit='day';
    }else if(first.calculation_method==='MANUAL'){
     fail('manual_charge_required');continue;
+   }
+   const unproratedQuantity=quantity;
+   if(first.proration_mode==='DAILY'&&first.calculation_method!=='PER_DAY'&&activeDays<daysInMonth(period)){
+    const value=(scaled(quantity)*BigInt(activeDays)+BigInt(daysInMonth(period)/2))/BigInt(daysInMonth(period));
+    quantity=(value/10000n).toString()+'.'+(value%10000n).toString().padStart(4,'0');
    }
    const amounts=amountFor(String(first.amount_minor),quantity,first.rounding_mode,first.minimum_amount===null?null:String(first.minimum_amount),first.maximum_amount===null?null:String(first.maximum_amount));
    if(BigInt(amounts.rounded)===0n){fail('zero_charge');continue}
    lines.push({unitId:unit.id,unitNumber:unit.number,serviceId,serviceName:first.service_name,tariffId:first.tariff_id,
-    ruleId:first.id,calculationMethod:first.calculation_method,baseQuantity:quantity,baseUnit,
+    ruleId:first.id,calculationMethod:first.calculation_method,baseQuantity:quantity,unproratedQuantity,prorationDays:activeDays,baseUnit,
     rateMinor:String(first.amount_minor),rateUnit:first.rate_unit,currency:first.currency,
     rawAmountMinor:amounts.raw,roundedAmountMinor:amounts.rounded,
     payerAssignmentId:assignment.id,payerId:effective.get(assignment.id)?.payerId??assignment.payer_user_id,
@@ -197,6 +232,12 @@ billingConfiguration.get('/finance/configuration',async(req,res)=>{
   pool.query('SELECT id,name FROM buildings WHERE organization_id=$1 AND ($2::uuid IS NULL OR id=$2) ORDER BY name',[c.organization_id,c.building_id])
  ]);
  res.json({services:services.rows,tariffs:tariffs.rows,rules:rules.rows,buildings:buildings.rows});
+});
+billingConfiguration.get('/finance/buildings/:buildingId/units',async(req,res)=>{
+ const c=await requirePermission(req,'billing.calculate'),buildingId=uuid.parse(req.params.buildingId);
+ await buildingFor(c,buildingId);
+ res.json((await pool.query(`SELECT id,number,area::text AS legal_area FROM units
+  WHERE organization_id=$1 AND building_id=$2 ORDER BY number,id LIMIT 2000`,[c.organization_id,buildingId])).rows);
 });
 
 billingConfiguration.post('/finance/services',async(req,res)=>{
@@ -254,6 +295,7 @@ const ruleInput=z.object({
 async function checkRuleConflict(db:PoolClient,c:Context,b:z.infer<typeof ruleInput>,excludeId?:string){
  const buildingId=b.buildingId??null,unitId=b.unitId??null;
  if(b.scopeKind==='organization'&&(buildingId||unitId)||b.scopeKind==='building'&&(!buildingId||unitId)||b.scopeKind==='unit'&&(!buildingId||!unitId))throw new ApiError(400,'invalid_scope');
+ if(c.building_id&&b.scopeKind==='organization')throw new ApiError(403,'organization_scope_required');
  if(buildingId){const building=(await db.query('SELECT id FROM buildings WHERE id=$1 AND organization_id=$2',[buildingId,c.organization_id])).rows[0];if(!building||c.building_id&&c.building_id!==buildingId)throw new ApiError(404,'not_found')}
  if(unitId){const unit=(await db.query('SELECT id FROM units WHERE id=$1 AND organization_id=$2 AND building_id=$3',[unitId,c.organization_id,buildingId])).rows[0];if(!unit||c.unit_id)throw new ApiError(404,'not_found')}
  if(b.validUntil&&b.validUntil<b.validFrom||b.maximumAmount&&b.minimumAmount&&BigInt(b.maximumAmount)<BigInt(b.minimumAmount))throw new ApiError(400,'validation_error');
@@ -341,6 +383,7 @@ billingConfiguration.patch('/properties/:id/billing-parameters',async(req,res)=>
   serviceQuantities:z.array(z.object({serviceId:uuid,quantity:z.string().regex(/^\d{1,10}(?:\.\d{1,4})?$/)}).strict()).max(50).default([]),
   serviceApplicability:z.array(z.object({serviceId:uuid,enabled:z.boolean()}).strict()).max(50).default([])
  }).strict().parse(req.body);
+ if(!b.effectiveFrom.endsWith('-01'))throw new ApiError(400,'effective_date_must_start_month');
  if(b.billingArea!==undefined&&b.billingArea!==null&&Number(b.billingArea)<=0)throw new ApiError(400,'invalid_area');
  if((b.residentCountMode==='AUTO_ACTIVE_RESIDENTS')&&(b.billingResidentCount!==undefined&&b.billingResidentCount!==null)||
     (b.residentCountMode!=='AUTO_ACTIVE_RESIDENTS')&&b.billingResidentCount==null)throw new ApiError(400,'invalid_resident_count');
@@ -399,13 +442,32 @@ billingConfiguration.post('/resident/finance/parameter-reviews',async(req,res)=>
   effectiveFrom:day.optional(),reason:z.string().trim().min(5).max(2000),clientId:uuid}).strict().parse(req.body);
  if(['service_applicability','parking_count'].includes(b.parameterKey)&&!b.serviceId)throw new ApiError(400,'service_required');
  if(b.parameterKey==='service_applicability'&&typeof b.proposedValue!=='boolean'||b.parameterKey==='parking_count'&&typeof b.proposedValue!=='number')throw new ApiError(400,'invalid_value');
- const current=await pool.query(`SELECT area::text AS area FROM units WHERE id=$1 AND organization_id=$2`,[s.unitId,s.organizationId]);
+ if(b.parameterKey==='billing_area'&&(typeof b.proposedValue!=='number'||b.proposedValue<=0)||
+    b.parameterKey==='resident_count'&&(typeof b.proposedValue!=='number'||!Number.isInteger(b.proposedValue)||b.proposedValue<0))throw new ApiError(400,'invalid_value');
+ if(b.effectiveFrom&&!b.effectiveFrom.endsWith('-01'))throw new ApiError(400,'effective_date_must_start_month');
+ const current=await pool.query(`SELECT u.area::text AS legal_area,p.billing_area::text AS billing_area,
+  p.resident_count_mode,p.billing_resident_count
+  FROM units u LEFT JOIN LATERAL(SELECT * FROM unit_billing_parameters x WHERE x.organization_id=u.organization_id
+   AND x.unit_id=u.id AND x.effective_from<=CURRENT_DATE AND (x.effective_until IS NULL OR x.effective_until>=CURRENT_DATE)
+   ORDER BY x.effective_from DESC LIMIT 1)p ON true WHERE u.id=$1 AND u.organization_id=$2`,[s.unitId,s.organizationId]);
  if(!current.rowCount)throw new ApiError(404,'not_found');
+ const activeResidentCount=b.parameterKey==='resident_count'&&current.rows[0].resident_count_mode==='AUTO_ACTIVE_RESIDENTS'
+  ?(await pool.query(`SELECT count(*)::int AS count FROM role_assignments a JOIN LATERAL(
+    SELECT e.resides_here,e.counts_for_billing FROM unit_billing_resident_eligibility e
+    WHERE e.organization_id=a.organization_id AND e.role_assignment_id=a.id AND e.effective_from<=CURRENT_DATE
+    AND (e.effective_until IS NULL OR e.effective_until>=CURRENT_DATE) ORDER BY e.effective_from DESC LIMIT 1
+   )e ON true WHERE a.organization_id=$1 AND a.unit_id=$2 AND a.active AND a.role_key IN('unit_owner','renter','family')
+   AND (a.expires_at IS NULL OR a.expires_at>now()) AND e.resides_here AND e.counts_for_billing`,
+   [s.organizationId,s.unitId])).rows[0].count
+  :null;
  const request=await transaction(async db=>idempotent(db,req,b.clientId,b,async()=>{
   const serviceCurrent=b.serviceId?await db.query(`SELECT (SELECT enabled FROM unit_billing_service_applicability a WHERE a.organization_id=$1 AND a.unit_id=$2 AND a.service_id=$3
     ORDER BY a.effective_from DESC LIMIT 1) AS enabled,(SELECT quantity::text FROM unit_billing_service_quantities q WHERE q.organization_id=$1 AND q.unit_id=$2 AND q.service_id=$3
     ORDER BY q.effective_from DESC LIMIT 1) AS quantity`,[s.organizationId,s.unitId,b.serviceId]):null;
-  const currentValue=b.parameterKey==='billing_area'?current.rows[0].area:b.parameterKey==='service_applicability'?serviceCurrent?.rows[0]?.enabled??null:b.parameterKey==='parking_count'?serviceCurrent?.rows[0]?.quantity??null:null;
+  const currentValue=b.parameterKey==='billing_area'?current.rows[0].billing_area??current.rows[0].legal_area:
+   b.parameterKey==='resident_count'?activeResidentCount??current.rows[0].billing_resident_count??null:
+   b.parameterKey==='service_applicability'?serviceCurrent?.rows[0]?.enabled??null:
+   b.parameterKey==='parking_count'?serviceCurrent?.rows[0]?.quantity??null:null;
   const row=(await db.query(`INSERT INTO billing_parameter_review_requests(organization_id,unit_id,requested_by,service_id,parameter_key,current_value,proposed_value,effective_from,reason)
    VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9) RETURNING *`,
   [s.organizationId,s.unitId,req.user!.id,b.serviceId??null,b.parameterKey,JSON.stringify(currentValue),JSON.stringify(b.proposedValue),b.effectiveFrom??null,b.reason])).rows[0];
@@ -429,14 +491,17 @@ billingConfiguration.post('/finance/billing-parameter-reviews/:id/decision',asyn
  }).strict().parse(req.body);
  const row=await transaction(async db=>{
   const item=(await db.query('SELECT * FROM billing_parameter_review_requests WHERE id=$1 AND organization_id=$2 FOR UPDATE',[id,c.organization_id])).rows[0];
-  if(!item||c.building_id&&item.unit_id!==c.unit_id)throw new ApiError(404,'not_found');
+  if(!item)throw new ApiError(404,'not_found');
+  const scoped=(await db.query('SELECT building_id FROM units WHERE id=$1 AND organization_id=$2',[item.unit_id,c.organization_id])).rows[0];
+  if(!scoped||c.building_id&&scoped.building_id!==c.building_id)throw new ApiError(404,'not_found');
   if(item.version!==b.version||item.status!=='pending')throw new ApiError(409,'stale_version');
   const status=b.action==='approve'?'approved':b.action==='reject'?'rejected':'needs_information';
   if(status==='approved'){
    const unit=(await db.query('SELECT * FROM units WHERE id=$1 AND organization_id=$2',[item.unit_id,c.organization_id])).rows[0];
    if(!unit||c.building_id&&unit.building_id!==c.building_id)throw new ApiError(404,'not_found');
    const value=typeof item.proposed_value==='string'?item.proposed_value:JSON.stringify(item.proposed_value);
-   const from=item.effective_from??new Date().toISOString().slice(0,10);
+   const nextMonth=new Date();nextMonth.setUTCMonth(nextMonth.getUTCMonth()+1,1);
+   const from=item.effective_from??nextMonth.toISOString().slice(0,10);
    if(item.parameter_key==='billing_area'||item.parameter_key==='resident_count'){
     const old=(await db.query(`SELECT * FROM unit_billing_parameters WHERE organization_id=$1 AND unit_id=$2
      AND effective_from<=$3::date AND (effective_until IS NULL OR effective_until>=$3::date) ORDER BY effective_from DESC LIMIT 1 FOR UPDATE`,

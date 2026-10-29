@@ -90,8 +90,9 @@ billingBatches.post('/finance/batches/:id/:action',async(req,res)=>{
       const invoice=(await db.query("INSERT INTO invoices(organization_id,unit_id,payer_user_id,period,amount_minor,currency,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING id",[c.organization_id,line.unitId,line.payerId,row.snapshot.period,amountMinor,tariff.currency,req.user!.id])).rows[0];
       await db.query(`INSERT INTO invoice_lines(invoice_id,description,quantity_hundredths,rate_minor,amount_minor,calculation_metadata)
        VALUES($1,$2,$3,$4,$5,$6)`,[invoice.id,tariff.name,quantity,tariff.rateMinor,amountMinor,JSON.stringify(ruleBased?{
-        model:'rule_engine',method:line.calculationMethod,ruleId:line.ruleId,tariffId:line.tariffId,
-        baseQuantity:line.baseQuantity,baseUnit:line.baseUnit,rateMinor:line.rateMinor,rateUnit:line.rateUnit,
+        model:'rule_engine',method:line.calculationMethod,ruleId:line.ruleId,tariffId:line.tariffId,serviceId:line.serviceId,
+        baseQuantity:line.baseQuantity,unproratedQuantity:line.unproratedQuantity,prorationDays:line.prorationDays,
+        baseUnit:line.baseUnit,rateMinor:line.rateMinor,rateUnit:line.rateUnit,
         rawAmountMinor:line.rawAmountMinor,roundedAmountMinor:line.roundedAmountMinor,roundingMode:line.roundingMode,
         serviceName:line.serviceName
        }:{model:'legacy'})]);

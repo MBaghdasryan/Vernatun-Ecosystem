@@ -28,6 +28,52 @@ test('Calculation → publication → idempotent payment → adjustment; no floa
  const key=crypto.randomUUID();const adjustment={invoiceId:id,amountMinor:'-100',reason:'Correct rounding basis',key};assert.equal((await accountant.call('/finance/adjustments','POST',adjustment)).status,201);assert.equal((await accountant.call('/finance/adjustments','POST',adjustment)).status,201);assert.equal((await owner.call('/finance/invoices/'+id+'/details')).data.adjustments.length,1);
  await assert.rejects(pool.query('UPDATE invoice_lines SET amount_minor=1 WHERE invoice_id=$1',[id]));await assert.rejects(pool.query('DELETE FROM payments WHERE id=$1',[repeats[0].data.id]));
 });
+test('Calculation — configurable billing preserves an auditable rule snapshot through publication',async()=>{
+ const effective=new Date();effective.setUTCDate(1);effective.setUTCMonth(effective.getUTCMonth()+48+(randomBytes(1)[0]%24));
+ const period=effective.toISOString().slice(0,10);
+ const unit=seeded.fixtures.ua;
+ const buildingId=(await pool.query('SELECT building_id FROM units WHERE id=$1',[unit])).rows[0].building_id;
+ const service=await accountant.call('/finance/services','POST',{name:'Area service '+randomBytes(4).toString('hex'),description:'Billing rule integration test',category:'maintenance',mandatory:true,defaultCalculationMethod:'PER_SQUARE_METER'});
+ assert.equal(service.status,201);
+ const tariff=await accountant.call('/finance/tariffs','POST',{serviceId:service.data.id,name:'120 AMD per square meter',amountMinor:'12000',currency:'AMD',calculationMethod:'PER_SQUARE_METER',rateUnit:'AMD/m²',validFrom:period});
+ assert.equal(tariff.status,201);
+ const payer=await accountant.call('/finance/payers','POST',{unitId:unit,payerId:seeded.accounts.unit_owner.id,serviceId:service.data.id,startsOn:period});
+ assert.equal(payer.status,201);
+ const parameters=await accountant.call(`/properties/${unit}/billing-parameters`,'PATCH',{
+  effectiveFrom:period,billingArea:'66.30',residentCountMode:'AUTO_ACTIVE_RESIDENTS',billingResidentCount:null,
+  occupancyStatus:'OCCUPIED',reason:'Verified area for rule calculation test',residents:[],serviceQuantities:[],serviceApplicability:[]
+ });
+ assert.equal(parameters.status,200);
+ const rule=await accountant.call('/finance/billing-rules','POST',{
+  serviceId:service.data.id,tariffId:tariff.data.id,scopeKind:'building',buildingId,
+  calculationMethod:'PER_SQUARE_METER',zeroPolicy:'ALLOW_ZERO',roundingMode:'NEAREST_AMD',
+  prorationMode:'DISABLED',validFrom:period,active:true,priority:50
+ });
+ assert.equal(rule.status,201);
+ const preview=await accountant.call('/finance/billing/preview','POST',{buildingId,period});
+ assert.equal(preview.status,200);
+ const charge=preview.data.charges.find((line:any)=>line.serviceId===service.data.id);
+ assert.ok(charge);
+ assert.equal(String(charge.baseQuantity),'66.30');
+ assert.equal(String(charge.rawAmountMinor),'795600');
+ assert.equal(String(charge.roundedAmountMinor),'795600');
+ const draft=await accountant.call('/finance/rule-batches','POST',{buildingId,period,key:crypto.randomUUID()});
+ assert.equal(draft.status,201);
+ const published=await accountant.call(`/finance/batches/${draft.data.id}/publish`,'POST',{
+  key:crypto.randomUUID(),version:draft.data.version,acceptWarnings:true
+ });
+ assert.equal(published.status,200);
+ const stored=(await pool.query(`SELECT i.id,il.amount_minor::text,il.calculation_metadata
+  FROM charges ch JOIN invoices i ON i.id=ch.invoice_id
+  JOIN invoice_lines il ON il.invoice_id=i.id
+  WHERE ch.payer_assignment_id=$1 AND ch.period=$2`,[payer.data.id,period])).rows[0];
+ assert.ok(stored);
+ assert.equal(stored.amount_minor,'795600');
+ assert.equal(stored.calculation_metadata.method,'PER_SQUARE_METER');
+ assert.equal(stored.calculation_metadata.serviceId,service.data.id);
+ assert.equal((await owner.call(`/finance/invoices/${stored.id}/details`)).status,200);
+ assert.equal((await family.call(`/finance/invoices/${stored.id}/details`)).status,404);
+});
 test('Defect assigned contractor cannot self-accept; return and acceptance use separate accounts',async()=>{
  const d=await developer.call('/defects','POST',{unitId:seeded.fixtures.ua,subject:'Window repair',location:'Kitchen',description:'Seal needs repair',contractorId:seeded.accounts.contractor.id,dueOn:'2026-12-01'});assert.equal(d.status,201);const path='/defects/'+d.data.id;
  assert.equal((await family.call(path)).status,403);assert.equal((await other.call(path)).status,403);

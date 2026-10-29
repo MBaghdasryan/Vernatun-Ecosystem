@@ -6,7 +6,13 @@ import {ApiError,context,requireAuth,requirePermission,scopedUnit} from './acces
 import {transaction,record,idempotent,invoiceAmounts} from './operations.js';
 import type {PoolClient} from 'pg';
 import {resolvePayers} from './payer-responsibility-store.js';
+import {createVersionedTariff} from './billing-configuration.js';
 export const finance=Router();finance.use(requireAuth);
+finance.post('/finance/tariffs',async(req,res,next)=>{
+ if(typeof req.body?.serviceId!=='string')return next();
+ const c=await requirePermission(req,'billing.calculate');
+ res.status(201).json(await createVersionedTariff(req,c));
+});
 const uuid=z.string().uuid(),amount=z.string().regex(/^[1-9]\d{0,13}$/),currency=z.enum(['AMD','RUB','USD']);
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s);
 async function invoice(req:Request,id:string,db:PoolClient){
