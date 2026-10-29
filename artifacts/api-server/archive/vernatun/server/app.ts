@@ -78,6 +78,7 @@ import {edgeMachineApiV2} from './edge-machine-api-v2.js';
 import {edgeManagementApi} from './edge-management-api.js';
 import {ownerRegistrationAdmin} from './owner-registration.js';
 import {platformCms} from './platform-cms.js';
+import {platformCommunications} from './platform-communications.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 app.use('/api',cors({
  origin(origin,callback){callback(null,origin===config.APP_ORIGIN?origin:false)},
@@ -118,6 +119,7 @@ app.use('/api',(req,_res,next)=>{
 app.use('/api/system/updates',systemUpdateCallbacks);
 app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['GET','HEAD','OPTIONS'].includes(req.method))return next();const origin=req.headers.origin;if(origin&&origin!==config.APP_ORIGIN)return next(new ApiError(403,'csrf_invalid'));const expected=req.session.csrf;const actual=req.get('X-CSRF-Token');if(!expected||!actual||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return next(new ApiError(403,'csrf_invalid'));next()});
 app.use('/api',platformCms);
+app.use('/api',platformCommunications);
 app.use('/api',edgeManagementApi);
 app.use('/api',ownerRegistrationAdmin);
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});

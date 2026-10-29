@@ -155,6 +155,42 @@ platformFoundation.get('/audit',async(req,res)=>{
   WHERE ${predicate} ORDER BY ${sort} ${q.direction},a.id ${q.direction} LIMIT $${values.length+1} OFFSET $${values.length+2}`,[...values,limit,offset])).rows;
  res.json(q.paged==='true'?{items,total,page:q.page,pageSize:limit}:items);
 });
+ platformFoundation.get('/audit/export.csv',async(req,res)=>{
+  const c=await context(req),platform=c.permissions.includes('platform.audit');
+  await requirePermission(req,platform?'platform.audit':'audit.read');
+  const q=z.object({organizationId:uuid.optional(),actorId:uuid.optional(),actor:z.string().trim().max(100).optional(),
+   action:z.string().trim().max(100).optional(),entityType:z.string().trim().max(80).optional(),
+   result:z.enum(['success','failure']).optional(),from:z.string().datetime({offset:true}).optional(),
+   to:z.string().datetime({offset:true}).optional(),sort:z.enum(['created_at','action','actor']).default('created_at'),
+   direction:z.enum(['asc','desc']).default('desc')}).strict().parse(req.query);
+  if(q.from&&q.to&&Date.parse(q.from)>Date.parse(q.to))throw new ApiError(400,'invalid_dates');
+  if(!platform&&q.organizationId&&q.organizationId!==c.organization_id)throw new ApiError(403,'forbidden');
+  const values:unknown[]=[],where:string[]=[];
+  const add=(expression:string,value:unknown)=>{values.push(value);where.push(expression.replace('?',`$${values.length}`))};
+  const org=platform?q.organizationId:c.organization_id;if(org)add('a.organization_id=?',org);
+  if(q.actorId)add('a.actor_user_id=?',q.actorId);
+  if(q.actor)add('u.name ILIKE ?',`%${q.actor.replace(/[\\%_]/g,'\\$&')}%`);
+  if(q.action)add('a.action=?',q.action);
+  if(q.entityType)add('a.entity_type=?',q.entityType);
+  if(q.from)add('a.created_at>=?::timestamptz',q.from);
+  if(q.to)add('a.created_at<=?::timestamptz',q.to);
+  const result=`CASE WHEN a.action LIKE '%.failed' THEN 'failure' ELSE COALESCE(a.details->>'result','success') END`;
+  if(q.result)add(result+'=?',q.result);
+  const predicate=where.join(' AND ')||'TRUE';
+  const sort={created_at:'a.created_at',action:'a.action',actor:'u.name'}[q.sort];
+  const rows=(await pool.query(`SELECT a.created_at,o.name AS organization_name,u.name AS actor,a.action,
+   a.entity_type,a.entity_id,${result} AS result,a.details
+   FROM audit_events a LEFT JOIN users u ON u.id=a.actor_user_id
+   LEFT JOIN organizations o ON o.id=a.organization_id WHERE ${predicate}
+   ORDER BY ${sort} ${q.direction},a.id ${q.direction} LIMIT 10001`,values)).rows;
+  if(rows.length>10000)throw new ApiError(413,'export_limit_exceeded');
+  const cell=(value:unknown)=>{const raw=String(value??''),safe=/^\\s*[=+\\-@]/.test(raw)?`'${raw}`:raw;return '"'+safe.replace(/"/g,'""')+'"';};
+  const csv=['created_at,organization,actor,action,entity_type,entity_id,result,details',
+   ...rows.map(r=>[r.created_at,r.organization_name,r.actor,r.action,r.entity_type,r.entity_id,r.result,JSON.stringify(r.details??{})].map(cell).join(','))].join('\r\n');
+  res.setHeader('Content-Type','text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="audit-events.csv"');
+  res.send('\uFEFF'+csv);
+ });
 platformFoundation.get('/invitations',async(req,res)=>{
  const c=await context(req),platform=c.permissions.includes('platform.invite');
  await requirePermission(req,platform?'platform.invite':'people.invite');

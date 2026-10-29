@@ -78,6 +78,51 @@ payments.get('/payments/workspace',async(req,res)=>{
   readiness:readiness(rail),canConfigure:platform||(!c.building_id&&!c.unit_id&&c.permissions.includes('organization.settings')),
   canIssuePlatformInvoice:platform,hasMore:[intents,platformInvoices,subscriptions,payableInvoices].some(r=>r.length>100)});
 });
+const ledgerQuery=z.object({q:z.string().trim().max(160).default(''),from:date.optional(),to:date.optional(),
+ page:z.coerce.number().int().min(1).max(10000).default(1),pageSize:z.coerce.number().int().min(1).max(100).default(25)})
+ .strict().refine(b=>!b.from||!b.to||b.from<=b.to,{path:['to'],message:'invalid_date_range'});
+const ledgerBase=`SELECT i.id,o.company_type,o.name AS organization_name,i.issued_at,i.billing_period,
+ p.name AS plan_name,i.amount_minor::text AS amount_minor,i.currency,i.status,
+ COALESCE((SELECT sum(a.amount_minor) FROM platform_payment_allocations a WHERE a.platform_invoice_id=i.id),0)::text AS paid_minor
+ FROM platform_invoices i JOIN organizations o ON o.id=i.organization_id
+ JOIN subscriptions s ON s.id=i.subscription_id JOIN subscription_plans p ON p.id=s.plan_id`;
+function ledgerWhere(b:z.infer<typeof ledgerQuery>){
+ const params:unknown[]=[],where:string[]=[];
+ if(b.q){const pattern=`%${b.q.replace(/[\\%_]/g,'\\$&')}%`;
+  params.push(pattern);const n=params.length;
+  where.push(`(o.name ILIKE $${n} OR p.name ILIKE $${n} OR o.company_type ILIKE $${n})`);}
+ if(b.from){params.push(b.from);where.push(`i.issued_at >= $${params.length}::date`);}
+ if(b.to){params.push(b.to);where.push(`i.issued_at < $${params.length}::date + interval '1 day'`);}
+ return {where:where.join(' AND ')||'TRUE',params};
+}
+async function platformLedger(req:Request,res:any,exportCsv:boolean){
+ const c=await context(req);
+ if(c.organization_id)throw new ApiError(403,'platform_scope_required');
+ await requirePermission(req,'subscriptions.manage');
+ const b=ledgerQuery.parse(req.query),filter=ledgerWhere(b);
+ if(exportCsv){
+  const rows=(await pool.query(`${ledgerBase} WHERE ${filter.where} ORDER BY i.issued_at DESC,i.id DESC LIMIT 10001`,filter.params)).rows;
+  if(rows.length>10000)throw new ApiError(413,'export_limit_exceeded');
+  const cell=(value:unknown)=>{const raw=String(value??''),safe=/^\s*[=+\-@]/.test(raw)?`'${raw}`:raw;return '"'+safe.replace(/"/g,'""')+'"';};
+  const csv=['company_type,organization,issued_at,billing_period,plan,amount,currency,paid,status',
+   ...rows.map(r=>[r.company_type,r.organization_name,r.issued_at,r.billing_period,r.plan_name,
+    r.amount_minor,r.currency,r.paid_minor,r.status].map(cell).join(','))].join('\r\n');
+  res.setHeader('Content-Type','text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="company-payments.csv"');
+  res.send('\uFEFF'+csv);return;
+ }
+ const countParams:unknown[]=[b.q,`%${b.q.replace(/[\\%_]/g,'\\$&')}%`,b.from??null,b.to??null];
+ const total=Number((await pool.query(`SELECT count(*)::int AS n FROM (${ledgerBase}) t
+  WHERE ($1='' OR t.organization_name ILIKE $2 OR t.plan_name ILIKE $2 OR t.company_type ILIKE $2)
+   AND ($3::date IS NULL OR t.issued_at >= $3::date)
+   AND ($4::date IS NULL OR t.issued_at < $4::date + interval '1 day')`,countParams)).rows[0].n);
+ const rows=(await pool.query(`${ledgerBase} WHERE ${filter.where} ORDER BY i.issued_at DESC,i.id DESC
+  LIMIT $${filter.params.length+1} OFFSET $${filter.params.length+2}`,
+ [...filter.params,b.pageSize,(b.page-1)*b.pageSize])).rows;
+ res.json({items:rows,total,page:b.page,pageSize:b.pageSize});
+}
+payments.get('/payments/platform-ledger',async(req,res)=>platformLedger(req,res,false));
+payments.get('/payments/platform-ledger/export.csv',async(req,res)=>platformLedger(req,res,true));
 const credentials=z.object({clientId:z.string().min(1).max(200),username:z.string().min(1).max(200),password:z.string().min(1).max(2000)}).strict();
 payments.post('/payments/provider-instances',async(req,res)=>{
  const b=z.object({providerCode:z.enum(['ameriabank','arca','telcell']),environment:z.enum(['sandbox','production']),

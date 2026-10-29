@@ -47,6 +47,7 @@ export default function Notifications({c,language}:{c:RoleContext;language:Langu
   {error&&<p className="p-error" role="alert">{error} <button className="p-button" onClick={()=>void load()}>{t('retry')}</button></p>}
   {!rows&&!error&&<p role="status">{t('loading')}</p>}{rows&&!rows.length&&<p>{t('empty')}</p>}
   {pending&&<div className="p-card" role="alertdialog" aria-label={t('switch')}><p>{t('confirm')}</p><p><strong>{label(pending.target)}</strong></p><button className="p-button orange" disabled={busy} onClick={confirmSwitch}>{t('yes')}</button> <button className="p-button" disabled={busy} onClick={()=>setPending(undefined)}>{t('no')}</button></div>}
-  {rows?.map(n=><div className="p-message" key={n.id}><strong>{n.kind==='request_update'||(!n.kind&&!n.event_code)?t('newUpdate'):eventLabel(n.event_code??n.kind,cat,language)}</strong><p>{date(n.created_at,language)}</p>
-   {n.access_denied?<p className="p-error">{t('denied')}</p>:<div className="p-modal-actions">{(n.targets??[]).map((x:Row)=><button key={x.id} className="p-button" disabled={busy} onClick={()=>openTarget(n,x)}>{t('open')} {label(x)}</button>)}</div>}
+  {rows?.map(n=><div className="p-message" key={n.id}><strong>{n.manual_batch_id?n.custom_title:(n.kind==='request_update'||(!n.kind&&!n.event_code)?t('newUpdate'):eventLabel(n.event_code??n.kind,cat,language))}</strong><p>{date(n.created_at,language)}</p>
+   {n.manual_batch_id&&n.custom_body&&<p>{n.custom_body}</p>}
+   {!n.manual_batch_id&&(n.access_denied?<p className="p-error">{t('denied')}</p>:<div className="p-modal-actions">{(n.targets??[]).map((x:Row)=><button key={x.id} className="p-button" disabled={busy} onClick={()=>openTarget(n,x)}>{t('open')} {label(x)}</button>)}</div>)}
    {!n.read_at&&<button className="p-button" disabled={busy} onClick={()=>mark(n)}>{t('read')}</button>}</div>)}</section>}

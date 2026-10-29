@@ -12,15 +12,22 @@ function allowed(c:Context,r:any,userId:string){
 }
 async function available(req:Request,id?:string){
  const options=await contexts(req.user!.id);
- const rows=(await pool.query(`SELECT n.*,r.unit_id,COALESCE(r.building_id,u.building_id) AS building_id,
- r.author_user_id,r.reported_for_user_id,r.source,w.technician_id
- FROM notifications n JOIN resident_requests r ON r.id=n.entity_id LEFT JOIN units u ON u.id=r.unit_id LEFT JOIN work_orders w ON w.request_id=r.id
- WHERE n.user_id=$1 AND ($2::uuid IS NULL OR n.id=$2) ORDER BY n.created_at DESC LIMIT 100`,[req.user!.id,id??null])).rows;
- return rows.map(r=>({row:r,targets:options.filter(c=>allowed(c,r,req.user!.id))}));
+ const rows=(await pool.query(`SELECT n.*,r.unit_id,COALESCE(r.building_id,u.building_id,b.building_id) AS building_id,
+  r.author_user_id,r.reported_for_user_id,r.source,w.technician_id
+  FROM notifications n LEFT JOIN resident_requests r ON r.id=n.entity_id
+  LEFT JOIN units u ON u.id=r.unit_id LEFT JOIN work_orders w ON w.request_id=r.id
+  LEFT JOIN platform_notification_batches b ON b.id=n.manual_batch_id
+  WHERE n.user_id=$1 AND ($2::uuid IS NULL OR n.id=$2)
+   AND (n.manual_batch_id IS NOT NULL OR r.id IS NOT NULL)
+  ORDER BY n.created_at DESC LIMIT 100`,[req.user!.id,id??null])).rows;
+ return rows.map(r=>({row:r,targets:options.filter(c=>r.manual_batch_id
+  ?c.organization_id===r.organization_id&&(!r.building_id||c.building_id===r.building_id)
+  :allowed(c,r,req.user!.id))}));
 }
 notificationLinks.get('/notifications',async(req,res)=>{
  res.json((await available(req)).map(({row:r,targets})=>({
   id:r.id,kind:r.kind,created_at:r.created_at,read_at:r.read_at,access_denied:!targets.length,
+  manual_batch_id:r.manual_batch_id,custom_title:r.custom_title,custom_body:r.custom_body,
   targets:targets.map(c=>({id:c.id,role_key:c.role_key,organization_name:c.organization_name,building_name:c.building_name,unit_number:c.unit_number})),
  })));
 });
