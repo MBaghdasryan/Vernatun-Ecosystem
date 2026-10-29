@@ -3,7 +3,12 @@
   "info": {
     "title": "Vernatun API",
     "version": "0.3.0",
-    "description": "Local Vernatun API: authenticated role-scoped operations. Existing detailed schemas plus route inventory for expanded modules. For new route request/response validation see the referenced Zod schemas in server source. Cookie sessions; mutations require CSRF. External integrations are not connected."
+    "description": "Local Vernatun API. Cookie sessions; mutations require CSRF. Contracts in the HAYAT/ImTun integration scope are checked against route validators and tests. This OpenAPI document describes callable HTTP interfaces only; it does not certify an external provider or physical-device deployment.",
+    "x-capability-status": {
+      "estimates": "unverified: no confirmed estimate/quotation route contract",
+      "parkingPermits": "unverified: no confirmed parking-permit route contract",
+      "physicalEdgeIntegrations": "unverified: HTTP Edge protocol tests do not prove physical Agent/device acceptance"
+    }
   },
   "servers": [
     {
@@ -72,6 +77,437 @@
             "type": "object"
           }
         }
+      },
+      "BusinessContext": {
+        "type": "object",
+        "required": ["id", "role_key", "shell", "organization_id", "organization_name", "building_id", "unit_id", "expires_at", "permissions", "modules"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "role_key": {"type": "string"},
+          "shell": {"type": "string"},
+          "organization_id": {"type": ["string", "null"], "format": "uuid"},
+          "organization_name": {"type": ["string", "null"]},
+          "building_id": {"type": ["string", "null"], "format": "uuid"},
+          "building_name": {"type": ["string", "null"]},
+          "unit_id": {"type": ["string", "null"], "format": "uuid"},
+          "unit_number": {"type": ["string", "null"]},
+          "expires_at": {"type": ["string", "null"], "format": "date-time"},
+          "permissions": {"type": "array", "items": {"type": "string"}},
+          "modules": {"type": "array", "items": {"type": "string"}},
+          "product": {"type": "string"},
+          "products": {"type": "array", "items": {"type": "string"}},
+          "startRoute": {"type": "string"}
+        },
+        "additionalProperties": true
+      },
+      "SessionState": {
+        "type": "object",
+        "required": ["user", "contexts", "contextId", "csrf", "demo", "mfaAvailable"],
+        "properties": {
+          "user": {"oneOf": [{"type": "null"}, {"$ref": "#/components/schemas/SessionUser"}]},
+          "contexts": {"type": "array", "items": {"$ref": "#/components/schemas/BusinessContext"}},
+          "contextId": {"type": ["string", "null"], "format": "uuid"},
+          "csrf": {"type": "string"},
+          "demo": {"type": "boolean"},
+          "mfaAvailable": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      },
+      "SessionUser": {
+        "type": "object",
+        "required": ["id", "email", "name", "locale", "currency"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "email": {"type": "string", "format": "email"},
+          "name": {"type": "string"},
+          "locale": {"type": "string", "enum": ["hy", "ru", "en"]},
+          "currency": {"type": "string", "enum": ["AMD", "RUB", "USD"]},
+          "mustChangePassword": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      },
+      "RequestCreate": {
+        "type": "object",
+        "required": ["unitId", "subject"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "unitId": {"type": "string", "format": "uuid"},
+          "subject": {"type": "string", "minLength": 3, "maxLength": 160},
+          "description": {"type": "string", "maxLength": 4000, "default": ""},
+          "categoryId": {"type": "string", "format": "uuid"},
+          "priority": {"type": "string", "enum": ["low", "normal", "high", "urgent", "emergency"], "default": "normal"},
+          "reportedForUserId": {"type": "string", "format": "uuid"},
+          "contactMethod": {"type": "string", "enum": ["app", "phone", "email", "none"], "default": "app"},
+          "preferredVisitStart": {"type": "string", "format": "date-time"},
+          "preferredVisitEnd": {"type": "string", "format": "date-time"},
+          "technicianId": {"type": "string", "format": "uuid"},
+          "assetId": {"type": "string", "format": "uuid"}
+        },
+        "additionalProperties": false
+      },
+      "RequestRecord": {
+        "type": "object",
+        "required": ["id", "organization_id", "unit_id", "subject", "description", "status", "version", "created_at"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "organization_id": {"type": "string", "format": "uuid"},
+          "unit_id": {"type": ["string", "null"], "format": "uuid"},
+          "subject": {"type": "string"},
+          "description": {"type": "string"},
+          "status": {"type": "string"},
+          "version": {"type": "integer", "minimum": 1},
+          "priority": {"type": "string", "enum": ["low", "normal", "high", "urgent", "emergency"]},
+          "source": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "building_id": {"type": ["string", "null"], "format": "uuid"},
+          "building_name": {"type": "string"},
+          "technician_id": {"type": ["string", "null"], "format": "uuid"},
+          "work_order_id": {"type": ["string", "null"], "format": "uuid"},
+          "sla": {"type": "array", "items": {"type": "object"}},
+          "visits": {"type": "array", "items": {"$ref": "#/components/schemas/VisitRecord"}},
+          "visitHistory": {"type": "array", "items": {"type": "object"}},
+          "materials": {"type": "array", "items": {"type": "object"}},
+          "history": {"type": "array", "items": {"type": "object"}},
+          "messages": {"type": "array", "items": {"type": "object"}},
+          "photos": {"type": "array", "items": {"type": "object"}}
+        },
+        "additionalProperties": true
+      },
+      "RequestTransition": {
+        "type": "object",
+        "required": ["action", "version"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "action": {"type": "string", "enum": ["assign", "start", "report", "approve", "reject", "confirm", "reopen", "accept", "cannot_perform", "pause", "resume"]},
+          "version": {"type": "integer", "minimum": 1},
+          "technicianId": {"type": "string", "format": "uuid"},
+          "note": {"type": "string", "maxLength": 4000, "default": ""},
+          "reason": {"type": "string", "enum": ["resident_unavailable", "no_access", "missing_material", "requires_specialist", "unsafe_condition", "wrong_category", "other"]},
+          "checklist": {"type": "array", "maxItems": 30, "items": {"type": "object", "required": ["text", "done"], "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 200}, "done": {"type": "boolean"}}, "additionalProperties": false}}
+        },
+        "additionalProperties": false
+      },
+      "RequestTransitionResult": {
+        "type": "object",
+        "required": ["id", "status", "work_status", "version"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "status": {"type": "string"},
+          "work_status": {"type": "string"},
+          "version": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      },
+      "VisitRecord": {
+        "type": "object",
+        "required": ["id", "request_id", "starts_at", "ends_at", "status", "version"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "request_id": {"type": "string", "format": "uuid"},
+          "starts_at": {"type": "string", "format": "date-time"},
+          "ends_at": {"type": "string", "format": "date-time"},
+          "status": {"type": "string", "enum": ["proposed", "confirmed", "cancelled", "superseded"]},
+          "version": {"type": "integer", "minimum": 1},
+          "resident_required": {"type": "boolean"},
+          "resident_confirmed_at": {"type": ["string", "null"], "format": "date-time"},
+          "technician_confirmed_at": {"type": ["string", "null"], "format": "date-time"},
+          "request_version": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": true
+      },
+      "VisitCreate": {
+        "type": "object",
+        "required": ["key", "version", "startsAt", "endsAt"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "VisitChange": {
+        "type": "object",
+        "required": ["key", "version", "visitVersion", "action"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "visitVersion": {"type": "integer", "minimum": 1},
+          "action": {"type": "string", "enum": ["confirm", "cancel", "request_another_time"]},
+          "note": {"type": "string", "maxLength": 4000, "default": ""},
+          "suggestedStart": {"type": "string", "format": "date-time"},
+          "suggestedEnd": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "MaterialCreate": {
+        "type": "object",
+        "required": ["key", "version", "kind", "name", "quantity", "unit"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "kind": {"type": "string", "enum": ["material", "service"]},
+          "name": {"type": "string", "minLength": 1, "maxLength": 160},
+          "quantity": {"type": "number", "exclusiveMinimum": 0, "maximum": 999999999},
+          "unit": {"type": "string", "minLength": 1, "maxLength": 30},
+          "unitCostMinor": {"type": "integer", "minimum": 0},
+          "comment": {"type": "string", "maxLength": 1000, "default": ""}
+        },
+        "additionalProperties": false
+      },
+      "DefectCreate": {
+        "type": "object",
+        "required": ["unitId", "subject", "location", "contractorId", "dueOn"],
+        "properties": {
+          "unitId": {"type": "string", "format": "uuid"},
+          "subject": {"type": "string", "minLength": 3, "maxLength": 160},
+          "location": {"type": "string", "minLength": 1, "maxLength": 200},
+          "description": {"type": "string", "maxLength": 4000, "default": ""},
+          "contractorId": {"type": "string", "format": "uuid"},
+          "dueOn": {"type": "string", "format": "date"}
+        },
+        "additionalProperties": false
+      },
+      "DefectRecord": {
+        "type": "object",
+        "required": ["id", "organization_id", "unit_id", "subject", "location", "description", "status", "version", "contractor_id", "due_on"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "organization_id": {"type": "string", "format": "uuid"},
+          "unit_id": {"type": "string", "format": "uuid"},
+          "subject": {"type": "string"},
+          "location": {"type": "string"},
+          "description": {"type": "string"},
+          "status": {"type": "string", "enum": ["assigned", "in_progress", "review", "accepted"]},
+          "version": {"type": "integer", "minimum": 1},
+          "contractor_id": {"type": "string", "format": "uuid"},
+          "due_on": {"type": "string", "format": "date"},
+          "photos": {"type": "array", "items": {"type": "object"}},
+          "history": {"type": "array", "items": {"type": "object"}}
+        },
+        "additionalProperties": true
+      },
+      "DefectTransition": {
+        "type": "object",
+        "required": ["action", "version"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "action": {"type": "string", "enum": ["start", "report", "accept", "return", "reopen"]},
+          "version": {"type": "integer", "minimum": 1},
+          "note": {"type": "string", "maxLength": 4000, "default": ""}
+        },
+        "additionalProperties": false
+      },
+      "DocumentUploadMetadata": {
+        "type": "object",
+        "required": ["title", "buildingId", "visibility"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "title": {"type": "string", "minLength": 2, "maxLength": 160},
+          "buildingId": {"type": "string", "format": "uuid"},
+          "unitId": {"type": "string", "format": "uuid"},
+          "visibility": {"type": "string", "enum": ["staff", "residents", "unit_owner"]},
+          "category": {"type": "string", "minLength": 2, "maxLength": 100, "default": "general"},
+          "relatedType": {"type": "string", "enum": ["building", "unit", "meeting"]},
+          "relatedId": {"type": "string", "format": "uuid"}
+        }
+      },
+      "DocumentRecord": {
+        "type": "object",
+        "required": ["id", "title", "visibility", "created_at", "media_type", "category", "version", "building_id"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "title": {"type": "string"},
+          "visibility": {"type": "string", "enum": ["staff", "residents", "unit_owner"]},
+          "created_at": {"type": "string", "format": "date-time"},
+          "media_type": {"type": "string", "enum": ["application/pdf", "image/jpeg"]},
+          "category": {"type": "string"},
+          "related_type": {"type": ["string", "null"], "enum": ["building", "unit", "meeting", null]},
+          "related_id": {"type": ["string", "null"], "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "latest_version_id": {"type": ["string", "null"], "format": "uuid"},
+          "building_id": {"type": "string", "format": "uuid"},
+          "unit_id": {"type": ["string", "null"], "format": "uuid"}
+        },
+        "additionalProperties": false
+      },
+      "RoleAssignmentUpdate": {
+        "type": "object",
+        "required": ["version", "roleKey", "buildingId", "unitId", "startsAt", "expiresAt"],
+        "properties": {
+          "version": {"type": "string", "pattern": "^\\d+$"},
+          "roleKey": {"type": "string", "enum": ["org_admin", "portfolio_owner", "developer", "manager", "accountant", "dispatcher", "technician", "contractor", "security"]},
+          "buildingId": {"type": ["string", "null"], "format": "uuid"},
+          "unitId": {"type": ["string", "null"], "format": "uuid"},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "expiresAt": {"type": ["string", "null"], "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityCreate": {
+        "type": "object",
+        "required": ["key", "unitId", "technicianId", "scope", "kind", "startsAt", "endsAt"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "unitId": {"type": "string", "format": "uuid"},
+          "technicianId": {"type": "string", "format": "uuid"},
+          "scope": {"type": "string", "enum": ["building", "unit"]},
+          "kind": {"type": "string", "enum": ["shift", "absence"]},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityChange": {
+        "type": "object",
+        "required": ["key", "version", "action"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "action": {"type": "string", "enum": ["update", "cancel"]},
+          "kind": {"type": "string", "enum": ["shift", "absence"]},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityBlock": {
+        "type": "object",
+        "required": ["id", "organization_id", "building_id", "technician_id", "kind", "starts_at", "ends_at", "version"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "organization_id": {"type": "string", "format": "uuid"},
+          "building_id": {"type": "string", "format": "uuid"},
+          "unit_id": {"type": ["string", "null"], "format": "uuid"},
+          "technician_id": {"type": "string", "format": "uuid"},
+          "kind": {"type": "string", "enum": ["shift", "absence"]},
+          "starts_at": {"type": "string", "format": "date-time"},
+          "ends_at": {"type": "string", "format": "date-time"},
+          "version": {"type": "integer", "minimum": 1},
+          "canEdit": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      },
+      "ContextSwitch": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {"id": {"type": "string", "format": "uuid"}},
+        "additionalProperties": false
+      },
+      "ContextSwitchResult": {
+        "type": "object",
+        "required": ["contextId"],
+        "properties": {"contextId": {"type": "string", "format": "uuid"}},
+        "additionalProperties": false
+      },
+      "MessageCreate": {
+        "type": "object",
+        "required": ["body"],
+        "properties": {
+          "body": {"type": "string", "minLength": 1, "maxLength": 4000},
+          "internal": {"type": "boolean", "default": false}
+        },
+        "additionalProperties": false
+      },
+      "MessageCreated": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {"id": {"type": "string", "format": "uuid"}},
+        "additionalProperties": false
+      },
+      "RequestPhotoUploadResult": {
+        "type": "object",
+        "required": ["id", "photo_type"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "photo_type": {"type": "string", "enum": ["before", "during", "after", "evidence"]}
+        },
+        "additionalProperties": false
+      },
+      "DefectPhotoUploadResult": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {"id": {"type": "string", "format": "uuid"}},
+        "additionalProperties": false
+      },
+      "DefectMessageCreate": {
+        "type": "object",
+        "required": ["key", "body"],
+        "properties": {
+          "key": {"type": "string", "format": "uuid"},
+          "body": {"type": "string", "minLength": 1, "maxLength": 4000}
+        },
+        "additionalProperties": false
+      },
+      "DefectMessageRecord": {
+        "type": "object",
+        "required": ["id", "actor_id", "body", "created_at", "actor"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "actor_id": {"type": "string", "format": "uuid"},
+          "body": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "actor": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "RoleAssignmentRecord": {
+        "type": "object",
+        "required": ["id", "user_id", "organization_id", "role_key", "profile_id", "building_id", "unit_id", "starts_at", "expires_at", "active", "version"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "user_id": {"type": "string", "format": "uuid"},
+          "organization_id": {"type": "string", "format": "uuid"},
+          "role_key": {"type": "string"},
+          "profile_id": {"type": ["string", "null"], "format": "uuid"},
+          "building_id": {"type": ["string", "null"], "format": "uuid"},
+          "unit_id": {"type": ["string", "null"], "format": "uuid"},
+          "starts_at": {"type": "string", "format": "date-time"},
+          "expires_at": {"type": ["string", "null"], "format": "date-time"},
+          "active": {"type": "boolean"},
+          "version": {"type": "string", "pattern": "^\\d+$"},
+          "name": {"type": "string"},
+          "email": {"type": "string", "format": "email"}
+        },
+        "additionalProperties": true
+      },
+      "AssetCreate": {
+        "type": "object",
+        "required": ["buildingId", "name", "serialNumber"],
+        "properties": {
+          "buildingId": {"type": "string", "format": "uuid"},
+          "name": {"type": "string", "minLength": 1, "maxLength": 160},
+          "serialNumber": {"type": "string", "minLength": 1, "maxLength": 160}
+        },
+        "additionalProperties": false
+      },
+      "OriginDiscussion": {
+        "type": "object",
+        "required": ["discussionId", "title", "sourceMessageId", "sourceExcerpt", "status", "body", "messages"],
+        "properties": {
+          "discussionId": {"type": "string", "format": "uuid"},
+          "title": {"type": "string"},
+          "sourceMessageId": {"type": ["string", "null"], "format": "uuid"},
+          "sourceExcerpt": {"type": "string"},
+          "status": {"type": "string"},
+          "body": {"type": "string"},
+          "messages": {"type": "array", "items": {"type": "object", "required": ["id", "body", "created_at", "sender"], "properties": {"id": {"type": "string", "format": "uuid"}, "body": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}, "sender": {"type": "string"}}, "additionalProperties": false}}
+        },
+        "additionalProperties": false
+      },
+      "DefectCollaboration": {
+        "type": "object",
+        "required": ["defectId", "messages", "total", "nextCursor", "canWrite", "photos", "reports"],
+        "properties": {
+          "defectId": {"type": "string", "format": "uuid"},
+          "messages": {"type": "array", "items": {"$ref": "#/components/schemas/DefectMessageRecord"}},
+          "total": {"type": "integer", "minimum": 0},
+          "nextCursor": {"type": ["string", "null"], "format": "uuid"},
+          "canWrite": {"type": "boolean"},
+          "photos": {"type": "array", "items": {"type": "object", "required": ["id", "created_at"], "properties": {"id": {"type": "string", "format": "uuid"}, "created_at": {"type": "string", "format": "date-time"}}, "additionalProperties": false}},
+          "reports": {"type": "array", "items": {"type": "object", "required": ["id", "actor", "action", "note", "created_at"], "properties": {"id": {"type": "string", "format": "uuid"}, "actor": {"type": "string"}, "action": {"type": "string"}, "note": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}}, "additionalProperties": false}}
+        },
+        "additionalProperties": false
       }
     }
   },
@@ -155,25 +591,7 @@
           "200": {
             "description": "Identity and currently valid contexts; building_name and unit_number are server-resolved labels, not additional permissions.",
             "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "contexts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "building_name": {"type": ["string", "null"]},
-                          "unit_number": {"type": ["string", "null"]}
-                        },
-                        "additionalProperties": true
-                      }
-                    }
-                  },
-                  "additionalProperties": true
-                }
-              }
+              "application/json": {"schema": {"$ref": "#/components/schemas/SessionState"}}
             }
           },
           "201": {
@@ -213,7 +631,8 @@
         "summary": "Sign in using an individual account",
         "responses": {
           "200": {
-            "description": "Success; some creation operations return 201 and deletion operations 204"
+            "description": "Authenticated identity, currently valid contexts and CSRF token",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionState"}}}
           },
           "201": {
             "description": "Created"
@@ -263,6 +682,12 @@
                   },
                   "password": {
                     "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 30,
+                    "description": "Optional MFA code when MFA is enabled."
                   }
                 },
                 "required": [
@@ -320,9 +745,11 @@
     "/auth/context": {
       "post": {
         "summary": "Choose an already granted assignment",
+        "description": "Sets the active context only when its ID is in the authenticated user's currently valid context list. This does not grant permissions.",
         "responses": {
           "200": {
-            "description": "Success; some creation operations return 201 and deletion operations 204"
+            "description": "Selected active context",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ContextSwitchResult"}}}
           },
           "201": {
             "description": "Created"
@@ -361,19 +788,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                "required": [
-                  "id"
-                ]
-              }
+              "schema": {"$ref": "#/components/schemas/ContextSwitch"}
             }
           }
         }
@@ -1209,40 +1624,36 @@
         "summary": "Read scoped role assignments",
         "responses": {
           "200": {
-            "description": "Success; some creation operations return 201 and deletion operations 204"
-          },
-          "201": {
-            "description": "Created"
-          },
-          "204": {
-            "description": "Completed without response body"
-          },
-          "400": {
-            "description": "Validation failure"
-          },
-          "401": {
-            "description": "Unauthenticated"
-          },
-          "403": {
-            "description": "Permission, scope, module or CSRF denied"
-          },
-          "404": {
-            "description": "Not found in authorized scope"
-          },
-          "409": {
-            "description": "Already exists"
-          },
-          "429": {
-            "description": "Rate limited"
-          },
-          "503": {
-            "description": "External delivery not configured"
+            "description": "Scoped active and historical assignment rows",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "name", "email", "role_key", "building_id", "unit_id", "active", "expires_at"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "email": {"type": "string", "format": "email"}, "role_key": {"type": "string"}, "building_id": {"type": ["string", "null"], "format": "uuid"}, "unit_id": {"type": ["string", "null"], "format": "uuid"}, "active": {"type": "boolean"}, "expires_at": {"type": ["string", "null"], "format": "date-time"}}, "additionalProperties": false}}}}
           }
         },
         "parameters": []
       }
     },
     "/roles/{id}": {
+      "get": {
+        "summary": "Read a scoped role assignment and editable role options",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Assignment, role options and effective base permissions", "content": {"application/json": {"schema": {"type": "object", "required": ["assignment", "editable", "editableRoles", "permissions"], "properties": {"assignment": {"$ref": "#/components/schemas/RoleAssignmentRecord"}, "editable": {"type": "boolean"}, "editableRoles": {"type": "array", "items": {"type": "string"}}, "permissions": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}}}},
+          "403": {"description": "Role administration permission denied"},
+          "404": {"description": "Assignment outside authorized scope"}
+        }
+      },
+      "patch": {
+        "summary": "Update a scoped role assignment using compare-and-swap",
+        "description": "The version is the database row version returned as a decimal string. Updating an assignment changes role and scope; it never grants permissions beyond server policy.",
+        "parameters": [{"$ref": "#/components/parameters/csrf"}, {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RoleAssignmentUpdate"}}}},
+        "responses": {
+          "200": {"description": "Updated role assignment", "content": {"application/json": {"schema": {"type": "object", "required": ["assignment"], "properties": {"assignment": {"$ref": "#/components/schemas/RoleAssignmentRecord"}}, "additionalProperties": false}}}},
+          "400": {"description": "Invalid scope or date"},
+          "403": {"description": "Role administration permission denied"},
+          "404": {"description": "Assignment or scope not found"},
+          "409": {"description": "Concurrent update or administrator policy conflict"}
+        }
+      },
       "delete": {
         "summary": "Immediately revoke an organizational role",
         "responses": {
@@ -1289,7 +1700,24 @@
               "type": "string"
             }
           }
-        ]
+        ],
+        "responses": {
+          "204": {"description": "Role assignment revoked; no response body"},
+          "403": {"description": "Role administration permission denied"},
+          "404": {"description": "Assignment outside authorized scope"},
+          "409": {"description": "Cannot revoke the last unrestricted organization administrator"}
+        }
+      }
+    },
+    "/roles/{id}/options": {
+      "get": {
+        "summary": "Read scoped building and unit options for role editing",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Identifiers and labels available within the assignment scope", "content": {"application/json": {"schema": {"type": "object", "required": ["buildings", "units"], "properties": {"buildings": {"type": "array", "items": {"type": "object"}}, "units": {"type": "array", "items": {"type": "object"}}}, "additionalProperties": false}}}},
+          "403": {"description": "Role administration permission denied"},
+          "404": {"description": "Assignment outside authorized scope"}
+        }
       }
     },
     "/modules": {
@@ -1707,7 +2135,8 @@
         "summary": "List authorized requests with work order state; residents own, technician assigned, staff organization scope",
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Authorized resident requests with work-order details",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/RequestRecord"}}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1722,10 +2151,12 @@
         "parameters": []
       },
       "post": {
-        "summary": "Create resident request",
+        "summary": "Create a scoped request or work order",
+        "description": "Resident requests may use unitId and subject. Staff and technician-assisted creation may also provide key, categoryId and assignment fields; permissions and eligible unit, resident, technician and asset scopes are enforced by the server.",
         "responses": {
-          "200": {
-            "description": "Success"
+          "201": {
+            "description": "Created request; a matching idempotency key returns the committed record",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestRecord"}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1746,28 +2177,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "unitId",
-                  "subject"
-                ],
-                "properties": {
-                  "unitId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "subject": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 160
-                  },
-                  "description": {
-                    "type": "string",
-                    "maxLength": 4000
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/RequestCreate"}
             }
           }
         }
@@ -1778,7 +2188,8 @@
         "summary": "Authorized detail, transition history, messages and photo IDs; resident cannot see internal messages",
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Scoped request detail; internal messages are omitted from resident views",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestRecord"}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1808,7 +2219,8 @@
         "summary": "Active technicians eligible for assignment in request scope",
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Eligible technicians in request scope",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}, "additionalProperties": false}}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1833,12 +2245,27 @@
         ]
       }
     },
+    "/requests/{id}/origin-discussion": {
+      "get": {
+        "summary": "Read the authorized resident discussion linked to a request",
+        "description": "Staff-only and restricted to the request's organization and building. No discussion is returned when the request has no valid source lineage.",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Discussion metadata, bounded source excerpt and visible messages", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OriginDiscussion"}}}},
+          "403": {"description": "Resident context or missing permission"},
+          "404": {"description": "Request or source discussion outside authorized scope"}
+        }
+      }
+    },
     "/requests/{id}/transition": {
       "post": {
         "summary": "Atomic version-checked role-specific transition",
+        "description": "Accepts all transition actions supported by the route validator; execution and assignment permissions depend on the action. Idempotency keys are required for accept, cannot_perform, pause and resume.",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestTransition"}}}},
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Updated request and work-order state",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestTransitionResult"}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1868,60 +2295,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "action",
-                  "version"
-                ],
-                "properties": {
-                  "action": {
-                    "type": "string",
-                    "enum": [
-                      "assign",
-                      "start",
-                      "report",
-                      "approve",
-                      "reject",
-                      "confirm",
-                      "reopen"
-                    ]
-                  },
-                  "version": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "technicianId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "note": {
-                    "type": "string",
-                    "maxLength": 4000
-                  },
-                  "checklist": {
-                    "type": "array",
-                    "maxItems": 30,
-                    "items": {
-                      "type": "object",
-                      "required": [
-                        "text",
-                        "done"
-                      ],
-                      "properties": {
-                        "text": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 200
-                        },
-                        "done": {
-                          "type": "boolean"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/RequestTransition"}
             }
           }
         }
@@ -1931,8 +2305,9 @@
       "post": {
         "summary": "Add public message or staff-only internal note",
         "responses": {
-          "200": {
-            "description": "Success"
+          "201": {
+            "description": "Created message",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MessageCreated"}}}
           },
           "403": {
             "description": "Access denied or module disabled"
@@ -1962,25 +2337,52 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "body"
-                ],
-                "properties": {
-                  "body": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 4000
-                  },
-                  "internal": {
-                    "type": "boolean",
-                    "default": false
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/MessageCreate"}
             }
           }
+        }
+      }
+    },
+    "/requests/{id}/visits": {
+      "post": {
+        "summary": "Propose a visit for an authorized request",
+        "description": "Request and visit versions are checked atomically. Visits must start in the future and last at most 24 hours. A new proposal supersedes any existing proposed or confirmed visit.",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisitCreate"}}}},
+        "responses": {
+          "200": {"description": "Proposed visit and incremented parent request version", "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/VisitRecord"}, {"type": "object", "required": ["request_version"], "properties": {"request_version": {"type": "integer"}}}]}}}},
+          "400": {"description": "Invalid visit window"},
+          "403": {"description": "Assignment or work-execution permission denied"},
+          "404": {"description": "Request outside authorized scope"},
+          "409": {"description": "Stale request version or invalid request state"}
+        }
+      }
+    },
+    "/requests/{id}/visits/{visitId}": {
+      "post": {
+        "summary": "Confirm, cancel, or request another visit time",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"name": "visitId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisitChange"}}}},
+        "responses": {
+          "200": {"description": "Updated visit and parent request version", "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/VisitRecord"}, {"type": "object", "required": ["request_version"], "properties": {"request_version": {"type": "integer"}}}]}}}},
+          "400": {"description": "Missing reason or invalid proposed time window"},
+          "403": {"description": "Role-specific confirmation or scheduling permission denied"},
+          "404": {"description": "Visit outside authorized request"},
+          "409": {"description": "Stale version, already confirmed, or invalid state"}
+        }
+      }
+    },
+    "/requests/{id}/materials": {
+      "post": {
+        "summary": "Record technician-reported work material or service",
+        "description": "Records operational evidence only. It does not create or authorize an estimate, invoice, or payment.",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MaterialCreate"}}}},
+        "responses": {
+          "201": {"description": "Created material record with request_version", "content": {"application/json": {"schema": {"type": "object", "required": ["id", "request_id", "kind", "name", "quantity", "unit", "request_version"], "properties": {"id": {"type": "string", "format": "uuid"}, "request_id": {"type": "string", "format": "uuid"}, "kind": {"type": "string", "enum": ["material", "service"]}, "name": {"type": "string"}, "quantity": {"type": "number"}, "unit": {"type": "string"}, "request_version": {"type": "integer"}}, "additionalProperties": true}}}},
+          "403": {"description": "Only the assigned technician may record work material"},
+          "404": {"description": "Request outside authorized scope"},
+          "409": {"description": "Stale version or work is not in progress"}
         }
       }
     },
@@ -1989,9 +2391,6 @@
         "summary": "Upload private photo: JPEG, PNG, WebP; at most 6 MiB and 16 million pixels; sanitized to JPEG",
         "description": "Offline upload supports optional account/context guards, operation receipts and expected work version. Every replay revalidates current scoped access. Successful original and replay return 201 with the same private photo ID.",
         "responses": {
-          "200": {
-            "description": "Success"
-          },
           "403": {
             "description": "Access denied or module disabled"
           },
@@ -2002,7 +2401,8 @@
             "description": "Stale version or invalid transition"
           },
           "201": {
-            "description": "Private photo ID"
+            "description": "Private photo identifier and evidence type",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestPhotoUploadResult"}}}
           },
           "413": {
             "description": "File too large"
@@ -2013,6 +2413,7 @@
           {"$ref": "#/components/parameters/hayatContext"},
           {"$ref": "#/components/parameters/photoOperation"},
           {"$ref": "#/components/parameters/workVersion"},
+          {"name": "photoType", "in": "query", "required": false, "schema": {"type": "string", "enum": ["before", "during", "after", "evidence"]}},
           {
             "name": "id",
             "in": "path",
@@ -2417,18 +2818,16 @@
     },
     "/defects": {
       "get": {
-        "summary": "GET /defects",
+        "summary": "List scoped defects",
         "tags": [
           "field"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "description": "Returns defects in the active organization/building/unit scope; contractors see only their assigned records.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Scoped defect list",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/DefectRecord"}}}}
           },
           "400": {
             "description": "Invalid input"
@@ -2448,22 +2847,21 @@
         }
       },
       "post": {
-        "summary": "POST /defects",
+        "summary": "Assign a scoped defect to an eligible contractor",
         "tags": [
           "field"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "description": "Requires defects.manage and a currently eligible contractor assignment for the unit.",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectCreate"}}}},
         "parameters": [
           {
             "$ref": "#/components/parameters/csrf"
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
           "201": {
-            "description": "Created (creation routes)"
+            "description": "Created defect",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectRecord"}}}
           },
           "400": {
             "description": "Invalid input"
@@ -2485,18 +2883,16 @@
     },
     "/defects/contractors": {
       "get": {
-        "summary": "GET /defects/contractors",
+        "summary": "List eligible contractors for a unit",
         "tags": [
           "field"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
-        "parameters": [],
+        "description": "Requires defects.manage. The required unitId is resolved within the active organization and building scope.",
+        "parameters": [{"name": "unitId", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}}],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Eligible contractor identifiers and display names",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}, "additionalProperties": false}}}}
           },
           "400": {
             "description": "Invalid input"
@@ -2518,27 +2914,26 @@
     },
     "/defects/{id}": {
       "get": {
-        "summary": "GET /defects/{id}",
+        "summary": "Read a scoped defect with photos and transition history",
         "tags": [
           "field"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/field.ts. Request schemas are not fully represented here.",
+        "description": "Contractor access is limited to the assigned defect; other roles require defects.read.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Defect with photos and non-message history",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectRecord"}}}
           },
           "400": {
             "description": "Invalid input"
@@ -2565,24 +2960,7 @@
           "field"
         ],
         "description": "Versioned defect transition. Optional immutable key replays an existing receipt without another transition/history entry, after revalidating current permissions and assignment.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["action", "version"],
-                "properties": {
-                  "key": {"type": "string", "format": "uuid"},
-                  "action": {"type": "string", "enum": ["start", "report", "accept", "return"]},
-                  "version": {"type": "integer", "minimum": 1},
-                  "note": {"type": "string", "maxLength": 4000, "default": ""}
-                }
-              }
-            }
-          }
-        },
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectTransition"}}}},
         "parameters": [
           {"$ref": "#/components/parameters/hayatUser"},
           {"$ref": "#/components/parameters/hayatContext"},
@@ -2600,10 +2978,8 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Updated defect after a role-checked transition",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectRecord"}}}
           },
           "400": {
             "description": "Invalid input"
@@ -2620,6 +2996,35 @@
           "409": {
             "description": "State, duplicate or version conflict"
           }
+        }
+      }
+    },
+    "/defects/{id}/collaboration": {
+      "get": {
+        "summary": "Read scoped defect messages, photos and contractor reports",
+        "description": "Messages are paginated by an optional before cursor; writer capability reflects current permissions and assignment.",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "before", "in": "query", "required": false, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {"description": "Authorized defect collaboration thread", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectCollaboration"}}}},
+          "403": {"description": "Defect read or assigned-work permission denied"},
+          "404": {"description": "Defect or cursor outside authorized scope"}
+        }
+      }
+    },
+    "/defects/{id}/messages": {
+      "post": {
+        "summary": "Add an idempotent message to an authorized defect thread",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectMessageCreate"}}}},
+        "responses": {
+          "201": {"description": "Created or replayed message", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectMessageRecord"}}}},
+          "400": {"description": "Invalid message or idempotency key"},
+          "403": {"description": "Current role or assignment cannot write"},
+          "404": {"description": "Defect outside authorized scope"},
+          "409": {"description": "Idempotency key conflict"}
         }
       }
     },
@@ -3447,18 +3852,16 @@
     },
     "/assets": {
       "get": {
-        "summary": "GET /assets",
+        "summary": "List scoped equipment and maintenance plans",
         "tags": [
           "services"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "description": "Requires assets.read. Each row includes the asset record, building label and its maintenance plan array.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Scoped equipment list",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "organization_id", "building_id", "name", "serial_number", "building_name", "plans"], "properties": {"id": {"type": "string", "format": "uuid"}, "organization_id": {"type": "string", "format": "uuid"}, "building_id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "serial_number": {"type": "string"}, "building_name": {"type": "string"}, "plans": {"type": "array", "items": {"type": "object"}}}, "additionalProperties": true}}}}
           },
           "400": {
             "description": "Invalid input"
@@ -3478,22 +3881,21 @@
         }
       },
       "post": {
-        "summary": "POST /assets",
+        "summary": "Register equipment in a scoped building",
         "tags": [
           "services"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/services.ts. Request schemas are not fully represented here.",
+        "description": "Requires assets.manage.",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AssetCreate"}}}},
         "parameters": [
           {
             "$ref": "#/components/parameters/csrf"
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
           "201": {
-            "description": "Created (creation routes)"
+            "description": "Created equipment record",
+            "content": {"application/json": {"schema": {"type": "object", "required": ["id", "organization_id", "building_id", "name", "serial_number"], "properties": {"id": {"type": "string", "format": "uuid"}, "organization_id": {"type": "string", "format": "uuid"}, "building_id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "serial_number": {"type": "string"}}, "additionalProperties": true}}}
           },
           "400": {
             "description": "Invalid input"
@@ -3510,6 +3912,96 @@
           "409": {
             "description": "State, duplicate or version conflict"
           }
+        }
+      }
+    },
+    "/assets/lookup": {
+      "get": {
+        "summary": "Look up equipment by UUID or serial number",
+        "description": "Requires assets.read and active organization/building/unit scope. Ambiguous serial numbers return 409; not found or out-of-scope assets return 404.",
+        "parameters": [{"name": "identifier", "in": "query", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 160}}],
+        "responses": {
+          "200": {"description": "Equipment, maintenance plans, visible related work and selectable units", "content": {"application/json": {"schema": {"type": "object", "required": ["asset", "plans", "works", "units"], "properties": {"asset": {"type": "object"}, "plans": {"type": "array", "items": {"type": "object"}}, "works": {"type": "array", "items": {"type": "object"}}, "units": {"type": "array", "items": {"type": "object"}}}, "additionalProperties": false}}}},
+          "403": {"description": "Equipment read permission denied"},
+          "404": {"description": "Equipment outside authorized scope"},
+          "409": {"description": "Identifier matches more than one asset"}
+        }
+      }
+    },
+    "/assets/{id}/qr": {
+      "get": {
+        "summary": "Download a private QR image for scoped equipment",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "320px PNG QR image encoding the asset UUID", "content": {"image/png": {"schema": {"type": "string", "format": "binary"}}}},
+          "403": {"description": "Equipment read permission denied"},
+          "404": {"description": "Equipment outside authorized scope"}
+        }
+      }
+    },
+    "/operations/visits": {
+      "get": {
+        "summary": "List visible proposed and confirmed visits in a time window",
+        "description": "Only visits visible under the active request permissions and organization/building/unit scope are returned. The interval is required and cannot exceed 62 days.",
+        "parameters": [{"name": "from", "in": "query", "required": true, "schema": {"type": "string", "format": "date-time"}}, {"name": "to", "in": "query", "required": true, "schema": {"type": "string", "format": "date-time"}}],
+        "responses": {
+          "200": {"description": "Visible visits, ordered by start time", "content": {"application/json": {"schema": {"type": "array", "items": {"allOf": [{"$ref": "#/components/schemas/VisitRecord"}, {"type": "object", "properties": {"request_version": {"type": "integer"}, "subject": {"type": "string"}, "number": {"type": ["string", "null"]}, "building_name": {"type": "string"}, "building_id": {"type": "string", "format": "uuid"}, "technician_id": {"type": ["string", "null"], "format": "uuid"}, "technician_name": {"type": ["string", "null"]}}}]}}}}},
+          "400": {"description": "Invalid or excessively large time window"},
+          "403": {"description": "Request read permission denied"}
+        }
+      }
+    },
+    "/operations/availability/options": {
+      "get": {
+        "summary": "List units available to the active scheduling context",
+        "responses": {
+          "200": {"description": "Scoped unit identifiers and labels", "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "number", "building_id", "building_name"], "properties": {"id": {"type": "string", "format": "uuid"}, "number": {"type": "string"}, "building_id": {"type": "string", "format": "uuid"}, "building_name": {"type": "string"}}, "additionalProperties": false}}}}},
+          "403": {"description": "Request-read or assigned-work permission denied"},
+          "400": {"description": "Result limit exceeded"}
+        }
+      }
+    },
+    "/operations/availability": {
+      "get": {
+        "summary": "Read scoped technician availability for a unit and time window",
+        "description": "Availability is only established inside the returned scope; missing planning remains unknown. Technician views are limited to themselves and visible work.",
+        "parameters": [
+          {"name": "unitId", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "from", "in": "query", "required": true, "schema": {"type": "string", "format": "date-time"}},
+          {"name": "to", "in": "query", "required": true, "schema": {"type": "string", "format": "date-time"}}
+        ],
+        "responses": {
+          "200": {"description": "Scoped people, plan blocks and management flags", "content": {"application/json": {"schema": {"type": "object", "required": ["canManage", "canManageBuilding", "people", "blocks"], "properties": {"canManage": {"type": "boolean"}, "canManageBuilding": {"type": "boolean"}, "people": {"type": "array", "items": {"type": "object", "required": ["id", "name", "status", "visitCount"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "status": {"type": "string", "enum": ["unknown", "available_in_scope", "absent", "busy"]}, "visitCount": {"type": "integer", "minimum": 0}}}}, "blocks": {"type": "array", "items": {"$ref": "#/components/schemas/AvailabilityBlock"}}}, "additionalProperties": false}}}},
+          "400": {"description": "Invalid or oversized time window"},
+          "403": {"description": "Request-read or assigned-work permission denied"},
+          "404": {"description": "Unit outside authorized scope"}
+        }
+      },
+      "post": {
+        "summary": "Create a scoped technician shift or absence",
+        "description": "Requires requests.assign and an eligible technician assignment covering the full period. Shifts are limited to 24 hours; all windows are limited to 62 days.",
+        "parameters": [{"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AvailabilityCreate"}}}},
+        "responses": {
+          "201": {"description": "Created availability block", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AvailabilityBlock"}}}},
+          "400": {"description": "Invalid time window"},
+          "403": {"description": "Scheduling permission denied or technician is not eligible"},
+          "404": {"description": "Unit outside authorized scope"},
+          "409": {"description": "Idempotency conflict"}
+        }
+      }
+    },
+    "/operations/availability/{id}/change": {
+      "post": {
+        "summary": "Update or cancel a scoped availability block",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"$ref": "#/components/parameters/csrf"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AvailabilityChange"}}}},
+        "responses": {
+          "200": {"description": "Updated availability block", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AvailabilityBlock"}}}},
+          "400": {"description": "Update requires kind, startsAt and endsAt"},
+          "403": {"description": "Scheduling permission denied or technician no longer eligible"},
+          "404": {"description": "Block outside authorized scope"},
+          "409": {"description": "Stale version or idempotency conflict"}
         }
       }
     },
@@ -4730,18 +5222,16 @@
     },
     "/documents": {
       "get": {
-        "summary": "GET /documents",
+        "summary": "List documents readable in the active context",
         "tags": [
           "documents"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "description": "Only document metadata is returned; private storage keys are never exposed. Residents and unit owners see only records whose visibility matches their scope.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Readable document metadata",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/DocumentRecord"}}}}
           },
           "400": {
             "description": "Invalid input"
@@ -4761,22 +5251,27 @@
         }
       },
       "post": {
-        "summary": "POST /documents",
+        "summary": "Upload a private document",
         "tags": [
           "documents"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "description": "Requires documents.manage. Metadata is supplied as query parameters and bytes as an application/octet-stream body (maximum 6 MiB). PDF bytes are accepted; PNG/JPEG/WebP images are sanitized to JPEG. An idempotency key is optional.",
         "parameters": [
-          {
-            "$ref": "#/components/parameters/csrf"
-          }
+          {"$ref": "#/components/parameters/csrf"},
+          {"name": "key", "in": "query", "required": false, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "title", "in": "query", "required": true, "schema": {"type": "string", "minLength": 2, "maxLength": 160}},
+          {"name": "buildingId", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "unitId", "in": "query", "required": false, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "visibility", "in": "query", "required": true, "schema": {"type": "string", "enum": ["staff", "residents", "unit_owner"]}},
+          {"name": "category", "in": "query", "required": false, "schema": {"type": "string", "minLength": 2, "maxLength": 100, "default": "general"}},
+          {"name": "relatedType", "in": "query", "required": false, "schema": {"type": "string", "enum": ["building", "unit", "meeting"]}},
+          {"name": "relatedId", "in": "query", "required": false, "schema": {"type": "string", "format": "uuid"}}
         ],
+        "requestBody": {"required": true, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}},
         "responses": {
-          "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
           "201": {
-            "description": "Created (creation routes)"
+            "description": "Created document identifier",
+            "content": {"application/json": {"schema": {"type": "object", "required": ["id"], "properties": {"id": {"type": "string", "format": "uuid"}}, "additionalProperties": false}}}
           },
           "400": {
             "description": "Invalid input"
@@ -4798,27 +5293,26 @@
     },
     "/documents/{id}/download": {
       "get": {
-        "summary": "GET /documents/{id}/download",
+        "summary": "Download a readable private document",
         "tags": [
           "documents"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/documents.ts. Request schemas are not fully represented here.",
+        "description": "Returns private, no-store bytes after current documents.read and visibility checks. Storage keys are never accepted from clients.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
+            "description": "Private PDF or sanitized JPEG bytes",
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}, "image/jpeg": {"schema": {"type": "string", "format": "binary"}}}
           },
           "400": {
             "description": "Invalid input"
@@ -4835,6 +5329,52 @@
           "409": {
             "description": "State, duplicate or version conflict"
           }
+        }
+      }
+    },
+    "/documents/{id}/versions": {
+      "get": {
+        "summary": "List readable document versions",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Versions visible in the active context without storage keys", "content": {"application/json": {"schema": {"type": "array", "items": {"type": "object", "required": ["id", "version_number", "title", "visibility", "uploaded_at", "media_type"], "properties": {"id": {"type": "string", "format": "uuid"}, "version_number": {"type": "integer"}, "previous_version_id": {"type": ["string", "null"], "format": "uuid"}, "title": {"type": "string"}, "category": {"type": "string"}, "related_type": {"type": ["string", "null"]}, "related_id": {"type": ["string", "null"], "format": "uuid"}, "visibility": {"type": "string", "enum": ["staff", "residents", "unit_owner"]}, "uploaded_by": {"type": "string", "format": "uuid"}, "uploaded_at": {"type": "string", "format": "date-time"}, "media_type": {"type": "string"}}, "additionalProperties": false}}}}},
+          "403": {"description": "Document read permission denied"},
+          "404": {"description": "Document outside authorized scope"}
+        }
+      },
+      "post": {
+        "summary": "Upload a new immutable document version",
+        "description": "Metadata is supplied as query parameters and file bytes as application/octet-stream. Requires documents.manage; the parent document version is compare-and-swap checked.",
+        "parameters": [
+          {"$ref": "#/components/parameters/csrf"},
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "key", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "version", "in": "query", "required": true, "schema": {"type": "integer", "minimum": 1}},
+          {"name": "title", "in": "query", "required": true, "schema": {"type": "string", "minLength": 2, "maxLength": 160}},
+          {"name": "category", "in": "query", "required": true, "schema": {"type": "string", "minLength": 2, "maxLength": 100}},
+          {"name": "visibility", "in": "query", "required": true, "schema": {"type": "string", "enum": ["staff", "residents", "unit_owner"]}},
+          {"name": "relatedType", "in": "query", "required": false, "schema": {"type": "string", "enum": ["building", "unit", "meeting"]}},
+          {"name": "relatedId", "in": "query", "required": false, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {"required": true, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}},
+        "responses": {
+          "201": {"description": "Created version with immutable version lineage and no storage key", "content": {"application/json": {"schema": {"type": "object", "required": ["id", "version_number", "previous_version_id", "title", "visibility", "uploaded_at"], "properties": {"id": {"type": "string", "format": "uuid"}, "version_number": {"type": "integer"}, "previous_version_id": {"type": ["string", "null"], "format": "uuid"}, "title": {"type": "string"}, "visibility": {"type": "string"}, "uploaded_at": {"type": "string", "format": "date-time"}}, "additionalProperties": true}}}},
+          "400": {"description": "Invalid metadata or file"},
+          "403": {"description": "Document management permission denied"},
+          "404": {"description": "Document outside authorized scope"},
+          "409": {"description": "Stale parent version or idempotency conflict"},
+          "413": {"description": "File too large"}
+        }
+      }
+    },
+    "/documents/{id}/versions/{versionId}/download": {
+      "get": {
+        "summary": "Download a readable immutable document version",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}, {"name": "versionId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Private version bytes", "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}, "image/jpeg": {"schema": {"type": "string", "format": "binary"}}}},
+          "403": {"description": "Document read permission denied"},
+          "404": {"description": "Document version outside authorized visibility scope"}
         }
       }
     },
@@ -5192,12 +5732,11 @@
     },
     "/defects/{id}/photos": {
       "post": {
-        "summary": "POST /defects/{id}/photos",
-        "description": "Private image upload: JPEG/PNG/WebP up to 6 MiB, sanitized to JPEG. Optional immutable photo operation key, expected parent version, and user/context guards use the same replay protocol as request photos.",
+        "summary": "Upload sanitized private evidence to a scoped defect",
         "tags": [
           "photos"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/photos.ts. Request schemas are not fully represented here.",
+        "description": "Accepts JPEG/PNG/WebP bytes up to 6 MiB and sanitizes them to JPEG. Optional operation key, expected work version and HAYAT identity guards apply the same replay protocol as request photos.",
         "parameters": [
           {"$ref": "#/components/parameters/hayatUser"},
           {"$ref": "#/components/parameters/hayatContext"},
@@ -5209,76 +5748,46 @@
             "required": true,
             "schema": {
               "type": "string"
+              ,"format": "uuid"
             }
           },
           {
             "$ref": "#/components/parameters/csrf"
           }
         ],
+        "requestBody": {"required": true, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}},
         "responses": {
-          "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Authentication required"
-          },
-          "403": {
-            "description": "Permission or module denied"
-          },
-          "404": {
-            "description": "Resource not in permitted scope"
-          },
-          "409": {
-            "description": "State, duplicate or version conflict"
-          }
+          "201": {"description": "Private attachment identifier", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DefectPhotoUploadResult"}}}},
+          "400": {"description": "Invalid image or operation key"},
+          "403": {"description": "Defect is not visible or writable in the active context"},
+          "404": {"description": "Defect outside authorized scope"},
+          "409": {"description": "Stale work version or defect is already accepted"},
+          "413": {"description": "File too large"}
         }
       }
     },
     "/defect-photos/{id}": {
       "get": {
-        "summary": "GET /defect-photos/{id}",
+        "summary": "Download sanitized defect evidence after current scope checks",
         "tags": [
           "photos"
         ],
-        "description": "Route inventory; validation and scoped authorization: server/photos.ts. Request schemas are not fully represented here.",
+        "description": "Returns private, no-store JPEG bytes only when the active context can read the parent defect.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful read or update (route-dependent)"
-          },
-          "201": {
-            "description": "Created (creation routes)"
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Authentication required"
-          },
-          "403": {
-            "description": "Permission or module denied"
-          },
-          "404": {
-            "description": "Resource not in permitted scope"
-          },
-          "409": {
-            "description": "State, duplicate or version conflict"
-          }
+          "200": {"description": "Private sanitized JPEG bytes", "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}}},
+          "403": {"description": "Defect read permission denied"},
+          "404": {"description": "Attachment outside authorized defect scope"}
         }
       }
     }

@@ -9,6 +9,7 @@ import {config} from '../config.js';
 import {contexts} from '../access.js';
 import {runMaintenanceGeneration,finishMaintenance} from '../maintenance.js';
 import {transaction} from '../operations.js';
+import {assertOpenApiOperation} from './openapi-contract-assertions.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const server=app.listen(0,'127.0.0.1');let base='';
@@ -117,6 +118,9 @@ test('Delegation expiration and resend are owner-scoped, rotate pending tokens, 
  assert.equal((await owner.call('/delegations/'+id+'/resend','POST',{version:3})).status,409);
 });
 test('Notification destinations require explicit current assignment and do not union permissions; tech-proposed visits support resident alternatives',async()=>{
+ assertOpenApiOperation('/requests/{id}/visits','post',{requestSchema:'VisitCreate',responseStatus:'200'});
+ assertOpenApiOperation('/requests/{id}/visits/{visitId}','post',{requestSchema:'VisitChange',responseStatus:'200'});
+ assertOpenApiOperation('/operations/visits','get',{responseStatus:'200'});
  const r=(await desk.call('/requests','POST',{key:randomUUID(),unitId:seeded.fixtures.ua,subject:'Phase3 visit fixture',categoryId:category,technicianId:seeded.accounts.technician.id})).data;
  const n=(await pool.query("INSERT INTO notifications(user_id,organization_id,kind,entity_id) VALUES($1,$2,'request.updated',$3) RETURNING id",[seeded.accounts.unit_owner.id,r.organization_id,r.id])).rows[0].id;
  const destination=await owner.call('/notifications/'+n+'/destination');assert.equal(destination.status,200);assert.equal(destination.data.destination,'/imtun/requests?requestId='+r.id);

@@ -9,6 +9,7 @@ import {contexts} from '../access.js';
 import {sharedDocument} from '../support-conversation.js';
 import {transaction} from '../operations.js';
 import {privateKeyPattern} from '../private-files.js';
+import {assertOpenApiOperation,openApiSpec} from './openapi-contract-assertions.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const account=(role:string)=>Object.keys(seeded.accounts).find(k=>k!=='second_org'&&seeded.accounts[k].role===role)!;
@@ -35,6 +36,26 @@ before(async()=>{
  const fixture=(await pool.query('SELECT organization_id,building_id FROM units WHERE id=$1',[seeded.fixtures.ua])).rows[0];org=fixture.organization_id;building=fixture.building_id;
 });
 after(async()=>{await new Promise<void>(r=>server.close(()=>r()));await pool.end()});
+test('Session, context switching and role editing publish validated contracts',()=>{
+ assertOpenApiOperation('/auth/session','get',{responseStatus:'200',responseSchema:'SessionState'});
+ assertOpenApiOperation('/auth/login','post',{responseStatus:'200',responseSchema:'SessionState'});
+ assertOpenApiOperation('/auth/context','post',{responseStatus:'200'});
+ assertOpenApiOperation('/people','get',{responseStatus:'200'});
+ assertOpenApiOperation('/roles/{id}','get',{responseStatus:'200'});
+ assertOpenApiOperation('/roles/{id}','patch',{requestSchema:'RoleAssignmentUpdate',responseStatus:'200'});
+ assertOpenApiOperation('/roles/{id}/options','get',{responseStatus:'200'});
+ const loginSchema=openApiSpec().paths['/auth/login'].post.requestBody.content['application/json'].schema;
+ assert.deepEqual(loginSchema.required,['email','password']);
+ assert.equal(loginSchema.properties.code.minLength,6);assert.equal(loginSchema.properties.code.maxLength,30);
+ const assignmentSchema=openApiSpec().paths['/roles/{id}'].get.responses['200'].content['application/json'].schema;
+ assert.equal(assignmentSchema.properties.assignment.$ref,'#/components/schemas/RoleAssignmentRecord');
+ const contextBody=openApiSpec().paths['/auth/context'].post.requestBody.content['application/json'].schema;
+ assert.equal(contextBody.$ref,'#/components/schemas/ContextSwitch');
+ const body=openApiSpec().components.schemas.ContextSwitch;
+ assert.deepEqual(body.required,['id']);assert.equal(body.properties.id.format,'uuid');
+ const versionPattern=new RegExp(openApiSpec().components.schemas.RoleAssignmentUpdate.properties.version.pattern);
+ assert.equal(versionPattern.test('42'),true);assert.equal(versionPattern.test('42x'),false);
+});
 test('Organization card/profile has optimistic concurrency; suspension/archive revoke contexts without deleting history',async()=>{
  const made=await admin.call('/organizations','POST',{name:'Phase5 isolated organization',currency:'AMD'});assert.equal(made.status,201);const id=made.data.id;
  await pool.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2)',[seeded.accounts[account('org_admin')].id,id]);

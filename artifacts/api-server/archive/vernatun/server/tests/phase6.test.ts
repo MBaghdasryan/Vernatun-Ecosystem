@@ -11,6 +11,7 @@ import {protocolPdf} from '../meeting-results.js';
 import {chromium} from 'playwright';
 import {spawn,type ChildProcess} from 'node:child_process';
 import {resolve} from 'node:path';
+import {assertOpenApiOperation} from './openapi-contract-assertions.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw new Error('Isolated database required');
 const seed=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 const account=(role:string)=>Object.keys(seed.accounts).find(k=>k!=='second_org'&&seed.accounts[k].role===role)!;
@@ -62,6 +63,18 @@ test('concurrent ownership writers cannot both consume the same remaining share'
  assert.deepEqual(a.map(r=>r.status).sort(),[201,409]);assert.ok(Number((await pool.query('SELECT sum(share_basis_points) AS s FROM ownerships WHERE unit_id=$1',[u])).rows[0].s)<=10000);
  // Finish this test-only ownership before meeting eligibility calendar date.
  await pool.query("UPDATE ownerships SET ends_on='2020-01-02' WHERE unit_id=$1",[u]);
+});
+test('Document list, upload and immutable-version routes expose the tested byte contract',()=>{
+ assertOpenApiOperation('/documents','get',{responseStatus:'200'});
+ assertOpenApiOperation('/documents','post',{responseStatus:'201'});
+ assertOpenApiOperation('/documents/{id}/download','get',{responseStatus:'200',responseMediaType:'application/pdf'});
+ assertOpenApiOperation('/documents/{id}/versions','get',{responseStatus:'200'});
+ assertOpenApiOperation('/documents/{id}/versions','post',{responseStatus:'201'});
+ assertOpenApiOperation('/documents/{id}/versions/{versionId}/download','get',{responseStatus:'200',responseMediaType:'application/pdf'});
+ const upload=assertOpenApiOperation('/documents','post');
+ assert.ok(upload.requestBody.content['application/octet-stream']);
+ assert.ok(upload.parameters.some((p:any)=>p.name==='buildingId'&&p.required));
+ assert.ok(!JSON.stringify(upload.responses['201']).includes('storage_key'));
 });
 test('document v1 and consent are pinned before any parent replacement',async()=>{
  const q=new URLSearchParams({key:randomUUID(),title:'Հայերեն документ',buildingId:building,visibility:'residents',category:'ownership_basis'});

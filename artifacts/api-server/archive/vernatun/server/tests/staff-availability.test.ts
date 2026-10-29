@@ -6,6 +6,7 @@ import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
 import {intervalCovered} from '../availability-logic.js';
+import {assertOpenApiOperation} from './openapi-contract-assertions.js';
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))throw Error('Isolated database required');
 const seeded=JSON.parse(await readFile('.local/test/demo-accounts.json','utf8'));
 let base='';const server=app.listen(0,'127.0.0.1');
@@ -33,6 +34,13 @@ before(async()=>{
  desk=await new Client().login('dispatcher');tech=await new Client().login('technician');other=await new Client().login('second_org');owner=await new Client().login('unit_owner');
 });
 after(async()=>{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await pool.end()});
+test('Availability and visit planning routes expose scoped request and response contracts',()=>{
+ assertOpenApiOperation('/operations/availability/options','get',{responseStatus:'200'});
+ assertOpenApiOperation('/operations/availability','get',{responseStatus:'200'});
+ assertOpenApiOperation('/operations/availability','post',{requestSchema:'AvailabilityCreate',responseStatus:'201',responseSchema:'AvailabilityBlock'});
+ assertOpenApiOperation('/operations/availability/{id}/change','post',{requestSchema:'AvailabilityChange',responseStatus:'200',responseSchema:'AvailabilityBlock'});
+ assertOpenApiOperation('/operations/visits','get',{responseStatus:'200'});
+});
 test('coverage merges adjacent shifts, never gaps or absent planning',()=>{
  assert.equal(intervalCovered(0,100,[]),false);
  assert.equal(intervalCovered(0,100,[{starts_at:new Date(0),ends_at:new Date(50)},{starts_at:new Date(50),ends_at:new Date(100)}]),true);
