@@ -3,6 +3,7 @@ import {Analytics,Scorecard} from './Portfolio';
 import {useEffect,useState,type ReactNode,type FormEvent} from 'react';
 import {request,uploadImport,ApiClientError} from './client';
 import Notifications from './Notifications';
+import PlatformNotificationsConsole from './PlatformNotificationsConsole';
 import TypedImports from './TypedImports';
 import MaintenancePlans from './Maintenance';
 import {BusinessTable} from './Business';
@@ -24,4 +25,4 @@ function LegacyCommunity({c,view,language,currency}:{c:RoleContext;view:string;l
 </>}</div>}
 
 type CommProps={c:RoleContext;view:string;language:Language;currency:Currency};
-export default function Community(p:CommProps){if(p.view==='ownership')return <Ownership key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='analytics')return <Analytics key={p.c.id} c={p.c} language={p.language} currency={p.currency}/>;if(p.view==='scorecard')return <Scorecard key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='imports')return <TypedImports key={p.c.id} c={p.c} language={p.language} legacy={<LegacyCommunity {...p}/>}/>;if(p.view==='budgets')return <Budgets key={p.c.id} c={p.c} language={p.language} currency={p.currency}/>;if(p.view==='meetings')return <Governance key={p.c.id} c={p.c} language={p.language} legacy={<LegacyCommunity {...p}/>}/>;return <LegacyCommunity {...p}/>}
+export default function Community(p:CommProps){if(p.view==='notifications'&&p.c.role_key==='platform_admin')return <PlatformNotificationsConsole c={p.c} language={p.language}/>;if(p.view==='ownership')return <Ownership key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='analytics')return <Analytics key={p.c.id} c={p.c} language={p.language} currency={p.currency}/>;if(p.view==='scorecard')return <Scorecard key={p.c.id} c={p.c} language={p.language}/>;if(p.view==='imports')return <TypedImports key={p.c.id} c={p.c} language={p.language} legacy={<LegacyCommunity {...p}/>}/>;if(p.view==='budgets')return <Budgets key={p.c.id} c={p.c} language={p.language} currency={p.currency}/>;if(p.view==='meetings')return <Governance key={p.c.id} c={p.c} language={p.language} legacy={<LegacyCommunity {...p}/>}/>;return <LegacyCommunity {...p}/>}

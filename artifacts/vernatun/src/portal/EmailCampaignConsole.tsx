@@ -30,7 +30,7 @@ export default function EmailCampaignConsole({c,language}:{c:RoleContext;languag
  async function start(){if(!campaign?.id||busy)return;if(!window.confirm(`${t.confirm} (${campaign.recipient_count})`))return;
   setBusy(true);setError('');setNotice('');
   try{let current:Row;
-   do{current=await request<Row>(`/platform/email/campaigns/${encodeURIComponent(campaign.id)}/dispatch`,'POST',{});setCampaign((p:Row)=>({...p,...current}));}
+   do{current=await request<Row>(`/platform/email/campaigns/${encodeURIComponent(campaign.id)}/dispatch`,'POST',{});setCampaign(p=>p?({...p,...current}):current);}
    while(!current.done&&current.status==='sending');
    setNotice(`${current.accepted??0} · ${t.accepted}; ${current.failed??0} · ${t.failed}; ${current.unknown??0} · ${t.unknown}`);
    setTick(n=>n+1);

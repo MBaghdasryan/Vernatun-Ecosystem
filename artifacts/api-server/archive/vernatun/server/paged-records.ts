@@ -7,7 +7,7 @@ const scope=(c:Context)=>[c.organization_id,c.building_id,c.unit_id];
 export async function recordDefinition(req:Parameters<typeof context>[0],resource:string):Promise<Definition>{
  const c=await context(req);
  if(resource==='organizations'){
-  await requirePermission(req,'organizations.read');
+   await requirePermission(req,c.permissions.includes('organizations.manage')?'organizations.manage':'organizations.read');
    return {sql:'SELECT id,name,company_type,status,version,timezone,currency,is_demo,created_at FROM organizations',args:[],sorts:['name','company_type','currency','created_at','status'],initial:'created_at'};
  }
  if(resource==='audit'){

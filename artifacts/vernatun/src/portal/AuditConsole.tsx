@@ -1,5 +1,5 @@
 import {useState,useEffect,useCallback,useRef,type FormEvent} from 'react';
-import {request} from './client';
+import {downloadFile,request} from './client';
 import {ct} from './console-i18n';
 import {errText,fmtDate,yerevanInstant} from './console-util';
 import type {Language,Currency} from './i18n';
@@ -27,6 +27,13 @@ export default function AuditConsole({c,language}:{c:RoleContext;language:Langua
  const submit=(e:FormEvent)=>{e.preventDefault();setPage(1);setFilters(draft)};
  const items:Row[]=data?.items??[],total=Number(data?.total??0),pages=Math.max(1,Math.ceil(total/size));
  const inp=(k:keyof typeof EMPTY,l:string,type='text')=><label>{t(l)}<input type={type} value={draft[k]} onChange={set(k)} maxLength={120}/></label>;
+  async function exportCsv(){try{const q=new URLSearchParams(),x:Record<string,string>={...filters};
+   if(x.from)x.from=yerevanInstant(x.from);if(x.to)x.to=yerevanInstant(x.to);
+   if(!crossOrg)x.organizationId='';
+   if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x.actor)){x.actorId=x.actor;x.actor=''}
+   for(const[k,v]of Object.entries(x))if(v)q.set(k,v);
+   const blob=await downloadFile('/audit/export.csv?'+q),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='audit-events.csv';a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){setError(errText(language,e))}}
  return <div className="p-business cx-wrap">
   <form className="p-card cx-form" onSubmit={submit} role="search"><h3>{t('audit')}</h3><div className="cx-filters">
    {crossOrg&&canOrgs&&<label>{t('organization')}<select value={draft.organizationId} onChange={set('organizationId')}><option value="">{t('all')}</option>{orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>}
@@ -35,7 +42,7 @@ export default function AuditConsole({c,language}:{c:RoleContext;language:Langua
    {inp('from','from','datetime-local')}{inp('to','to','datetime-local')}
    <label>{t('sort')}<select value={draft.sort} onChange={set('sort')}>{['created_at','action','actor'].map(s=><option key={s} value={s}>{t(s==='actor'?'actor':s==='action'?'action':s)}</option>)}</select></label>
    <label>{t('direction')}<select value={draft.direction} onChange={set('direction')}><option value="desc">{t('desc')}</option><option value="asc">{t('asc')}</option></select></label></div>
-   <div className="cx-row"><button className="p-button orange">{t('apply')}</button><button type="button" className="p-button" onClick={()=>{setDraft(EMPTY);setFilters(EMPTY);setPage(1)}}>{t('reset')}</button><button type="button" className="p-button" disabled={loading} onClick={()=>setTick(n=>n+1)}>{t('refresh')}</button></div></form>
+    <div className="cx-row"><button className="p-button orange">{t('apply')}</button><button type="button" className="p-button" onClick={()=>{setDraft(EMPTY);setFilters(EMPTY);setPage(1)}}>{t('reset')}</button><button type="button" className="p-button" onClick={()=>void exportCsv()}>{language==='ru'?'Экспорт CSV':language==='hy'?'CSV արտահանում':'Export CSV'}</button><button type="button" className="p-button" disabled={loading} onClick={()=>setTick(n=>n+1)}>{t('refresh')}</button></div></form>
   {error&&<div role="alert"><p className="p-error">{error}</p><button className="p-button" onClick={()=>setTick(n=>n+1)}>{t('retry')}</button></div>}
   <section className="p-card" aria-busy={loading}>{loading&&!data?<p role="status">{t('loading')}</p>:<div className="cx-scroll"><table className="cx-table"><thead><tr><th>{t('created_at')}</th><th>{t('organization')}</th><th>{t('actor')}</th><th>{t('action')}</th><th>{t('entity')}</th><th>{t('result')}</th><th>{t('details')}</th></tr></thead><tbody>
    {items.map(i=><tr key={i.id}><td>{fmtDate(i.created_at,language)}</td><td>{i.organization_name??'—'}</td><td>{i.actor??'—'}</td><td>{i.action}</td><td>{i.entity_type}{i.entity_id?' · '+i.entity_id:''}</td><td>{i.result?t(i.result):'—'}</td><td><pre className="cx-pre">{JSON.stringify(i.details??{},null,1)}</pre></td></tr>)}

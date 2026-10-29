@@ -184,7 +184,7 @@ platformFoundation.get('/audit',async(req,res)=>{
    LEFT JOIN organizations o ON o.id=a.organization_id WHERE ${predicate}
    ORDER BY ${sort} ${q.direction},a.id ${q.direction} LIMIT 10001`,values)).rows;
   if(rows.length>10000)throw new ApiError(413,'export_limit_exceeded');
-  const cell=(value:unknown)=>{const raw=String(value??''),safe=/^\\s*[=+\\-@]/.test(raw)?`'${raw}`:raw;return '"'+safe.replace(/"/g,'""')+'"';};
+   const cell=(value:unknown)=>{const raw=String(value??''),safe=/^\s*[=+@-]/.test(raw)?`'${raw}`:raw;return '"'+safe.replace(/"/g,'""')+'"';};
   const csv=['created_at,organization,actor,action,entity_type,entity_id,result,details',
    ...rows.map(r=>[r.created_at,r.organization_name,r.actor,r.action,r.entity_type,r.entity_id,r.result,JSON.stringify(r.details??{})].map(cell).join(','))].join('\r\n');
   res.setHeader('Content-Type','text/csv; charset=utf-8');

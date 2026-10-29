@@ -28,7 +28,7 @@ const S:Record<string,[string,string,string]>={
  note:['Առաքված նշանակում է՝ ստացողի սերվերն ընդունել է։ Բացումներ և սեղմումներ չեն հետևվում։','Доставлено означает, что сервер адресата принял письмо. Открытия и клики не отслеживаются.','Delivered means the recipient server accepted the message. Opens and clicks are not tracked.']};
 const STATUSES=['unknown','local','accepted','sent','delayed','delivered','bounced','complained','failed'],TYPES=['invitation','password_reset','delegation','notification','platform_invoice','support','other'];
 const L={en:2,ru:1,hy:0} as const;
-export default function EmailConsole({c,language}:{c:RoleContext;language:Language}){
+function EmailOperationsConsole({c,language}:{c:RoleContext;language:Language}){
  const t=(k:string)=>(S[k]??[k,k,k])[L[language]];
  const [from,setFrom]=useState(()=>day(new Date(Date.now()-29*864e5))),[to,setTo]=useState(()=>day(new Date()));
  const [f,setF]=useState({status:'',provider:'',businessType:'',recipient:''});
@@ -88,3 +88,4 @@ export default function EmailConsole({c,language}:{c:RoleContext;language:Langua
    {detail&&<><div className="cx-grid"><div>{kv('msgId',detail.message.provider_message_id_short??'—')}{kv('status',st(detail.message.status))}{kv('sender',detail.message.sender??'—')}{kv('scope',detail.message.provider_scope??'—')}</div><div>{kv('created',fmtDate(detail.message.created_at,language))}{kv('accepted_at',fmtDate(detail.message.accepted_at,language))}</div></div>
     {!detail.events.length?<p>{t('noEvents')}</p>:<div className="cx-scroll"><table className="cx-table"><thead><tr><th>{t('events')}</th><th>{t('outcome')}</th><th>{t('occurred')}</th><th>{t('received')}</th><th/></tr></thead><tbody>{detail.events.map((e:Row,i:number)=><tr key={i}><td>{e.event_type}</td><td>{e.outcome}</td><td>{fmtDate(e.occurred_at,language)}</td><td>{fmtDate(e.received_at,language)}</td><td><pre className="cx-pre">{JSON.stringify(e.safe_metadata??{},null,1)}</pre></td></tr>)}</tbody></table></div>}</>}</section>}
  </div>}
+export default EmailOperationsConsole;

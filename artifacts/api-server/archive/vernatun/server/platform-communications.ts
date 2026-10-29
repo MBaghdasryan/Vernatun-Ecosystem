@@ -7,7 +7,7 @@ import {transaction,record} from './operations.js';
 import {deliverEmail} from './email.js';
 
 export const platformCommunications=Router();
-platformCommunications.use(async(req,_res,next)=>{
+platformCommunications.use(['/platform/communications','/platform/notifications','/platform/email'],async(req,_res,next)=>{
  try{
   const c=await context(req);
   if(c.role_key!=='platform_admin'||c.organization_id)throw new ApiError(403,'forbidden');
@@ -299,9 +299,10 @@ platformCommunications.post('/platform/email/campaigns/:id/dispatch',async(req,r
   try{
    const outcome=await deliverEmail({to:r.email,subject:batch.campaign.subject,text:batch.campaign.body_text,url:''},
     `notification-${r.id}`,{business:{type:'notification',id,organizationId:r.organization_id}});
-   const state=outcome.delivery==='local_only'?'local':'accepted';
+    const state=outcome.delivery==='local_only'?'local':'accepted';
+    const messageId=outcome.delivery==='local_only'?null:outcome.messageId??null;
    await pool.query(`UPDATE platform_email_campaign_recipients SET status=$2,provider_message_id=$3,
-    failure_code=NULL,updated_at=now() WHERE id=$1`,[r.id,state,outcome.messageId??null]);
+     failure_code=NULL,updated_at=now() WHERE id=$1`,[r.id,state,messageId]);
   }catch(error){
    const code=(error as {code?:string})?.code;
    const state=code==='email_not_configured'||code==='email_delivery_failed'?'failed':'unknown';

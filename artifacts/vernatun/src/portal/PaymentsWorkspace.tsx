@@ -6,6 +6,7 @@ import type {RoleContext} from './types';
 import {date,money,type Currency,type Language} from './i18n';
 import {getCsrfHeaders} from './client';
 import {pt} from './payments-i18n';
+import PlatformPaymentsConsole from './PlatformPaymentsConsole';
 import './payments.css';
 // Generated clients reuse the session CSRF token already held by ./client.
 setCsrfTokenGetter(()=>getCsrfHeaders()['X-CSRF-Token']||null);
@@ -108,7 +109,7 @@ export function PaymentsInner({c,language:l,currency}:Props){
   {confirm&&<Dialog title={pt(l,'disable')} l={l} onClose={()=>setConfirm(undefined)}><p>{pt(l,'disableConfirm')} {providerLabel(confirm.provider_code)} · {confirm.environment}</p><div className="p-modal-actions"><button className="p-button" onClick={()=>setConfirm(undefined)}>{pt(l,'cancel')}</button><button className="p-button orange" disabled={disable.isPending} onClick={()=>disable.mutate({id:confirm.id},{onSuccess:()=>{setConfirm(undefined);refresh()},onError:er=>{setConfirm(undefined);setSetupMsg({ok:false,text:msg(er,l)})}})}>{pt(l,'confirm')}</button></div></Dialog>}
  </div>}
 
-export default function PaymentsWorkspace(p:Props){return <Scoped c={p.c}><PaymentsInner {...p}/></Scoped>}
+export default function PaymentsWorkspace(p:Props){return p.c.role_key==='platform_admin'?<PlatformPaymentsConsole c={p.c} language={p.language}/>:<Scoped c={p.c}><PaymentsInner {...p}/></Scoped>}
 
 function UtilitiesInner({c,language:l}:Props){
  const q=useGetUtilityBillingWorkspace({query:{queryKey:[...getGetUtilityBillingWorkspaceQueryKey(),c.id]}});

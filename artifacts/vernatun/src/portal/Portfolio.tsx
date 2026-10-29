@@ -3,6 +3,7 @@ import type {Currency,Language} from './i18n';
 import type {RoleContext} from './types';
 import {Fail,Frozen,useFrozen,useMounted,useLoad,LoadFail,Empty,p6,bp,minorText,minorFromMajor,dayText,ISO_DAY,type Row} from './phase6-ui';
 import PortfolioObjects from './PortfolioObjects';
+import PlatformAnalyticsConsole from './PlatformAnalyticsConsole';
 import {Bar,BarChart,CartesianGrid,Legend,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 
 type Flt={from:string;to:string;currency:string;buildingId:string;propertyId:string;portfolioObjectId?:string};
@@ -35,7 +36,13 @@ function Filters({c,l,currency,withCurrency,onApply}:{c:RoleContext;l:Language;c
 const occ=(r:Row|undefined,l:Language)=>r?.occupancyBasisPoints===null||r?.occupancyBasisPoints===undefined?p6(l,'occIncomplete'):bp(r.occupancyBasisPoints)+' ('+(r.occupiedUnits??'—')+'/'+(r.unitCount??'—')+')';
 const qs=(f:Flt|undefined,cur:boolean)=>{const q=new URLSearchParams();if(f){if(f.from)q.set('from',f.from);if(f.to)q.set('to',f.to);if(cur&&f.currency)q.set('currency',f.currency);if(f.buildingId)q.set('buildingId',f.buildingId);if(f.propertyId)q.set('propertyId',f.propertyId);if(f.portfolioObjectId)q.set('portfolioObjectId',f.portfolioObjectId)}return q.toString()};
 
-export function Analytics({c,language:l,currency}:{c:RoleContext;language:Language;currency:Currency}){
+type AnalyticsProps={c:RoleContext;language:Language;currency:Currency};
+export function Analytics(props:AnalyticsProps){
+ return props.c.role_key==='platform_admin'
+  ?<PlatformAnalyticsConsole c={props.c} language={props.language}/>
+  :<PortfolioAnalytics {...props}/>;
+}
+function PortfolioAnalytics({c,language:l,currency}:AnalyticsProps){
  const [f,setF]=useState<Flt>();const cur=f?.currency||currency;
  const a=useLoad<Row>(f?'/portfolio/analytics?'+qs(f,true):null,[c.id]);const d=a.data;const m=(v:unknown,miss?:string)=>minorText(v,cur,l,miss);const nr=p6(l,'notRecorded');
   const chartRows:PortfolioChartPoint[]=(d?.series??[]).map((s:Row)=>({
