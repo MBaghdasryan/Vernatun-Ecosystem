@@ -42,6 +42,7 @@ import {mfa} from './mfa.js';
 import {finance} from './finance.js';
 import {payments} from './payments/routes.js';
 import {billingBatches} from './billing-batches.js';
+import {billingConfiguration} from './billing-configuration.js';
 import {bankReconciliation} from './bank-reconciliation.js';
 import {organizationConsole} from './organization-console.js';
 import {supportConversation} from './support-conversation.js';
@@ -145,7 +146,7 @@ app.use('/api',documentVersions);app.use('/api',ownership);app.use('/api',govern
 app.use('/api',notificationCenter);app.use('/api',branding);app.use('/api',portfolioObjects);
 app.use('/api',platformFoundation);app.use('/api',coreOperations);app.use('/api',operationIncidents);app.use('/api',photos);app.use('/api',workflow);app.use('/api',finance);app.use('/api',field);app.use('/api',residentLifecycle);app.use('/api',notificationLinks);app.use('/api',grants);app.use('/api',maintenance);app.use('/api',services);app.use('/api',imports);app.use('/api',lifecycle);app.use('/api',documents);app.use('/api',reporting);app.use('/api',insights);app.use('/api',api);
 app.use('/api',hayat);
-app.use('/api',billingBatches);
+app.use('/api',billingBatches,billingConfiguration);
 app.use('/api',bankReconciliation);
 app.use('/api',organizationConsole);
 app.use('/api',supportConversation);

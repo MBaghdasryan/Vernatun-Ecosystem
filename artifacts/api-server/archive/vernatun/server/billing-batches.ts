@@ -6,6 +6,7 @@ import {uuid,day,hash,amountLimit,version} from './finance-shared.js';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
 import {resolvePayers} from './payer-responsibility-store.js';
+import {calculateRuleBilling} from './billing-configuration.js';
 export const billingBatches=Router();billingBatches.use(requireAuth);
 const input=z.object({buildingId:uuid,period:day.refine(s=>s.endsWith('-01')),tariffId:uuid}).strict();
 async function calculate(db:PoolClient,c:Context,b:z.infer<typeof input>,lock=false){
@@ -41,7 +42,21 @@ async function batch(db:PoolClient,c:Context,id:string){
  const row=(await db.query('SELECT * FROM billing_batches WHERE id=$1 AND organization_id=$2 FOR UPDATE',[id,c.organization_id])).rows[0];
  if(!row||c.building_id&&c.building_id!==row.building_id||c.unit_id)throw new ApiError(404,'not_found');return row;
 }
+const quantityHundredths=(value:string)=>{const [whole,fraction='']=value.split('.');const n=BigInt(whole)*10000n+BigInt(fraction.padEnd(4,'0').slice(0,4));const q=(n+50n)/100n;return (q>0n?q:1n).toString()};
 billingBatches.post('/finance/batches/preview',async(req,res)=>{const c=await requirePermission(req,'billing.calculate'),b=input.parse(req.body);res.json((await transaction(db=>calculate(db,c,b))).snapshot)});
+billingBatches.post('/finance/rule-batches',async(req,res)=>{
+ const c=await requirePermission(req,'billing.calculate'),b=z.object({buildingId:uuid,period:day.refine(s=>s.endsWith('-01')),key:uuid}).strict().parse(req.body);
+ res.status(201).json(await transaction(db=>idempotent(db,req,b.key,b,async()=>{
+  const result=await calculateRuleBilling(db,c,b.buildingId,b.period);
+  if(!result.snapshot.chargeCount)throw new ApiError(409,'no_charges');
+  const primaryTariffId=result.snapshot.charges[0].tariffId;
+  const row=(await db.query(`INSERT INTO billing_batches(organization_id,building_id,tariff_id,period,snapshot,fingerprint,created_by,snapshot_kind)
+   VALUES($1,$2,$3,$4,$5,$6,$7,'rule_engine') RETURNING *`,
+  [c.organization_id,b.buildingId,primaryTariffId,b.period,JSON.stringify(result.snapshot),result.fingerprint,req.user!.id])).rows[0];
+  await record(db,req,c,'billing_batch.rule_draft','billing_batch',row.id,{chargeCount:result.snapshot.chargeCount,totalMinor:result.snapshot.totalMinor});
+  return row;
+ })));
+});
 billingBatches.get('/finance/batches',async(req,res)=>{const c=await requirePermission(req,'billing.read');res.json((await pool.query('SELECT * FROM billing_batches WHERE organization_id=$1 AND ($2::uuid IS NULL OR building_id=$2) AND $3::uuid IS NULL ORDER BY created_at DESC LIMIT 100',[c.organization_id,c.building_id,c.unit_id])).rows)});
 billingBatches.post('/finance/batches',async(req,res)=>{
  const c=await requirePermission(req,'billing.calculate'),b=input.extend({key:uuid}).parse(req.body);
@@ -61,14 +76,26 @@ billingBatches.post('/finance/batches/:id/:action',async(req,res)=>{
    if(row.version!==b.version)throw new ApiError(409,'stale_version');
    if(row.status!=='draft')throw new ApiError(409,'batch_not_draft');
    if(action==='publish'){
-    const fresh=await calculate(db,c,{buildingId:row.building_id,period:String(row.snapshot.period),tariffId:row.tariff_id},true);
+     const fresh=row.snapshot_kind==='rule_engine'
+      ?await calculateRuleBilling(db,c,row.building_id,String(row.snapshot.period),true)
+      :await calculate(db,c,{buildingId:row.building_id,period:String(row.snapshot.period),tariffId:row.tariff_id},true);
     if(fresh.fingerprint!==row.fingerprint)throw new ApiError(409,'batch_preview_changed');
     if(fresh.snapshot.warnings.length&&!b.acceptWarnings)throw new ApiError(409,'batch_warnings_unacknowledged');
     for(const line of fresh.snapshot.charges){
-     const tariff=fresh.snapshot.tariff;
-     const invoice=(await db.query("INSERT INTO invoices(organization_id,unit_id,payer_user_id,period,amount_minor,currency,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING id",[c.organization_id,line.unitId,line.payerId,row.snapshot.period,line.amountMinor,tariff.currency,req.user!.id])).rows[0];
-     await db.query('INSERT INTO invoice_lines(invoice_id,description,quantity_hundredths,rate_minor,amount_minor) VALUES($1,$2,$3,$4,$5)',[invoice.id,tariff.name,line.quantityHundredths,tariff.rateMinor,line.amountMinor]);
-      await db.query('INSERT INTO charges(organization_id,payer_assignment_id,period,tariff_id,invoice_id,payer_delegation_id) VALUES($1,$2,$3,$4,$5,$6)',[c.organization_id,line.payerAssignmentId,row.snapshot.period,row.tariff_id,invoice.id,line.payerDelegationId]);
+      const ruleBased=row.snapshot_kind==='rule_engine';
+      const legacyTariff=(fresh.snapshot as any).tariff;
+      const tariff=ruleBased?{name:line.serviceName,rateMinor:line.rateMinor,currency:line.currency}:{...legacyTariff,name:legacyTariff.name,rateMinor:legacyTariff.rateMinor,currency:legacyTariff.currency};
+      const amountMinor=ruleBased?line.roundedAmountMinor:line.amountMinor;
+      const quantity=ruleBased?quantityHundredths(line.baseQuantity):line.quantityHundredths;
+      const invoice=(await db.query("INSERT INTO invoices(organization_id,unit_id,payer_user_id,period,amount_minor,currency,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING id",[c.organization_id,line.unitId,line.payerId,row.snapshot.period,amountMinor,tariff.currency,req.user!.id])).rows[0];
+      await db.query(`INSERT INTO invoice_lines(invoice_id,description,quantity_hundredths,rate_minor,amount_minor,calculation_metadata)
+       VALUES($1,$2,$3,$4,$5,$6)`,[invoice.id,tariff.name,quantity,tariff.rateMinor,amountMinor,JSON.stringify(ruleBased?{
+        model:'rule_engine',method:line.calculationMethod,ruleId:line.ruleId,tariffId:line.tariffId,
+        baseQuantity:line.baseQuantity,baseUnit:line.baseUnit,rateMinor:line.rateMinor,rateUnit:line.rateUnit,
+        rawAmountMinor:line.rawAmountMinor,roundedAmountMinor:line.roundedAmountMinor,roundingMode:line.roundingMode,
+        serviceName:line.serviceName
+       }:{model:'legacy'})]);
+       await db.query('INSERT INTO charges(organization_id,payer_assignment_id,period,tariff_id,invoice_id,payer_delegation_id) VALUES($1,$2,$3,$4,$5,$6)',[c.organization_id,line.payerAssignmentId,row.snapshot.period,ruleBased?line.tariffId:row.tariff_id,invoice.id,line.payerDelegationId]);
      await db.query("UPDATE invoices SET status='published',published_at=now(),published_by=$2 WHERE id=$1",[invoice.id,req.user!.id]);
      await db.query('INSERT INTO billing_batch_invoices(batch_id,organization_id,invoice_id) VALUES($1,$2,$3)',[row.id,c.organization_id,invoice.id]);
     }
