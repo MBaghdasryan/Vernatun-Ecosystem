@@ -11,6 +11,20 @@ import {preserveAdministrator} from './assignment-management.js';
 import {systemPermissions} from './system-permissions.js';
 export const iam=Router();
 const uuid=z.string().uuid(),reason=z.string().trim().min(5).max(1000);
+const userFilterFields=z.object({
+ q:z.string().trim().max(100).default(''),
+ createdFrom:z.string().date().optional(),
+ createdTo:z.string().date().optional(),
+}).strict();
+const validUserDateRange=(b:{createdFrom?:string;createdTo?:string})=>!b.createdFrom||!b.createdTo||b.createdFrom<=b.createdTo;
+const userFilter=userFilterFields.refine(validUserDateRange,{path:['createdTo'],message:'invalid_date_range'});
+const userListFilter=userFilterFields.extend({offset:z.coerce.number().int().min(0).max(100000).default(0)})
+ .strict().refine(validUserDateRange,{path:['createdTo'],message:'invalid_date_range'});
+function userSearchPattern(q:string){return '%'+q.replace(/[\\%_]/g,'\\$&')+'%'}
+function csvCell(input:unknown){
+ const value=String(input??''),safe=/^\s*[=+\-@]/.test(value)?`'${value}`:value;
+ return '"'+safe.replace(/"/g,'""')+'"';
+}
 const isPlatform=(c:Context)=>c.role_key==='platform_admin'&&!c.organization_id;
 async function actor(req:Request,readOnly=false){
  const c=await context(req);
@@ -139,10 +153,10 @@ iam.patch('/iam/profiles/:id',async(req,res)=>{
  }));
 });
 iam.get('/iam/users',async(req,res)=>{
- const c=await actor(req),q=z.string().max(100).parse(req.query.q??''),offset=z.coerce.number().int().min(0).max(100000).parse(req.query.offset??0);
- const args=[isPlatform(c),c.organization_id,c.building_id,c.unit_id,'%'+q+'%',offset];
+  const c=await actor(req),b=userListFilter.parse(req.query),args=[isPlatform(c),c.organization_id,c.building_id,c.unit_id,userSearchPattern(b.q),b.createdFrom??null,b.createdTo??null,b.offset];
   const rows=(await pool.query(`SELECT u.id,u.name,u.email,u.account_status,
  COALESCE((SELECT enabled FROM mfa_credentials WHERE user_id=u.id),false) AS mfa_enabled,count(*) OVER()::int AS total
+   ,u.created_at
   ,COALESCE((SELECT json_agg(json_build_object('role_key',a.role_key,'organization_id',a.organization_id,
    'organization_name',o.name,'building_id',a.building_id,'building_name',b.name,'unit_id',a.unit_id,
    'unit_number',un.number,'active',a.active) ORDER BY a.active DESC,a.role_key)
@@ -151,8 +165,42 @@ iam.get('/iam/users',async(req,res)=>{
    WHERE a.user_id=u.id),'[]'::json) AS assignments
  FROM users u WHERE ($1 OR EXISTS(SELECT 1 FROM role_assignments a WHERE a.user_id=u.id AND a.organization_id=$2
  AND ($3::uuid IS NULL OR a.building_id=$3) AND ($4::uuid IS NULL OR a.unit_id=$4)))
- AND (u.name ILIKE $5 OR u.email ILIKE $5) ORDER BY u.name,u.id LIMIT 50 OFFSET $6`,args)).rows;
- res.json({rows,total:rows[0]?.total??0,offset,limit:50});
+  AND (u.name ILIKE $5 OR u.email ILIKE $5)
+  AND ($6::date IS NULL OR (u.created_at AT TIME ZONE 'Asia/Yerevan')::date >= $6::date)
+  AND ($7::date IS NULL OR (u.created_at AT TIME ZONE 'Asia/Yerevan')::date <= $7::date)
+  ORDER BY u.name,u.id LIMIT 50 OFFSET $8`,args)).rows;
+  res.json({rows,total:rows[0]?.total??0,offset:b.offset,limit:50});
+ });
+ // Register the static export path before /iam/users/:id.
+ iam.get('/iam/users/export.csv',async(req,res)=>{
+  const c=await actor(req,true);if(!isPlatform(c))throw new ApiError(403,'forbidden');
+  const b=userFilter.parse(req.query),args=[true,c.organization_id,c.building_id,c.unit_id,userSearchPattern(b.q),b.createdFrom??null,b.createdTo??null];
+  const rows=(await pool.query(`SELECT u.id,u.name,u.email,u.account_status,u.created_at,
+   COALESCE((SELECT enabled FROM mfa_credentials WHERE user_id=u.id),false) AS mfa_enabled,
+   COALESCE((SELECT json_agg(json_build_object('role_key',a.role_key,'organization_name',o.name,
+    'building_name',building.name,'unit_number',un.number,'active',a.active) ORDER BY a.active DESC,a.role_key)
+    FROM role_assignments a LEFT JOIN organizations o ON o.id=a.organization_id
+    LEFT JOIN buildings building ON building.id=a.building_id LEFT JOIN units un ON un.id=a.unit_id
+    WHERE a.user_id=u.id),'[]'::json) AS assignments
+   FROM users u WHERE ($1 OR EXISTS(SELECT 1 FROM role_assignments a WHERE a.user_id=u.id AND a.organization_id=$2
+    AND ($3::uuid IS NULL OR a.building_id=$3) AND ($4::uuid IS NULL OR a.unit_id=$4)))
+   AND (u.name ILIKE $5 OR u.email ILIKE $5)
+   AND ($6::date IS NULL OR (u.created_at AT TIME ZONE 'Asia/Yerevan')::date >= $6::date)
+   AND ($7::date IS NULL OR (u.created_at AT TIME ZONE 'Asia/Yerevan')::date <= $7::date)
+   ORDER BY u.created_at DESC,u.id DESC LIMIT 20001`,args)).rows;
+  if(rows.length>20000)throw new ApiError(413,'export_limit_exceeded');
+  const columns=['name','email','access','account_status','mfa_enabled','created_at'];
+  const csvRows=rows.map(user=>{
+   const access=(user.assignments??[]).map((a:any)=>{
+    const scope=[a.organization_name??(!a.building_name?'Vernatun':null),a.building_name,a.unit_number?`Unit ${a.unit_number}`:null].filter(Boolean).join(' / ');
+    return `${a.role_key}${scope?` (${scope})`:''}${a.active?'':' [inactive]'}`;
+   }).join('; ');
+   const values:Record<string,unknown>={...user,access,created_at:user.created_at instanceof Date?user.created_at.toISOString():new Date(user.created_at).toISOString()};
+   return columns.map(key=>csvCell(values[key])).join(',');
+  });
+  const csv=[columns.map(csvCell).join(','),...csvRows].join('\r\n');
+  await transaction(async db=>record(db,req,c,'iam.users.export','user_directory','all',{rows:rows.length,searchApplied:!!b.q,createdFrom:b.createdFrom??null,createdTo:b.createdTo??null}));
+  res.set({'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="vernatun-users.csv"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).send('\ufeff'+csv);
 });
 iam.get('/iam/users/:id',async(req,res)=>{
  const c=await actor(req),id=uuid.parse(req.params.id);

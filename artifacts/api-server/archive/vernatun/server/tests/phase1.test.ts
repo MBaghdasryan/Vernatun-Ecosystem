@@ -114,6 +114,34 @@ test('Platform can invite organization roles and Vernatun support without creati
  assert.equal((await org.call('/invitations','POST',{email:`support-org-${tag}@example.test`,role:'support'})).status,403);
 });
 
+test('Platform user directory supports creation-date filters and an audited formula-safe CSV export',async()=>{
+ const platform=clients.platform_admin,org=clients.org_admin,user=seeded.accounts.platform_admin;
+ const day=(await pool.query("SELECT (created_at AT TIME ZONE 'Asia/Yerevan')::date::text AS day FROM users WHERE id=$1",[user.id])).rows[0].day;
+ const query=new URLSearchParams({q:user.email,createdFrom:day,createdTo:day});
+ const filtered=await platform.call('/iam/users?'+query.toString());
+ assert.equal(filtered.status,200);
+ assert.ok(filtered.data.rows.some((row:any)=>row.id===user.id&&row.created_at));
+ const excluded=await platform.call('/iam/users?'+new URLSearchParams({q:user.email,createdFrom:'1900-01-01',createdTo:'1900-01-02'}));
+ assert.equal(excluded.status,200);assert.equal(excluded.data.total,0);
+ assert.equal((await platform.call('/iam/users?createdFrom=2026-10-30&createdTo=2026-10-01')).status,400);
+
+ const original=(await pool.query('SELECT name FROM users WHERE id=$1',[user.id])).rows[0].name;
+ await pool.query('UPDATE users SET name=$2 WHERE id=$1',[user.id,'=HYPERLINK("https://example.test")']);
+ try{
+  const response=await fetch(base+'/api/iam/users/export.csv?'+query.toString(),{headers:{Cookie:platform.cookie}});
+  assert.equal(response.status,200);assert.match(response.headers.get('content-type')??'',/text\/csv/i);
+  assert.match(response.headers.get('content-disposition')??'',/vernatun-users\.csv/);
+  const csv=await response.text();
+  assert.ok(csv.startsWith('"name","email","access","account_status","mfa_enabled","created_at"'));
+  assert.ok(csv.includes("'=HYPERLINK"));
+  assert.ok(csv.includes(user.email));
+  const audit=(await pool.query("SELECT details FROM audit_events WHERE action='iam.users.export' AND actor_user_id=$1 ORDER BY created_at DESC LIMIT 1",[user.id])).rows[0];
+  assert.deepEqual(audit.details,{rows:1,searchApplied:true,createdFrom:day,createdTo:day});
+ }finally{await pool.query('UPDATE users SET name=$2 WHERE id=$1',[user.id,original])}
+ const denied=await fetch(base+'/api/iam/users/export.csv',{headers:{Cookie:org.cookie}});
+ assert.equal(denied.status,403);
+});
+
 test('Platform audit includes organization events and structured details without leaking another organization to org admin',async()=>{
  const first=randomUUID(),second=randomUUID();
  await pool.query(`INSERT INTO audit_events(organization_id,actor_user_id,action,entity_type,entity_id,details)

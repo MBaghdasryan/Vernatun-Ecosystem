@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState,type ComponentType,type FormEvent,type ReactNode} from 'react';
-import {ArrowLeft,ArrowRight,Building2,KeyRound,Plus,Search,Users} from 'lucide-react';
-import {request} from './client';
+import {ArrowLeft,ArrowRight,Building2,CalendarDays,Download,KeyRound,Plus,Search,Users} from 'lucide-react';
+import {downloadFile,request} from './client';
 import EmployeeAssignment from './EmployeeAssignment';
 import {roleName,type Language} from './i18n';
 import type {RoleContext} from './types';
@@ -12,7 +12,7 @@ type ErrorComponent=ComponentType<{error:unknown}>;
 type Props={c:RoleContext;language:Language;Modal:ModalComponent;ErrorNotice:ErrorComponent};
 type Catalog={roles:Record<string,{permissions:string[]}>};
 type Assignment={role_key:string;organization_name:string|null;building_name:string|null;unit_number:string|null;active:boolean};
-type UserRow={id:string;name:string;email:string;account_status:string;mfa_enabled:boolean;assignments:Assignment[]};
+type UserRow={id:string;name:string;email:string;account_status:string;mfa_enabled:boolean;created_at:string;assignments:Assignment[]};
 type Organization={id:string;name:string};
 type ScopeOption={id:string;name:string;address?:string;number?:string;building_id?:string};
 type UserList={rows:UserRow[];total:number;offset:number;limit:number};
@@ -49,6 +49,13 @@ const copy={
  enabled:['Միացված','Включена','Enabled'],
  notEnabled:['Անջատված','Выключена','Off'],
  search:['Անուն կամ email','Имя или email','Name or email'],
+  createdFrom:['Ստեղծվել է՝ սկսած','Дата создания с','Created from'],
+  createdTo:['Ստեղծվել է՝ մինչև','Дата создания по','Created through'],
+  invalidDateRange:['Սկզբի օրը պետք է լինի ավարտից շուտ կամ նույն օրը։','Начальная дата должна быть не позже конечной.','Start date must be on or before end date.'],
+  resetFilters:['Մաքրել','Сбросить','Reset'],
+  exportUsers:['Արտահանել','Экспортировать','Export users'],
+  exporting:['Արտահանվում է…','Экспортируем…','Exporting…'],
+  createdAt:['Ստեղծվել է','Создан','Created'],
  noUsers:['Օգտատերեր չկան','Пользователей нет','No users found'],
  acceptedHint:['Հրավերը ստեղծված է։ Հաշիվը կհայտնվի ցուցակում, երբ օգտատերը ընդունի հրավերը։','Приглашение создано. Аккаунт появится в списке после его принятия.','Invitation created. The account will appear after the invite is accepted.'],
  inviteLink:['Հղում','Ссылка','Invitation link'],
@@ -67,6 +74,9 @@ const residentRoles=new Set(['unit_owner','renter','family']);
 export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Props){
  const [list,setList]=useState<UserList>();const [listError,setListError]=useState<unknown>();const [revision,setRevision]=useState(0);
  const [searchText,setSearchText]=useState('');const [query,setQuery]=useState('');const [offset,setOffset]=useState(0);
+ const [createdFromInput,setCreatedFromInput]=useState('');const [createdToInput,setCreatedToInput]=useState('');
+ const [createdFrom,setCreatedFrom]=useState('');const [createdTo,setCreatedTo]=useState('');
+ const [exporting,setExporting]=useState(false);const [exportError,setExportError]=useState<unknown>();
  const [catalog,setCatalog]=useState<Catalog>();const [organizations,setOrganizations]=useState<Organization[]>([]);
  const [catalogError,setCatalogError]=useState<unknown>();const [organizationsError,setOrganizationsError]=useState<unknown>();const [scopeError,setScopeError]=useState<unknown>();
  const [showInvite,setShowInvite]=useState(false);const [accessUser,setAccessUser]=useState<string>();
@@ -78,9 +88,11 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
  const [revisionDetails,setRevisionDetails]=useState(0);
 
  useEffect(()=>{let live=true;setList(undefined);setListError(undefined);
-  request<UserList>(`/iam/users?q=${encodeURIComponent(query)}&offset=${offset}`).then(data=>{if(live)setList(data)}).catch(error=>{if(live)setListError(error)});
+  const params=new URLSearchParams({q:query,offset:String(offset)});
+  if(createdFrom)params.set('createdFrom',createdFrom);if(createdTo)params.set('createdTo',createdTo);
+  request<UserList>(`/iam/users?${params}`).then(data=>{if(live)setList(data)}).catch(error=>{if(live)setListError(error)});
   return()=>{live=false};
- },[c.id,query,offset,revision]);
+ },[c.id,query,createdFrom,createdTo,offset,revision]);
  useEffect(()=>{let live=true;setCatalog(undefined);setOrganizations([]);setCatalogError(undefined);setOrganizationsError(undefined);
   request<Catalog>('/iam/catalog').then(roles=>{if(live)setCatalog(roles)}).catch(error=>{if(live)setCatalogError(error)});
   request<Organization[]>('/organizations').then(orgs=>{if(live)setOrganizations(orgs)}).catch(error=>{if(live)setOrganizationsError(error)});
@@ -103,6 +115,18 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
   return <span className="p-user-assignment" key={`${a.role_key}-${i}`}><strong>{roleName(language,a.role_key)}</strong><small>{scope}</small></span>;
  });
  const reload=()=>setRevision(value=>value+1);
+ const dateRangeInvalid=!!createdFromInput&&!!createdToInput&&createdFromInput>createdToInput;
+ function applyFilters(event:FormEvent){event.preventDefault();if(dateRangeInvalid)return;setOffset(0);setQuery(searchText.trim());setCreatedFrom(createdFromInput);setCreatedTo(createdToInput);setExportError(undefined)}
+ function resetFilters(){setSearchText('');setQuery('');setCreatedFromInput('');setCreatedToInput('');setCreatedFrom('');setCreatedTo('');setOffset(0);setExportError(undefined)}
+ async function exportUsers(){
+  if(exporting)return;setExporting(true);setExportError(undefined);
+  const params=new URLSearchParams({q:query});if(createdFrom)params.set('createdFrom',createdFrom);if(createdTo)params.set('createdTo',createdTo);
+  try{
+   const blob=await downloadFile(`/iam/users/export.csv?${params.toString()}`),url=URL.createObjectURL(blob),link=document.createElement('a');
+   link.href=url;link.download='vernatun-users.csv';link.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(error){setExportError(error)}finally{setExporting(false)}
+ }
+ const createdDate=(value:string)=>new Date(value).toLocaleDateString(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US');
  function openInvite(){setSubmitError(undefined);setSuccess(undefined);setAccountType('organization');setEmail('');setOrganizationId('');setRole('org_admin');setBuildingId('');setUnitId('');setShowInvite(true)}
  function changeAccountType(value:'organization'|'internal'){setAccountType(value);setOrganizationId('');setBuildingId('');setUnitId('');setRole(value==='internal'?'support':'org_admin');setScopeError(undefined);setSubmitError(undefined)}
  async function submitInvite(event:FormEvent){
@@ -123,19 +147,26 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
    <header><div className="p-platform-users-title"><Users size={21}/><div><h2>{text(language,'accounts')}</h2><p>{text(language,'accessHint')}</p></div></div>
     <button className="p-button orange" type="button" onClick={openInvite}><Plus size={17}/>{text(language,'add')}</button>
    </header>
-   <form className="p-user-search" onSubmit={event=>{event.preventDefault();setOffset(0);setQuery(searchText.trim())}}>
+    <form className="p-user-search" onSubmit={applyFilters}>
     <label><Search size={17}/><span className="sr-only">{text(language,'search')}</span><input value={searchText} onChange={event=>setSearchText(event.target.value)} placeholder={text(language,'search')}/></label>
+     <label className="p-user-date"><CalendarDays size={16}/><span>{text(language,'createdFrom')}</span><input aria-label={text(language,'createdFrom')} type="date" value={createdFromInput} onChange={event=>setCreatedFromInput(event.target.value)}/></label>
+     <label className="p-user-date"><CalendarDays size={16}/><span>{text(language,'createdTo')}</span><input aria-label={text(language,'createdTo')} type="date" value={createdToInput} onChange={event=>setCreatedToInput(event.target.value)}/></label>
     <button className="p-button" type="submit">{language==='ru'?'Найти':language==='hy'?'Փնտրել':'Search'}</button>
+     {(query||createdFrom||createdTo||searchText||createdFromInput||createdToInput)&&<button className="p-button" type="button" onClick={resetFilters}>{text(language,'resetFilters')}</button>}
+     <button className="p-button" type="button" disabled={!list?.total||exporting} onClick={()=>void exportUsers()}><Download size={15}/>{exporting?text(language,'exporting'):text(language,'exportUsers')}</button>
    </form>
+    {dateRangeInvalid&&<p className="p-user-date-error" role="alert">{text(language,'invalidDateRange')}</p>}
+    {!!exportError&&<ErrorNotice error={exportError}/>}
    {listError?<><ErrorNotice error={listError}/><button className="p-button" onClick={reload}>{language==='ru'?'Повторить':language==='hy'?'Կրկնել':'Retry'}</button></>:
     !list?<p role="status">{language==='ru'?'Загрузка…':language==='hy'?'Բեռնվում է…':'Loading…'}</p>:
     list.rows.length===0?<div className="p-empty"><Users size={25}/><h3>{text(language,'noUsers')}</h3></div>:
     <div className="p-table-wrap"><table><thead><tr>
-     <th>{language==='ru'?'Имя':language==='hy'?'Անուն':'Name'}</th><th>{text(language,'email')}</th><th>{text(language,'assignments')}</th>
+      <th>{language==='ru'?'Имя':language==='hy'?'Անուն':'Name'}</th><th>{text(language,'email')}</th><th>{text(language,'createdAt')}</th><th>{text(language,'assignments')}</th>
      <th>{text(language,'status')}</th><th>{text(language,'mfa')}</th><th>{text(language,'manageAccess')}</th>
     </tr></thead><tbody>{list.rows.map(user=><tr key={user.id}>
      <td data-label={language==='ru'?'Имя':language==='hy'?'Անուն':'Name'}>{user.name||'—'}</td>
      <td data-label={text(language,'email')}>{user.email}</td>
+      <td data-label={text(language,'createdAt')}>{createdDate(user.created_at)}</td>
      <td data-label={text(language,'assignments')}><div className="p-user-assignment-list">{visibleAssignments(user.assignments)}</div></td>
      <td data-label={text(language,'status')}><span className={'p-badge '+(user.account_status==='active'?'green':user.account_status==='locked'?'amber':'red')}>{text(language,user.account_status==='active'?'active':user.account_status==='locked'?'locked':'disabled')}</span></td>
      <td data-label={text(language,'mfa')}>{text(language,user.mfa_enabled?'enabled':'notEnabled')}</td>

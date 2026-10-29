@@ -148,10 +148,22 @@ globalThis.require = __bannerCrReq(import.meta.url);
     sourcemap: "linked",
     logLevel: "info",
   });
+  const sourceMigrations = path.join(artifactDir, "archive/vernatun/server/migrations");
+  const packagedMigrations = path.join(distDir, "migrations");
+  await cp(sourceMigrations, packagedMigrations, { recursive: true });
+  const migrationFiles = async directory => (await readdir(directory))
+    .filter(name => /^\d{3}_[a-z0-9_-]+\.sql$/i.test(name))
+    .sort();
+  const [sourceMigrationNames, packagedMigrationNames] = await Promise.all([
+    migrationFiles(sourceMigrations),
+    migrationFiles(packagedMigrations),
+  ]);
+  if (JSON.stringify(sourceMigrationNames) !== JSON.stringify(packagedMigrationNames)) {
+    throw new Error("The API release package is missing one or more SQL migrations.");
+  }
   await cp(
-    path.join(artifactDir, "archive/vernatun/server/migrations"),
-    path.join(distDir, "migrations"),
-    { recursive: true },
+    path.join(artifactDir, "COOLIFY-USER-MANAGEMENT-RELEASE-RU.md"),
+    path.join(distDir, "COOLIFY-USER-MANAGEMENT-RELEASE-RU.md"),
   );
 }
 
