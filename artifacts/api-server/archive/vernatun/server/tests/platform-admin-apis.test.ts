@@ -225,6 +225,56 @@ test('platform analytics and server CSV preserve month boundaries in a non-UTC s
  assert.equal((await platform.call(`/platform/analytics?from=${from}&to=${to}&currency=EUR`)).status,400);
 });
 
+test('platform analytics and CSV keep leap-day records in the correct UTC month in a non-UTC session',async()=>{
+ const adminId=seeded.accounts.platform_admin.id;
+ const records=[
+  '2040-02-28T23:59:59.999Z',
+  '2040-02-29T23:59:59.999Z',
+  '2040-03-01T00:00:00.000Z',
+ ];
+ for(const [index,createdAt] of records.entries()){
+  await pool.query('INSERT INTO organizations(name,created_at) VALUES($1,$2)',
+   [`Leap-year analytics ${index} ${randomUUID()}`,createdAt]);
+  await pool.query(`INSERT INTO support_cases(organization_id,created_by,subject,body,created_at)
+   VALUES($1,$2,$3,'Leap-year analytics fixture',$4)`,
+   [orgA,adminId,`Leap-year support ${index} ${randomUUID()}`,createdAt]);
+ }
+
+ const query='from=2040-02-01&to=2040-03-31&currency=AMD';
+ const json=await platform.call(`/platform/analytics?${query}`);
+ assert.equal(json.status,200);
+ assert.deepEqual(json.data.monthly.map((month:any)=>month.month),['2040-02-01','2040-03-01']);
+ assert.deepEqual(json.data.monthly.map((month:any)=>month.organizations),[2,1]);
+ assert.deepEqual(json.data.monthly.map((month:any)=>month.support_cases),[2,1]);
+
+ const csv=await platform.raw(`/platform/analytics/export.csv?${query}`);
+ assert.equal(csv.status,200);
+ assert.match(csv.contentType,/text\/csv/);
+ const rows=csv.text.replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/).map(line=>{
+  const values:string[]=[];
+  let value='',quoted=false;
+  for(let i=0;i<line.length;i++){
+   const char=line[i];
+   if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++}
+   else if(char==='"')quoted=!quoted;
+   else if(char===','&&!quoted){values.push(value);value=''}
+   else value+=char;
+  }
+  values.push(value);
+  return values;
+ });
+ const monthlyHeader=rows.findIndex(row=>row[0]==='month');
+ const csvMonthly=rows.slice(monthlyHeader+1).map(row=>row.slice(0,5));
+ const jsonMonthly=json.data.monthly.map((month:any)=>[
+  month.month,String(month.organizations),month.billed_minor,month.paid_minor,String(month.support_cases),
+ ]);
+ assert.deepEqual(csvMonthly,jsonMonthly);
+ assert.deepEqual(csvMonthly.map(row=>[row[0],row[1],row[4]]),[
+  ['2040-02-01','2','2'],
+  ['2040-03-01','1','1'],
+ ]);
+});
+
 test('non-platform roles and platform users without the required permission are denied',async()=>{
  for(const client of [organizationAdmin,manager]){
   assert.equal((await client.call('/platform/analytics')).status,403);
