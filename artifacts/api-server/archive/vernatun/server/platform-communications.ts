@@ -8,6 +8,11 @@ import {deliverEmail} from './email.js';
 import {activeLeasePredicate} from './lease-policy.js';
 
 export const platformCommunications=Router();
+let deliverCampaignEmail=deliverEmail;
+export function setPlatformCampaignEmailDeliveryForTests(delivery:typeof deliverEmail|null){
+ if(process.env.NODE_ENV!=='test')throw new Error('Campaign email delivery override is test-only');
+ deliverCampaignEmail=delivery??deliverEmail;
+}
 platformCommunications.use('/broadcasts',requireAuth);
 platformCommunications.use(['/platform/communications','/platform/notifications','/platform/email'],async(req,_res,next)=>{
  try{
@@ -440,7 +445,7 @@ platformCommunications.post('/platform/email/campaigns/:id/dispatch',async(req,r
  });
  for(const r of batch.rows){
   try{
-   const outcome=await deliverEmail({to:r.email,subject:batch.campaign.subject,text:batch.campaign.body_text,url:''},
+    const outcome=await deliverCampaignEmail({to:r.email,subject:batch.campaign.subject,text:batch.campaign.body_text,url:''},
     `notification-${r.id}`,{business:{type:'notification',id,organizationId:r.organization_id}});
     const state=outcome.delivery==='local_only'?'local':'accepted';
     const messageId=outcome.delivery==='local_only'?null:outcome.messageId??null;

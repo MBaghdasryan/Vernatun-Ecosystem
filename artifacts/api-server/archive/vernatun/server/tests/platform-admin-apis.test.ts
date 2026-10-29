@@ -5,6 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
+import {setPlatformCampaignEmailDeliveryForTests} from '../platform-communications.js';
 
 if(config.NODE_ENV!=='test'||!new URL(config.DATABASE_URL).pathname.endsWith('/vernatun_test'))
  throw new Error('Platform API tests require an isolated vernatun_test database');
@@ -66,6 +67,19 @@ after(async()=>{
  server.closeAllConnections();
  await pool.end();
 });
+
+async function createEmailCampaign(subject:string){
+ const target={type:'organization',id:orgA};
+ const preview=await platform.call('/platform/communications/preview','POST',{target});
+ assert.equal(preview.status,200);
+ assert.ok(preview.data.count>0&&preview.data.count<=25,'The isolated organization fits in one dispatch batch');
+ const response=await platform.call('/platform/email/campaigns','POST',{
+  target,subject,body:'Isolated dispatch test; delivery is replaced by a safe fake.',
+  expectedRecipients:preview.data.count,idempotencyKey:randomUUID(),
+ });
+ assert.equal(response.status,201);
+ return {id:response.data.id,recipientCount:preview.data.count};
+}
 
 test('public session and login remain available beside the protected platform APIs',async()=>{
  const anonymous=new Client();
@@ -266,4 +280,119 @@ test('platform notifications and email campaigns safely replay concurrent reques
  assert.equal(Number((await pool.query('SELECT count(*)::int AS n FROM platform_email_campaign_recipients WHERE campaign_id=$1',[emailResponses[0].data.id])).rows[0].n),preview.data.count);
  const conflictingEmail=await platform.call('/platform/email/campaigns','POST',{...email,subject:'Different subject'});
  assert.equal(conflictingEmail.status,409);
+});
+
+test('parallel platform email dispatches claim a recipient only once',async()=>{
+ const campaign=await createEmailCampaign('Parallel dispatch isolation');
+ let calls=0;
+ const deliveredTo:string[]=[];
+ let signalStarted!:()=>void;
+ let releaseDelivery!:()=>void;
+ const started=new Promise<void>(resolve=>{signalStarted=resolve});
+ const gate=new Promise<void>(resolve=>{releaseDelivery=resolve});
+ setPlatformCampaignEmailDeliveryForTests(async(message)=>{
+  calls++;
+  deliveredTo.push(message.to);
+  signalStarted();
+  await gate;
+  return {delivery:'resend_accepted',provider:'safe-test-fake',messageId:'fake-accepted-1'};
+ });
+ const firstPromise=platform.call(`/platform/email/campaigns/${campaign.id}/dispatch`,'POST',{});
+ try{
+  await started;
+  const second=await platform.call(`/platform/email/campaigns/${campaign.id}/dispatch`,'POST',{});
+  assert.equal(second.status,200);
+  assert.equal(second.data.status,'sending');
+  assert.equal(second.data.processed,0);
+  assert.equal(second.data.remaining,campaign.recipientCount);
+  releaseDelivery();
+  const first=await firstPromise;
+  assert.equal(first.status,200);
+  assert.equal(first.data.status,'accepted');
+  assert.equal(calls,campaign.recipientCount);
+  assert.equal(new Set(deliveredTo).size,campaign.recipientCount);
+
+  const recipient=(await pool.query(`SELECT count(*)::int AS total,
+   count(*) FILTER(WHERE status='accepted' AND provider_message_id='fake-accepted-1' AND failure_code IS NULL)::int AS accepted
+   FROM platform_email_campaign_recipients WHERE campaign_id=$1`,[campaign.id])).rows[0];
+  assert.deepEqual(recipient,{total:campaign.recipientCount,accepted:campaign.recipientCount});
+  const finalCampaign=(await pool.query('SELECT status,finished_at FROM platform_email_campaigns WHERE id=$1',[campaign.id])).rows[0];
+  assert.equal(finalCampaign.status,'accepted');
+  assert.ok(finalCampaign.finished_at);
+
+  const events=(await pool.query(`SELECT details FROM audit_events WHERE action='platform.email.campaign.dispatch'
+   AND entity_type='platform_email_campaign' AND entity_id=$1`,[campaign.id])).rows.map((row:any)=>row.details);
+  assert.equal(events.length,2);
+  assert.ok(events.some((details:any)=>details.processed===0&&details.remaining===campaign.recipientCount&&details.status==='sending'));
+  assert.ok(events.some((details:any)=>details.processed===campaign.recipientCount&&details.remaining===0&&details.status==='accepted'));
+ }finally{
+  releaseDelivery();
+  await firstPromise.catch(()=>undefined);
+  setPlatformCampaignEmailDeliveryForTests(null);
+ }
+});
+
+test('uncertain and interrupted platform email deliveries stay terminal on retry',async()=>{
+ const uncertain=await createEmailCampaign('Uncertain delivery isolation');
+ let uncertainCalls=0;
+ const uncertainRecipients:string[]=[];
+ setPlatformCampaignEmailDeliveryForTests(async(message)=>{
+  uncertainCalls++;
+  uncertainRecipients.push(message.to);
+  throw Object.assign(new Error('Provider acceptance could not be confirmed'),{code:'email_receipt_unrecorded'});
+ });
+ try{
+  const first=await platform.call(`/platform/email/campaigns/${uncertain.id}/dispatch`,'POST',{});
+  assert.equal(first.status,200);
+  assert.equal(first.data.status,'unknown');
+  assert.equal(first.data.unknown,uncertain.recipientCount);
+  const retry=await platform.call(`/platform/email/campaigns/${uncertain.id}/dispatch`,'POST',{});
+  assert.equal(retry.status,200);
+  assert.equal(retry.data.status,'unknown');
+  assert.equal(retry.data.processed,0);
+  assert.equal(uncertainCalls,uncertain.recipientCount);
+  assert.equal(new Set(uncertainRecipients).size,uncertain.recipientCount);
+
+  const uncertainState=(await pool.query(`SELECT r.status,r.failure_code,c.status AS campaign_status,c.finished_at
+   FROM platform_email_campaign_recipients r JOIN platform_email_campaigns c ON c.id=r.campaign_id
+   WHERE r.campaign_id=$1`,[uncertain.id])).rows[0];
+  assert.deepEqual(uncertainState.status,'unknown');
+  assert.equal(uncertainState.failure_code,'email_receipt_unrecorded');
+  assert.equal(uncertainState.campaign_status,'unknown');
+  assert.ok(uncertainState.finished_at);
+  const uncertainEvents=(await pool.query(`SELECT details FROM audit_events WHERE action='platform.email.campaign.dispatch'
+   AND entity_type='platform_email_campaign' AND entity_id=$1`,[uncertain.id])).rows.map((row:any)=>row.details);
+  assert.equal(uncertainEvents.length,2);
+  assert.ok(uncertainEvents.some((details:any)=>details.processed===uncertain.recipientCount&&details.remaining===0&&details.status==='unknown'));
+  assert.ok(uncertainEvents.some((details:any)=>details.processed===0&&details.remaining===0&&details.status==='unknown'));
+ }finally{
+  setPlatformCampaignEmailDeliveryForTests(null);
+ }
+
+ const interrupted=await createEmailCampaign('Interrupted delivery isolation');
+ await pool.query(`UPDATE platform_email_campaign_recipients SET status='sending',updated_at=now()-interval '6 minutes'
+  WHERE campaign_id=$1`,[interrupted.id]);
+ let interruptedCalls=0;
+ setPlatformCampaignEmailDeliveryForTests(async()=>{
+  interruptedCalls++;
+  return {delivery:'resend_accepted',provider:'safe-test-fake',messageId:'must-not-be-sent'};
+ });
+ try{
+  const recovered=await platform.call(`/platform/email/campaigns/${interrupted.id}/dispatch`,'POST',{});
+  assert.equal(recovered.status,200);
+  assert.equal(recovered.data.status,'unknown');
+  assert.equal(recovered.data.processed,0);
+  assert.equal(recovered.data.unknown,interrupted.recipientCount);
+  assert.equal(interruptedCalls,0);
+  const interruptedState=(await pool.query(`SELECT r.status,r.failure_code,c.status AS campaign_status,c.finished_at
+   FROM platform_email_campaign_recipients r JOIN platform_email_campaigns c ON c.id=r.campaign_id
+   WHERE r.campaign_id=$1`,[interrupted.id])).rows[0];
+  const interruptedRecipients=(await pool.query(`SELECT status,failure_code,count(*)::int AS total
+   FROM platform_email_campaign_recipients WHERE campaign_id=$1 GROUP BY status,failure_code`,[interrupted.id])).rows;
+  assert.deepEqual(interruptedRecipients,[{status:'unknown',failure_code:'dispatch_interrupted',total:interrupted.recipientCount}]);
+  assert.equal(interruptedState.campaign_status,'unknown');
+  assert.ok(interruptedState.finished_at);
+ }finally{
+  setPlatformCampaignEmailDeliveryForTests(null);
+ }
 });
