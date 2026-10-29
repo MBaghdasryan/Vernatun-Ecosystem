@@ -172,7 +172,21 @@ test('platform admin can create and manage organizations in the signed-in consol
   assert.equal(await page.getByLabel('From',{exact:true}).count(),1);
   assert.equal(await page.getByLabel('To',{exact:true}).count(),1);
   await page.locator('.p-platform-analytics .p-metrics').waitFor();
-  assert.equal(await page.locator('.p-platform-analytics time').count(),1,'The analytics report should show when its data was generated');
+  const lastUpdatedLabels={en:'Last updated',hy:'Վերջին թարմացում',ru:'Последнее обновление'} as const;
+  const analyticsLanguage=page.locator('.p-topbar .p-selectors select').first();
+  const generatedTime=page.locator('.p-platform-analytics time');
+  for(const language of ['en','hy','ru'] as const){
+   await analyticsLanguage.selectOption(language);
+   await page.getByRole('heading',{name:language==='en'?'Platform analytics':language==='hy'?'Հարթակի վերլուծություն':'Аналитика платформы',exact:true}).waitFor();
+   assert.equal(await analyticsLanguage.inputValue(),language,`The analytics interface should switch to ${language}`);
+   assert.equal(await generatedTime.count(),1,`The ${language} analytics report should show when its data was generated`);
+   const displayedGeneratedAt=await generatedTime.getAttribute('dateTime');
+   assert.ok(displayedGeneratedAt&&Number.isFinite(Date.parse(displayedGeneratedAt)),`The ${language} report should expose a valid API generation time`);
+   const expectedDateTime=await page.evaluate(({locale,generatedAt})=>new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(generatedAt)),{locale:language,generatedAt:displayedGeneratedAt});
+   assert.equal(await generatedTime.innerText(),`${expectedDateTime} UTC`,`The ${language} timestamp should be a readable locale-formatted date and time explicitly marked UTC`);
+   assert.ok((await page.locator('.p-platform-analytics form .p-muted-note').innerText()).includes(`${lastUpdatedLabels[language]}:`),`The last-updated label should be translated in ${language}`);
+  }
+  await analyticsLanguage.selectOption('en');
   const analyticsDownload=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export CSV',exact:true}).click();
   assert.equal((await analyticsDownload).suggestedFilename(),'vernatun-platform-analytics-UTC.csv');
