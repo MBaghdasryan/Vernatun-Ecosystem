@@ -48,13 +48,20 @@ async function loadAnalytics(input:unknown){
     COALESCE(sum(amount_minor),0)::text AS billed_minor,
     COALESCE(sum(amount_minor) FILTER(WHERE status='paid'),0)::text AS paid_minor,
     count(*) FILTER(WHERE status IN ('issued','partially_paid','overdue'))::int AS open_count
-   FROM platform_invoices WHERE currency=$3 AND issued_at >= $1::date AND issued_at < ($2::date + interval '1 day')`,
+    -- Interpret date-only report bounds as UTC calendar dates, not session-local dates.
+    FROM platform_invoices WHERE currency=$3
+     AND issued_at >= ($1::date::timestamp AT TIME ZONE 'UTC')
+     AND issued_at < (($2::date + 1)::timestamp AT TIME ZONE 'UTC')`,
    [range.from,range.to,range.currency]),
    pool.query(`SELECT to_char(m.month::date,'YYYY-MM-DD') AS month,
-    (SELECT count(*)::int FROM organizations o WHERE o.created_at>=m.month AND o.created_at<m.month+interval '1 month') AS organizations,
+     (SELECT count(*)::int FROM organizations o
+      WHERE o.created_at >= (m.month::date::timestamp AT TIME ZONE 'UTC')
+       AND o.created_at < ((m.month::date + interval '1 month') AT TIME ZONE 'UTC')) AS organizations,
     (SELECT COALESCE(sum(i.amount_minor),0)::text FROM platform_invoices i WHERE i.billing_period=m.month::date AND i.currency=$3) AS billed_minor,
     (SELECT COALESCE(sum(i.amount_minor) FILTER(WHERE i.status='paid'),0)::text FROM platform_invoices i WHERE i.billing_period=m.month::date AND i.currency=$3) AS paid_minor,
-    (SELECT count(*)::int FROM support_cases s WHERE s.created_at>=m.month AND s.created_at<m.month+interval '1 month') AS support_cases
+     (SELECT count(*)::int FROM support_cases s
+      WHERE s.created_at >= (m.month::date::timestamp AT TIME ZONE 'UTC')
+       AND s.created_at < ((m.month::date + interval '1 month') AT TIME ZONE 'UTC')) AS support_cases
    FROM generate_series(date_trunc('month',$1::date),date_trunc('month',$2::date),interval '1 month') m(month)
    ORDER BY m.month`,[range.from,range.to,range.currency]),
  ]);

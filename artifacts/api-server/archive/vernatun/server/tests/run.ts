@@ -13,7 +13,13 @@ const admin=new pg.Client({connectionString:source});await admin.connect();if(!(
 // Each pass gets clean fixtures, without dropping or modifying any app schema.
 const schemas=Array.from({length:isSevenChains?7:1},()=>`qa_${randomBytes(10).toString('hex')}`);
 const schema=schemas[0];
-const urlForSchema=(name:string)=>{const target=new URL(url);target.searchParams.set('options',`-c search_path=${name},public`);return target.toString()};
+const urlForSchema=(name:string)=>{
+ const target=new URL(url);
+ const options=[`-c search_path=${name},public`];
+ if(process.argv.includes('--platform-admin-apis-only'))options.push('-c timezone=Asia/Yerevan');
+ target.searchParams.set('options',options.join(' '));
+ return target.toString();
+};
 const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin.connect();
 const browserEnv=process.argv.includes('--org-console-only')
  ? {APP_ORIGIN:'http://127.0.0.1:4193'}

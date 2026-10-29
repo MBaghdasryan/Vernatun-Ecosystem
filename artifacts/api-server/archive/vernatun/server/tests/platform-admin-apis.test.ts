@@ -50,6 +50,8 @@ class Client{
 let platform:Client,organizationAdmin:Client,manager:Client,orgA:string,orgB:string,buildingA:string,buildingB:string;
 
 before(async()=>{
+ const timezone=await pool.query("SELECT current_setting('TimeZone') AS timezone");
+ assert.equal(timezone.rows[0].timezone,'Asia/Yerevan','platform analytics regression must run with a non-UTC database session');
  await pool.query('DELETE FROM auth_rate_limits');
  await new Promise<void>(resolve=>server.listening?resolve():server.once('listening',resolve));
  base='http://127.0.0.1:'+ (server.address() as {port:number}).port;
@@ -98,6 +100,12 @@ test('public session and login remain available beside the protected platform AP
 test('platform analytics and server CSV include only the selected currency',async()=>{
  const adminId=seeded.accounts.platform_admin.id;
  const from='2040-06-15',to='2040-07-14';
+ await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgA,'2040-05-31T22:00:00.000Z']);
+ await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgB,'2040-06-30T23:59:59.999Z']);
+ await pool.query(`INSERT INTO support_cases(organization_id,created_by,subject,body,created_at)
+  VALUES($1,$3,$2,'Timezone boundary fixture','2040-05-31T22:00:00.000Z'),
+        ($1,$3,$4,'Timezone boundary fixture','2040-06-30T23:59:59.999Z')`,
+  [orgA,`Before month boundary ${randomUUID()}`,adminId,`End month boundary ${randomUUID()}`]);
  const currencies={
   AMD:{lower:100,upper:200,before:1000,after:2000},
   RUB:{lower:10,upper:20,before:100,after:200},
@@ -151,6 +159,8 @@ test('platform analytics and server CSV include only the selected currency',asyn
   assert.equal(json.data.metrics.invoiceCount,2);
   assert.equal(json.data.metrics.openInvoices,1);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.month),['2040-06-01','2040-07-01']);
+   assert.deepEqual(json.data.monthly.map((month:any)=>month.organizations),[1,0]);
+   assert.deepEqual(json.data.monthly.map((month:any)=>month.support_cases),[1,0]);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.billed_minor),[String(amounts.lower),String(amounts.upper)]);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.paid_minor),[String(amounts.lower),'0']);
 
