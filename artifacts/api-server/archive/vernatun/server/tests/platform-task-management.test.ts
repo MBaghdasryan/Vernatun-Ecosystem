@@ -122,6 +122,19 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
  const supportNotice=(await pool.query(`SELECT id,event_code FROM notifications
   WHERE user_id=$1 AND entity_type='platform_task' AND entity_id=$2`,[supportUserId,create.data.id])).rows[0];
  assert.equal(supportNotice.event_code,'platform_task_assigned');
+ const formerNotice=(await platform.call('/notifications')).data.find((item:any)=>item.id===first.id);
+ assert.equal(formerNotice.access_denied,true);
+ assert.equal(formerNotice.platform_task,null);
+ assert.deepEqual(formerNotice.targets,[]);
+ assert.equal((await platform.call(`/notifications/${first.id}/destination`)).status,403);
+ assert.equal((await platform.call('/platform/tasks/'+create.data.id)).status,404);
+
+ const newNotice=(await support.call('/notifications')).data.find((item:any)=>item.id===supportNotice.id);
+ assert.equal(newNotice.access_denied,false);
+ assert.equal(newNotice.platform_task.id,create.data.id);
+ const newTaskDestination=await support.call(`/notifications/${supportNotice.id}/destination?contextId=${newNotice.targets[0].id}`);
+ assert.equal(newTaskDestination.status,200);
+ assert.equal(newTaskDestination.data.destination,`/console/tasks?taskId=${create.data.id}`);
  assert.equal((await support.call('/platform/tasks/'+create.data.id)).data.status,'blocked');
  const audit=(await pool.query(`SELECT action,details FROM audit_events
   WHERE entity_type='platform_task' AND entity_id=$1`,[create.data.id])).rows;
