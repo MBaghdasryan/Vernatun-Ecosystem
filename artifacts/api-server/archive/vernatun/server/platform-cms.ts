@@ -1,7 +1,7 @@
 import {Router} from 'express';
 import {z} from 'zod';
 import {pool} from './db.js';
-import {ApiError,requireAuth,requirePermission} from './access.js';
+import {ApiError,requirePermission} from './access.js';
 import {transaction} from './operations.js';
 import {requireRecentAuthentication} from './recent-auth.js';
 import {cmsBrandSchema,cmsPageContentSchema,cmsSlugSchema} from './platform-cms-schema.js';
@@ -27,7 +27,6 @@ platformCms.get('/public/site/pages/:slug',async(req,res)=>{
  res.json({slug,content:row.published_content,version:row.published_version,publishedAt:row.published_at});
 });
 
-platformCms.use(requireAuth);
 platformCms.get('/platform/cms',async(req,res)=>{
  await admin(req);
  const [brand,pages]=await Promise.all([

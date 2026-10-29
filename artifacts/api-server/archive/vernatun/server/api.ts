@@ -34,7 +34,13 @@ api.post('/organizations',async(req,res)=>{
    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
    [b.name,b.companyType,b.legalName,b.taxId,b.address,b.contactEmail,b.contactPhone,b.timezone,b.currency,b.defaultLanguage])).rows[0];
   const enabled=new Set(b.modules);
-  for(const module of moduleKeys)await db.query('INSERT INTO module_entitlements(organization_id,module,enabled) VALUES($1,$2,$3)',[organization.id,module,enabled.has(module)]);
+  for(const module of moduleKeys){
+   const active=enabled.has(module);
+   await db.query(`INSERT INTO module_entitlements(organization_id,module,enabled,override_state)
+    VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,module) DO UPDATE SET
+    enabled=EXCLUDED.enabled,override_state=EXCLUDED.override_state,override_reason='Initial organization setup',updated_at=now()`,
+    [organization.id,module,active,active?'inherited':'disabled']);
+  }
   await record(db,req,{...c,organization_id:organization.id},'organization.create','organization',organization.id,{companyType:b.companyType,modules:b.modules});
   return organization;
  }));
