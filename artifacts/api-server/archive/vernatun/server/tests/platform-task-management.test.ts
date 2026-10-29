@@ -75,6 +75,66 @@ test('platform task board is protected, searchable, versioned and audited',async
  assert.deepEqual(audit.rows.map((row:any)=>row.action).sort(),['platform.task.archived','platform.task.assigned','platform.task.created','platform.task.updated'].sort());
 });
 
+test('platform task alerts honor independent onboarding channel preferences without duplicate intents',async()=>{
+ const initialPreferences=(await platform.call('/notifications/preferences')).data;
+ let preferenceVersion=initialPreferences.version;
+ const updatePreferences=async(inApp:boolean,email:boolean)=>{
+  const updated=await platform.call('/notifications/preferences','PUT',{
+   email_enabled:true,in_app_enabled:true,version:preferenceVersion,
+   categories:{onboarding:{in_app:inApp,email}},
+  });
+  assert.equal(updated.status,200);
+  preferenceVersion=updated.data.version;
+ };
+ const combinations=[
+  {inApp:false,email:false},
+  {inApp:false,email:true},
+  {inApp:true,email:false},
+  {inApp:true,email:true},
+ ];
+
+ for(const [index,preference] of combinations.entries()){
+  await updatePreferences(preference.inApp,preference.email);
+  const create=await platform.call('/platform/tasks','POST',{
+   title:`Channel preference check ${index+1}`,assigneeId:platformUserId,dueOn:'2026-12-20',
+  });
+  assert.equal(create.status,201);
+  const deadline=await platform.call(`/platform/tasks/${create.data.id}`,'PATCH',{
+   version:1,dueOn:'2026-12-27',
+  });
+  assert.equal(deadline.status,200);
+
+  const notices=(await pool.query(`SELECT id,event_code,in_app_enabled FROM notifications
+   WHERE user_id=$1 AND entity_type='platform_task' AND entity_id=$2 ORDER BY event_code`,
+  [platformUserId,create.data.id])).rows;
+  assert.deepEqual(notices.map((row:any)=>row.event_code).sort(),[
+   'platform_task_assigned','platform_task_deadline_changed',
+  ]);
+  for(const notice of notices){
+   assert.equal(notice.in_app_enabled,preference.inApp,`${notice.event_code} in-app setting`);
+   assert.equal(
+    (await pool.query('SELECT 1 FROM notification_email_outbox WHERE notification_id=$1',[notice.id])).rowCount>0,
+    preference.email,
+    `${notice.event_code} email setting`,
+   );
+  }
+
+  await updatePreferences(!preference.inApp,!preference.email);
+  const resaved=await platform.call(`/platform/tasks/${create.data.id}`,'PATCH',{
+   version:2,title:create.data.title,assigneeId:platformUserId,dueOn:'2026-12-27',
+  });
+  assert.equal(resaved.status,200);
+  assert.equal(Number((await pool.query(`SELECT count(*) FROM notifications
+   WHERE user_id=$1 AND entity_type='platform_task' AND entity_id=$2`,
+  [platformUserId,create.data.id])).rows[0].count),2,'Preference changes and a task resave must not duplicate alerts');
+  assert.equal(Number((await pool.query(`SELECT count(*) FROM notification_email_outbox o
+   JOIN notifications n ON n.id=o.notification_id
+   WHERE n.user_id=$1 AND n.entity_type='platform_task' AND n.entity_id=$2`,
+  [platformUserId,create.data.id])).rows[0].count),preference.email?2:0,
+  'Preference changes must not add or remove email intents for existing alerts');
+ }
+});
+
 test('platform task assignment, reassignment, deadline notices use channel preferences and live task details',async()=>{
  await pool.query(`INSERT INTO notification_preferences(user_id,email_enabled,in_app_enabled,categories)
   VALUES($1,false,true,'{}') ON CONFLICT(user_id) DO UPDATE SET email_enabled=false,in_app_enabled=true,categories='{}'`,[platformUserId]);
