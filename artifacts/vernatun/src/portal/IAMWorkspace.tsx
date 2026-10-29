@@ -1,5 +1,5 @@
-import {useEffect,useState,type ComponentType,type ReactNode} from 'react';
-import {request,ApiClientError} from './client';
+import {useEffect,useState,type ComponentType,type FormEvent,type ReactNode} from 'react';
+import {request,downloadFile,ApiClientError} from './client';
 import {roleName,index,type Language} from './i18n';
 import type {RoleContext} from './types';
 import EmployeeAssignment from './EmployeeAssignment';
@@ -10,8 +10,12 @@ type Props={language:Language;platform:boolean;view:string;brand:ReactNode;heade
  Modal:ComponentType<{title:string;onClose:()=>void;children:ReactNode}>;ErrorNotice:ComponentType<{error:unknown}>};
 export default function IAMWorkspace({language,platform,view,brand,headerTools,context,onSwitch,onLogout,Modal,ErrorNotice}:Props){
  const L=index(language),tr=(hy:string,ru:string,en:string)=>[hy,ru,en][L],base=platform?'/console':'/os';
+ const canExportUsers=platform&&context.role_key==='platform_admin'&&!context.organization_id;
  const [catalog,setCatalog]=useState<any>(),[profiles,setProfiles]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]),[total,setTotal]=useState(0);
  const [q,setQ]=useState(''),[search,setSearch]=useState(''),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0);
+ const [createdFromInput,setCreatedFromInput]=useState(''),[createdToInput,setCreatedToInput]=useState('');
+ const [createdFrom,setCreatedFrom]=useState(''),[createdTo,setCreatedTo]=useState('');
+ const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState<unknown>();
  const [loading,setLoading]=useState(true),[error,setError]=useState<unknown>(),[busy,setBusy]=useState(false);
  const [card,setCard]=useState<any>(),[userId,setUserId]=useState<string>(),[scopeId,setScopeId]=useState<string>();
   const [draft,setDraft]=useState<any>(),[matrixRole,setMatrixRole]=useState('manager'),[roleDraft,setRoleDraft]=useState<any>(),[policy,setPolicy]=useState<any>();
@@ -20,10 +24,12 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,c
  const [action,setAction]=useState<{kind:string;id:string;status?:string;sessionId?:string;version?:string}>(),[reason,setReason]=useState('');
  const refresh=()=>setRevision(v=>v+1);
  useEffect(()=>{let live=true;setLoading(true);setError(undefined);
-  Promise.all([request<any>('/iam/catalog'),request<any[]>('/iam/profiles'),request<any>('/iam/users?q='+encodeURIComponent(search)+'&offset='+offset)])
+   const params=new URLSearchParams({q:search,offset:String(offset)});
+   if(createdFrom)params.set('createdFrom',createdFrom);if(createdTo)params.set('createdTo',createdTo);
+   Promise.all([request<any>('/iam/catalog'),request<any[]>('/iam/profiles'),request<any>('/iam/users?'+params)])
    .then(([c,p,u])=>{if(live){setCatalog(c);setProfiles(p);setRows(u.rows);setTotal(u.total)}})
    .catch(e=>{if(live)setError(e)}).finally(()=>{if(live)setLoading(false)});return()=>{live=false};
- },[revision,search,offset]);
+  },[revision,search,createdFrom,createdTo,offset]);
  useEffect(()=>{if(!userId)return;let live=true;setCard(undefined);
   request('/iam/users/'+userId).then(d=>{if(live)setCard(d)}).catch(setError);return()=>{live=false};
  },[userId,revision]);
@@ -37,6 +43,26 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,c
  }
  const button=(text:string,onClick:()=>void,disabled=false)=><button key={text} type="button" className="p-button small" disabled={busy||disabled} onClick={onClick}>{text}</button>;
  const save=tr('Պահպանել','Сохранить','Save'),cancel=tr('Չեղարկել','Отмена','Cancel'),reload=tr('Թարմացնել','Обновить','Reload');
+  const dateRangeInvalid=!!createdFromInput&&!!createdToInput&&createdFromInput>createdToInput;
+  function applyUserFilters(event:FormEvent){
+   event.preventDefault();if(dateRangeInvalid)return;
+   setOffset(0);setSearch(q.trim());setCreatedFrom(createdFromInput);setCreatedTo(createdToInput);setExportError(undefined);
+  }
+  function resetUserFilters(){
+   setQ('');setSearch('');setCreatedFromInput('');setCreatedToInput('');setCreatedFrom('');setCreatedTo('');
+   setOffset(0);setExportError(undefined);
+  }
+  async function exportUsers(){
+   if(exporting||!total)return;
+   setExporting(true);setExportError(undefined);
+   const params=new URLSearchParams({q:search});
+   if(createdFrom)params.set('createdFrom',createdFrom);if(createdTo)params.set('createdTo',createdTo);
+   try{
+    const blob=await downloadFile(`/iam/users/export.csv?${params}`),url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='vernatun-users.csv';link.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+   }catch(error){setExportError(error)}finally{setExporting(false)}
+  }
+  const createdDate=(value:string)=>new Date(value).toLocaleDateString(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US',{timeZone:'Asia/Yerevan'});
  const users=tr('Օգտատերեր','Пользователи','Users'),roles=tr('Դերեր','Роли','Roles'),permissions=tr('Թույլտվություններ','Разрешения','Permissions');
  const statusLabel=(v:string)=>({active:tr('Ակտիվ','Активен','Active'),locked:tr('Արգելափակված','Заблокирован','Locked'),disabled:tr('Անջատված','Отключён','Disabled'),suspended:tr('Կասեցված','Приостановлен','Suspended'),revoked:tr('Հետ կանչված','Отозван','Revoked')}[v]??v);
  const errorBox=error?<div><ErrorNotice error={error}/>{error instanceof ApiClientError&&error.code==='concurrent_change'&&<p>{tr('Տվյալները փոխվել են։ Բացեք քարտը նորից։','Данные изменились. Откройте карточку заново, прежде чем сохранять.','Data changed. Reopen the card before saving.')}</p>}{button(reload,refresh)}</div>:null;
@@ -45,9 +71,18 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,c
   <main className="iam-main"><h1>{view==='roles'?roles:view==='permissions'?permissions:users}</h1><p>{platform?tr('Հարթակի հասանելիություն․ առանց կազմակերպության բիզնես տվյալների','Доступ платформы — без доступа к бизнес-данным организаций','Platform access — no tenant business-data access'):tr('Կազմակերպության աշխատակիցներ և հասանելիություն','Сотрудники и доступ организации','Organization employees and access')}</p>
    {errorBox}{loading?<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>:catalog&&<>
    {(view==='users'||view==='people')&&<section className="p-card">
-    <form className="iam-row" onSubmit={e=>{e.preventDefault();setOffset(0);setSearch(q)}}><label>{tr('Որոնում','Поиск','Search')}<input value={q} onChange={e=>setQ(e.target.value)} maxLength={100}/></label><button className="p-button">{tr('Գտնել','Найти','Search')}</button></form>
-    <div className="iam-table"><table><thead><tr><th>{tr('Անուն','Имя','Name')}</th><th>Email</th><th>{tr('Հաշվի վիճակ','Статус аккаунта','Account status')}</th><th>MFA</th></tr></thead><tbody>{rows.map(u=><tr key={u.id}><td>{button(u.name,()=>setUserId(u.id))}</td><td>{u.email}</td><td>{statusLabel(u.account_status)}</td><td>{u.mfa_enabled?tr('Միացված','Включена','Enabled'):tr('Անջատված','Выключена','Disabled')}</td></tr>)}</tbody></table></div>
-    {!rows.length&&<p>{tr('Գրառումներ չկան','Записей нет','No records')}</p>}<div className="iam-row">{button('←',()=>setOffset(Math.max(0,offset-50)),offset===0)}<span>{offset+1}–{offset+rows.length} / {total}</span>{button('→',()=>setOffset(offset+50),offset+rows.length>=total)}</div>
+     {platform?<form className="p-user-search" onSubmit={applyUserFilters}>
+      <label><span>{tr('Անուն կամ email','Имя или email','Name or email')}</span><input value={q} onChange={e=>setQ(e.target.value)} maxLength={100}/></label>
+      <label className="p-user-date"><span>{tr('Ստեղծվել է՝ սկսած','Дата создания с','Created from')}</span><input aria-label={tr('Ստեղծվել է՝ սկսած','Дата создания с','Created from')} type="date" value={createdFromInput} onChange={e=>setCreatedFromInput(e.target.value)}/></label>
+      <label className="p-user-date"><span>{tr('Ստեղծվել է՝ մինչև','Дата создания по','Created through')}</span><input aria-label={tr('Ստեղծվել է՝ մինչև','Дата создания по','Created through')} type="date" value={createdToInput} onChange={e=>setCreatedToInput(e.target.value)}/></label>
+      <button className="p-button" type="submit">{tr('Փնտրել','Найти','Search')}</button>
+      {(search||createdFrom||createdTo||q||createdFromInput||createdToInput)&&<button className="p-button" type="button" onClick={resetUserFilters}>{tr('Մաքրել','Сбросить','Reset')}</button>}
+      {canExportUsers&&<button className="p-button" type="button" disabled={!total||exporting} onClick={()=>void exportUsers()}>{exporting?tr('Արտահանվում է…','Экспортируем…','Exporting…'):tr('Արտահանել','Экспортировать','Export users')}</button>}
+     </form>:<form className="iam-row" onSubmit={e=>{e.preventDefault();setOffset(0);setSearch(q)}}><label>{tr('Որոնում','Поиск','Search')}<input value={q} onChange={e=>setQ(e.target.value)} maxLength={100}/></label><button className="p-button">{tr('Գտնել','Найти','Search')}</button></form>}
+     {platform&&dateRangeInvalid&&<p className="p-user-date-error" role="alert">{tr('Սկզբի օրը պետք է լինի ավարտից շուտ կամ նույն օրը։','Начальная дата должна быть не позже конечной.','Start date must be on or before end date.')}</p>}
+     {!!exportError&&<ErrorNotice error={exportError}/>}
+     <div className="iam-table"><table><thead><tr><th>{tr('Անուն','Имя','Name')}</th><th>Email</th>{platform&&<th>{tr('Ստեղծվել է','Создан','Created')}</th>}<th>{tr('Հաշվի վիճակ','Статус аккаунта','Account status')}</th><th>MFA</th></tr></thead><tbody>{rows.map(u=><tr key={u.id}><td>{button(u.name,()=>setUserId(u.id))}</td><td>{u.email}</td>{platform&&<td>{createdDate(u.created_at)}</td>}<td>{statusLabel(u.account_status)}</td><td>{u.mfa_enabled?tr('Միացված','Включена','Enabled'):tr('Անջատված','Выключена','Disabled')}</td></tr>)}</tbody></table></div>
+     {!rows.length&&<p>{tr('Գրառումներ չկան','Записей нет','No records')}</p>}<div className="iam-row"><button type="button" className="p-button small" aria-label={tr('Նախորդ','Назад','Previous')} disabled={busy||offset===0} onClick={()=>setOffset(Math.max(0,offset-50))}>←</button><span>{offset+1}–{offset+rows.length} / {total}</span><button type="button" className="p-button small" aria-label={tr('Հաջորդ','Далее','Next')} disabled={busy||offset+rows.length>=total} onClick={()=>setOffset(offset+50)}>→</button></div>
      {!platform&&view==='people'&&<OwnerAccessQueue language={language} context={context} ErrorNotice={ErrorNotice} Modal={Modal}/>}
     </section>}
    {(view==='roles'||view==='permissions')&&<>

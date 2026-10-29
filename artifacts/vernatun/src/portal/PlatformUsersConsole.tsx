@@ -126,7 +126,7 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
    link.href=url;link.download='vernatun-users.csv';link.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }catch(error){setExportError(error)}finally{setExporting(false)}
  }
- const createdDate=(value:string)=>new Date(value).toLocaleDateString(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US');
+ const createdDate=(value:string)=>new Date(value).toLocaleDateString(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US',{timeZone:'Asia/Yerevan'});
  function openInvite(){setSubmitError(undefined);setSuccess(undefined);setAccountType('organization');setEmail('');setOrganizationId('');setRole('org_admin');setBuildingId('');setUnitId('');setShowInvite(true)}
  function changeAccountType(value:'organization'|'internal'){setAccountType(value);setOrganizationId('');setBuildingId('');setUnitId('');setRole(value==='internal'?'support':'org_admin');setScopeError(undefined);setSubmitError(undefined)}
  async function submitInvite(event:FormEvent){

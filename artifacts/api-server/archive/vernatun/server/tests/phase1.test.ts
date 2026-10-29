@@ -2,6 +2,10 @@ import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
+import {createServer} from 'node:net';
+import {spawn,type ChildProcess} from 'node:child_process';
+import {resolve} from 'node:path';
+import {chromium} from 'playwright';
 import {app} from '../app.js';
 import {pool} from '../db.js';
 import {config} from '../config.js';
@@ -39,6 +43,29 @@ class Client{
  }
 }
 const clients:Record<string,Client>={};
+async function freePort(){
+ const listener=createServer();
+ await new Promise<void>((resolveListen,reject)=>listener.listen(0,'127.0.0.1',error=>error?reject(error):resolveListen()));
+ const port=(listener.address() as {port:number}).port;
+ await new Promise<void>((resolveClose,reject)=>listener.close(error=>error?reject(error):resolveClose()));
+ return port;
+}
+function parseCsv(source:string){
+ const rows:string[][]=[],row:string[]=[];let value='',quoted=false;
+ for(let i=0;i<source.length;i++){
+  const char=source[i];
+  if(quoted){
+   if(char==='"'&&source[i+1]==='"'){value+='"';i++}
+   else if(char==='"')quoted=false;
+   else value+=char;
+  }else if(char==='"')quoted=true;
+  else if(char===','){row.push(value);value=''}
+  else if(char==='\n'){row.push(value);rows.push([...row]);row.length=0;value=''}
+  else if(char!=='\r')value+=char;
+ }
+ if(value||row.length){row.push(value);rows.push(row)}
+ return rows;
+}
 before(async()=>{
  await new Promise<void>(resolve=>server.listening?resolve():server.on('listening',resolve));
  base='http://127.0.0.1:'+(server.address() as {port:number}).port;
@@ -140,6 +167,122 @@ test('Platform user directory supports creation-date filters and an audited form
  }finally{await pool.query('UPDATE users SET name=$2 WHERE id=$1',[user.id,original])}
  const denied=await fetch(base+'/api/iam/users/export.csv',{headers:{Cookie:org.cookie}});
  assert.equal(denied.status,403);
+  const invalidExport=await fetch(base+'/api/iam/users/export.csv?createdFrom=2026-10-30&createdTo=2026-10-01',{headers:{Cookie:platform.cookie}});
+  assert.equal(invalidExport.status,400);
+});
+
+test('Platform user filters, pagination and CSV export work in the authenticated browser',async()=>{
+ const tag='qa223-'+randomUUID(),startDay='2025-01-10',endDay='2025-01-11';
+ const marker=`${tag}-boundary`;
+ const platformAdminId=seeded.accounts.platform_admin.id;
+ const originalLocale=(await pool.query('SELECT locale FROM users WHERE id=$1',[platformAdminId])).rows[0].locale;
+ await pool.query("UPDATE users SET locale='en' WHERE id=$1",[platformAdminId]);
+ await pool.query(`INSERT INTO users(email,name,password_hash,created_at)
+  SELECT $1||'-list-'||lpad(n::text,2,'0')||'@example.test','QA223 Directory '||lpad(n::text,2,'0'),'test-only-hash',now()-make_interval(days=>n)
+  FROM generate_series(1,55) AS n`,[tag]);
+ await pool.query(`INSERT INTO users(email,name,password_hash,created_at) VALUES
+  ($1||'-start@example.test','QA223 boundary start','test-only-hash',$2::timestamptz),
+  ($1||'-end@example.test','QA223 boundary end','test-only-hash',$3::timestamptz),
+  ($1||'-before@example.test','QA223 boundary before','test-only-hash',$4::timestamptz),
+  ($1||'-after@example.test','QA223 boundary after','test-only-hash',$5::timestamptz),
+  ($6||'@example.test','QA223 unrelated','test-only-hash',$2::timestamptz)`,
+ [marker,startDay+'T06:00:00Z',endDay+'T06:00:00Z','2025-01-09T06:00:00Z','2025-01-12T06:00:00Z',tag+'-unrelated']);
+
+ const port=await freePort(),webDir=resolve(process.cwd(),'../../../vernatun'),viteBin=resolve(webDir,'node_modules/vite/bin/vite.js');
+ let web:ChildProcess|undefined,browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
+ try{
+  web=spawn(process.execPath,[viteBin,'--host','127.0.0.1','--port',String(port),'--strictPort'],{
+   cwd:webDir,env:{...process.env,PORT:String(port),BASE_PATH:'/',API_PROXY_TARGET:base},stdio:'ignore',
+  });
+  const started=Date.now();
+  while(Date.now()-started<30000){
+   if(web.exitCode!==null)throw new Error(`Vite exited with code ${web.exitCode}`);
+   try{if((await fetch(`http://127.0.0.1:${port}/`)).ok)break}catch{}
+   await new Promise(resolveWait=>setTimeout(resolveWait,200));
+  }
+  assert.ok(Date.now()-started<30000,'Vernatun UI server did not become ready');
+  browser=await chromium.launch({headless:true,executablePath:process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE,args:['--no-sandbox']});
+  const context=await browser.newContext({acceptDownloads:true});
+  const cookie=clients.platform_admin.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith('vernatun.sid='));
+  assert.ok(cookie,'Platform admin test session cookie must exist');
+  await context.addCookies([{name:'vernatun.sid',value:cookie.slice('vernatun.sid='.length),url:`http://127.0.0.1:${port}`}]);
+  await context.addInitScript(()=>localStorage.setItem('vernatun.language','en'));
+  const page=await context.newPage();
+  const browserErrors:string[]=[];
+  page.on('pageerror',error=>browserErrors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error')browserErrors.push(message.text())});
+  page.on('response',response=>{if(response.url().includes('/api/')&&response.status()>=400)browserErrors.push(`API ${response.status()} ${response.url()}`)});
+  await page.goto(`http://127.0.0.1:${port}/console/users`);
+  try{await page.getByRole('heading',{name:'Users',exact:true}).waitFor({timeout:15000})}
+  catch(error){
+   throw new Error(`Authenticated users page did not render. URL: ${page.url()}; body: ${(await page.locator('body').innerText()).slice(0,1600)}; browser/API logs: ${browserErrors.join(' | ')}`,{cause:error});
+  }
+  const tableRows=page.locator('.iam-table tbody tr');
+  await tableRows.nth(49).waitFor({timeout:15000});
+  const pagination=page.locator('.iam-main .p-card .iam-row').last();
+  const firstPage=await pagination.innerText();
+  assert.match(firstPage,/1–50/);
+  assert.ok(Number(firstPage.match(/\/ (\d+)/)?.[1])>50,'Pagination must be available with more than 50 matching users');
+  assert.equal(await tableRows.count(),50);
+  await page.getByRole('button',{name:'Next'}).click();
+  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('51–'));
+  assert.ok(await tableRows.count()>0&&await tableRows.count()<50);
+  await page.getByRole('button',{name:'Previous'}).click();
+  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('1–50 /'));
+
+  await page.getByRole('textbox',{name:'Name or email'}).fill(marker);
+  await page.getByLabel('Created from').fill(startDay);
+  await page.getByLabel('Created through').fill(endDay);
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('1–2 / 2'));
+  const displayed=await tableRows.allInnerTexts();
+  assert.equal(displayed.length,2);
+  assert.ok(displayed.some(row=>row.includes(`${marker}-start@example.test`)),'the starting date is inclusive');
+  assert.ok(displayed.some(row=>row.includes(`${marker}-end@example.test`)),'the ending date is inclusive');
+  assert.ok(displayed.every(row=>!row.includes('-before@example.test')&&!row.includes('-after@example.test')));
+  assert.equal(await page.getByRole('button',{name:'Previous'}).isDisabled(),true);
+
+  const [download]=await Promise.all([
+   page.waitForEvent('download'),
+   page.getByRole('button',{name:'Export users'}).click(),
+  ]);
+  assert.equal(download.suggestedFilename(),'vernatun-users.csv');
+  const downloadedPath=await download.path();
+  assert.ok(downloadedPath,'The CSV download must be saved and readable');
+  const downloaded=(await readFile(downloadedPath,'utf8')).replace(/^\uFEFF/,'');
+  const csvRows=parseCsv(downloaded);
+  assert.deepEqual(csvRows[0],['name','email','access','account_status','mfa_enabled','created_at']);
+  assert.equal(csvRows.length,3,'The exported file contains exactly the two filtered records');
+  const exportedEmails=csvRows.slice(1).map(row=>row[1]).sort();
+  assert.deepEqual(exportedEmails,[`${marker}-end@example.test`,`${marker}-start@example.test`].sort());
+  assert.ok(!downloaded.includes(`${marker}-before@example.test`));
+  assert.ok(!downloaded.includes(`${marker}-after@example.test`));
+
+  await page.getByLabel('Created from').fill('2025-01-12');
+  await page.getByLabel('Created through').fill(endDay);
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  assert.match(await page.getByRole('alert').innerText(),/Start date must be on or before end date/);
+  assert.equal(await tableRows.count(),2,'An invalid date range must not replace the last valid results');
+  assert.match(await pagination.innerText(),/1–2 \/ 2/);
+
+  await page.route('**/api/iam/users/export.csv*',route=>route.fulfill({
+   status:503,contentType:'application/json',body:JSON.stringify({error:'service_unavailable'}),
+  }));
+  await page.getByRole('button',{name:'Export users'}).click();
+  const exportAlert=page.getByRole('alert').last();
+  await exportAlert.waitFor({timeout:5000});
+  assert.ok((await exportAlert.innerText()).trim().length>0,'Export failures must show a readable error');
+  await page.unroute('**/api/iam/users/export.csv*');
+ }finally{
+  await browser?.close();
+  if(web&&web.exitCode===null){
+   const exited=new Promise<void>(resolveExit=>web!.once('exit',()=>resolveExit()));
+   web.kill('SIGTERM');
+   await exited;
+  }
+  await pool.query('DELETE FROM users WHERE email LIKE $1',[`${tag}-%@example.test`]);
+  await pool.query('UPDATE users SET locale=$2 WHERE id=$1',[platformAdminId,originalLocale]);
+ }
 });
 
 test('Platform audit includes organization events and structured details without leaking another organization to org admin',async()=>{
