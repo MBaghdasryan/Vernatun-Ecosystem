@@ -15,7 +15,9 @@ const schemas=Array.from({length:isSevenChains?7:1},()=>`qa_${randomBytes(10).to
 const schema=schemas[0];
 const urlForSchema=(name:string)=>{const target=new URL(url);target.searchParams.set('options',`-c search_path=${name},public`);return target.toString()};
 const testAdmin=new pg.Client({connectionString:url.toString()});await testAdmin.connect();
-const browserEnv=process.argv.includes('--phase6-only')
+const browserEnv=process.argv.includes('--org-console-only')
+ ? {APP_ORIGIN:'http://127.0.0.1:4193'}
+ : process.argv.includes('--phase6-only')
  ? {APP_ORIGIN:'http://127.0.0.1:4191'}
  : process.argv.includes('--notifications-only')
  ? {APP_ORIGIN:'http://127.0.0.1:4192'}
@@ -37,7 +39,9 @@ const sevenChains:readonly {name:string;files:readonly (readonly [string,string?
  {name:'Собрание, голосование и протокол',files:[['server/tests/phase6.test.ts']]},
 ];
 const chainResults:{name:string;passed:number;failed:number;exitCodes:number[];startedAt:string;finishedAt?:string}[]=[];
-const checks=process.argv.includes('--browser-only')
+const checks=process.argv.includes('--org-console-only')
+ ? [['--test','server/tests/organization-console.browser.test.ts']]
+ : process.argv.includes('--browser-only')
  ? [['server/tests/browser-sandbox.ts',...(process.argv.includes('--payments-qa')?['--payments-qa']:[])]]
   : process.argv.includes('--payments-only')
   ? [['--test','server/tests/payments.test.ts']]

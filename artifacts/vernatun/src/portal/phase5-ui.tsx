@@ -1,5 +1,5 @@
 import './phase5.css';
-import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {X} from 'lucide-react';
 import {request,ApiClientError} from './client';
 import {isUncertain} from './finance-util';
@@ -65,9 +65,9 @@ export function Fail({l,error,onRefresh}:{l:Language;error:unknown;onRefresh?:()
  return <div className="p-error" role="alert">{errText(l,error)}{stale&&onRefresh&&<> <button type="button" className="p-button small" onClick={onRefresh}>{p5(l,'refresh')}</button></>}</div>;
 }
 export function Dlg({title,onClose,l,children}:{title:string;onClose:()=>void;l:Language;children:ReactNode}){
- const ref=useRef<HTMLDialogElement>(null);
+ const ref=useRef<HTMLDialogElement>(null),titleId=useId();
  useEffect(()=>{const before=document.activeElement as HTMLElement|null;const o=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.showModal();return()=>{document.body.style.overflow=o;before?.focus()}},[]);
- return <dialog className="p-modal" ref={ref} onCancel={onClose} onClick={e=>{if(e.currentTarget===e.target)onClose()}}><button type="button" className="p-icon p-modal-close" onClick={onClose} aria-label={p5(l,'close')}><X/></button><h2>{title}</h2>{children}</dialog>;
+ return <dialog className="p-modal" ref={ref} aria-labelledby={titleId} onCancel={onClose} onClick={e=>{if(e.currentTarget===e.target)onClose()}}><button type="button" className="p-icon p-modal-close" onClick={onClose} aria-label={p5(l,'close')}><X/></button><h2 id={titleId}>{title}</h2>{children}</dialog>;
 }
 export function Badge({l,v}:{l:Language;v:string}){return <span className={'p-badge '+(['active','completed','committed','valid','resolved'].includes(v)?'green':['archived','invalid','urgent'].includes(v)?'red':'amber')}>{p5(l,v)}</span>}
 export function useStep(){const [s,set]=useState(0);return [s,set] as const}
