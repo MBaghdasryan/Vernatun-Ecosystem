@@ -71,6 +71,16 @@ test('platform task board is protected, searchable, versioned and audited',async
  const afterArchive=await platform.call('/platform/tasks?q=release');
  assert.equal(afterArchive.status,200);
  assert.equal(afterArchive.data.tasks.length,0);
+  const oldAlert=(await pool.query(`SELECT id FROM notifications
+   WHERE user_id=$1 AND entity_type='platform_task' AND entity_id=$2 ORDER BY created_at DESC LIMIT 1`,
+   [platformUserId,create.data.id])).rows[0];
+  assert.ok(oldAlert);
+  const archivedAlert=(await platform.call('/notifications')).data.find((item:any)=>item.id===oldAlert.id);
+  assert.equal(archivedAlert.access_denied,true);
+  assert.equal(archivedAlert.platform_task,null);
+  assert.deepEqual(archivedAlert.targets,[]);
+  assert.equal((await platform.call(`/notifications/${oldAlert.id}/destination`)).status,403);
+  assert.equal((await platform.call('/platform/tasks/'+create.data.id)).status,404);
  const audit=await pool.query(`SELECT action FROM audit_events WHERE entity_type='platform_task' AND entity_id=$1 ORDER BY created_at`,[create.data.id]);
  assert.deepEqual(audit.rows.map((row:any)=>row.action).sort(),['platform.task.archived','platform.task.assigned','platform.task.created','platform.task.updated'].sort());
 });

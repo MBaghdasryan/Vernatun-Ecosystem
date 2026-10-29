@@ -39,8 +39,10 @@ async function payerResponsibilityTargets(n:any,userId:string,options:Context[])
 }
 async function targets(n:any,userId:string,options:Context[]){
  if(n.entity_type==='platform_task'){
+   // Archived tasks stay as denied alerts, not a route to readable task history.
   const assigned=(await pool.query(`SELECT id FROM platform_tasks
-   WHERE id=$1 AND assignee_id=$2 AND organization_id IS NOT DISTINCT FROM $3::uuid`,
+    WHERE id=$1 AND assignee_id=$2 AND organization_id IS NOT DISTINCT FROM $3::uuid
+     AND archived_at IS NULL`,
    [n.entity_id,userId,n.organization_id])).rowCount;
   if(!assigned)return [];
   return options.filter(c=>c.shell==='platform'&&c.organization_id===null).map(c=>({c,view:'tasks'}));
@@ -97,7 +99,7 @@ async function list(req:any,id?:string){const options=await contexts(req.user.id
   const t=await targets(n,req.user.id,options);
   const task=n.entity_type==='platform_task'&&t.length
    ?(await pool.query(`SELECT id,title,status,due_on::text AS "dueOn"
-      FROM platform_tasks WHERE id=$1 AND assignee_id=$2`,[n.entity_id,req.user.id])).rows[0]??null
+       FROM platform_tasks WHERE id=$1 AND assignee_id=$2 AND archived_at IS NULL`,[n.entity_id,req.user.id])).rows[0]??null
    :null;
   return {n,t,task};
  }));

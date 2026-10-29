@@ -47,12 +47,14 @@ async function selectTask(db:any,id:string){
 }
 const taskNotificationBody=(task:{status:string;dueOn:string|null})=>`Status: ${task.status}. Due: ${task.dueOn??'—'}`;
 async function assignedTask(req:Request,id:string){
+ // Archived tasks and users without active platform membership cannot read task history.
  const task=(await pool.query(`SELECT t.id,t.title,t.description,t.status,t.priority,
   t.organization_id AS "organizationId",o.name AS "organizationName",
   t.assignee_id AS "assigneeId",u.name AS "assigneeName",t.due_on::text AS "dueOn",
   t.version,t.created_at AS "createdAt",t.updated_at AS "updatedAt"
   FROM platform_tasks t LEFT JOIN organizations o ON o.id=t.organization_id
   LEFT JOIN users u ON u.id=t.assignee_id WHERE t.id=$1 AND t.assignee_id=$2
+   AND t.archived_at IS NULL
    AND EXISTS(SELECT 1 FROM users member WHERE member.id=$2 AND member.account_status='active' AND NOT member.blocked
     AND EXISTS(SELECT 1 FROM role_assignments a JOIN roles r ON r.key=a.role_key
      WHERE a.user_id=member.id AND a.organization_id IS NULL AND a.active AND a.assignment_status='active'
