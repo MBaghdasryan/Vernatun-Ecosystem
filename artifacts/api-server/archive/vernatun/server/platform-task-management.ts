@@ -2,7 +2,7 @@ import {Router,type Request} from 'express';
 import {z} from 'zod';
 import {pool} from './db.js';
 import {ApiError,context,requireAuth,type Context} from './access.js';
-import {record,transaction} from './operations.js';
+import {notifyPlatformTask,record,transaction} from './operations.js';
 
 export const platformTaskManagement=Router();
 platformTaskManagement.use('/platform/tasks',requireAuth);
@@ -45,6 +45,18 @@ async function selectTask(db:any,id:string){
   FROM platform_tasks t LEFT JOIN organizations o ON o.id=t.organization_id
   LEFT JOIN users u ON u.id=t.assignee_id WHERE t.id=$1`,[id])).rows[0];
 }
+const taskNotificationBody=(task:{status:string;dueOn:string|null})=>`Status: ${task.status}. Due: ${task.dueOn??'—'}`;
+async function assignedTask(req:Request,id:string){
+ const task=(await pool.query(`SELECT t.id,t.title,t.description,t.status,t.priority,
+  t.organization_id AS "organizationId",o.name AS "organizationName",
+  t.assignee_id AS "assigneeId",u.name AS "assigneeName",t.due_on::text AS "dueOn",
+  t.version,t.created_at AS "createdAt",t.updated_at AS "updatedAt"
+  FROM platform_tasks t LEFT JOIN organizations o ON o.id=t.organization_id
+  LEFT JOIN users u ON u.id=t.assignee_id WHERE t.id=$1 AND t.assignee_id=$2`,
+  [id,req.user!.id])).rows[0];
+ if(!task)throw new ApiError(404,'not_found');
+ return task;
+}
 
 const listQuery=z.object({
  q:z.string().trim().max(160).default(''),
@@ -85,6 +97,10 @@ platformTaskManagement.get('/platform/tasks',async(req,res)=>{
  ]);
  res.json({tasks,organizations:organizations.rows,assignees:assignees.rows});
 });
+platformTaskManagement.get('/platform/tasks/:id',async(req,res)=>{
+ const task=await assignedTask(req,uuid.parse(req.params.id));
+ res.set('Cache-Control','private, no-store').json(task);
+});
 
 const createSchema=z.object({
  title,description:z.string().max(4000).default(''),
@@ -105,6 +121,12 @@ platformTaskManagement.post('/platform/tasks',async(req,res)=>{
   const result=await selectTask(db,created.id);
   await record(db,req,c,'platform.task.created','platform_task',created.id,
    {status:result.status,priority:result.priority,organizationId,assigneeId,dueOn});
+  if(assigneeId){
+   await record(db,req,c,'platform.task.assigned','platform_task',created.id,
+    {assigneeId,status:result.status,dueOn,version:result.version});
+   await notifyPlatformTask(db,assigneeId,organizationId,'platform_task_assigned',created.id,
+    `platform-task:${created.id}:assigned:${result.version}`,result.title,taskNotificationBody(result));
+  }
   return result;
  });
  res.status(201).json(task);
@@ -121,11 +143,14 @@ const updateSchema=z.object({
 platformTaskManagement.patch('/platform/tasks/:id',async(req,res)=>{
  const c=await admin(req),id=uuid.parse(req.params.id),body=updateSchema.parse(req.body);
  const task=await transaction(async db=>{
-  const prior=(await db.query('SELECT * FROM platform_tasks WHERE id=$1 AND archived_at IS NULL FOR UPDATE',[id])).rows[0];
+  const prior=(await db.query('SELECT *,due_on::text AS due_on_text FROM platform_tasks WHERE id=$1 AND archived_at IS NULL FOR UPDATE',[id])).rows[0];
   if(!prior)throw new ApiError(404,'not_found');
   if(prior.version!==body.version)throw new ApiError(409,'version_conflict');
   const organizationId=body.organizationId===undefined?prior.organization_id:body.organizationId;
   const assigneeId=body.assigneeId===undefined?prior.assignee_id:body.assigneeId;
+  const dueOn=body.dueOn===undefined?prior.due_on_text:body.dueOn;
+  const assignmentChanged=prior.assignee_id!==assigneeId;
+  const deadlineChanged=(prior.due_on_text??null)!==(dueOn??null);
   await validateOrganization(db,body.organizationId);await validateAssignee(db,body.assigneeId);
   const changedFields=Object.keys(body).filter(key=>key!=='version').sort();
   const updated=(await db.query(`UPDATE platform_tasks SET title=$2,description=$3,status=$4,priority=$5,
@@ -137,6 +162,19 @@ platformTaskManagement.patch('/platform/tasks/:id',async(req,res)=>{
   const result=await selectTask(db,updated.id);
   await record(db,req,c,'platform.task.updated','platform_task',id,
    {changedFields,fromStatus:prior.status,toStatus:result.status,version:result.version});
+  if(assignmentChanged){
+   const action=assigneeId?(prior.assignee_id?'platform.task.reassigned':'platform.task.assigned'):'platform.task.unassigned';
+   await record(db,req,c,action,'platform_task',id,
+    {previousAssigneeId:prior.assignee_id,newAssigneeId:assigneeId,status:result.status,dueOn:result.dueOn,version:result.version});
+   if(assigneeId)await notifyPlatformTask(db,assigneeId,organizationId,'platform_task_assigned',id,
+    `platform-task:${id}:assigned:${result.version}`,result.title,taskNotificationBody(result));
+  }
+  if(deadlineChanged){
+   await record(db,req,c,'platform.task.deadline_changed','platform_task',id,
+    {fromDueOn:prior.due_on_text??null,toDueOn:result.dueOn,assigneeId:result.assigneeId,status:result.status,version:result.version});
+   if(result.assigneeId)await notifyPlatformTask(db,result.assigneeId,organizationId,'platform_task_deadline_changed',id,
+    `platform-task:${id}:deadline:${result.version}`,result.title,taskNotificationBody(result));
+  }
   return result;
  });
  res.json(task);

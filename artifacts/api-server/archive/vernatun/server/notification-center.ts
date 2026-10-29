@@ -38,6 +38,13 @@ async function payerResponsibilityTargets(n:any,userId:string,options:Context[])
    recipientEligible&&['renter','family'].includes(c.role_key))).map(c=>({c,view:'preferences'}));
 }
 async function targets(n:any,userId:string,options:Context[]){
+ if(n.entity_type==='platform_task'){
+  const assigned=(await pool.query(`SELECT id FROM platform_tasks
+   WHERE id=$1 AND assignee_id=$2 AND organization_id IS NOT DISTINCT FROM $3::uuid`,
+   [n.entity_id,userId,n.organization_id])).rowCount;
+  if(!assigned)return [];
+  return options.filter(c=>c.shell==='platform'&&c.organization_id===null).map(c=>({c,view:'tasks'}));
+ }
  if(n.entity_type==='system')return options.filter(c=>c.organization_id===n.organization_id).map(c=>({c,view:'settings'}));
  if(n.entity_type==='payer_responsibility')return payerResponsibilityTargets(n,userId,options);
  if(n.entity_type==='resident_conversation'){
@@ -86,9 +93,16 @@ async function list(req:any,id?:string){const options=await contexts(req.user.id
  const rows=(await pool.query(`SELECT n.*,COALESCE(n.event_code,notification_event_alias(n.kind)) AS code,c.category,c.critical
  FROM notifications n JOIN notification_catalog c ON c.code=COALESCE(n.event_code,notification_event_alias(n.kind))
  WHERE user_id=$1 AND in_app_enabled AND (visible_after IS NULL OR visible_after<=now()) AND ($2::uuid IS NULL OR n.id=$2) ORDER BY created_at DESC,id DESC LIMIT 100`,[req.user.id,id??null])).rows;
- return Promise.all(rows.map(async n=>({n,t:await targets(n,req.user.id,options)})));
+ return Promise.all(rows.map(async n=>{
+  const t=await targets(n,req.user.id,options);
+  const task=n.entity_type==='platform_task'&&t.length
+   ?(await pool.query(`SELECT id,title,status,due_on::text AS "dueOn"
+      FROM platform_tasks WHERE id=$1 AND assignee_id=$2`,[n.entity_id,req.user.id])).rows[0]??null
+   :null;
+  return {n,t,task};
+ }));
 }
-notificationCenter.get('/notifications',async(req,res)=>res.json((await list(req)).map(({n,t})=>({id:n.id,kind:n.kind,event_code:n.code,category:n.category,critical:n.critical,created_at:n.created_at,read_at:n.read_at,manual_batch_id:n.manual_batch_id??null,custom_title:n.custom_title??null,custom_body:n.custom_body??null,access_denied:!t.length,targets:t.map(({c})=>({id:c.id,role_key:c.role_key,organization_name:c.organization_name,building_name:c.building_name,unit_number:c.unit_number}))}))));
+notificationCenter.get('/notifications',async(req,res)=>res.json((await list(req)).map(({n,t,task})=>({id:n.id,kind:n.kind,event_code:n.code,category:n.category,critical:n.critical,created_at:n.created_at,read_at:n.read_at,manual_batch_id:n.manual_batch_id??null,custom_title:n.custom_title??null,custom_body:n.custom_body??null,platform_task:task,access_denied:!t.length,targets:t.map(({c})=>({id:c.id,role_key:c.role_key,organization_name:c.organization_name,building_name:c.building_name,unit_number:c.unit_number}))}))));
 notificationCenter.get('/notifications/unread-count',async(req,res)=>{
  const unread=Number((await pool.query('SELECT count(*) FROM notifications WHERE user_id=$1 AND in_app_enabled AND read_at IS NULL AND (visible_after IS NULL OR visible_after<=now())',[req.user!.id])).rows[0].count);
  res.set('Cache-Control','private, no-store').json({unread});
@@ -96,9 +110,10 @@ notificationCenter.get('/notifications/unread-count',async(req,res)=>{
 notificationCenter.get('/notifications/:id/destination',async(req,res)=>{const entry=(await list(req,uuid.parse(req.params.id)))[0];if(!entry)throw new ApiError(404,'not_found');
  const desired=req.query.contextId?uuid.parse(req.query.contextId):req.session.contextId;
  const target=entry.t.find(x=>x.c.id===desired)??(!req.query.contextId?entry.t[0]:undefined);if(!target)throw new ApiError(403,'forbidden');
- const {c,view}=target,product=view==='preferences'?'imtun':c.permissions.includes('requests.own')?'imtun':view==='finance'?'os':c.product;
+ const {c,view}=target,product=view==='preferences'?'imtun':view==='tasks'?'console':c.permissions.includes('requests.own')?'imtun':view==='finance'?'os':c.product;
  if(!['imtun','hayat','os','console'].includes(product??''))throw new ApiError(403,'forbidden');
-  const query=entry.n.entity_type==='request'?`?requestId=${entry.n.entity_id}`:
+  const query=entry.n.entity_type==='platform_task'?`?taskId=${entry.n.entity_id}`:
+   entry.n.entity_type==='request'?`?requestId=${entry.n.entity_id}`:
    entry.n.entity_type==='resident_conversation'?`?recordKind=conversations&recordId=${entry.n.entity_id}`:'';
  res.json({targetContextId:c.id,requiresSwitch:c.id!==req.session.contextId,destination:`/${product}/${view}${query}`});
 });
