@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useState,type ComponentType,type FormEvent,type ReactNode} from 'react';
-import {Archive,Building2,CalendarDays,Check,Clock3,ListTodo,Pencil,Plus,Search,UserRound} from 'lucide-react';
-import {request} from './client';
+import {Archive,Building2,CalendarDays,Check,Clock3,Download,ListTodo,MessageCircle,Paperclip,Pencil,Plus,Search,Send,UserRound} from 'lucide-react';
+import {downloadFile,request,uploadPlatformTaskAttachment} from './client';
 import {type Language} from './i18n';
 import type {RoleContext} from './types';
 import './platform-task-manager.css';
@@ -8,17 +8,18 @@ import './platform-task-manager.css';
 type Status='todo'|'in_progress'|'blocked'|'done';
 type Priority='low'|'normal'|'high'|'urgent';
 type Task={id:string;title:string;description:string;status:Status;priority:Priority;organizationId:string|null;organizationName:string|null;assigneeId:string|null;assigneeName:string|null;dueOn:string|null;version:number;createdAt:string;updatedAt:string};
+type Activity={id:string;type:'comment'|'attachment';content:string|null;fileName:string|null;mediaType:string|null;byteSize:string|number|null;author:string;createdAt:string};
 type SelectItem={id:string;name:string};
 type BoardData={tasks:Task[];organizations:SelectItem[];assignees:SelectItem[]};
 type ModalComponent=ComponentType<{title:string;onClose:()=>void;children:ReactNode}>;
 type ErrorComponent=ComponentType<{error:unknown}>;
 type Props={c:RoleContext;language:Language;Modal:ModalComponent;ErrorNotice:ErrorComponent};
 type Draft={title:string;description:string;status:Status;priority:Priority;organizationId:string;assigneeId:string;dueOn:string};
-type Copy={subtitle:string;newTask:string;search:string;organization:string;allOrganizations:string;noOrganization:string;assignee:string;anyAssignee:string;priority:string;allPriorities:string;dueFrom:string;dueTo:string;clear:string;loading:string;retry:string;empty:string;createFirst:string;todo:string;inProgress:string;blocked:string;done:string;created:string;urgent:string;high:string;normal:string;low:string;noAssignee:string;noDueDate:string;due:string;overdue:string;edit:string;createTitle:string;editTitle:string;taskTitle:string;description:string;status:string;save:string;cancel:string;saving:string;archive:string;archiveConfirm:string;archiving:string;filters:string;allTasks:string;invalidRange:string;loadFailed:string;saveFailed:string;archiveFailed:string;moveFailed:string;taskCount:string;taskDescription:string};
+type Copy={subtitle:string;newTask:string;search:string;organization:string;allOrganizations:string;noOrganization:string;assignee:string;anyAssignee:string;priority:string;allPriorities:string;dueFrom:string;dueTo:string;clear:string;loading:string;retry:string;empty:string;createFirst:string;todo:string;inProgress:string;blocked:string;done:string;created:string;urgent:string;high:string;normal:string;low:string;noAssignee:string;noDueDate:string;due:string;overdue:string;edit:string;createTitle:string;editTitle:string;taskTitle:string;description:string;status:string;save:string;cancel:string;saving:string;archive:string;archiveConfirm:string;archiving:string;filters:string;allTasks:string;invalidRange:string;loadFailed:string;saveFailed:string;archiveFailed:string;moveFailed:string;taskCount:string;taskDescription:string;discussion:string;commentPlaceholder:string;sendComment:string;sendingComment:string;attachment:string;uploadAttachment:string;uploading:string;download:string;noActivity:string;activityFailed:string;attachmentFailed:string;commentFailed:string;supportedFiles:string};
 const TEXT:Record<Language,Copy>={
- hy:{subtitle:'Վերնատունի ներքին աշխատանքների Kanban տախտակ',newTask:'Նոր առաջադրանք',search:'Որոնել առաջադրանքներ',organization:'Կազմակերպություն',allOrganizations:'Բոլոր կազմակերպությունները',noOrganization:'Առանց կազմակերպության',assignee:'Պատասխանատու',anyAssignee:'Բոլորը',priority:'Առաջնահերթություն',allPriorities:'Բոլորը',dueFrom:'Ժամկետը՝ սկսած',dueTo:'Ժամկետը՝ մինչև',clear:'Մաքրել զտիչները',loading:'Բեռնվում է…',retry:'Կրկնել',empty:'Այս սյունակում առաջադրանքներ չկան։',createFirst:'Ստեղծել առաջադրանք',todo:'Անելիք',inProgress:'Ընթացքում',blocked:'Արգելափակված',done:'Ավարտված',created:'Ստեղծված է',urgent:'Շտապ',high:'Բարձր',normal:'Սովորական',low:'Ցածր',noAssignee:'Նշանակված չէ',noDueDate:'Ժամկետ սահմանված չէ',due:'Ժամկետ',overdue:'Ժամկետանց',edit:'Խմբագրել',createTitle:'Նոր առաջադրանք',editTitle:'Խմբագրել առաջադրանքը',taskTitle:'Վերնագիր',description:'Նկարագրություն',status:'Կարգավիճակ',save:'Պահպանել',cancel:'Չեղարկել',saving:'Պահպանվում է…',archive:'Արխիվացնել',archiveConfirm:'Արխիվացնե՞լ այս առաջադրանքը։ Այն կանհետանա տախտակից, բայց կմնա գործողությունների մատյանում։',archiving:'Արխիվացվում է…',filters:'Զտիչներ',allTasks:'Բոլոր առաջադրանքները',invalidRange:'Սկզբի ամսաթիվը պետք է լինի մինչև ավարտի ամսաթիվը։',loadFailed:'Չհաջողվեց բեռնել առաջադրանքները։',saveFailed:'Չհաջողվեց պահպանել առաջադրանքը։',archiveFailed:'Չհաջողվեց արխիվացնել առաջադրանքը։',moveFailed:'Չհաջողվեց փոխել կարգավիճակը։',taskCount:'առաջադրանք',taskDescription:'Պլանավորեք, հանձնարարեք և հետևեք Vernatun-ի ներքին աշխատանքներին։'},
- ru:{subtitle:'Внутренние задачи Vernatun — доска Kanban',newTask:'Новая задача',search:'Поиск задач',organization:'Компания',allOrganizations:'Все компании',noOrganization:'Без компании',assignee:'Ответственный',anyAssignee:'Любой',priority:'Приоритет',allPriorities:'Любой приоритет',dueFrom:'Срок с',dueTo:'Срок по',clear:'Сбросить фильтры',loading:'Загрузка…',retry:'Повторить',empty:'В этой колонке пока нет задач.',createFirst:'Создать задачу',todo:'К выполнению',inProgress:'В работе',blocked:'Заблокировано',done:'Готово',created:'Создана',urgent:'Срочно',high:'Высокий',normal:'Обычный',low:'Низкий',noAssignee:'Не назначен',noDueDate:'Без срока',due:'Срок',overdue:'Просрочена',edit:'Изменить',createTitle:'Новая задача',editTitle:'Изменить задачу',taskTitle:'Название',description:'Описание',status:'Статус',save:'Сохранить',cancel:'Отмена',saving:'Сохранение…',archive:'В архив',archiveConfirm:'Архивировать эту задачу? Она исчезнет с доски, но останется в журнале действий.',archiving:'Архивирование…',filters:'Фильтры',allTasks:'Всего задач',invalidRange:'Начальная дата должна быть раньше конечной.',loadFailed:'Не удалось загрузить задачи.',saveFailed:'Не удалось сохранить задачу.',archiveFailed:'Не удалось архивировать задачу.',moveFailed:'Не удалось изменить статус.',taskCount:'задач',taskDescription:'Создавайте задачи, назначайте ответственных и отслеживайте работу Vernatun.'},
- en:{subtitle:'Internal Vernatun work, organized on a Kanban board',newTask:'New task',search:'Search tasks',organization:'Organization',allOrganizations:'All organizations',noOrganization:'No organization',assignee:'Assignee',anyAssignee:'Anyone',priority:'Priority',allPriorities:'Any priority',dueFrom:'Due from',dueTo:'Due through',clear:'Clear filters',loading:'Loading…',retry:'Retry',empty:'No tasks in this column yet.',createFirst:'Create a task',todo:'To do',inProgress:'In progress',blocked:'Blocked',done:'Done',created:'Created',urgent:'Urgent',high:'High',normal:'Normal',low:'Low',noAssignee:'Unassigned',noDueDate:'No due date',due:'Due',overdue:'Overdue',edit:'Edit',createTitle:'New task',editTitle:'Edit task',taskTitle:'Title',description:'Description',status:'Status',save:'Save',cancel:'Cancel',saving:'Saving…',archive:'Archive',archiveConfirm:'Archive this task? It will disappear from the board but remain in the audit log.',archiving:'Archiving…',filters:'Filters',allTasks:'All tasks',invalidRange:'The start date must be earlier than the end date.',loadFailed:'Could not load tasks.',saveFailed:'Could not save the task.',archiveFailed:'Could not archive the task.',moveFailed:'Could not change the status.',taskCount:'tasks',taskDescription:'Create tasks, assign owners, and track Vernatun internal work.'}
+ hy:{subtitle:'Վերնատունի ներքին աշխատանքների Kanban տախտակ',newTask:'Նոր առաջադրանք',search:'Որոնել առաջադրանքներ',organization:'Կազմակերպություն',allOrganizations:'Բոլոր կազմակերպությունները',noOrganization:'Առանց կազմակերպության',assignee:'Պատասխանատու',anyAssignee:'Բոլորը',priority:'Առաջնահերթություն',allPriorities:'Բոլորը',dueFrom:'Ժամկետը՝ սկսած',dueTo:'Ժամկետը՝ մինչև',clear:'Մաքրել զտիչները',loading:'Բեռնվում է…',retry:'Կրկնել',empty:'Այս սյունակում առաջադրանքներ չկան։',createFirst:'Ստեղծել առաջադրանք',todo:'Անելիք',inProgress:'Ընթացքում',blocked:'Արգելափակված',done:'Ավարտված',created:'Ստեղծված է',urgent:'Շտապ',high:'Բարձր',normal:'Սովորական',low:'Ցածր',noAssignee:'Նշանակված չէ',noDueDate:'Ժամկետ սահմանված չէ',due:'Ժամկետ',overdue:'Ժամկետանց',edit:'Խմբագրել',createTitle:'Նոր առաջադրանք',editTitle:'Խմբագրել առաջադրանքը',taskTitle:'Վերնագիր',description:'Նկարագրություն',status:'Կարգավիճակ',save:'Պահպանել',cancel:'Չեղարկել',saving:'Պահպանվում է…',archive:'Արխիվացնել',archiveConfirm:'Արխիվացնե՞լ այս առաջադրանքը։ Այն կանհետանա տախտակից, բայց կմնա գործողությունների մատյանում։',archiving:'Արխիվացվում է…',filters:'Զտիչներ',allTasks:'Բոլոր առաջադրանքները',invalidRange:'Սկզբի ամսաթիվը պետք է լինի մինչև ավարտի ամսաթիվը։',loadFailed:'Չհաջողվեց բեռնել առաջադրանքները։',saveFailed:'Չհաջողվեց պահպանել առաջադրանքը։',archiveFailed:'Չհաջողվեց արխիվացնել առաջադրանքը։',moveFailed:'Չհաջողվեց փոխել կարգավիճակը։',taskCount:'առաջադրանք',taskDescription:'Պլանավորեք, հանձնարարեք և հետևեք Vernatun-ի ներքին աշխատանքներին։',discussion:'Մեկնաբանություններ և ֆայլեր',commentPlaceholder:'Գրեք մեկնաբանություն…',sendComment:'Ավելացնել մեկնաբանություն',sendingComment:'Ուղարկվում է…',attachment:'Կցված ֆայլ',uploadAttachment:'Կցել ֆայլ',uploading:'Վերբեռնվում է…',download:'Ներբեռնել',noActivity:'Մեկնաբանություններ կամ ֆայլեր դեռ չկան։',activityFailed:'Չհաջողվեց բեռնել քննարկումը։',attachmentFailed:'Չհաջողվեց կցել ֆայլը։',commentFailed:'Չհաջողվեց ավելացնել մեկնաբանությունը։',supportedFiles:'PDF, PNG, JPEG կամ WebP · մինչև 6 ՄԲ'},
+ ru:{subtitle:'Внутренние задачи Vernatun — доска Kanban',newTask:'Новая задача',search:'Поиск задач',organization:'Компания',allOrganizations:'Все компании',noOrganization:'Без компании',assignee:'Ответственный',anyAssignee:'Любой',priority:'Приоритет',allPriorities:'Любой приоритет',dueFrom:'Срок с',dueTo:'Срок по',clear:'Сбросить фильтры',loading:'Загрузка…',retry:'Повторить',empty:'В этой колонке пока нет задач.',createFirst:'Создать задачу',todo:'К выполнению',inProgress:'В работе',blocked:'Заблокировано',done:'Готово',created:'Создана',urgent:'Срочно',high:'Высокий',normal:'Обычный',low:'Низкий',noAssignee:'Не назначен',noDueDate:'Без срока',due:'Срок',overdue:'Просрочена',edit:'Изменить',createTitle:'Новая задача',editTitle:'Изменить задачу',taskTitle:'Название',description:'Описание',status:'Статус',save:'Сохранить',cancel:'Отмена',saving:'Сохранение…',archive:'В архив',archiveConfirm:'Архивировать эту задачу? Она исчезнет с доски, но останется в журнале действий.',archiving:'Архивирование…',filters:'Фильтры',allTasks:'Всего задач',invalidRange:'Начальная дата должна быть раньше конечной.',loadFailed:'Не удалось загрузить задачи.',saveFailed:'Не удалось сохранить задачу.',archiveFailed:'Не удалось архивировать задачу.',moveFailed:'Не удалось изменить статус.',taskCount:'задач',taskDescription:'Создавайте задачи, назначайте ответственных и отслеживайте работу Vernatun.',discussion:'Обсуждение и файлы',commentPlaceholder:'Напишите комментарий…',sendComment:'Добавить комментарий',sendingComment:'Отправка…',attachment:'Файл',uploadAttachment:'Прикрепить файл',uploading:'Загрузка…',download:'Скачать',noActivity:'Пока нет комментариев и файлов.',activityFailed:'Не удалось загрузить обсуждение.',attachmentFailed:'Не удалось прикрепить файл.',commentFailed:'Не удалось добавить комментарий.',supportedFiles:'PDF, PNG, JPEG или WebP · до 6 МБ'},
+ en:{subtitle:'Internal Vernatun work, organized on a Kanban board',newTask:'New task',search:'Search tasks',organization:'Organization',allOrganizations:'All organizations',noOrganization:'No organization',assignee:'Assignee',anyAssignee:'Anyone',priority:'Priority',allPriorities:'Any priority',dueFrom:'Due from',dueTo:'Due through',clear:'Clear filters',loading:'Loading…',retry:'Retry',empty:'No tasks in this column yet.',createFirst:'Create a task',todo:'To do',inProgress:'In progress',blocked:'Blocked',done:'Done',created:'Created',urgent:'Urgent',high:'High',normal:'Normal',low:'Low',noAssignee:'Unassigned',noDueDate:'No due date',due:'Due',overdue:'Overdue',edit:'Edit',createTitle:'New task',editTitle:'Edit task',taskTitle:'Title',description:'Description',status:'Status',save:'Save',cancel:'Cancel',saving:'Saving…',archive:'Archive',archiveConfirm:'Archive this task? It will disappear from the board but remain in the audit log.',archiving:'Archiving…',filters:'Filters',allTasks:'All tasks',invalidRange:'The start date must be earlier than the end date.',loadFailed:'Could not load tasks.',saveFailed:'Could not save the task.',archiveFailed:'Could not archive the task.',moveFailed:'Could not change the status.',taskCount:'tasks',taskDescription:'Create tasks, assign owners, and track Vernatun internal work.',discussion:'Discussion and files',commentPlaceholder:'Write a comment…',sendComment:'Add comment',sendingComment:'Sending…',attachment:'Attachment',uploadAttachment:'Attach a file',uploading:'Uploading…',download:'Download',noActivity:'No comments or files yet.',activityFailed:'Could not load the discussion.',attachmentFailed:'Could not attach the file.',commentFailed:'Could not add the comment.',supportedFiles:'PDF, PNG, JPEG, or WebP · up to 6 MB'}
 };
 const STATUS:Status[]=['todo','in_progress','blocked','done'];
 const PRIORITIES:Priority[]=['urgent','high','normal','low'];
@@ -45,6 +46,13 @@ export default function PlatformTaskManager({c,language,Modal,ErrorNotice}:Props
  const [busyTask,setBusyTask]=useState<string|null>(null);
  const [moving,setMoving]=useState<string|null>(null);
  const [archiveConfirm,setArchiveConfirm]=useState(false);
+  const [activity,setActivity]=useState<Activity[]>([]);
+  const [activityLoading,setActivityLoading]=useState(false);
+  const [activityRevision,setActivityRevision]=useState(0);
+  const [activityError,setActivityError]=useState('');
+  const [comment,setComment]=useState('');
+  const [commentBusy,setCommentBusy]=useState(false);
+  const [attachmentBusy,setAttachmentBusy]=useState(false);
  const dateRangeInvalid=Boolean(dueFrom&&dueTo&&dueFrom>dueTo);
 
  const load=useCallback(async()=>{
@@ -61,18 +69,29 @@ export default function PlatformTaskManager({c,language,Modal,ErrorNotice}:Props
   finally{setLoading(false)}
  },[query,organizationId,assigneeId,priority,dueFrom,dueTo]);
  useEffect(()=>{if(!dateRangeInvalid)void load()},[load,revision,dateRangeInvalid]);
+  const activeTaskId=editing?.id;
+  useEffect(()=>{
+   if(!creating||!activeTaskId){setActivity([]);return}
+   let active=true;
+   setActivityLoading(true);setActivityError('');
+   request<{activity:Activity[]}>('/platform/tasks/'+activeTaskId+'/activity')
+    .then(result=>{if(active)setActivity(result.activity)})
+    .catch(()=>{if(active)setActivityError(copy.activityFailed)})
+    .finally(()=>{if(active)setActivityLoading(false)});
+   return()=>{active=false};
+  },[creating,activeTaskId,activityRevision,copy.activityFailed]);
 
  const visibleTasks=data?.tasks??[];
  const totals=useMemo(()=>STATUS.reduce((acc,status)=>({...acc,[status]:visibleTasks.filter(task=>task.status===status).length}),{} as Record<Status,number>),[visibleTasks]);
  const priorityName=(value:Priority)=>value==='urgent'?copy.urgent:value==='high'?copy.high:value==='low'?copy.low:copy.normal;
  const statusName=(value:Status)=>value==='in_progress'?copy.inProgress:value==='blocked'?copy.blocked:value==='done'?copy.done:copy.todo;
  const clearFilters=()=>{setSearchInput('');setQuery('');setOrganizationId('');setAssigneeId('');setPriority('');setDueFrom('');setDueTo('')};
- const openNew=()=>{setEditing(null);setDraft(freshDraft());setArchiveConfirm(false);setCreating(true)};
- const openEdit=(task:Task)=>{setEditing(task);setDraft({title:task.title,description:task.description,status:task.status,priority:task.priority,organizationId:task.organizationId??'',assigneeId:task.assigneeId??'',dueOn:task.dueOn??''});setArchiveConfirm(false);setCreating(true)};
- const closeEditor=()=>{if(!busy){setCreating(false);setEditing(null);setArchiveConfirm(false)}};
+  const openNew=()=>{setEditing(null);setDraft(freshDraft());setComment('');setActivityError('');setArchiveConfirm(false);setCreating(true)};
+  const openEdit=(task:Task)=>{setEditing(task);setDraft({title:task.title,description:task.description,status:task.status,priority:task.priority,organizationId:task.organizationId??'',assigneeId:task.assigneeId??'',dueOn:task.dueOn??''});setComment('');setActivityError('');setArchiveConfirm(false);setCreating(true)};
+  const closeEditor=()=>{if(!busy&&!commentBusy&&!attachmentBusy){setCreating(false);setEditing(null);setArchiveConfirm(false)}};
  const submitSearch=(event:FormEvent)=>{event.preventDefault();setQuery(searchInput.trim())};
  const save=async(event:FormEvent)=>{
-  event.preventDefault();if(busy)return;
+   event.preventDefault();if(busy||commentBusy||attachmentBusy)return;
   setBusy(true);
   const body={title:draft.title.trim(),description:draft.description,status:draft.status,priority:draft.priority,organizationId:draft.organizationId||null,assigneeId:draft.assigneeId||null,dueOn:draft.dueOn||null};
   try{
@@ -83,7 +102,7 @@ export default function PlatformTaskManager({c,language,Modal,ErrorNotice}:Props
   finally{setBusy(false)}
  };
  const archive=async()=>{
-  if(!editing||busy)return;
+   if(!editing||busy||commentBusy||attachmentBusy)return;
   setBusy(true);
   try{await request('/platform/tasks/'+editing.id+'/archive','POST',{version:editing.version});setCreating(false);setEditing(null);setArchiveConfirm(false);setRevision(value=>value+1)}
   catch(err){setError(err)}
@@ -96,6 +115,36 @@ export default function PlatformTaskManager({c,language,Modal,ErrorNotice}:Props
   catch(err){setError(err)}
   finally{setBusyTask(null);setMoving(null)}
  };
+  const addComment=async(event:FormEvent)=>{
+   event.preventDefault();
+   if(!editing||!comment.trim()||commentBusy)return;
+   setCommentBusy(true);setActivityError('');
+   try{
+    await request('/platform/tasks/'+editing.id+'/comments','POST',{text:comment.trim()});
+    setComment('');setActivityRevision(value=>value+1);
+   }catch{setActivityError(copy.commentFailed)}
+   finally{setCommentBusy(false)}
+  };
+  const attachFile=async(file:File|undefined)=>{
+   if(!editing||!file||attachmentBusy)return;
+   setAttachmentBusy(true);setActivityError('');
+   try{
+    await uploadPlatformTaskAttachment(editing.id,file);
+    setActivityRevision(value=>value+1);
+   }catch{setActivityError(copy.attachmentFailed)}
+   finally{setAttachmentBusy(false)}
+  };
+  const downloadAttachment=async(item:Activity)=>{
+   if(!editing||!item.fileName)return;
+   try{
+    const blob=await downloadFile('/platform/tasks/'+editing.id+'/attachments/'+item.id);
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=item.fileName;link.click();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+   }catch{setActivityError(copy.attachmentFailed)}
+  };
+  const timeLabel=(value:string)=>new Intl.DateTimeFormat(language==='en'?'en-US':language==='hy'?'hy-AM':'ru-RU',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Yerevan'}).format(new Date(value));
+  const sizeLabel=(value:string|number|null)=>{const bytes=Number(value??0);return bytes<1024?`${bytes} B`:bytes<1024*1024?`${(bytes/1024).toFixed(1)} KB`:`${(bytes/1024/1024).toFixed(1)} MB`};
  const dateLabel=(date:string)=>new Intl.DateTimeFormat(language==='en'?'en-US':language==='hy'?'hy-AM':'ru-RU',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Yerevan'}).format(new Date(date+'T12:00:00'));
 
  return <section className="ptm" aria-labelledby="ptm-title">
@@ -149,12 +198,34 @@ export default function PlatformTaskManager({c,language,Modal,ErrorNotice}:Props
      <label>{copy.assignee}<select value={draft.assigneeId} onChange={event=>setDraft({...draft,assigneeId:event.target.value})}><option value="">{copy.noAssignee}</option>{(data?.assignees??[]).map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
     </div>
     <label>{copy.dueTo}<input type="date" value={draft.dueOn} onChange={event=>setDraft({...draft,dueOn:event.target.value})}/></label>
-    {archiveConfirm&&<div className="ptm-archive-confirm" role="alert"><p>{copy.archiveConfirm}</p><div><button className="p-button" type="button" onClick={()=>setArchiveConfirm(false)}>{copy.cancel}</button><button className="p-button danger" type="button" disabled={busy} onClick={()=>void archive()}><Archive size={15}/>{busy?copy.archiving:copy.archive}</button></div></div>}
+     {editing&&<section className="ptm-discussion" aria-labelledby="ptm-discussion-title">
+      <h3 id="ptm-discussion-title"><MessageCircle size={17}/>{copy.discussion}</h3>
+      {activityError&&<p className="ptm-discussion-error" role="alert">{activityError}</p>}
+      {activityLoading?<p className="ptm-activity-empty" role="status">{copy.loading}</p>:activity.length===0?<p className="ptm-activity-empty">{copy.noActivity}</p>:
+       <ol className="ptm-activity-list">{activity.map(item=><li key={item.type+item.id} className="ptm-activity-item">
+        <div className="ptm-activity-meta"><strong>{item.author}</strong><time dateTime={item.createdAt}>{timeLabel(item.createdAt)}</time></div>
+        {item.type==='comment'?<p className="ptm-activity-content">{item.content}</p>:<div className="ptm-attachment-row">
+         <span><Paperclip size={15}/><strong>{item.fileName}</strong><small>{sizeLabel(item.byteSize)}</small></span>
+         <button className="p-button" type="button" onClick={()=>void downloadAttachment(item)}><Download size={14}/>{copy.download}</button>
+        </div>}
+       </li>)}</ol>}
+      <form className="ptm-comment-form" onSubmit={addComment}>
+       <label className="sr-only" htmlFor="ptm-comment">{copy.commentPlaceholder}</label>
+       <textarea id="ptm-comment" rows={2} maxLength={4000} placeholder={copy.commentPlaceholder} value={comment} onChange={event=>setComment(event.target.value)}/>
+       <button className="p-button orange" type="submit" disabled={commentBusy||!comment.trim()}><Send size={15}/>{commentBusy?copy.sendingComment:copy.sendComment}</button>
+      </form>
+      <div className="ptm-attachment-upload">
+       <label className="p-button" htmlFor="ptm-attachment"><Paperclip size={15}/>{attachmentBusy?copy.uploading:copy.uploadAttachment}</label>
+       <input id="ptm-attachment" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" disabled={attachmentBusy} onChange={event=>{const file=event.currentTarget.files?.[0];void attachFile(file);event.currentTarget.value=''}}/>
+       <small>{copy.supportedFiles}</small>
+      </div>
+     </section>}
+      {archiveConfirm&&<div className="ptm-archive-confirm" role="alert"><p>{copy.archiveConfirm}</p><div><button className="p-button" type="button" disabled={busy||commentBusy||attachmentBusy} onClick={()=>setArchiveConfirm(false)}>{copy.cancel}</button><button className="p-button danger" type="button" disabled={busy||commentBusy||attachmentBusy} onClick={()=>void archive()}><Archive size={15}/>{busy?copy.archiving:copy.archive}</button></div></div>}
     <div className="ptm-form-actions">
      {editing&&!archiveConfirm&&<button className="p-button danger" type="button" disabled={busy} onClick={()=>setArchiveConfirm(true)}><Archive size={15}/>{copy.archive}</button>}
      <span/>
-     <button className="p-button" type="button" disabled={busy} onClick={closeEditor}>{copy.cancel}</button>
-     <button className="p-button orange" type="submit" disabled={busy||!draft.title.trim()}>{busy?copy.saving:<><Check size={16}/>{copy.save}</>}</button>
+      <button className="p-button" type="button" disabled={busy||commentBusy||attachmentBusy} onClick={closeEditor}>{copy.cancel}</button>
+      <button className="p-button orange" type="submit" disabled={busy||commentBusy||attachmentBusy||!draft.title.trim()}>{busy?copy.saving:<><Check size={16}/>{copy.save}</>}</button>
     </div>
    </form>
   </Modal>}

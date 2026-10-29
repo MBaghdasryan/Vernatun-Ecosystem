@@ -15,6 +15,20 @@ silently switching after an error could hide or lose the user's existing files.
 Refuse unsupported reviewed deletion instead of falling back to an unconditional
 delete. Verify matched SQL/bytes and the owning namespace before maintenance.
 
+Every new table that references private bytes must be registered across every
+file-lifecycle catalog: cleanup references and locks, migration enumeration,
+backup manifests, restore validation, and tests. These lists are independent, so
+adding an authorized upload route alone can leave live bytes classified as orphaned
+or omitted from a recovery set.
+
+**Why:** Platform-task attachments use their own metadata table rather than the
+existing document catalog; the first integrated check exposed a missing reference
+and mismatched key type in separate lifecycle queries.
+
+**How to apply:** Search all private-file reference queries whenever adding a
+metadata table, include it in inventory and backup/restore, and preserve the
+canonical key type when combining references.
+
 Keep private file upload and download operations behind Vernatun's existing
 server authorization; moving bytes to App Storage is not an authentication
 migration or permission redesign.

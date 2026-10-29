@@ -29,7 +29,7 @@ async function insertDocument(db:{query:typeof pool.query},key:string){
 }
 async function metadataRows(){
   const rows=[];
-  for(const table of ['request_photos','file_attachments','documents']){
+  for(const table of ['request_photos','file_attachments','documents','platform_task_attachments']){
     rows.push((await pool.query(`SELECT * FROM ${table} ORDER BY id`)).rows);
   }
   return rows;
@@ -41,8 +41,13 @@ after(async()=>{
 
 test('Inventory is read-only; grace period, all three tables, exact namespace and repeatable deletion',async()=>{
   const orphan=await create(),recent=await create();
-  const doc=await create(),photo=await create('photos'),attachment=await create('photos');
+  const doc=await create(),photo=await create('photos'),attachment=await create('photos'),taskFile=await create();
   await insertDocument(pool,doc);
+  const admin=fixtures.accounts.platform_admin.id;
+  const task=(await pool.query(`INSERT INTO platform_tasks(title,created_by,updated_by)
+    VALUES('Inventory test task',$1,$1) RETURNING id`,[admin])).rows[0];
+  await pool.query(`INSERT INTO platform_task_attachments(task_id,storage_key,file_name,media_type,byte_size,uploaded_by)
+    VALUES($1,$2,'task-file.pdf','application/pdf',$3,$4)`,[task.id,taskFile,body.length,admin]);
   await pool.query('INSERT INTO request_photos(request_id,author_id,storage_key) SELECT id,$1,$2 FROM resident_requests LIMIT 1',[fixtures.accounts.unit_owner.id,photo]);
   await pool.query('INSERT INTO file_attachments(defect_id,author_id,storage_key) SELECT id,$1,$2 FROM defects LIMIT 1',[fixtures.accounts.developer.id,attachment]);
   const unknown=location.bucket.file(location.prefix+'photos/not-a-managed-key');
@@ -53,7 +58,7 @@ test('Inventory is read-only; grace period, all three tables, exact namespace an
     const report=await inventoryPrivateFiles();
     assert.equal(report.graceHours,72);
     for(const key of [orphan,recent])assert.equal(report.objects.find(e=>e.key===key)!.status,'recent');
-    for(const key of [doc,photo,attachment])assert.equal(report.objects.find(e=>e.key===key)!.status,'referenced');
+    for(const key of [doc,photo,attachment,taskFile])assert.equal(report.objects.find(e=>e.key===key)!.status,'referenced');
     assert.ok(report.ignored>=1);
     assert.equal((await cleanPrivateFiles(only(report,recent))).deleted,0);
     assert.ok(await privateFileExists('documents',recent));
@@ -63,12 +68,13 @@ test('Inventory is read-only; grace period, all three tables, exact namespace an
     assert.equal((await cleanPrivateFiles(only(oldReport,orphan),now)).missing,1);
     assert.deepEqual(await metadataRows(),before);
     assert.deepEqual(await privateFileMetadata('documents',doc),objectBefore);
-    for(const key of [doc,photo,attachment]){
+    for(const key of [doc,photo,attachment,taskFile]){
       // Even a manually marked candidate cannot override a live reference.
       const selected=only(oldReport,key);selected.objects[0]!.status='candidate';
       assert.equal((await cleanPrivateFiles(selected,now)).referenced,1);
     }
     assert.deepEqual(await readPrivateFile('documents',doc),body);
+    assert.deepEqual(await readPrivateFile('documents',taskFile),body);
     assert.deepEqual(await readPrivateFile('photos',photo),body);
     assert.deepEqual(await readPrivateFile('photos',attachment),body);
     assert.ok((await unknown.exists())[0]);

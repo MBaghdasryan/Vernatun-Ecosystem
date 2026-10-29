@@ -42,6 +42,7 @@ export async function referencedFiles(db:PoolClient|Client,schema:string){
   const hasIncidents=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='incident_attachments'",[schema])).rowCount;
   const hasAvatars=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='resident_avatars'",[schema])).rowCount;
   const hasListings=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='resident_listing_photos'",[schema])).rowCount;
+  const hasPlatformTaskAttachments=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='platform_task_attachments'",[schema])).rowCount;
   return (await db.query(`
     SELECT 'photos' AS kind,storage_key AS key,'image/jpeg' AS media_type FROM ${s}.request_photos
     ${hasAvatars?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.resident_avatars`:''}
@@ -49,5 +50,6 @@ export async function referencedFiles(db:PoolClient|Client,schema:string){
     ${hasIncidents?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.incident_attachments`:''}
     ${hasListings?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.resident_listing_photos`:''}
     UNION SELECT 'documents',storage_key,media_type FROM ${s}.documents
+    ${hasPlatformTaskAttachments?`UNION SELECT 'documents',storage_key::text,media_type FROM ${s}.platform_task_attachments`:''}
     ORDER BY kind,key,media_type`)).rows as {kind:'photos'|'documents';key:string;media_type:string}[];
 }

@@ -1,8 +1,11 @@
-import {Router,type Request} from 'express';
+import {Router,raw,type Request} from 'express';
 import {z} from 'zod';
+import {randomUUID} from 'node:crypto';
 import {pool} from './db.js';
 import {ApiError,context,requireAuth,type Context} from './access.js';
 import {notifyPlatformTask,record,transaction} from './operations.js';
+import {readPrivateFile,saveAndCommitPrivateFile} from './private-files.js';
+import {sanitizeDocument} from './document-versions.js';
 
 export const platformTaskManagement=Router();
 platformTaskManagement.use('/platform/tasks',requireAuth);
@@ -12,6 +15,21 @@ const statuses=['todo','in_progress','blocked','done'] as const;
 const priorities=['low','normal','high','urgent'] as const;
 const title=z.string().trim().min(2).max(160);
 const description=z.string().max(4000);
+const commentText=z.string().trim().min(1).max(4000);
+
+function safeFileName(value:string|undefined){
+ if(!value)throw new ApiError(400,'invalid_file_name');
+ let decoded:string;
+ try{decoded=decodeURIComponent(value)}catch{throw new ApiError(400,'invalid_file_name')}
+ const name=decoded.split(/[\\/]/).at(-1)?.replace(/[\u0000-\u001f\u007f]/g,'').trim();
+ if(!name||name.length>180||name==='.'||name==='..')throw new ApiError(400,'invalid_file_name');
+ return name;
+}
+
+function attachmentDisposition(name:string){
+ const ascii=name.replace(/[^\x20-\x7e]|["\\;]/g,'_');
+ return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
 
 async function admin(req:Request):Promise<Context>{
  const c=await context(req);
@@ -184,6 +202,81 @@ platformTaskManagement.patch('/platform/tasks/:id',async(req,res)=>{
   return result;
  });
  res.json(task);
+});
+
+platformTaskManagement.get('/platform/tasks/:id/activity',async(req,res)=>{
+ const c=await admin(req);
+ const id=uuid.parse(req.params.id);
+ const activity=await transaction(async db=>{
+  if(!(await db.query('SELECT id FROM platform_tasks WHERE id=$1 AND archived_at IS NULL FOR SHARE',[id])).rowCount)
+   throw new ApiError(404,'not_found');
+  const items=(await db.query(`SELECT id,type,content,"fileName","mediaType","byteSize",author,"createdAt"
+   FROM (
+    SELECT c.id,'comment'::text AS type,c.content,NULL::text AS "fileName",NULL::text AS "mediaType",
+     NULL::bigint AS "byteSize",u.name AS author,c.created_at AS "createdAt"
+    FROM platform_task_comments c JOIN users u ON u.id=c.author_user_id WHERE c.task_id=$1
+    UNION ALL
+    SELECT a.id,'attachment'::text AS type,NULL::text AS content,a.file_name AS "fileName",
+     a.media_type AS "mediaType",a.byte_size AS "byteSize",u.name AS author,a.created_at AS "createdAt"
+    FROM platform_task_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.task_id=$1
+   ) items ORDER BY "createdAt",id`,[id])).rows;
+  await record(db,req,c,'platform.task.activity.read','platform_task',id,{itemCount:items.length});
+  return items;
+ });
+ res.json({activity});
+});
+
+platformTaskManagement.post('/platform/tasks/:id/comments',async(req,res)=>{
+ const c=await admin(req),id=uuid.parse(req.params.id);
+ const body=z.object({text:commentText}).strict().parse(req.body);
+ const comment=await transaction(async db=>{
+  if(!(await db.query('SELECT id FROM platform_tasks WHERE id=$1 AND archived_at IS NULL FOR UPDATE',[id])).rowCount)
+   throw new ApiError(404,'not_found');
+  const result=(await db.query(`INSERT INTO platform_task_comments(task_id,author_user_id,content)
+   VALUES($1,$2,$3) RETURNING id,content,created_at AS "createdAt"`,[id,req.user!.id,body.text])).rows[0];
+  await record(db,req,c,'platform.task.comment.created','platform_task',id,{commentId:result.id});
+  return {...result,author:req.user!.name};
+ });
+ res.status(201).json(comment);
+});
+
+platformTaskManagement.post('/platform/tasks/:id/attachments',
+ raw({type:'application/octet-stream',limit:'6mb'}),async(req,res)=>{
+ const c=await admin(req),id=uuid.parse(req.params.id),fileName=safeFileName(req.get('X-File-Name'));
+ if(!Buffer.isBuffer(req.body)||!req.body.length)throw new ApiError(400,'invalid_file');
+ if(!(await pool.query('SELECT id FROM platform_tasks WHERE id=$1 AND archived_at IS NULL',[id])).rowCount)
+  throw new ApiError(404,'not_found');
+ const file=await sanitizeDocument(req.body),storageKey=randomUUID();
+ const attachment=await saveAndCommitPrivateFile('documents',storageKey,file.body,file.mediaType,async db=>{
+  if(!(await db.query('SELECT id FROM platform_tasks WHERE id=$1 AND archived_at IS NULL FOR UPDATE',[id])).rowCount)
+   throw new ApiError(404,'not_found');
+  const result=(await db.query(`INSERT INTO platform_task_attachments
+   (task_id,storage_key,file_name,media_type,byte_size,uploaded_by)
+   VALUES($1,$2,$3,$4,$5,$6)
+   RETURNING id,file_name AS "fileName",media_type AS "mediaType",byte_size AS "byteSize",created_at AS "createdAt"`,
+   [id,storageKey,fileName,file.mediaType,file.body.length,req.user!.id])).rows[0];
+  await record(db,req,c,'platform.task.attachment.uploaded','platform_task',id,
+   {attachmentId:result.id,mediaType:file.mediaType,byteSize:file.body.length});
+  return result;
+ });
+ res.status(201).json({...attachment,author:req.user!.name});
+});
+
+platformTaskManagement.get('/platform/tasks/:id/attachments/:attachmentId',async(req,res)=>{
+ const c=await admin(req),id=uuid.parse(req.params.id),attachmentId=uuid.parse(req.params.attachmentId);
+ const attachment=(await pool.query(`SELECT a.storage_key,a.file_name,a.media_type,a.byte_size
+  FROM platform_task_attachments a JOIN platform_tasks t ON t.id=a.task_id
+  WHERE a.id=$1 AND a.task_id=$2 AND t.archived_at IS NULL`,[attachmentId,id])).rows[0];
+ if(!attachment)throw new ApiError(404,'not_found');
+ const bytes=await readPrivateFile('documents',attachment.storage_key);
+ await transaction(async db=>{
+  if(!(await db.query('SELECT id FROM platform_tasks WHERE id=$1 AND archived_at IS NULL',[id])).rowCount)
+   throw new ApiError(404,'not_found');
+  await record(db,req,c,'platform.task.attachment.downloaded','platform_task',id,
+   {attachmentId,byteSize:attachment.byte_size});
+ });
+ res.set({'Content-Type':attachment.media_type,'Content-Disposition':attachmentDisposition(attachment.file_name),
+  'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).send(bytes);
 });
 
 platformTaskManagement.post('/platform/tasks/:id/archive',async(req,res)=>{

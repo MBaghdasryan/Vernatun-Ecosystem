@@ -17,6 +17,9 @@ class Client{
   if(data?.csrf)this.csrf=data.csrf;
   return {status:response.status,data};
  }
+  async upload(path:string,body:Buffer,fileName:string){
+   return fetch(base+'/api'+path,{method:'POST',headers:{'Content-Type':'application/octet-stream',Cookie:this.cookie,'X-CSRF-Token':this.csrf,'X-File-Name':encodeURIComponent(fileName)},body:new Uint8Array(body)});
+  }
  async login(role:string){
   const user=account(role);await this.call('/auth/session');
   const result=await this.call('/auth/login','POST',{email:user.email,password:user.password});
@@ -29,13 +32,15 @@ class Client{
   return this;
  }
 }
-const platform=new Client(),organization=new Client(),support=new Client();let organizationId:string,platformUserId:string,supportUserId:string;
+const platform=new Client(),organization=new Client(),support=new Client();
+let organizationId:string,platformUserId:string,platformUserName:string,supportUserId:string;
 before(async()=>{
  if(!server.listening)await new Promise<void>(resolve=>server.once('listening',resolve));
  base='http://127.0.0.1:'+(server.address() as any).port;
  await platform.login('platform_admin');await organization.login('org_admin');await support.login('support');
  organizationId=(await pool.query('SELECT id FROM organizations ORDER BY id LIMIT 1')).rows[0].id;
- platformUserId=(await pool.query('SELECT id FROM users WHERE email=$1',[account('platform_admin').email])).rows[0].id;
+  const platformUser=(await pool.query('SELECT id,name FROM users WHERE email=$1',[account('platform_admin').email])).rows[0];
+  platformUserId=platformUser.id;platformUserName=platformUser.name;
  supportUserId=(await pool.query('SELECT id FROM users WHERE email=$1',[account('support').email])).rows[0].id;
 });
 after(async()=>{await new Promise<void>(resolve=>server.close(()=>resolve()));await pool.end()});
@@ -214,7 +219,7 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
   WHERE entity_type='platform_task' AND entity_id=$1`,[create.data.id])).rows;
  assert.ok(audit.some((row:any)=>row.action==='platform.task.deadline_changed'&&row.details.toDueOn==='2026-12-27'));
  assert.ok(audit.some((row:any)=>row.action==='platform.task.reassigned'&&row.details.newAssigneeId===supportUserId));
-});
+ });
 
 test('platform task alerts and direct reads require an active platform membership',async()=>{
  const assignment=(await pool.query(`SELECT id,active,assignment_status,starts_at,expires_at FROM role_assignments
@@ -278,4 +283,47 @@ test('platform task alerts and direct reads require an active platform membershi
    pool.query('UPDATE users SET account_status=$2 WHERE id=$1',[platformUserId,accountState.account_status]),
   ]);
  }
-});
+ });
+
+test('platform task discussion and private attachments are authorized and audited',async()=>{
+ const created=await platform.call('/platform/tasks','POST',{title:'Discuss private task files'});
+ assert.equal(created.status,201);
+ const taskId=created.data.id;
+ assert.equal((await new Client().call(`/platform/tasks/${taskId}/activity`)).status,401);
+ assert.equal((await organization.call(`/platform/tasks/${taskId}/activity`)).status,403);
+  assert.equal((await support.call(`/platform/tasks/${taskId}/activity`)).status,403);
+ const comment=await platform.call(`/platform/tasks/${taskId}/comments`,'POST',{text:'Review the attached release notes.'});
+ assert.equal(comment.status,201);
+ assert.equal(comment.data.content,'Review the attached release notes.');
+ assert.equal(comment.data.author,platformUserName);
+ assert.ok(comment.data.createdAt);
+
+ const pdf=Buffer.from('%PDF-1.4\nTask discussion test\n%%EOF');
+ const uploaded=await platform.upload(`/platform/tasks/${taskId}/attachments`,pdf,'release-notes.pdf');
+ assert.equal(uploaded.status,201);
+ const attachment=await uploaded.json() as any;
+ assert.equal(attachment.fileName,'release-notes.pdf');
+ assert.equal(attachment.mediaType,'application/pdf');
+ assert.equal(Number(attachment.byteSize),pdf.length);
+ assert.equal((await organization.upload(`/platform/tasks/${taskId}/attachments`,pdf,'blocked.pdf')).status,403);
+  assert.equal((await support.upload(`/platform/tasks/${taskId}/attachments`,pdf,'blocked-support.pdf')).status,403);
+
+ const activity=await platform.call(`/platform/tasks/${taskId}/activity`);
+ assert.equal(activity.status,200);
+ assert.deepEqual(activity.data.activity.map((item:any)=>item.type),['comment','attachment']);
+ assert.ok(new Date(activity.data.activity[0].createdAt)<=new Date(activity.data.activity[1].createdAt));
+ assert.deepEqual(activity.data.activity.map((item:any)=>item.author),[platformUserName,platformUserName]);
+
+ const downloadPath=`/platform/tasks/${taskId}/attachments/${attachment.id}`;
+ assert.equal((await organization.call(downloadPath)).status,403);
+  assert.equal((await support.call(downloadPath)).status,403);
+ const downloaded=await fetch(base+'/api'+downloadPath,{headers:{Cookie:platform.cookie}});
+ assert.equal(downloaded.status,200);
+ assert.equal(downloaded.headers.get('cache-control'),'private, no-store');
+ assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),pdf);
+ const audit=await pool.query(`SELECT action FROM audit_events WHERE entity_type='platform_task' AND entity_id=$1 ORDER BY created_at`,[taskId]);
+ assert.deepEqual(audit.rows.map((row:any)=>row.action),[
+  'platform.task.created','platform.task.comment.created','platform.task.attachment.uploaded',
+  'platform.task.activity.read','platform.task.attachment.downloaded',
+ ]);
+ });

@@ -30,6 +30,9 @@ const browserEnv=process.argv.includes('--org-console-only')
  : {};
 const createdSchemas:string[]=[];
 const env={...process.env,NODE_ENV:'test',DATABASE_URL:urlForSchema(schema),DEMO_SEED_ENABLED:'true',PRIVATE_FILES_TEST_RUN:schema,...browserEnv};
+if(process.argv.includes('--platform-tasks-only'))Object.assign(env,{
+ PRIVATE_STORAGE_MODE:'local',LOCAL_PRIVATE_STORAGE_DIR:`/tmp/vernatun-platform-task-files-${schema}`,
+});
 // Ephemeral test-only cryptographic material; never persisted in workspace Secrets.
 if(process.argv.includes('--system-only')||process.argv.includes('--payments-only')||process.argv.includes('--browser-only')||process.argv.includes('--seven-chains-only')||process.argv.includes('--edge-only'))Object.assign(env,{
  VERNATUN_OPERATIONS_ENCRYPTION_KEY:randomBytes(32).toString('hex'),BACKUP_STORAGE_MODE:'local',

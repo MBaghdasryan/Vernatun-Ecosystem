@@ -62,3 +62,25 @@
 .portal-root .ptm-archive-confirm>div{display:flex;justify-content:flex-end;gap:8px}
 @media(max-width:1100px){.portal-root .ptm-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.portal-root .ptm-search{grid-column:span 3}.portal-root .ptm-clear{justify-self:start}}
 @media(max-width:650px){.portal-root .ptm-header{align-items:stretch;flex-direction:column}.portal-root .ptm-header>.p-button{align-self:flex-start}.portal-root .ptm-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.portal-root .ptm-search{grid-column:span 2}.portal-root .ptm-board{grid-template-columns:repeat(4,minmax(260px,82vw));margin-right:-12px;padding-right:12px}.portal-root .ptm-form{min-width:0}.portal-root .ptm-form-grid{grid-template-columns:1fr}.portal-root .ptm-form-actions{flex-wrap:wrap}.portal-root .ptm-form-actions .p-button{min-height:42px}.portal-root .ptm-summary-pill{font-size:11px}}
+.portal-root .ptm-discussion{display:grid;gap:12px;padding-top:14px;border-top:1px solid var(--border,#e3e6e8)}
+.portal-root .ptm-discussion>h3{display:flex;align-items:center;gap:8px;margin:0;color:var(--foreground,#1c2e3b);font-size:15px}
+.portal-root .ptm-activity-list{display:grid;gap:9px;max-height:360px;overflow:auto;margin:0;padding:0;list-style:none}
+.portal-root .ptm-activity-item{display:grid;gap:7px;padding:10px 12px;border:1px solid #e4e8eb;border-radius:9px;background:#fafbfb}
+.portal-root .ptm-activity-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--foreground,#24333d);font-size:12px}
+.portal-root .ptm-activity-meta time,.portal-root .ptm-attachment-row small{color:var(--muted-foreground,#64737f);font-size:11px;font-weight:400}
+.portal-root .ptm-activity-content{margin:0;color:var(--foreground,#283944);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.portal-root .ptm-activity-empty{margin:0;padding:12px;border:1px dashed #d6dde1;border-radius:8px;color:var(--muted-foreground,#64737f);font-size:12px}
+.portal-root .ptm-attachment-row,.portal-root .ptm-attachment-row>span{display:flex;align-items:center;gap:8px;min-width:0}
+.portal-root .ptm-attachment-row{justify-content:space-between}
+.portal-root .ptm-attachment-row>span{overflow-wrap:anywhere}
+.portal-root .ptm-attachment-row>span strong{font-size:12px;overflow-wrap:anywhere}
+.portal-root .ptm-attachment-row .p-button{min-height:34px;padding:6px 9px;white-space:nowrap}
+.portal-root .ptm-comment-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px}
+.portal-root .ptm-comment-form textarea{box-sizing:border-box;width:100%;min-height:58px;padding:9px 10px;border:1px solid var(--border,#d9dfe3);border-radius:8px;background:var(--surface,#fff);color:var(--foreground,#17232d);font:inherit;font-size:13px;resize:vertical}
+.portal-root .ptm-comment-form .p-button,.portal-root .ptm-attachment-upload .p-button{min-height:40px;padding:8px 12px}
+.portal-root .ptm-attachment-upload{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.portal-root .ptm-attachment-upload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.portal-root .ptm-attachment-upload label.p-button{display:inline-flex;align-items:center;flex-direction:row;cursor:pointer}
+.portal-root .ptm-attachment-upload small{color:var(--muted-foreground,#64737f);font-size:11px}
+.portal-root .ptm-discussion-error{margin:0;padding:8px 10px;border-radius:7px;background:#fff0ed;color:#a5291d;font-size:12px}
+@media(max-width:520px){.portal-root .ptm-comment-form{grid-template-columns:1fr}.portal-root .ptm-comment-form .p-button{justify-self:start}}

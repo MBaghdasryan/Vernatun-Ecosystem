@@ -34,8 +34,8 @@ pnpm --filter @workspace/api-server storage:inventory --apply /tmp/private-files
 ```
 
 Apply considers only candidates in that report. For each one it checks the
-current prefix, references in **all three** tables (`request_photos`,
-`file_attachments`, `documents`), age, generation and metageneration again.
+current prefix, references in all private-file tables (including task attachments),
+age, generation and metageneration again.
 It never edits or removes application metadata to make a file eligible.
 Per-object PostgreSQL locks protect uploads from object creation through commit;
 table locks also protect concurrent inserts/updates by other database writers.

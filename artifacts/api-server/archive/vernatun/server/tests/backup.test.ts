@@ -45,7 +45,7 @@ class Client{
     if(!r.data.contextId)assert.equal((await this.call('/auth/context','POST',{id:r.data.contexts.find((c:any)=>c.role_key===account.role).id})).status,200);
     return this;
   }
-  upload(path:string,body:Buffer){return fetch(base+path,{method:'POST',headers:{Cookie:this.cookie,'X-CSRF-Token':this.csrf,'Content-Type':'application/octet-stream'},body})}
+  upload(path:string,body:Buffer,fileName?:string){return fetch(base+path,{method:'POST',headers:{Cookie:this.cookie,'X-CSRF-Token':this.csrf,'Content-Type':'application/octet-stream',...(fileName?{'X-File-Name':encodeURIComponent(fileName)}:{})},body})}
   download(path:string){return fetch(base+path,{headers:{Cookie:this.cookie}})}
 }
 after(async()=>{await stop();await pool.end()});
@@ -74,6 +74,16 @@ test('Complete SQL + App Storage backup restores original keys, bytes and busine
   const attachment=await contractor.upload(`/defects/${defect.data.id}/photos`,png);assert.equal(attachment.status,201);
   const attachmentPath='/defect-photos/'+(await attachment.json()).id;
   checks.push({path:attachmentPath,body:jpeg,allowed:'contractor',denied:['family','second_org']});
+  const platform=await new Client().login('platform_admin');
+  const task=await platform.call('/platform/tasks','POST',{title:'Backup task attachment fixture'});
+  assert.equal(task.status,201);
+  const taskFile=await platform.upload(`/platform/tasks/${task.data.id}/attachments`,pdf,'task-notes.pdf');
+  assert.equal(taskFile.status,201);
+  const taskAttachment=await taskFile.json();
+  checks.push({
+    path:`/platform/tasks/${task.data.id}/attachments/${taskAttachment.id}`,body:pdf,
+    allowed:'platform_admin',denied:['org_admin','unit_owner','family','second_org','contractor'],
+  });
   await stop();
   const schema=(await pool.query('SELECT current_schema() AS name')).rows[0].name;
   const db=await pool.connect();
@@ -97,7 +107,7 @@ test('Complete SQL + App Storage backup restores original keys, bytes and busine
       await start('server/tests/backup-server.ts',{...process.env,NODE_ENV:'test',DATABASE_URL:context.connectionString,PRIVATE_FILES_TEST_RUN:context.testRun});
       try{
         const clients=new Map<string,Client>();
-        for(const key of ['org_admin','unit_owner','family','second_org','contractor'])clients.set(key,await new Client().login(key));
+        for(const key of ['org_admin','unit_owner','family','second_org','contractor','platform_admin'])clients.set(key,await new Client().login(key));
         for(const check of checks){
           const r=await clients.get(check.allowed)!.download(check.path);assert.equal(r.status,200);
           assert.equal(r.headers.get('cache-control'),'private, no-store');
