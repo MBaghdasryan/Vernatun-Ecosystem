@@ -68,7 +68,8 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
  const [list,setList]=useState<UserList>();const [listError,setListError]=useState<unknown>();const [revision,setRevision]=useState(0);
  const [searchText,setSearchText]=useState('');const [query,setQuery]=useState('');const [offset,setOffset]=useState(0);
  const [catalog,setCatalog]=useState<Catalog>();const [organizations,setOrganizations]=useState<Organization[]>([]);
- const [referencesError,setReferencesError]=useState<unknown>();const [showInvite,setShowInvite]=useState(false);const [accessUser,setAccessUser]=useState<string>();
+ const [catalogError,setCatalogError]=useState<unknown>();const [organizationsError,setOrganizationsError]=useState<unknown>();const [scopeError,setScopeError]=useState<unknown>();
+ const [showInvite,setShowInvite]=useState(false);const [accessUser,setAccessUser]=useState<string>();
  const [accountType,setAccountType]=useState<'organization'|'internal'>('organization');
  const [email,setEmail]=useState('');const [organizationId,setOrganizationId]=useState('');const [role,setRole]=useState('org_admin');
  const [buildingId,setBuildingId]=useState('');const [unitId,setUnitId]=useState('');
@@ -80,15 +81,16 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
   request<UserList>(`/iam/users?q=${encodeURIComponent(query)}&offset=${offset}`).then(data=>{if(live)setList(data)}).catch(error=>{if(live)setListError(error)});
   return()=>{live=false};
  },[c.id,query,offset,revision]);
- useEffect(()=>{let live=true;Promise.all([request<Catalog>('/iam/catalog'),request<Organization[]>('/organizations')])
-  .then(([roles,orgs])=>{if(live){setCatalog(roles);setOrganizations(orgs)}}).catch(error=>{if(live)setReferencesError(error)});
+ useEffect(()=>{let live=true;setCatalog(undefined);setOrganizations([]);setCatalogError(undefined);setOrganizationsError(undefined);
+  request<Catalog>('/iam/catalog').then(roles=>{if(live)setCatalog(roles)}).catch(error=>{if(live)setCatalogError(error)});
+  request<Organization[]>('/organizations').then(orgs=>{if(live)setOrganizations(orgs)}).catch(error=>{if(live)setOrganizationsError(error)});
   return()=>{live=false};
  },[c.id]);
- useEffect(()=>{let live=true;setBuildings([]);setUnits([]);setBuildingId('');setUnitId('');
+ useEffect(()=>{let live=true;setBuildings([]);setUnits([]);setBuildingId('');setUnitId('');setScopeError(undefined);
   if(accountType==='organization'&&organizationId){
    request<Row>(`/platform/organizations/${encodeURIComponent(organizationId)}`).then(detail=>{
     if(live){setBuildings(detail.buildings??[]);setUnits(detail.units??[])};
-   }).catch(error=>{if(live)setReferencesError(error)});
+   }).catch(error=>{if(live)setScopeError(error)});
   }
   return()=>{live=false};
  },[accountType,organizationId]);
@@ -102,7 +104,7 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
  });
  const reload=()=>setRevision(value=>value+1);
  function openInvite(){setSubmitError(undefined);setSuccess(undefined);setAccountType('organization');setEmail('');setOrganizationId('');setRole('org_admin');setBuildingId('');setUnitId('');setShowInvite(true)}
- function changeAccountType(value:'organization'|'internal'){setAccountType(value);setOrganizationId('');setBuildingId('');setUnitId('');setRole(value==='internal'?'support':'org_admin');setReferencesError(undefined)}
+ function changeAccountType(value:'organization'|'internal'){setAccountType(value);setOrganizationId('');setBuildingId('');setUnitId('');setRole(value==='internal'?'support':'org_admin');setScopeError(undefined);setSubmitError(undefined)}
  async function submitInvite(event:FormEvent){
   event.preventDefault();if(busy)return;setBusy(true);setSubmitError(undefined);
   const body=accountType==='internal'?{email,role:'support'}:{
@@ -163,9 +165,11 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
      <p className="p-muted-note">{text(language,'accessHint')}</p>
     </>:<><label>{text(language,'role')}<input value={roleName(language,'support')} readOnly/></label><p className="p-info"><Building2 size={17}/>{text(language,'internalHint')}</p><p className="p-muted-note">{text(language,'supportOnly')}</p></>}
     {permissions.length>0&&<details className="p-user-permissions"><summary>{text(language,'rolePermissions')} · {permissions.length} {text(language,'roleCount')}</summary><div className="p-permissions">{permissions.map(permission=><code key={permission}>{permission}</code>)}</div></details>}
-    {!!referencesError&&<ErrorNotice error={referencesError}/>}
+    {!!catalogError&&<ErrorNotice error={catalogError}/>}
+    {accountType==='organization'&&!!organizationsError&&<ErrorNotice error={organizationsError}/>}
+    {accountType==='organization'&&!!scopeError&&<ErrorNotice error={scopeError}/>}
     {!!submitError&&<ErrorNotice error={submitError}/>}
-    <button className="p-button orange" disabled={busy||!catalog||!!referencesError}>{busy?(language==='ru'?'Отправляем…':language==='hy'?'Ուղարկվում է…':'Sending…'):text(language,'invite')}<ArrowRight size={17}/></button>
+    <button className="p-button orange" disabled={busy||!catalog||!!catalogError||(accountType==='organization'&&!!organizationsError)||(accountType==='organization'&&!!scopeError)}>{busy?(language==='ru'?'Отправляем…':language==='hy'?'Ուղարկվում է…':'Sending…'):text(language,'invite')}<ArrowRight size={17}/></button>
    </form>}
   </Modal>}
   {accessUser&&<EmployeeAssignment key={`${accessUser}-${revisionDetails}`} id={accessUser} language={language} Modal={Modal} ErrorNotice={ErrorNotice} onClose={()=>setAccessUser(undefined)} onSaved={reload}/>}
