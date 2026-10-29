@@ -83,37 +83,108 @@ test('public session and login remain available beside the protected platform AP
 
 test('platform analytics and server CSV include only the selected currency',async()=>{
  const adminId=seeded.accounts.platform_admin.id;
- const from='2040-06-01',to='2040-06-30';
- const planA=(await pool.query(`INSERT INTO subscription_plans(name,amount_minor,currency,building_limit)
-  VALUES('Isolated analytics AMD',1,'AMD',1) RETURNING id`)).rows[0].id;
- const planB=(await pool.query(`INSERT INTO subscription_plans(name,amount_minor,currency,building_limit)
-  VALUES('Isolated analytics USD',1,'USD',1) RETURNING id`)).rows[0].id;
- const subA=(await pool.query(`INSERT INTO subscriptions(organization_id,plan_id,starts_on,ends_on,status,created_by)
-  VALUES($1,$2,'2040-01-01','2040-12-31','active',$3) RETURNING id`,[orgA,planA,adminId])).rows[0].id;
- const subB=(await pool.query(`INSERT INTO subscriptions(organization_id,plan_id,starts_on,ends_on,status,created_by)
-  VALUES($1,$2,'2040-01-01','2040-12-31','active',$3) RETURNING id`,[orgB,planB,adminId])).rows[0].id;
- await pool.query(`INSERT INTO platform_invoices(subscription_id,organization_id,billing_period,amount_minor,currency,status,issued_at,due_at,created_by)
-  VALUES($1,$2,'2040-06-01',731111,'AMD','paid','2040-06-12','2040-07-01',$3),
-        ($4,$5,'2040-06-01',274441,'USD','paid','2040-06-13','2040-07-01',$3)`,
-  [subA,orgA,adminId,subB,orgB]);
+ const from='2040-06-15',to='2040-07-14';
+ const currencies={
+  AMD:{lower:100,upper:200,before:1000,after:2000},
+  RUB:{lower:10,upper:20,before:100,after:200},
+  USD:{lower:1000,upper:2000,before:10000,after:20000},
+ };
+ const plans=new Map<string,string>();
+ for(const currency of Object.keys(currencies)){
+  const planId=(await pool.query(`INSERT INTO subscription_plans(name,amount_minor,currency,building_limit)
+   VALUES($1,1,$2,1) RETURNING id`,[`Isolated analytics ${currency}`,currency])).rows[0].id;
+  plans.set(currency,planId);
+ }
 
- const amd=await platform.call(`/platform/analytics?from=${from}&to=${to}&currency=AMD`);
- assert.equal(amd.status,200);
- assert.equal(amd.data.period.currency,'AMD');
- assert.equal(amd.data.metrics.billedMinor,'731111');
- assert.equal(amd.data.metrics.paidMinor,'731111');
- assert.equal(amd.data.monthly.length,1);
- assert.equal(amd.data.monthly[0].billed_minor,'731111');
- const csv=await platform.raw(`/platform/analytics/export.csv?from=${from}&to=${to}&currency=AMD`);
- assert.equal(csv.status,200);
- assert.match(csv.contentType,/text\/csv/);
- assert.match(csv.text,/"billed_minor","731111","AMD"/);
- assert.doesNotMatch(csv.text,/"billed_minor","274441","USD"/);
- const usd=await platform.call(`/platform/analytics?from=${from}&to=${to}&currency=USD`);
- assert.equal(usd.status,200);
- assert.equal(usd.data.period.currency,'USD');
- assert.equal(usd.data.metrics.billedMinor,'274441');
- assert.equal(usd.data.metrics.paidMinor,'274441');
+ for(const [currency,amounts] of Object.entries(currencies)){
+  const invoices=[
+   {period:'2040-05-01',issued:'2040-06-14T23:59:59.999Z',amount:amounts.before,status:'paid'},
+   {period:'2040-06-01',issued:'2040-06-15T00:00:00.000Z',amount:amounts.lower,status:'paid'},
+   {period:'2040-07-01',issued:'2040-07-14T23:59:59.999Z',amount:amounts.upper,status:'issued'},
+   {period:'2040-08-01',issued:'2040-07-15T00:00:00.000Z',amount:amounts.after,status:'paid'},
+  ];
+  for(const invoice of invoices){
+   const organizationId=currency==='AMD'?orgA:orgB;
+   const subscriptionId=(await pool.query(`INSERT INTO subscriptions(organization_id,plan_id,starts_on,ends_on,status,created_by)
+    VALUES($1,$2,'2040-01-01','2040-12-31','active',$3) RETURNING id`,
+    [organizationId,plans.get(currency),adminId])).rows[0].id;
+   await pool.query(`INSERT INTO platform_invoices(subscription_id,organization_id,billing_period,amount_minor,currency,status,issued_at,due_at,created_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,'2040-12-31',$8)`,
+    [subscriptionId,organizationId,invoice.period,invoice.amount,currency,invoice.status,invoice.issued,adminId]);
+  }
+ }
+
+ function parseCsvRow(line:string){
+  const values:string[]=[];
+  let value='',quoted=false;
+  for(let i=0;i<line.length;i++){
+   const char=line[i];
+   if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++}
+   else if(char==='"')quoted=!quoted;
+   else if(char===','&&!quoted){values.push(value);value=''}
+   else value+=char;
+  }
+  values.push(value);
+  return values;
+ }
+ for(const [currency,amounts] of Object.entries(currencies)){
+  const query=`from=${from}&to=${to}&currency=${currency}`;
+  const json=await platform.call(`/platform/analytics?${query}`);
+  assert.equal(json.status,200);
+  assert.deepEqual(json.data.period,{from,to,currency});
+  assert.equal(json.data.metrics.billedMinor,String(amounts.lower+amounts.upper));
+  assert.equal(json.data.metrics.paidMinor,String(amounts.lower));
+  assert.equal(json.data.metrics.invoiceCount,2);
+  assert.equal(json.data.metrics.openInvoices,1);
+  assert.deepEqual(json.data.monthly.map((month:any)=>month.month),['2040-06-01','2040-07-01']);
+  assert.deepEqual(json.data.monthly.map((month:any)=>month.billed_minor),[String(amounts.lower),String(amounts.upper)]);
+  assert.deepEqual(json.data.monthly.map((month:any)=>month.paid_minor),[String(amounts.lower),'0']);
+
+  const csv=await platform.raw(`/platform/analytics/export.csv?${query}`);
+  assert.equal(csv.status,200);
+  assert.match(csv.contentType,/text\/csv/);
+  const rows=csv.text.replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/).map(parseCsvRow);
+  const metricRows=rows.slice(1,rows.findIndex(row=>row[0]===''));
+  const metricValues=new Map(metricRows.map(row=>[row[0],row[1]]));
+  const metricFields:{
+   [csvName:string]:keyof typeof json.data.metrics
+  }={
+   organizations:'total',active_organizations:'active',pilot_organizations:'pilot',
+   paused_organizations:'paused',buildings:'buildings',billed_minor:'billedMinor',
+   paid_minor:'paidMinor',open_invoices:'openInvoices',invoice_count:'invoiceCount',
+   open_support_cases:'openSupport',urgent_support_cases:'urgentSupport',
+   onboarding_total:'onboardingTotal',onboarding_completed:'onboardingCompleted',
+   onboarding_open:'onboardingOpen',onboarding_overdue:'onboardingOverdue',
+  };
+  assert.deepEqual(Object.fromEntries(metricValues),
+   Object.fromEntries(Object.entries(metricFields).map(([csvName,jsonName])=>[
+    csvName,String(json.data.metrics[jsonName]),
+   ])));
+  assert.ok(metricRows.every(row=>row[3]===from&&row[4]===to));
+  assert.ok(metricRows.filter(row=>row[0]==='billed_minor'||row[0]==='paid_minor')
+   .every(row=>row[2]===currency));
+  const monthlyHeader=rows.findIndex(row=>row[0]==='month');
+  const csvMonthly=rows.slice(monthlyHeader+1).map(row=>row.slice(0,5));
+  const jsonMonthly=json.data.monthly.map((month:any)=>[
+   month.month,String(month.organizations),month.billed_minor,month.paid_minor,String(month.support_cases),
+  ]);
+  assert.deepEqual(csvMonthly,jsonMonthly);
+  assert.ok(rows.filter(row=>row[0]==='billed_minor').every(row=>row[2]===currency));
+ }
+
+ for(const currency of Object.keys(currencies)){
+  const empty=await platform.call(`/platform/analytics?from=2041-01-01&to=2041-01-31&currency=${currency}`);
+  assert.equal(empty.status,200);
+  assert.equal(empty.data.metrics.billedMinor,'0');
+  assert.equal(empty.data.metrics.paidMinor,'0');
+  assert.equal(empty.data.metrics.invoiceCount,0);
+  assert.equal(empty.data.metrics.openInvoices,0);
+  assert.equal(empty.data.monthly.length,1);
+  assert.equal(empty.data.monthly[0].month,'2041-01-01');
+  assert.equal(empty.data.monthly[0].billed_minor,'0');
+  assert.equal(empty.data.monthly[0].paid_minor,'0');
+ }
+
  assert.equal((await platform.call(`/platform/analytics?from=${from}&to=${to}&currency=EUR`)).status,400);
 });
 
