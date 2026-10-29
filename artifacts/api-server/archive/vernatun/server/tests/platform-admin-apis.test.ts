@@ -215,6 +215,15 @@ test('platform analytics and server CSV preserve month boundaries in a non-UTC s
   assert.ok(metricRows.every(row=>row[3]===from&&row[4]===to));
   assert.ok(metricRows.filter(row=>row[0]==='billed_minor'||row[0]==='paid_minor')
    .every(row=>row[2]===currency));
+  const companyTypesHeader=rows.findIndex(row=>row[0]==='organizations_by_company_type');
+  assert.ok(companyTypesHeader>0,'CSV must clearly label the organization-type breakdown');
+  assert.deepEqual(rows[companyTypesHeader+1],['company_type','count']);
+  const companyTypesEnd=rows.findIndex((row,index)=>index>companyTypesHeader+1&&row[0]==='');
+  const csvCompanyTypes=rows.slice(companyTypesHeader+2,companyTypesEnd)
+   .map(row=>[row[0],Number(row[1])]);
+  assert.deepEqual(csvCompanyTypes,json.data.companyTypes.map((companyType:any)=>[
+   companyType.company_type,companyType.count,
+  ]),'CSV organization-type counts must match the analytics response');
   const monthlyHeader=rows.findIndex(row=>row[0]==='month');
   const csvMonthly=rows.slice(monthlyHeader+1).map(row=>row.slice(0,5));
   const jsonMonthly=json.data.monthly.map((month:any)=>[

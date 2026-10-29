@@ -84,7 +84,7 @@ function csvCell(value:unknown){
  return '"'+safe.replace(/"/g,'""')+'"';
 }
 function analyticsCsv(res:Response,data:Awaited<ReturnType<typeof loadAnalytics>>){
- const {generatedAt,period,metrics,monthly}=data;
+ const {generatedAt,period,metrics,companyTypes,monthly}=data;
  const rows:unknown[][]=[
    ['report_generated_at_utc',generatedAt],
    ['reporting_timezone','UTC'],
@@ -105,6 +105,10 @@ function analyticsCsv(res:Response,data:Awaited<ReturnType<typeof loadAnalytics>
   ['onboarding_completed',metrics.onboardingCompleted,'',period.from,period.to],
   ['onboarding_open',metrics.onboardingOpen,'',period.from,period.to],
   ['onboarding_overdue',metrics.onboardingOverdue,'',period.from,period.to],
+  [],
+  ['organizations_by_company_type'],
+  ['company_type','count'],
+  ...companyTypes.map(companyType=>[companyType.company_type,companyType.count]),
   [],
   ['month','new_organizations','billed_minor','paid_minor','support_cases','currency'],
   ...monthly.map(m=>[m.month,m.organizations,m.billed_minor,m.paid_minor,m.support_cases,period.currency]),
