@@ -282,6 +282,9 @@ test('platform task alerts and direct reads require an active platform membershi
     [assignment.id,assignment.active,assignment.assignment_status,assignment.starts_at,assignment.expires_at]),
    pool.query('UPDATE users SET account_status=$2 WHERE id=$1',[platformUserId,accountState.account_status]),
   ]);
+   platform.cookie='';
+   platform.csrf='';
+   await platform.login('platform_admin');
  }
  });
 
