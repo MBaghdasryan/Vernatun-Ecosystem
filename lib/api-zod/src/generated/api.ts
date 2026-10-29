@@ -6593,6 +6593,255 @@ export const GetIncidentEvidenceParams = zod.object({
 export const GetIncidentEvidenceResponse = zod.unknown()
 
 
+export const GetFinanceConfigurationResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const createFinanceServiceBodyNameMin = 2;
+export const createFinanceServiceBodyNameMax = 160;
+
+export const createFinanceServiceBodyDescriptionMax = 2000;
+
+
+
+export const CreateFinanceServiceBody = zod.object({
+  "name": zod.string().min(createFinanceServiceBodyNameMin).max(createFinanceServiceBodyNameMax),
+  "description": zod.string().max(createFinanceServiceBodyDescriptionMax).optional(),
+  "category": zod.enum(['maintenance', 'security', 'cleaning', 'waste', 'parking', 'intercom', 'utilities', 'optional', 'other']).optional(),
+  "mandatory": zod.boolean().optional(),
+  "defaultCalculationMethod": zod.enum(['FIXED_PER_UNIT', 'PER_SQUARE_METER', 'PER_RESIDENT', 'PER_PARKING_SPACE', 'PER_QUANTITY', 'PER_METER_CONSUMPTION', 'PER_DAY', 'MANUAL']).optional()
+})
+
+export const CreateFinanceServiceResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const createConfiguredFinanceTariffBodyNameMin = 2;
+export const createConfiguredFinanceTariffBodyNameMax = 160;
+
+export const createConfiguredFinanceTariffBodyAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,14}$');
+export const createConfiguredFinanceTariffBodyRateUnitMax = 40;
+
+
+
+export const CreateConfiguredFinanceTariffBody = zod.object({
+  "serviceId": zod.string().uuid(),
+  "name": zod.string().min(createConfiguredFinanceTariffBodyNameMin).max(createConfiguredFinanceTariffBodyNameMax),
+  "amountMinor": zod.string().regex(createConfiguredFinanceTariffBodyAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "calculationMethod": zod.enum(['FIXED_PER_UNIT', 'PER_SQUARE_METER', 'PER_RESIDENT', 'PER_PARKING_SPACE', 'PER_QUANTITY', 'PER_METER_CONSUMPTION', 'PER_DAY', 'MANUAL']),
+  "rateUnit": zod.string().min(1).max(createConfiguredFinanceTariffBodyRateUnitMax),
+  "validFrom": zod.coerce.date(),
+  "validUntil": zod.coerce.date().nullish()
+})
+
+export const CreateConfiguredFinanceTariffResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const createVersionedFinanceTariffBodyOneNameMin = 2;
+export const createVersionedFinanceTariffBodyOneNameMax = 160;
+
+export const createVersionedFinanceTariffBodyOneAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,14}$');
+export const createVersionedFinanceTariffBodyOneRateUnitMax = 40;
+
+export const createVersionedFinanceTariffBodyTwoNameMin = 2;
+export const createVersionedFinanceTariffBodyTwoNameMax = 120;
+
+export const createVersionedFinanceTariffBodyTwoAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,14}$');
+
+
+export const CreateVersionedFinanceTariffBody = zod.union([zod.object({
+  "serviceId": zod.string().uuid(),
+  "name": zod.string().min(createVersionedFinanceTariffBodyOneNameMin).max(createVersionedFinanceTariffBodyOneNameMax),
+  "amountMinor": zod.string().regex(createVersionedFinanceTariffBodyOneAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "calculationMethod": zod.enum(['FIXED_PER_UNIT', 'PER_SQUARE_METER', 'PER_RESIDENT', 'PER_PARKING_SPACE', 'PER_QUANTITY', 'PER_METER_CONSUMPTION', 'PER_DAY', 'MANUAL']),
+  "rateUnit": zod.string().min(1).max(createVersionedFinanceTariffBodyOneRateUnitMax),
+  "validFrom": zod.coerce.date(),
+  "validUntil": zod.coerce.date().nullish()
+}),zod.object({
+  "name": zod.string().min(createVersionedFinanceTariffBodyTwoNameMin).max(createVersionedFinanceTariffBodyTwoNameMax),
+  "amountMinor": zod.string().regex(createVersionedFinanceTariffBodyTwoAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "basis": zod.enum(['area', 'unit'])
+})])
+
+export const CreateVersionedFinanceTariffResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const createFinanceBillingRuleBodyMinimumAmountRegExp = new RegExp('^[0-9]{1,14}$');
+export const createFinanceBillingRuleBodyMaximumAmountRegExp = new RegExp('^[0-9]{1,14}$');
+export const createFinanceBillingRuleBodyPriorityMin = -1000;
+export const createFinanceBillingRuleBodyPriorityMax = 1000;
+
+
+
+export const CreateFinanceBillingRuleBody = zod.object({
+  "serviceId": zod.string().uuid(),
+  "tariffId": zod.string().uuid(),
+  "scopeKind": zod.enum(['organization', 'building', 'unit']),
+  "buildingId": zod.string().uuid().nullish(),
+  "unitId": zod.string().uuid().nullish(),
+  "calculationMethod": zod.enum(['FIXED_PER_UNIT', 'PER_SQUARE_METER', 'PER_RESIDENT', 'PER_PARKING_SPACE', 'PER_QUANTITY', 'PER_METER_CONSUMPTION', 'PER_DAY', 'MANUAL']),
+  "occupancyCountMode": zod.enum(['AUTO_ACTIVE_RESIDENTS', 'REGISTRY_COUNT', 'MANUAL_COUNT']).nullish(),
+  "zeroPolicy": zod.enum(['ALLOW_ZERO', 'MINIMUM_ONE', 'MANUAL_REVIEW']).optional(),
+  "roundingMode": zod.enum(['NEAREST_AMD', 'ROUND_UP_AMD', 'ROUND_DOWN_AMD']).optional(),
+  "prorationMode": zod.enum(['DISABLED', 'DAILY']).optional(),
+  "minimumAmount": zod.string().regex(createFinanceBillingRuleBodyMinimumAmountRegExp).optional(),
+  "maximumAmount": zod.string().regex(createFinanceBillingRuleBodyMaximumAmountRegExp).optional(),
+  "validFrom": zod.coerce.date(),
+  "validUntil": zod.coerce.date().nullish(),
+  "active": zod.boolean().optional(),
+  "priority": zod.number().int().min(createFinanceBillingRuleBodyPriorityMin).max(createFinanceBillingRuleBodyPriorityMax).optional(),
+  "meterKind": zod.enum(['water', 'electricity', 'gas']).optional()
+})
+
+export const CreateFinanceBillingRuleResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UpdateFinanceBillingRuleParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const UpdateFinanceBillingRuleBody = zod.object({
+  "active": zod.boolean(),
+  "validUntil": zod.coerce.date().nullish()
+})
+
+export const UpdateFinanceBillingRuleResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const PreviewRuleBasedBillingBody = zod.object({
+  "buildingId": zod.string().uuid(),
+  "period": zod.coerce.date().describe('First day of the billing month')
+})
+
+export const PreviewRuleBasedBillingResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const CreateRuleBasedBillingDraftBody = zod.object({
+  "buildingId": zod.string().uuid(),
+  "period": zod.coerce.date().describe('First day of the billing month'),
+  "key": zod.string().uuid()
+})
+
+export const CreateRuleBasedBillingDraftResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const createManualBillingChargeBodyAmountMinorRegExp = new RegExp('^[1-9][0-9]{0,14}$');
+export const createManualBillingChargeBodyReasonMin = 5;
+export const createManualBillingChargeBodyReasonMax = 1000;
+
+
+
+export const CreateManualBillingChargeBody = zod.object({
+  "unitId": zod.string().uuid(),
+  "serviceId": zod.string().uuid(),
+  "period": zod.coerce.date().describe('First day of the billing month'),
+  "amountMinor": zod.string().regex(createManualBillingChargeBodyAmountMinorRegExp),
+  "currency": zod.enum(['AMD', 'RUB', 'USD']),
+  "reason": zod.string().min(createManualBillingChargeBodyReasonMin).max(createManualBillingChargeBodyReasonMax),
+  "key": zod.string().uuid()
+})
+
+export const CreateManualBillingChargeResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListFinanceBuildingUnitsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListFinanceBuildingUnitsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListFinanceBuildingUnitsResponse = zod.array(ListFinanceBuildingUnitsResponseItem)
+
+
+export const GetUnitBillingParametersParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetUnitBillingParametersResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const UpdateUnitBillingParametersParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateUnitBillingParametersBodyBillingAreaMin = 0;
+
+export const updateUnitBillingParametersBodyBillingResidentCountMin = 0;
+
+export const updateUnitBillingParametersBodyReasonMin = 3;
+export const updateUnitBillingParametersBodyReasonMax = 1000;
+
+
+
+export const UpdateUnitBillingParametersBody = zod.object({
+  "effectiveFrom": zod.coerce.date(),
+  "billingArea": zod.number().min(updateUnitBillingParametersBodyBillingAreaMin).nullish(),
+  "residentCountMode": zod.enum(['AUTO_ACTIVE_RESIDENTS', 'REGISTRY_COUNT', 'MANUAL_COUNT']),
+  "billingResidentCount": zod.number().int().min(updateUnitBillingParametersBodyBillingResidentCountMin).nullish(),
+  "occupancyStatus": zod.enum(['OCCUPIED', 'VACANT', 'UNKNOWN']),
+  "reason": zod.string().min(updateUnitBillingParametersBodyReasonMin).max(updateUnitBillingParametersBodyReasonMax),
+  "residents": zod.array(zod.object({
+  "assignmentId": zod.string().uuid(),
+  "residesHere": zod.boolean(),
+  "countsForBilling": zod.boolean()
+})).optional(),
+  "serviceQuantities": zod.array(zod.object({
+  "serviceId": zod.string().uuid(),
+  "quantity": zod.string()
+})).optional(),
+  "serviceApplicability": zod.array(zod.object({
+  "serviceId": zod.string().uuid(),
+  "enabled": zod.boolean()
+})).optional()
+})
+
+export const UpdateUnitBillingParametersResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const requestBillingParameterReviewBodyProposedValueOneMax = 120;
+
+export const requestBillingParameterReviewBodyProposedValueTwoMin = 0;
+
+export const requestBillingParameterReviewBodyReasonMin = 5;
+export const requestBillingParameterReviewBodyReasonMax = 2000;
+
+
+
+export const RequestBillingParameterReviewBody = zod.object({
+  "unitId": zod.string().uuid(),
+  "serviceId": zod.string().uuid().optional(),
+  "parameterKey": zod.enum(['billing_area', 'resident_count', 'service_applicability', 'parking_count']),
+  "proposedValue": zod.union([zod.string().min(1).max(requestBillingParameterReviewBodyProposedValueOneMax),zod.number().min(requestBillingParameterReviewBodyProposedValueTwoMin),zod.boolean()]),
+  "effectiveFrom": zod.coerce.date().optional(),
+  "reason": zod.string().min(requestBillingParameterReviewBodyReasonMin).max(requestBillingParameterReviewBodyReasonMax),
+  "clientId": zod.string().uuid()
+})
+
+export const RequestBillingParameterReviewResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const ListBillingParameterReviewsResponseItem = zod.record(zod.string(), zod.unknown())
+export const ListBillingParameterReviewsResponse = zod.array(ListBillingParameterReviewsResponseItem)
+
+
+export const DecideBillingParameterReviewParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const decideBillingParameterReviewBodyNoteMax = 1000;
+
+
+
+
+export const DecideBillingParameterReviewBody = zod.object({
+  "action": zod.enum(['approve', 'reject', 'needs_information']),
+  "note": zod.string().max(decideBillingParameterReviewBodyNoteMax).optional(),
+  "version": zod.number().int().min(1)
+})
+
+export const DecideBillingParameterReviewResponse = zod.record(zod.string(), zod.unknown())
+
+
 export const PreviewBillingBatchBody = zod.object({
   "buildingId": zod.string().uuid(),
   "period": zod.coerce.date(),

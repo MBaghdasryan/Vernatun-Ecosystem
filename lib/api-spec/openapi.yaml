@@ -3500,6 +3500,95 @@ paths:
           content:
             image/jpeg:
               schema: {type: string, format: binary}
+  /finance/configuration:
+    get:
+      operationId: getFinanceConfiguration
+      responses:
+        "200": { description: "Scoped services, versioned tariffs, rules and buildings", content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/services:
+    post:
+      operationId: createFinanceService
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceServiceInput" } } } }
+      responses:
+        "201": { description: Organization service catalog entry, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/configuration/tariffs:
+    post:
+      operationId: createConfiguredFinanceTariff
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/VersionedTariffInput" } } } }
+      responses:
+        "201": { description: New version of a service tariff, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/tariffs:
+    post:
+      operationId: createVersionedFinanceTariff
+      requestBody: { required: true, content: { application/json: { schema: { oneOf: [{ $ref: "#/components/schemas/VersionedTariffInput" }, { $ref: "#/components/schemas/LegacyTariffInput" }] } } } }
+      responses:
+        "201": { description: New tariff version, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/billing-rules:
+    post:
+      operationId: createFinanceBillingRule
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingRuleInput" } } } }
+      responses:
+        "201": { description: Scoped rule with overlap validation and audit evidence, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/billing-rules/{id}:
+    patch:
+      operationId: updateFinanceBillingRule
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingRuleUpdateInput" } } } }
+      responses:
+        "200": { description: Rule activation or end date update, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/billing/preview:
+    post:
+      operationId: previewRuleBasedBilling
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingPreviewInput" } } } }
+      responses:
+        "200": { description: Explainable preview with per-unit exceptions; performs no ledger writes, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/rule-batches:
+    post:
+      operationId: createRuleBasedBillingDraft
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RuleBillingBatchInput" } } } }
+      responses:
+        "201": { description: Versioned draft snapshot; invoices are created only on publish, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/manual-charges:
+    post:
+      operationId: createManualBillingCharge
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ManualChargeInput" } } } }
+      responses:
+        "201": { description: Audited manual charge revision for an active MANUAL rule, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/buildings/{id}/units:
+    get:
+      operationId: listFinanceBuildingUnits
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Authorized unit IDs and areas, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /properties/{id}/billing-parameters:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getUnitBillingParameters
+      responses:
+        "200": { description: "Scoped unit parameters, resident eligibility and service settings", content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+    patch:
+      operationId: updateUnitBillingParameters
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UnitBillingParametersInput" } } } }
+      responses:
+        "200": { description: Versioned settings with audited reason; published invoices remain unchanged, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /resident/finance/parameter-reviews:
+    post:
+      operationId: requestBillingParameterReview
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingParameterReviewInput" } } } }
+      responses:
+        "201": { description: Resident request awaiting organization review, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
+  /finance/billing-parameter-reviews:
+    get:
+      operationId: listBillingParameterReviews
+      responses:
+        "200": { description: Scoped review queue, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FinanceRecord" } } } } }
+  /finance/billing-parameter-reviews/{id}/decision:
+    post:
+      operationId: decideBillingParameterReview
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BillingParameterDecisionInput" } } } }
+      responses:
+        "200": { description: "Audited approval, rejection or information request", content: { application/json: { schema: { $ref: "#/components/schemas/FinanceRecord" } } } }
   /finance/batches/preview:
     post:
       operationId: previewBillingBatch
@@ -5234,6 +5323,150 @@ components:
           items:
             type: object
             additionalProperties: { type: string, maxLength: 1000 }
+    LegacyTariffInput:
+      type: object
+      additionalProperties: false
+      required: [name, amountMinor, currency, basis]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        amountMinor: { type: string, pattern: "^[1-9][0-9]{0,14}$" }
+        currency: { type: string, enum: [AMD, RUB, USD] }
+        basis: { type: string, enum: [area, unit] }
+    FinanceServiceInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        description: { type: string, maxLength: 2000 }
+        category: { type: string, enum: [maintenance, security, cleaning, waste, parking, intercom, utilities, optional, other] }
+        mandatory: { type: boolean }
+        defaultCalculationMethod: { type: string, enum: [FIXED_PER_UNIT, PER_SQUARE_METER, PER_RESIDENT, PER_PARKING_SPACE, PER_QUANTITY, PER_METER_CONSUMPTION, PER_DAY, MANUAL] }
+    VersionedTariffInput:
+      type: object
+      additionalProperties: false
+      required: [serviceId, name, amountMinor, currency, calculationMethod, rateUnit, validFrom]
+      properties:
+        serviceId: { type: string, format: uuid }
+        name: { type: string, minLength: 2, maxLength: 160 }
+        amountMinor: { type: string, pattern: "^[1-9][0-9]{0,14}$" }
+        currency: { type: string, enum: [AMD, RUB, USD] }
+        calculationMethod: { type: string, enum: [FIXED_PER_UNIT, PER_SQUARE_METER, PER_RESIDENT, PER_PARKING_SPACE, PER_QUANTITY, PER_METER_CONSUMPTION, PER_DAY, MANUAL] }
+        rateUnit: { type: string, minLength: 1, maxLength: 40 }
+        validFrom: { type: string, format: date }
+        validUntil: { type: string, format: date, nullable: true }
+    BillingRuleInput:
+      type: object
+      additionalProperties: false
+      required: [serviceId, tariffId, scopeKind, calculationMethod, validFrom]
+      properties:
+        serviceId: { type: string, format: uuid }
+        tariffId: { type: string, format: uuid }
+        scopeKind: { type: string, enum: [organization, building, unit] }
+        buildingId: { type: string, format: uuid, nullable: true }
+        unitId: { type: string, format: uuid, nullable: true }
+        calculationMethod: { type: string, enum: [FIXED_PER_UNIT, PER_SQUARE_METER, PER_RESIDENT, PER_PARKING_SPACE, PER_QUANTITY, PER_METER_CONSUMPTION, PER_DAY, MANUAL] }
+        occupancyCountMode: { type: string, enum: [AUTO_ACTIVE_RESIDENTS, REGISTRY_COUNT, MANUAL_COUNT], nullable: true }
+        zeroPolicy: { type: string, enum: [ALLOW_ZERO, MINIMUM_ONE, MANUAL_REVIEW] }
+        roundingMode: { type: string, enum: [NEAREST_AMD, ROUND_UP_AMD, ROUND_DOWN_AMD] }
+        prorationMode: { type: string, enum: [DISABLED, DAILY] }
+        minimumAmount: { type: string, pattern: "^[0-9]{1,14}$" }
+        maximumAmount: { type: string, pattern: "^[0-9]{1,14}$" }
+        validFrom: { type: string, format: date }
+        validUntil: { type: string, format: date, nullable: true }
+        active: { type: boolean }
+        priority: { type: integer, minimum: -1000, maximum: 1000 }
+        meterKind: { type: string, enum: [water, electricity, gas] }
+    BillingRuleUpdateInput:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active: { type: boolean }
+        validUntil: { type: string, format: date, nullable: true }
+    BillingPreviewInput:
+      type: object
+      additionalProperties: false
+      required: [buildingId, period]
+      properties:
+        buildingId: { type: string, format: uuid }
+        period: { type: string, format: date, description: First day of the billing month }
+    RuleBillingBatchInput:
+      type: object
+      additionalProperties: false
+      required: [buildingId, period, key]
+      properties:
+        buildingId: { type: string, format: uuid }
+        period: { type: string, format: date, description: First day of the billing month }
+        key: { type: string, format: uuid }
+    ManualChargeInput:
+      type: object
+      additionalProperties: false
+      required: [unitId, serviceId, period, amountMinor, currency, reason, key]
+      properties:
+        unitId: { type: string, format: uuid }
+        serviceId: { type: string, format: uuid }
+        period: { type: string, format: date, description: First day of the billing month }
+        amountMinor: { type: string, pattern: "^[1-9][0-9]{0,14}$" }
+        currency: { type: string, enum: [AMD, RUB, USD] }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+        key: { type: string, format: uuid }
+    UnitBillingParametersInput:
+      type: object
+      additionalProperties: false
+      required: [effectiveFrom, residentCountMode, occupancyStatus, reason]
+      properties:
+        effectiveFrom: { type: string, format: date }
+        billingArea: { type: number, minimum: 0, nullable: true }
+        residentCountMode: { type: string, enum: [AUTO_ACTIVE_RESIDENTS, REGISTRY_COUNT, MANUAL_COUNT] }
+        billingResidentCount: { type: integer, minimum: 0, nullable: true }
+        occupancyStatus: { type: string, enum: [OCCUPIED, VACANT, UNKNOWN] }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+        residents:
+          type: array
+          items:
+            type: object
+            required: [assignmentId, residesHere, countsForBilling]
+            properties:
+              assignmentId: { type: string, format: uuid }
+              residesHere: { type: boolean }
+              countsForBilling: { type: boolean }
+        serviceQuantities:
+          type: array
+          items:
+            type: object
+            required: [serviceId, quantity]
+            properties:
+              serviceId: { type: string, format: uuid }
+              quantity: { type: string }
+        serviceApplicability:
+          type: array
+          items:
+            type: object
+            required: [serviceId, enabled]
+            properties:
+              serviceId: { type: string, format: uuid }
+              enabled: { type: boolean }
+    BillingParameterReviewInput:
+      type: object
+      additionalProperties: false
+      required: [unitId, parameterKey, proposedValue, reason, clientId]
+      properties:
+        unitId: { type: string, format: uuid }
+        serviceId: { type: string, format: uuid }
+        parameterKey: { type: string, enum: [billing_area, resident_count, service_applicability, parking_count] }
+        proposedValue: { oneOf: [{ type: string, minLength: 1, maxLength: 120 }, { type: number, minimum: 0 }, { type: boolean }] }
+        effectiveFrom: { type: string, format: date }
+        reason: { type: string, minLength: 5, maxLength: 2000 }
+        clientId: { type: string, format: uuid }
+    BillingParameterDecisionInput:
+      type: object
+      additionalProperties: false
+      required: [action, version]
+      properties:
+        action: { type: string, enum: [approve, reject, needs_information] }
+        note: { type: string, maxLength: 1000 }
+        version: { type: integer, minimum: 1 }
     FinanceRecord:
       type: object
       additionalProperties: true

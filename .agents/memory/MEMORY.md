@@ -45,3 +45,4 @@
 - [Public auth route ordering](public-auth-route-ordering.md) — routers mounted before session bootstrap must scope authorization to protected handlers, not the whole router.
 - [Accessible native dialogs](accessible-native-dialogs.md) — connect each visible dialog heading with `aria-labelledby`; visible title text alone does not give the native dialog an accessible name.
 - [Platform console scope](platform-console-scope.md) — global admin screens must not inherit organization module gates, and date-only API fields need explicit ISO serialization.
+- [Legacy finance migration compatibility](financial-migration-compatibility.md) — additive billing schema changes must keep older tariff and invoice write paths working too.

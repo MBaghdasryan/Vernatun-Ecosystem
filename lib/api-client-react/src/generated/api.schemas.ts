@@ -2287,6 +2287,349 @@ export interface PlatformImportInput {
   rows: PlatformImportInputRowsItem[];
 }
 
+export type LegacyTariffInputCurrency = typeof LegacyTariffInputCurrency[keyof typeof LegacyTariffInputCurrency];
+
+
+export const LegacyTariffInputCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type LegacyTariffInputBasis = typeof LegacyTariffInputBasis[keyof typeof LegacyTariffInputBasis];
+
+
+export const LegacyTariffInputBasis = {
+  area: 'area',
+  unit: 'unit',
+} as const;
+
+export interface LegacyTariffInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /** @pattern ^[1-9][0-9]{0,14}$ */
+  amountMinor: string;
+  currency: LegacyTariffInputCurrency;
+  basis: LegacyTariffInputBasis;
+}
+
+export type FinanceServiceInputCategory = typeof FinanceServiceInputCategory[keyof typeof FinanceServiceInputCategory];
+
+
+export const FinanceServiceInputCategory = {
+  maintenance: 'maintenance',
+  security: 'security',
+  cleaning: 'cleaning',
+  waste: 'waste',
+  parking: 'parking',
+  intercom: 'intercom',
+  utilities: 'utilities',
+  optional: 'optional',
+  other: 'other',
+} as const;
+
+export type FinanceServiceInputDefaultCalculationMethod = typeof FinanceServiceInputDefaultCalculationMethod[keyof typeof FinanceServiceInputDefaultCalculationMethod];
+
+
+export const FinanceServiceInputDefaultCalculationMethod = {
+  FIXED_PER_UNIT: 'FIXED_PER_UNIT',
+  PER_SQUARE_METER: 'PER_SQUARE_METER',
+  PER_RESIDENT: 'PER_RESIDENT',
+  PER_PARKING_SPACE: 'PER_PARKING_SPACE',
+  PER_QUANTITY: 'PER_QUANTITY',
+  PER_METER_CONSUMPTION: 'PER_METER_CONSUMPTION',
+  PER_DAY: 'PER_DAY',
+  MANUAL: 'MANUAL',
+} as const;
+
+export interface FinanceServiceInput {
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  name: string;
+  /** @maxLength 2000 */
+  description?: string;
+  category?: FinanceServiceInputCategory;
+  mandatory?: boolean;
+  defaultCalculationMethod?: FinanceServiceInputDefaultCalculationMethod;
+}
+
+export type VersionedTariffInputCurrency = typeof VersionedTariffInputCurrency[keyof typeof VersionedTariffInputCurrency];
+
+
+export const VersionedTariffInputCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export type VersionedTariffInputCalculationMethod = typeof VersionedTariffInputCalculationMethod[keyof typeof VersionedTariffInputCalculationMethod];
+
+
+export const VersionedTariffInputCalculationMethod = {
+  FIXED_PER_UNIT: 'FIXED_PER_UNIT',
+  PER_SQUARE_METER: 'PER_SQUARE_METER',
+  PER_RESIDENT: 'PER_RESIDENT',
+  PER_PARKING_SPACE: 'PER_PARKING_SPACE',
+  PER_QUANTITY: 'PER_QUANTITY',
+  PER_METER_CONSUMPTION: 'PER_METER_CONSUMPTION',
+  PER_DAY: 'PER_DAY',
+  MANUAL: 'MANUAL',
+} as const;
+
+export interface VersionedTariffInput {
+  serviceId: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  name: string;
+  /** @pattern ^[1-9][0-9]{0,14}$ */
+  amountMinor: string;
+  currency: VersionedTariffInputCurrency;
+  calculationMethod: VersionedTariffInputCalculationMethod;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  rateUnit: string;
+  validFrom: string;
+  validUntil?: string | null;
+}
+
+export type BillingRuleInputScopeKind = typeof BillingRuleInputScopeKind[keyof typeof BillingRuleInputScopeKind];
+
+
+export const BillingRuleInputScopeKind = {
+  organization: 'organization',
+  building: 'building',
+  unit: 'unit',
+} as const;
+
+export type BillingRuleInputCalculationMethod = typeof BillingRuleInputCalculationMethod[keyof typeof BillingRuleInputCalculationMethod];
+
+
+export const BillingRuleInputCalculationMethod = {
+  FIXED_PER_UNIT: 'FIXED_PER_UNIT',
+  PER_SQUARE_METER: 'PER_SQUARE_METER',
+  PER_RESIDENT: 'PER_RESIDENT',
+  PER_PARKING_SPACE: 'PER_PARKING_SPACE',
+  PER_QUANTITY: 'PER_QUANTITY',
+  PER_METER_CONSUMPTION: 'PER_METER_CONSUMPTION',
+  PER_DAY: 'PER_DAY',
+  MANUAL: 'MANUAL',
+} as const;
+
+export type BillingRuleInputOccupancyCountMode = typeof BillingRuleInputOccupancyCountMode[keyof typeof BillingRuleInputOccupancyCountMode] | null;
+
+
+export const BillingRuleInputOccupancyCountMode = {
+  AUTO_ACTIVE_RESIDENTS: 'AUTO_ACTIVE_RESIDENTS',
+  REGISTRY_COUNT: 'REGISTRY_COUNT',
+  MANUAL_COUNT: 'MANUAL_COUNT',
+} as const;
+
+export type BillingRuleInputZeroPolicy = typeof BillingRuleInputZeroPolicy[keyof typeof BillingRuleInputZeroPolicy];
+
+
+export const BillingRuleInputZeroPolicy = {
+  ALLOW_ZERO: 'ALLOW_ZERO',
+  MINIMUM_ONE: 'MINIMUM_ONE',
+  MANUAL_REVIEW: 'MANUAL_REVIEW',
+} as const;
+
+export type BillingRuleInputRoundingMode = typeof BillingRuleInputRoundingMode[keyof typeof BillingRuleInputRoundingMode];
+
+
+export const BillingRuleInputRoundingMode = {
+  NEAREST_AMD: 'NEAREST_AMD',
+  ROUND_UP_AMD: 'ROUND_UP_AMD',
+  ROUND_DOWN_AMD: 'ROUND_DOWN_AMD',
+} as const;
+
+export type BillingRuleInputProrationMode = typeof BillingRuleInputProrationMode[keyof typeof BillingRuleInputProrationMode];
+
+
+export const BillingRuleInputProrationMode = {
+  DISABLED: 'DISABLED',
+  DAILY: 'DAILY',
+} as const;
+
+export type BillingRuleInputMeterKind = typeof BillingRuleInputMeterKind[keyof typeof BillingRuleInputMeterKind];
+
+
+export const BillingRuleInputMeterKind = {
+  water: 'water',
+  electricity: 'electricity',
+  gas: 'gas',
+} as const;
+
+export interface BillingRuleInput {
+  serviceId: string;
+  tariffId: string;
+  scopeKind: BillingRuleInputScopeKind;
+  buildingId?: string | null;
+  unitId?: string | null;
+  calculationMethod: BillingRuleInputCalculationMethod;
+  occupancyCountMode?: BillingRuleInputOccupancyCountMode;
+  zeroPolicy?: BillingRuleInputZeroPolicy;
+  roundingMode?: BillingRuleInputRoundingMode;
+  prorationMode?: BillingRuleInputProrationMode;
+  /** @pattern ^[0-9]{1,14}$ */
+  minimumAmount?: string;
+  /** @pattern ^[0-9]{1,14}$ */
+  maximumAmount?: string;
+  validFrom: string;
+  validUntil?: string | null;
+  active?: boolean;
+  /**
+     * @minimum -1000
+     * @maximum 1000
+     */
+  priority?: number;
+  meterKind?: BillingRuleInputMeterKind;
+}
+
+export interface BillingRuleUpdateInput {
+  active: boolean;
+  validUntil?: string | null;
+}
+
+export interface BillingPreviewInput {
+  buildingId: string;
+  /** First day of the billing month */
+  period: string;
+}
+
+export interface RuleBillingBatchInput {
+  buildingId: string;
+  /** First day of the billing month */
+  period: string;
+  key: string;
+}
+
+export type ManualChargeInputCurrency = typeof ManualChargeInputCurrency[keyof typeof ManualChargeInputCurrency];
+
+
+export const ManualChargeInputCurrency = {
+  AMD: 'AMD',
+  RUB: 'RUB',
+  USD: 'USD',
+} as const;
+
+export interface ManualChargeInput {
+  unitId: string;
+  serviceId: string;
+  /** First day of the billing month */
+  period: string;
+  /** @pattern ^[1-9][0-9]{0,14}$ */
+  amountMinor: string;
+  currency: ManualChargeInputCurrency;
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  reason: string;
+  key: string;
+}
+
+export type UnitBillingParametersInputResidentCountMode = typeof UnitBillingParametersInputResidentCountMode[keyof typeof UnitBillingParametersInputResidentCountMode];
+
+
+export const UnitBillingParametersInputResidentCountMode = {
+  AUTO_ACTIVE_RESIDENTS: 'AUTO_ACTIVE_RESIDENTS',
+  REGISTRY_COUNT: 'REGISTRY_COUNT',
+  MANUAL_COUNT: 'MANUAL_COUNT',
+} as const;
+
+export type UnitBillingParametersInputOccupancyStatus = typeof UnitBillingParametersInputOccupancyStatus[keyof typeof UnitBillingParametersInputOccupancyStatus];
+
+
+export const UnitBillingParametersInputOccupancyStatus = {
+  OCCUPIED: 'OCCUPIED',
+  VACANT: 'VACANT',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type UnitBillingParametersInputResidentsItem = {
+  assignmentId: string;
+  residesHere: boolean;
+  countsForBilling: boolean;
+};
+
+export type UnitBillingParametersInputServiceQuantitiesItem = {
+  serviceId: string;
+  quantity: string;
+};
+
+export type UnitBillingParametersInputServiceApplicabilityItem = {
+  serviceId: string;
+  enabled: boolean;
+};
+
+export interface UnitBillingParametersInput {
+  effectiveFrom: string;
+  /** @minimum 0 */
+  billingArea?: number | null;
+  residentCountMode: UnitBillingParametersInputResidentCountMode;
+  /** @minimum 0 */
+  billingResidentCount?: number | null;
+  occupancyStatus: UnitBillingParametersInputOccupancyStatus;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+  residents?: UnitBillingParametersInputResidentsItem[];
+  serviceQuantities?: UnitBillingParametersInputServiceQuantitiesItem[];
+  serviceApplicability?: UnitBillingParametersInputServiceApplicabilityItem[];
+}
+
+export type BillingParameterReviewInputParameterKey = typeof BillingParameterReviewInputParameterKey[keyof typeof BillingParameterReviewInputParameterKey];
+
+
+export const BillingParameterReviewInputParameterKey = {
+  billing_area: 'billing_area',
+  resident_count: 'resident_count',
+  service_applicability: 'service_applicability',
+  parking_count: 'parking_count',
+} as const;
+
+export interface BillingParameterReviewInput {
+  unitId: string;
+  serviceId?: string;
+  parameterKey: BillingParameterReviewInputParameterKey;
+  proposedValue: string | number | boolean;
+  effectiveFrom?: string;
+  /**
+     * @minLength 5
+     * @maxLength 2000
+     */
+  reason: string;
+  clientId: string;
+}
+
+export type BillingParameterDecisionInputAction = typeof BillingParameterDecisionInputAction[keyof typeof BillingParameterDecisionInputAction];
+
+
+export const BillingParameterDecisionInputAction = {
+  approve: 'approve',
+  reject: 'reject',
+  needs_information: 'needs_information',
+} as const;
+
+export interface BillingParameterDecisionInput {
+  action: BillingParameterDecisionInputAction;
+  /** @maxLength 1000 */
+  note?: string;
+  /** @minimum 1 */
+  version: number;
+}
+
 export interface FinanceRecord { [key: string]: unknown }
 
 export interface BillingBatchInput {

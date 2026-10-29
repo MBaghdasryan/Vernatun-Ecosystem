@@ -119,6 +119,8 @@ const checks=process.argv.includes('--org-console-only')
   ? [['--test','server/tests/backup.test.ts'],['--test','server/tests/storage.test.ts'],['--test','server/tests/storage-inventory.test.ts']]
   : process.argv.includes('--phase6-only')
  ? [['--test','server/tests/phase6.test.ts']]
+ : process.argv.includes('--billing-rules-only')
+ ? [['--test-name-pattern=Calculation','server/tests/business.test.ts']]
  : process.argv.includes('--phase4-only')
  ? [['--test','server/tests/phase4.test.ts']]
  : process.argv.includes('--backup-only')

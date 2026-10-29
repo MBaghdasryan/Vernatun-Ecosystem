@@ -9,6 +9,15 @@ import {ownScope} from './resident-continuity-store.js';
 import {day,uuid,amountLimit} from './finance-shared.js';
 
 export const billingConfiguration=Router();
+billingConfiguration.use(async(_req,res,next)=>{
+ try{
+  const schema=await pool.query(`SELECT to_regclass('billing_rules') AS rules,to_regclass('unit_billing_parameters') AS unit_parameters,
+   to_regclass('billing_manual_charges') AS manual_charges`);
+  if(!schema.rows[0]?.rules||!schema.rows[0]?.unit_parameters||!schema.rows[0]?.manual_charges)
+   return res.status(503).json({error:'billing_configuration_migration_required'});
+  return next();
+ }catch(error){return next(error)}
+});
 billingConfiguration.use(requireAuth);
 
 const method=z.enum(['FIXED_PER_UNIT','PER_SQUARE_METER','PER_RESIDENT','PER_PARKING_SPACE','PER_METER_CONSUMPTION','PER_QUANTITY','PER_DAY','MANUAL']);
@@ -125,6 +134,11 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
   AND effective_from<=$4::date AND (effective_until IS NULL OR effective_until>=$5::date)
   ORDER BY unit_id,service_id,effective_from DESC,id DESC`,[c.organization_id,units.map(u=>u.id),serviceIds,periodEnd,period])).rows:[];
  const applicabilityByKey=new Map(applicability.map(q=>[q.unit_id+':'+q.service_id,q.enabled]));
+  const manualCharges=serviceIds.length?(await db.query(`SELECT DISTINCT ON(unit_id,service_id) *
+   FROM billing_manual_charges WHERE organization_id=$1 AND unit_id=ANY($2::uuid[]) AND service_id=ANY($3::uuid[])
+   AND period=$4::date AND status='active' ORDER BY unit_id,service_id,revision DESC,id DESC`,
+   [c.organization_id,units.map(u=>u.id),serviceIds,period])).rows:[];
+  const manualByKey=new Map(manualCharges.map(q=>[q.unit_id+':'+q.service_id,q]));
  const lines:any[]=[],exceptions:any[]=[];
  for(const unit of units){
   const services=[...new Set(rules.map(r=>r.service_id))];
@@ -135,7 +149,7 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    const specificity=(r:any)=>r.scope_kind==='unit'?3:r.scope_kind==='building'?2:1;
    candidates.sort((a,b)=>specificity(b)-specificity(a)||b.priority-a.priority);
    const first=candidates[0],ties=candidates.filter(r=>specificity(r)===specificity(first)&&r.priority===first.priority);
-   const fail=(code:string)=>exceptions.push({unitId:unit.id,unitNumber:unit.number,serviceId,serviceName:first.service_name,code});
+   const fail=(code:string)=>exceptions.push({unitId:unit.id,unitNumber:unit.number,serviceId:String(first.service_id),serviceName:first.service_name,code});
    if(ties.length>1){fail('rule_conflict');continue}
    if(!first.service_active||!first.billing_enabled){fail('service_disabled');continue}
    if(applicabilityByKey.get(unit.id+':'+serviceId)===false){
@@ -154,7 +168,7 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    if(assignments.length!==1){fail(assignments.length?'payer_overlap':'no_payer_rule');continue}
    const assignment=assignments[0];
    if(priorIds.has(assignment.id)){fail('already_calculated');continue}
-   let quantity='1',baseUnit='unit';
+    let quantity='1',baseUnit='unit',manualCharge:any=null;
    if(first.calculation_method==='PER_SQUARE_METER'){
     const p=paramsByUnit.get(unit.id);
     if(p&&(p.effective_from>period||p.effective_until&&p.effective_until<periodEnd)){fail('mid_period_unit_parameter_change_requires_review');continue}
@@ -168,6 +182,7 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
     let count:number|undefined;
     if(first.occupancy_count_mode==='AUTO_ACTIVE_RESIDENTS'){
      const records=eligibleByUnit.get(unit.id)??[];
+      if(records.some(e=>e.resides_here&&e.counts_for_billing&&(e.effective_from>period||e.effective_until&&e.effective_until<periodEnd))){fail('resident_eligibility_changed_mid_period');continue}
      if(!records.length&&p.occupancy_status!=='VACANT'){fail('resident_count_unknown');continue}
      count=records.filter(e=>e.resides_here&&e.counts_for_billing&&e.effective_from<=periodEnd&&(!e.effective_until||e.effective_until>=period)).length;
     }else count=p.billing_resident_count===null?undefined:Number(p.billing_resident_count);
@@ -192,19 +207,24 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    }else if(first.calculation_method==='PER_DAY'){
     quantity=String(activeDays);baseUnit='day';
    }else if(first.calculation_method==='MANUAL'){
-    fail('manual_charge_required');continue;
+     manualCharge=manualByKey.get(unit.id+':'+serviceId);
+     if(!manualCharge){fail('manual_charge_required');continue}
+     if(activeDays<daysInMonth(period)){fail('mid_period_manual_charge_requires_review');continue}
+     quantity='1';baseUnit='manual';
    }
    const unproratedQuantity=quantity;
-   if(first.proration_mode==='DAILY'&&first.calculation_method!=='PER_DAY'&&activeDays<daysInMonth(period)){
+    if(!manualCharge&&first.proration_mode==='DAILY'&&first.calculation_method!=='PER_DAY'&&activeDays<daysInMonth(period)){
     const value=(scaled(quantity)*BigInt(activeDays)+BigInt(daysInMonth(period)/2))/BigInt(daysInMonth(period));
     quantity=(value/10000n).toString()+'.'+(value%10000n).toString().padStart(4,'0');
    }
-   const amounts=amountFor(String(first.amount_minor),quantity,first.rounding_mode,first.minimum_amount===null?null:String(first.minimum_amount),first.maximum_amount===null?null:String(first.maximum_amount));
+    const rateMinor=manualCharge?String(manualCharge.amount_minor):String(first.amount_minor);
+    const amounts=manualCharge?{raw:rateMinor,rounded:rateMinor}:amountFor(rateMinor,quantity,first.rounding_mode,first.minimum_amount===null?null:String(first.minimum_amount),first.maximum_amount===null?null:String(first.maximum_amount));
    if(BigInt(amounts.rounded)===0n){fail('zero_charge');continue}
-   lines.push({unitId:unit.id,unitNumber:unit.number,serviceId,serviceName:first.service_name,tariffId:first.tariff_id,
+   lines.push({unitId:unit.id,unitNumber:unit.number,serviceId:String(first.service_id),serviceName:first.service_name,tariffId:first.tariff_id,
     ruleId:first.id,calculationMethod:first.calculation_method,baseQuantity:quantity,unproratedQuantity,prorationDays:activeDays,baseUnit,
-    rateMinor:String(first.amount_minor),rateUnit:first.rate_unit,currency:first.currency,
+    rateMinor,rateUnit:first.rate_unit,currency:first.currency,
     rawAmountMinor:amounts.raw,roundedAmountMinor:amounts.rounded,
+    manualChargeId:manualCharge?.id??null,manualReason:manualCharge?.reason??null,
     payerAssignmentId:assignment.id,payerId:effective.get(assignment.id)?.payerId??assignment.payer_user_id,
     payerDelegationId:effective.get(assignment.id)?.delegationId??null,
     roundingMode:first.rounding_mode});
@@ -341,6 +361,40 @@ billingConfiguration.patch('/finance/billing-rules/:id',async(req,res)=>{
  }));
 });
 
+billingConfiguration.post('/finance/manual-charges',async(req,res)=>{
+ const c=await manageFinance(req),b=z.object({unitId:uuid,serviceId:uuid,period:periodDay,amountMinor:positiveMinor,
+  currency,reason:z.string().trim().min(5).max(1000),key:uuid}).strict().parse(req.body);
+ if(BigInt(b.amountMinor)>amountLimit)throw new ApiError(400,'invalid_amount');
+ const unit=await scopedUnit(c,b.unitId);
+ res.status(201).json(await transaction(async db=>idempotent(db,req,b.key,b,async()=>{
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[unit.id+b.serviceId+b.period]);
+  const rule=(await db.query(`SELECT t.currency FROM billing_rules r
+   JOIN services s ON s.id=r.service_id AND s.organization_id=r.organization_id
+   JOIN tariffs t ON t.id=r.tariff_id AND t.service_id=r.service_id AND t.organization_id=r.organization_id
+   WHERE r.organization_id=$1 AND r.service_id=$2 AND r.active AND r.calculation_method='MANUAL'
+   AND s.active AND s.billing_enabled AND t.status='active' AND t.valid_from<=$5::date
+   AND (t.valid_until IS NULL OR t.valid_until>=$6::date) AND r.valid_from<=$5::date
+   AND (r.valid_until IS NULL OR r.valid_until>=$6::date)
+   AND (r.scope_kind='organization' OR r.scope_kind='building' AND r.building_id=$3 OR r.scope_kind='unit' AND r.unit_id=$4)
+   ORDER BY CASE r.scope_kind WHEN 'unit' THEN 3 WHEN 'building' THEN 2 ELSE 1 END DESC,r.priority DESC LIMIT 1`,
+   [c.organization_id,b.serviceId,unit.building_id,unit.id,b.period,endOfMonth(b.period)])).rows[0];
+  if(!rule)throw new ApiError(409,'manual_rule_required');
+  if(rule.currency!==b.currency)throw new ApiError(400,'currency_mismatch');
+  const old=(await db.query(`SELECT * FROM billing_manual_charges WHERE organization_id=$1 AND unit_id=$2
+   AND service_id=$3 AND period=$4 AND status='active' FOR UPDATE`,
+   [c.organization_id,unit.id,b.serviceId,b.period])).rows[0];
+  const revision=Number((await db.query(`SELECT COALESCE(max(revision),0)+1 AS revision FROM billing_manual_charges
+   WHERE organization_id=$1 AND unit_id=$2 AND service_id=$3 AND period=$4`,
+   [c.organization_id,unit.id,b.serviceId,b.period])).rows[0].revision);
+  if(old)await db.query("UPDATE billing_manual_charges SET status='superseded' WHERE id=$1",[old.id]);
+  const row=(await db.query(`INSERT INTO billing_manual_charges(organization_id,unit_id,service_id,period,amount_minor,currency,
+   reason,revision,supersedes_id,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+   [c.organization_id,unit.id,b.serviceId,b.period,b.amountMinor,b.currency,b.reason,revision,old?.id??null,req.user!.id])).rows[0];
+  await record(db,req,c,'finance.manual_charge.created','billing_manual_charge',row.id,{unitId:unit.id,serviceId:b.serviceId,period:b.period,revision,reason:b.reason});
+  return row;
+ })));
+});
+
 billingConfiguration.post('/finance/billing/preview',async(req,res)=>{
  const c=await requirePermission(req,'billing.calculate'),b=z.object({buildingId:uuid,period:periodDay}).strict().parse(req.body);
  const result=await transaction(db=>calculateRuleBilling(db,c,b.buildingId,b.period,false));
@@ -350,9 +404,9 @@ billingConfiguration.post('/finance/billing/preview',async(req,res)=>{
 });
 
 billingConfiguration.get('/properties/:id/billing-parameters',async(req,res)=>{
- const c=await readFinance(req),unit=await scopedUnit(c,uuid.parse(req.params.id));
+ const c=await manageFinance(req),unit=await scopedUnit(c,uuid.parse(req.params.id));
  const today=new Date().toISOString().slice(0,10);
- const [param,residents,quantities,applicability]=await Promise.all([
+  const [param,residents,quantities,applicability,manualCharges]=await Promise.all([
   pool.query(`SELECT * FROM unit_billing_parameters WHERE organization_id=$1 AND unit_id=$2 AND effective_from<=$3::date
    AND (effective_until IS NULL OR effective_until>=$3::date) ORDER BY effective_from DESC LIMIT 1`,[c.organization_id,unit.id,today]),
   pool.query(`SELECT a.id AS assignment_id,a.user_id,u.name,a.role_key, e.resides_here,e.counts_for_billing,e.effective_from::text,e.effective_until::text
@@ -366,12 +420,16 @@ billingConfiguration.get('/properties/:id/billing-parameters',async(req,res)=>{
   [c.organization_id,unit.id,today]),
   pool.query(`SELECT a.*,s.name AS service_name FROM unit_billing_service_applicability a JOIN services s ON s.id=a.service_id
    WHERE a.organization_id=$1 AND a.unit_id=$2 AND a.effective_from<=$3::date AND (a.effective_until IS NULL OR a.effective_until>=$3::date)`,
-  [c.organization_id,unit.id,today])
+   [c.organization_id,unit.id,today]),
+   pool.query(`SELECT m.id,m.service_id,s.name AS service_name,m.period::text,m.amount_minor::text,m.currency,m.reason,m.revision,m.created_at
+    FROM billing_manual_charges m JOIN services s ON s.id=m.service_id AND s.organization_id=m.organization_id
+    WHERE m.organization_id=$1 AND m.unit_id=$2 AND m.status='active' ORDER BY m.period DESC,m.created_at DESC LIMIT 12`,
+    [c.organization_id,unit.id])
  ]);
  const p=param.rows[0];
  res.json({unit:{id:unit.id,building_id:unit.building_id,number:unit.number,legal_area:String(unit.area),
   billing_area:p?.billing_area===null||p?.billing_area===undefined?String(unit.area):String(p.billing_area)},
-  parameters:p??null,residents:residents.rows,serviceQuantities:quantities.rows,serviceApplicability:applicability.rows});
+   parameters:p??null,residents:residents.rows,serviceQuantities:quantities.rows,serviceApplicability:applicability.rows,manualCharges:manualCharges.rows});
 });
 
 billingConfiguration.patch('/properties/:id/billing-parameters',async(req,res)=>{

@@ -94,7 +94,7 @@ billingBatches.post('/finance/batches/:id/:action',async(req,res)=>{
         baseQuantity:line.baseQuantity,unproratedQuantity:line.unproratedQuantity,prorationDays:line.prorationDays,
         baseUnit:line.baseUnit,rateMinor:line.rateMinor,rateUnit:line.rateUnit,
         rawAmountMinor:line.rawAmountMinor,roundedAmountMinor:line.roundedAmountMinor,roundingMode:line.roundingMode,
-        serviceName:line.serviceName
+         serviceName:line.serviceName,manualChargeId:line.manualChargeId,manualReason:line.manualReason
        }:{model:'legacy'})]);
        await db.query('INSERT INTO charges(organization_id,payer_assignment_id,period,tariff_id,invoice_id,payer_delegation_id) VALUES($1,$2,$3,$4,$5,$6)',[c.organization_id,line.payerAssignmentId,row.snapshot.period,ruleBased?line.tariffId:row.tariff_id,invoice.id,line.payerDelegationId]);
      await db.query("UPDATE invoices SET status='published',published_at=now(),published_by=$2 WHERE id=$1",[invoice.id,req.user!.id]);

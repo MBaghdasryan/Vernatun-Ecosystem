@@ -26,3 +26,20 @@ Audit scope: the attached Vernatun OS + ImTun tariff and area/resident billing m
 - Unknown area, resident count, meter reading, or conflicting rules must stop the affected charge and create a visible exception.
 - Residents may request review but cannot directly alter tariffs, billing area, resident counts, or published bills.
 - Keep platform SaaS fees, organization property charges, utility charges, payment responsibility, and merchant beneficiary as separate domains.
+
+## Implementation status
+
+The configurable billing framework is implemented in source code; it is not production-enabled yet.
+
+- Migration `064_configurable_billing_rules.sql` adds effective-dated tariff/rule versions, unit parameters, resident billing eligibility, service applicability and quantities, manual-charge revisions, and immutable calculation metadata for invoice lines.
+- The API supports service/tariff configuration, organization/building/unit rules, rule-based previews and drafts, scoped unit settings, resident parameter-review requests, audited manager decisions, and revisioned manual charges.
+- Vernatun OS has configuration, per-unit parameters, manual-charge entry, and a manager review queue. ImTun displays saved calculation details and lets residents submit parameter corrections for review.
+- Published invoice calculations remain snapshots. Corrections do not rewrite an already published invoice, and payment merchant/beneficiary settings are not changed by billing rules.
+- API tests cover area-based calculation, invoice publication and snapshot retention, manual-charge idempotency and revisions, parameter-review authorization, and service-applicability approval. The API schema also generates typed clients from the new routes.
+
+### Not enabled or not fully accepted
+
+- Migration 064 has been exercised by isolated API tests only. It has **not** been applied to the shared development database or Production. The API returns `billing_configuration_migration_required` until the migration exists.
+- No real payment provider was configured or tested. Provider setup, live collection, and settlement verification remain separate work.
+- The tested end-to-end calculation path uses area billing and manual charges; the other supported calculation methods, all exception combinations, all role/language/device combinations, and real Android/iOS acceptance still need broader test coverage.
+- No Production deployment or database migration was performed as part of this implementation.

@@ -39,7 +39,12 @@ import type {
   BankImportInput,
   BillingBatchInput,
   BillingDraftInput,
+  BillingParameterDecisionInput,
+  BillingParameterReviewInput,
+  BillingPreviewInput,
   BillingPublicationInput,
+  BillingRuleInput,
+  BillingRuleUpdateInput,
   CastWeightedVote201,
   CastWeightedVoteBody,
   CategoryInput,
@@ -127,6 +132,7 @@ import type {
   EndOwnershipBody,
   ExamineDueNotifications200,
   FinanceRecord,
+  FinanceServiceInput,
   GetApiCenter200,
   GetApiCenterParams,
   GetApiHealth200,
@@ -219,6 +225,7 @@ import type {
   LandingLeadPage,
   LandingLeadReceipt,
   LeaseLifecycleInput,
+  LegacyTariffInput,
   ListBankTransactionsParams,
   ListDocumentVersions200Item,
   ListEdgeAlarms200Item,
@@ -253,6 +260,7 @@ import type {
   MaintenancePlanInput,
   MaintenanceRecord,
   ManagedApiClient,
+  ManualChargeInput,
   MaterialInput,
   MfaPolicy,
   MfaPolicyInput,
@@ -349,6 +357,7 @@ import type {
   RollbackSystemUpdate202,
   RollbackSystemUpdate409,
   RollbackSystemUpdateBody,
+  RuleBillingBatchInput,
   SaveOperatingBudget200,
   SaveOperatingBudgetBody,
   SaveSystemLogRetention200,
@@ -379,6 +388,7 @@ import type {
   SystemOverview,
   SystemSessionRevokeInput,
   SystemSessions,
+  UnitBillingParametersInput,
   UnitPlanChange,
   UnitPlanReceipt,
   UnitPlanView,
@@ -403,6 +413,7 @@ import type {
   UtilityBillingWorkspace,
   ValidateSystemUpdate200,
   VerifySystemBackup200,
+  VersionedTariffInput,
   VisitProposalInput,
   VisitResponseInput,
   WebhookCenter,
@@ -24539,6 +24550,1195 @@ export function useGetIncidentEvidence<TData = Awaited<ReturnType<typeof getInci
 
 
 
+
+export const getGetFinanceConfigurationUrl = () => {
+
+
+
+
+  return `/api/finance/configuration`
+}
+
+export const getFinanceConfiguration = async ( options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+  return customFetch<FinanceRecord>(getGetFinanceConfigurationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinanceConfigurationQueryKey = () => {
+    return [
+    `/api/finance/configuration`
+    ] as const;
+    }
+
+
+export const getGetFinanceConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof getFinanceConfiguration>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinanceConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinanceConfigurationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinanceConfiguration>>> = ({ signal }) => getFinanceConfiguration({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinanceConfiguration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinanceConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof getFinanceConfiguration>>>
+export type GetFinanceConfigurationQueryError = ErrorType<unknown>
+
+
+
+export function useGetFinanceConfiguration<TData = Awaited<ReturnType<typeof getFinanceConfiguration>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinanceConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinanceConfigurationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateFinanceServiceUrl = () => {
+
+
+
+
+  return `/api/finance/services`
+}
+
+export const createFinanceService = async (financeServiceInput: FinanceServiceInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateFinanceServiceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(financeServiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateFinanceServiceMutationKey = () => ['createFinanceService'] as const;
+
+export const getCreateFinanceServiceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinanceService>>, TError,CreateFinanceServiceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFinanceService>>, TError,CreateFinanceServiceMutationVariables, TContext> => {
+
+const mutationKey = getCreateFinanceServiceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFinanceService>>, CreateFinanceServiceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFinanceService(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFinanceServiceMutationResult = NonNullable<Awaited<ReturnType<typeof createFinanceService>>>
+    export type CreateFinanceServiceMutationBody = BodyType<FinanceServiceInput>
+    export type CreateFinanceServiceMutationError = ErrorType<unknown>
+    export type CreateFinanceServiceMutationVariables = {data: BodyType<FinanceServiceInput>}
+
+    export const useCreateFinanceService = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinanceService>>, TError,CreateFinanceServiceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFinanceService>>,
+        TError,
+        CreateFinanceServiceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateFinanceServiceMutationOptions(options));
+    }
+
+export const getCreateConfiguredFinanceTariffUrl = () => {
+
+
+
+
+  return `/api/finance/configuration/tariffs`
+}
+
+export const createConfiguredFinanceTariff = async (versionedTariffInput: VersionedTariffInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateConfiguredFinanceTariffUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(versionedTariffInput)
+  }
+);}
+
+
+
+
+
+export const getCreateConfiguredFinanceTariffMutationKey = () => ['createConfiguredFinanceTariff'] as const;
+
+export const getCreateConfiguredFinanceTariffMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConfiguredFinanceTariff>>, TError,CreateConfiguredFinanceTariffMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createConfiguredFinanceTariff>>, TError,CreateConfiguredFinanceTariffMutationVariables, TContext> => {
+
+const mutationKey = getCreateConfiguredFinanceTariffMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createConfiguredFinanceTariff>>, CreateConfiguredFinanceTariffMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createConfiguredFinanceTariff(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateConfiguredFinanceTariffMutationResult = NonNullable<Awaited<ReturnType<typeof createConfiguredFinanceTariff>>>
+    export type CreateConfiguredFinanceTariffMutationBody = BodyType<VersionedTariffInput>
+    export type CreateConfiguredFinanceTariffMutationError = ErrorType<unknown>
+    export type CreateConfiguredFinanceTariffMutationVariables = {data: BodyType<VersionedTariffInput>}
+
+    export const useCreateConfiguredFinanceTariff = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConfiguredFinanceTariff>>, TError,CreateConfiguredFinanceTariffMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createConfiguredFinanceTariff>>,
+        TError,
+        CreateConfiguredFinanceTariffMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateConfiguredFinanceTariffMutationOptions(options));
+    }
+
+export const getCreateVersionedFinanceTariffUrl = () => {
+
+
+
+
+  return `/api/finance/tariffs`
+}
+
+export const createVersionedFinanceTariff = async (versionedTariffInputLegacyTariffInput: VersionedTariffInput | LegacyTariffInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateVersionedFinanceTariffUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(versionedTariffInputLegacyTariffInput)
+  }
+);}
+
+
+
+
+
+export const getCreateVersionedFinanceTariffMutationKey = () => ['createVersionedFinanceTariff'] as const;
+
+export const getCreateVersionedFinanceTariffMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVersionedFinanceTariff>>, TError,CreateVersionedFinanceTariffMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVersionedFinanceTariff>>, TError,CreateVersionedFinanceTariffMutationVariables, TContext> => {
+
+const mutationKey = getCreateVersionedFinanceTariffMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVersionedFinanceTariff>>, CreateVersionedFinanceTariffMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVersionedFinanceTariff(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVersionedFinanceTariffMutationResult = NonNullable<Awaited<ReturnType<typeof createVersionedFinanceTariff>>>
+    export type CreateVersionedFinanceTariffMutationBody = BodyType<VersionedTariffInput | LegacyTariffInput>
+    export type CreateVersionedFinanceTariffMutationError = ErrorType<unknown>
+    export type CreateVersionedFinanceTariffMutationVariables = {data: BodyType<VersionedTariffInput | LegacyTariffInput>}
+
+    export const useCreateVersionedFinanceTariff = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVersionedFinanceTariff>>, TError,CreateVersionedFinanceTariffMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVersionedFinanceTariff>>,
+        TError,
+        CreateVersionedFinanceTariffMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateVersionedFinanceTariffMutationOptions(options));
+    }
+
+export const getCreateFinanceBillingRuleUrl = () => {
+
+
+
+
+  return `/api/finance/billing-rules`
+}
+
+export const createFinanceBillingRule = async (billingRuleInput: BillingRuleInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateFinanceBillingRuleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(billingRuleInput)
+  }
+);}
+
+
+
+
+
+export const getCreateFinanceBillingRuleMutationKey = () => ['createFinanceBillingRule'] as const;
+
+export const getCreateFinanceBillingRuleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinanceBillingRule>>, TError,CreateFinanceBillingRuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFinanceBillingRule>>, TError,CreateFinanceBillingRuleMutationVariables, TContext> => {
+
+const mutationKey = getCreateFinanceBillingRuleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFinanceBillingRule>>, CreateFinanceBillingRuleMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFinanceBillingRule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFinanceBillingRuleMutationResult = NonNullable<Awaited<ReturnType<typeof createFinanceBillingRule>>>
+    export type CreateFinanceBillingRuleMutationBody = BodyType<BillingRuleInput>
+    export type CreateFinanceBillingRuleMutationError = ErrorType<unknown>
+    export type CreateFinanceBillingRuleMutationVariables = {data: BodyType<BillingRuleInput>}
+
+    export const useCreateFinanceBillingRule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinanceBillingRule>>, TError,CreateFinanceBillingRuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFinanceBillingRule>>,
+        TError,
+        CreateFinanceBillingRuleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateFinanceBillingRuleMutationOptions(options));
+    }
+
+export const getUpdateFinanceBillingRuleUrl = (id: string,) => {
+
+
+
+
+  return `/api/finance/billing-rules/${id}`
+}
+
+export const updateFinanceBillingRule = async (id: string,
+    billingRuleUpdateInput: BillingRuleUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getUpdateFinanceBillingRuleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(billingRuleUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateFinanceBillingRuleMutationKey = () => ['updateFinanceBillingRule'] as const;
+
+export const getUpdateFinanceBillingRuleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinanceBillingRule>>, TError,UpdateFinanceBillingRuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFinanceBillingRule>>, TError,UpdateFinanceBillingRuleMutationVariables, TContext> => {
+
+const mutationKey = getUpdateFinanceBillingRuleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFinanceBillingRule>>, UpdateFinanceBillingRuleMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFinanceBillingRule(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFinanceBillingRuleMutationResult = NonNullable<Awaited<ReturnType<typeof updateFinanceBillingRule>>>
+    export type UpdateFinanceBillingRuleMutationBody = BodyType<BillingRuleUpdateInput>
+    export type UpdateFinanceBillingRuleMutationError = ErrorType<unknown>
+    export type UpdateFinanceBillingRuleMutationVariables = {id: string;data: BodyType<BillingRuleUpdateInput>}
+
+    export const useUpdateFinanceBillingRule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinanceBillingRule>>, TError,UpdateFinanceBillingRuleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFinanceBillingRule>>,
+        TError,
+        UpdateFinanceBillingRuleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateFinanceBillingRuleMutationOptions(options));
+    }
+
+export const getPreviewRuleBasedBillingUrl = () => {
+
+
+
+
+  return `/api/finance/billing/preview`
+}
+
+export const previewRuleBasedBilling = async (billingPreviewInput: BillingPreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getPreviewRuleBasedBillingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(billingPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewRuleBasedBillingMutationKey = () => ['previewRuleBasedBilling'] as const;
+
+export const getPreviewRuleBasedBillingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRuleBasedBilling>>, TError,PreviewRuleBasedBillingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewRuleBasedBilling>>, TError,PreviewRuleBasedBillingMutationVariables, TContext> => {
+
+const mutationKey = getPreviewRuleBasedBillingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewRuleBasedBilling>>, PreviewRuleBasedBillingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewRuleBasedBilling(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewRuleBasedBillingMutationResult = NonNullable<Awaited<ReturnType<typeof previewRuleBasedBilling>>>
+    export type PreviewRuleBasedBillingMutationBody = BodyType<BillingPreviewInput>
+    export type PreviewRuleBasedBillingMutationError = ErrorType<unknown>
+    export type PreviewRuleBasedBillingMutationVariables = {data: BodyType<BillingPreviewInput>}
+
+    export const usePreviewRuleBasedBilling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRuleBasedBilling>>, TError,PreviewRuleBasedBillingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewRuleBasedBilling>>,
+        TError,
+        PreviewRuleBasedBillingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewRuleBasedBillingMutationOptions(options));
+    }
+
+export const getCreateRuleBasedBillingDraftUrl = () => {
+
+
+
+
+  return `/api/finance/rule-batches`
+}
+
+export const createRuleBasedBillingDraft = async (ruleBillingBatchInput: RuleBillingBatchInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateRuleBasedBillingDraftUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ruleBillingBatchInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRuleBasedBillingDraftMutationKey = () => ['createRuleBasedBillingDraft'] as const;
+
+export const getCreateRuleBasedBillingDraftMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRuleBasedBillingDraft>>, TError,CreateRuleBasedBillingDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRuleBasedBillingDraft>>, TError,CreateRuleBasedBillingDraftMutationVariables, TContext> => {
+
+const mutationKey = getCreateRuleBasedBillingDraftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRuleBasedBillingDraft>>, CreateRuleBasedBillingDraftMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRuleBasedBillingDraft(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRuleBasedBillingDraftMutationResult = NonNullable<Awaited<ReturnType<typeof createRuleBasedBillingDraft>>>
+    export type CreateRuleBasedBillingDraftMutationBody = BodyType<RuleBillingBatchInput>
+    export type CreateRuleBasedBillingDraftMutationError = ErrorType<unknown>
+    export type CreateRuleBasedBillingDraftMutationVariables = {data: BodyType<RuleBillingBatchInput>}
+
+    export const useCreateRuleBasedBillingDraft = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRuleBasedBillingDraft>>, TError,CreateRuleBasedBillingDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRuleBasedBillingDraft>>,
+        TError,
+        CreateRuleBasedBillingDraftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateRuleBasedBillingDraftMutationOptions(options));
+    }
+
+export const getCreateManualBillingChargeUrl = () => {
+
+
+
+
+  return `/api/finance/manual-charges`
+}
+
+export const createManualBillingCharge = async (manualChargeInput: ManualChargeInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getCreateManualBillingChargeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualChargeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateManualBillingChargeMutationKey = () => ['createManualBillingCharge'] as const;
+
+export const getCreateManualBillingChargeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualBillingCharge>>, TError,CreateManualBillingChargeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createManualBillingCharge>>, TError,CreateManualBillingChargeMutationVariables, TContext> => {
+
+const mutationKey = getCreateManualBillingChargeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createManualBillingCharge>>, CreateManualBillingChargeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createManualBillingCharge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateManualBillingChargeMutationResult = NonNullable<Awaited<ReturnType<typeof createManualBillingCharge>>>
+    export type CreateManualBillingChargeMutationBody = BodyType<ManualChargeInput>
+    export type CreateManualBillingChargeMutationError = ErrorType<unknown>
+    export type CreateManualBillingChargeMutationVariables = {data: BodyType<ManualChargeInput>}
+
+    export const useCreateManualBillingCharge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualBillingCharge>>, TError,CreateManualBillingChargeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createManualBillingCharge>>,
+        TError,
+        CreateManualBillingChargeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateManualBillingChargeMutationOptions(options));
+    }
+
+export const getListFinanceBuildingUnitsUrl = (id: string,) => {
+
+
+
+
+  return `/api/finance/buildings/${id}/units`
+}
+
+export const listFinanceBuildingUnits = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord[]> => {
+
+  return customFetch<FinanceRecord[]>(getListFinanceBuildingUnitsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFinanceBuildingUnitsQueryKey = (id: string,) => {
+    return [
+    `/api/finance/buildings/${id}/units`
+    ] as const;
+    }
+
+
+export const getListFinanceBuildingUnitsQueryOptions = <TData = Awaited<ReturnType<typeof listFinanceBuildingUnits>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinanceBuildingUnits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFinanceBuildingUnitsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFinanceBuildingUnits>>> = ({ signal }) => listFinanceBuildingUnits(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFinanceBuildingUnits>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFinanceBuildingUnitsQueryResult = NonNullable<Awaited<ReturnType<typeof listFinanceBuildingUnits>>>
+export type ListFinanceBuildingUnitsQueryError = ErrorType<unknown>
+
+
+
+export function useListFinanceBuildingUnits<TData = Awaited<ReturnType<typeof listFinanceBuildingUnits>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinanceBuildingUnits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFinanceBuildingUnitsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetUnitBillingParametersUrl = (id: string,) => {
+
+
+
+
+  return `/api/properties/${id}/billing-parameters`
+}
+
+export const getUnitBillingParameters = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+  return customFetch<FinanceRecord>(getGetUnitBillingParametersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnitBillingParametersQueryKey = (id: string,) => {
+    return [
+    `/api/properties/${id}/billing-parameters`
+    ] as const;
+    }
+
+
+export const getGetUnitBillingParametersQueryOptions = <TData = Awaited<ReturnType<typeof getUnitBillingParameters>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitBillingParameters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnitBillingParametersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnitBillingParameters>>> = ({ signal }) => getUnitBillingParameters(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnitBillingParameters>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnitBillingParametersQueryResult = NonNullable<Awaited<ReturnType<typeof getUnitBillingParameters>>>
+export type GetUnitBillingParametersQueryError = ErrorType<unknown>
+
+
+
+export function useGetUnitBillingParameters<TData = Awaited<ReturnType<typeof getUnitBillingParameters>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnitBillingParameters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnitBillingParametersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateUnitBillingParametersUrl = (id: string,) => {
+
+
+
+
+  return `/api/properties/${id}/billing-parameters`
+}
+
+export const updateUnitBillingParameters = async (id: string,
+    unitBillingParametersInput: UnitBillingParametersInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getUpdateUnitBillingParametersUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(unitBillingParametersInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateUnitBillingParametersMutationKey = () => ['updateUnitBillingParameters'] as const;
+
+export const getUpdateUnitBillingParametersMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUnitBillingParameters>>, TError,UpdateUnitBillingParametersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUnitBillingParameters>>, TError,UpdateUnitBillingParametersMutationVariables, TContext> => {
+
+const mutationKey = getUpdateUnitBillingParametersMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUnitBillingParameters>>, UpdateUnitBillingParametersMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateUnitBillingParameters(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUnitBillingParametersMutationResult = NonNullable<Awaited<ReturnType<typeof updateUnitBillingParameters>>>
+    export type UpdateUnitBillingParametersMutationBody = BodyType<UnitBillingParametersInput>
+    export type UpdateUnitBillingParametersMutationError = ErrorType<unknown>
+    export type UpdateUnitBillingParametersMutationVariables = {id: string;data: BodyType<UnitBillingParametersInput>}
+
+    export const useUpdateUnitBillingParameters = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUnitBillingParameters>>, TError,UpdateUnitBillingParametersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUnitBillingParameters>>,
+        TError,
+        UpdateUnitBillingParametersMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateUnitBillingParametersMutationOptions(options));
+    }
+
+export const getRequestBillingParameterReviewUrl = () => {
+
+
+
+
+  return `/api/resident/finance/parameter-reviews`
+}
+
+export const requestBillingParameterReview = async (billingParameterReviewInput: BillingParameterReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getRequestBillingParameterReviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(billingParameterReviewInput)
+  }
+);}
+
+
+
+
+
+export const getRequestBillingParameterReviewMutationKey = () => ['requestBillingParameterReview'] as const;
+
+export const getRequestBillingParameterReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestBillingParameterReview>>, TError,RequestBillingParameterReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestBillingParameterReview>>, TError,RequestBillingParameterReviewMutationVariables, TContext> => {
+
+const mutationKey = getRequestBillingParameterReviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestBillingParameterReview>>, RequestBillingParameterReviewMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestBillingParameterReview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestBillingParameterReviewMutationResult = NonNullable<Awaited<ReturnType<typeof requestBillingParameterReview>>>
+    export type RequestBillingParameterReviewMutationBody = BodyType<BillingParameterReviewInput>
+    export type RequestBillingParameterReviewMutationError = ErrorType<unknown>
+    export type RequestBillingParameterReviewMutationVariables = {data: BodyType<BillingParameterReviewInput>}
+
+    export const useRequestBillingParameterReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestBillingParameterReview>>, TError,RequestBillingParameterReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestBillingParameterReview>>,
+        TError,
+        RequestBillingParameterReviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestBillingParameterReviewMutationOptions(options));
+    }
+
+export const getListBillingParameterReviewsUrl = () => {
+
+
+
+
+  return `/api/finance/billing-parameter-reviews`
+}
+
+export const listBillingParameterReviews = async ( options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord[]> => {
+
+  return customFetch<FinanceRecord[]>(getListBillingParameterReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBillingParameterReviewsQueryKey = () => {
+    return [
+    `/api/finance/billing-parameter-reviews`
+    ] as const;
+    }
+
+
+export const getListBillingParameterReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listBillingParameterReviews>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBillingParameterReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBillingParameterReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBillingParameterReviews>>> = ({ signal }) => listBillingParameterReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBillingParameterReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBillingParameterReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listBillingParameterReviews>>>
+export type ListBillingParameterReviewsQueryError = ErrorType<unknown>
+
+
+
+export function useListBillingParameterReviews<TData = Awaited<ReturnType<typeof listBillingParameterReviews>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBillingParameterReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBillingParameterReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideBillingParameterReviewUrl = (id: string,) => {
+
+
+
+
+  return `/api/finance/billing-parameter-reviews/${id}/decision`
+}
+
+export const decideBillingParameterReview = async (id: string,
+    billingParameterDecisionInput: BillingParameterDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<FinanceRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FinanceRecord>(getDecideBillingParameterReviewUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(billingParameterDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideBillingParameterReviewMutationKey = () => ['decideBillingParameterReview'] as const;
+
+export const getDecideBillingParameterReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideBillingParameterReview>>, TError,DecideBillingParameterReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideBillingParameterReview>>, TError,DecideBillingParameterReviewMutationVariables, TContext> => {
+
+const mutationKey = getDecideBillingParameterReviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideBillingParameterReview>>, DecideBillingParameterReviewMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideBillingParameterReview(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideBillingParameterReviewMutationResult = NonNullable<Awaited<ReturnType<typeof decideBillingParameterReview>>>
+    export type DecideBillingParameterReviewMutationBody = BodyType<BillingParameterDecisionInput>
+    export type DecideBillingParameterReviewMutationError = ErrorType<unknown>
+    export type DecideBillingParameterReviewMutationVariables = {id: string;data: BodyType<BillingParameterDecisionInput>}
+
+    export const useDecideBillingParameterReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideBillingParameterReview>>, TError,DecideBillingParameterReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideBillingParameterReview>>,
+        TError,
+        DecideBillingParameterReviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideBillingParameterReviewMutationOptions(options));
+    }
 
 export const getPreviewBillingBatchUrl = () => {
 

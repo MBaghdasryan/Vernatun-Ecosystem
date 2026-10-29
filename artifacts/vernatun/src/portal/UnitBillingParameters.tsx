@@ -2,15 +2,17 @@ import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent,type ReactN
 import {request} from './client';
 import './unit-billing-parameters.css';
 
-type Props={language:'hy'|'ru'|'en';canManage:boolean};
+type Props={language:'hy'|'ru'|'en';canManage:boolean;canReview?:boolean};
 type Building={id:string|number;name:string};
 type Service={id:string|number;name:string;mandatory:boolean};
 type Unit={id:string|number;number:string|number;legal_area:string|number|null;billing_area:string|number|null};
 type Resident={assignment_id:string|number;user_id:string|number;name:string;role_key:string;resides_here:boolean;counts_for_billing:boolean};
 type Quantity={service_id:string|number;service_name:string;quantity:string};
 type Applicability={service_id:string|number;service_name:string;enabled:boolean};
+type ManualCharge={id:string;service_id:string;service_name:string;period:string;amount_minor:string;currency:string;reason:string;revision:number};
+type Review={id:string;resident_name:string;building_name:string;unit_number:string;parameter_key:string;current_value:unknown;proposed_value:unknown;reason:string;status:string;version:number;created_at:string};
 type Parameters={resident_count_mode:'AUTO_ACTIVE_RESIDENTS'|'REGISTRY_COUNT'|'MANUAL_COUNT';billing_resident_count:number|null;occupancy_status:'OCCUPIED'|'VACANT'|'UNKNOWN';effective_from:string};
-type Detail={unit:Unit;parameters:Parameters|null;residents:Resident[];serviceQuantities:Quantity[];serviceApplicability:Applicability[]};
+type Detail={unit:Unit;parameters:Parameters|null;residents:Resident[];serviceQuantities:Quantity[];serviceApplicability:Applicability[];manualCharges:ManualCharge[]};
 type Config={buildings:Building[];services:Service[]};
 type ResidentEdit=Pick<Resident,'assignment_id'|'resides_here'|'counts_for_billing'>;
 type QuantityEdit={service_id:string|number;service_name:string;quantity:string};
@@ -20,32 +22,39 @@ const TEXT={
  title:['Միավորի վճարային պարամետրեր','Параметры начисления помещения','Unit billing parameters'],
  intro:['Ստուգեք բնակիչների հաշվարկը, ծառայությունների քանակները և կիրառելիությունը։','Настройте учёт жильцов, количества услуг и их применимость.','Review resident counting, service quantities and applicability.'],
  configuration:['Վճարային կարգավորում','Настройка начислений','Billing configuration'],building:['Շենք','Здание','Building'],chooseBuilding:['Ընտրեք շենքը','Выберите здание','Choose a building'],unit:['Միավոր','Помещение','Unit'],chooseUnit:['Ընտրեք միավորը','Выберите помещение','Choose a unit'],loadingConfig:['Բեռնվում են շենքերը…','Загрузка списка зданий…','Loading buildings…'],loadingUnits:['Բեռնվում են միավորները…','Загрузка помещений…','Loading units…'],loadingDetail:['Բեռնվում են պարամետրերը…','Загрузка параметров…','Loading parameters…'],
- refresh:['Կրկին փորձել','Повторить','Retry'],loadError:['Տվյալները բեռնել չհաջողվեց։','Не удалось загрузить данные.','Could not load the data.'],saveError:['Պարամետրերը չպահպանվեցին։ Ստուգեք տվյալները և փորձեք կրկին։','Не удалось сохранить параметры. Проверьте данные и повторите попытку.','Parameters were not saved. Check the details and try again.'],saved:['Պահպանված է։ Միավորի տվյալները թարմացվել են։','Сохранено. Данные помещения обновлены.','Saved. Unit parameters have been refreshed.'],save:['Պահպանել փոփոխությունները','Сохранить изменения','Save changes'],saving:['Պահպանվում է…','Сохранение…','Saving…'],readOnly:['Դիտման ռեժիմ․ փոփոխությունները հասանելի են միայն կառավարման իրավասությամբ։','Режим просмотра: редактирование доступно только управляющим.','Read-only: editing is available to managers only.'],
+ refresh:['Կրկին փորձել','Повторить','Retry'],loadError:['Տվյալները բեռնել չհաջողվեց։','Не удалось загрузить данные.','Could not load the data.'],migrationRequired:['Բաժինը միացնելու համար նախ պետք է կիրառել 064 միգրացիան։','Чтобы включить раздел, сначала нужно применить миграцию 064.','Apply migration 064 to enable this section.'],saveError:['Պարամետրերը չպահպանվեցին։ Ստուգեք տվյալները և փորձեք կրկին։','Не удалось сохранить параметры. Проверьте данные и повторите попытку.','Parameters were not saved. Check the details and try again.'],saved:['Պահպանված է։ Միավորի տվյալները թարմացվել են։','Сохранено. Данные помещения обновлены.','Saved. Unit parameters have been refreshed.'],save:['Պահպանել փոփոխությունները','Сохранить изменения','Save changes'],saving:['Պահպանվում է…','Сохранение…','Saving…'],readOnly:['Դիտման ռեժիմ․ փոփոխությունները հասանելի են միայն կառավարման իրավասությամբ։','Режим просмотра: редактирование доступно только управляющим.','Read-only: editing is available to managers only.'],
  legalArea:['Իրավական մակերես','Юридическая площадь','Legal area'],billingArea:['Հաշվարկային մակերես','Расчётная площадь','Billing area'],billingAreaHelp:['Օգտագործվում է գանձումների հաշվարկում։ Իրավական մակերեսը չի փոխվում։','Используется для расчёта начислений. Юридическая площадь не изменяется.','Used to calculate charges. Legal area is not changed.'],effectiveFrom:['Գործում է ամսից','Действует с месяца','Effective from month'],residents:['Բնակիչներ','Жильцы','Residents'],residentCountMode:['Բնակիչների քանակի եղանակ','Способ подсчёта жильцов','Resident count mode'],autoResidents:['Գործող բնակիչների ավտոմատ հաշվարկ','Автоматически по активным жильцам','Automatically count active residents'],registryCount:['Գրանցամատյանի քանակ','Количество по реестру','Registry count'],manualCount:['Ձեռքով նշված քանակ','Количество вручную','Manual count'],billingResidentCount:['Հաշվարկային բնակիչների քանակ','Количество жильцов для начисления','Residents counted for billing'],occupancyStatus:['Բնակեցման կարգավիճակ','Статус заселения','Occupancy status'],occupied:['Բնակեցված','Заселено','Occupied'],vacant:['Դատարկ','Свободно','Vacant'],unknown:['Անհայտ','Неизвестно','Unknown'],reason:['Փոփոխության պատճառ','Причина изменения','Reason'],reasonHint:['Նշեք՝ ինչու են պարամետրերը փոխվում։','Укажите причину изменения параметров.','Explain why these parameters are changing.'],
  residentName:['Անուն','Имя','Name'],role:['Դեր','Роль','Role'],residesHere:['Բնակվում է այստեղ','Проживает здесь','Resides here'],countsForBilling:['Հաշվարկվում է','Учитывается при начислении','Counts for billing'],serviceQuantities:['Ծառայությունների քանակներ','Количество услуг','Service quantities'],quantity:['Քանակ','Количество','Quantity'],serviceApplicability:['Ծառայությունների կիրառելիություն','Применимость услуг','Service applicability'],enabled:['Կիրառելի է','Применяется','Applicable'],mandatory:['Պարտադիր ծառայություն','Обязательная услуга','Mandatory service'],noBuildings:['Շենքեր չկան։','Зданий нет.','No buildings are available.'],noUnits:['Այս շենքում միավորներ չկան։','В этом здании нет помещений.','This building has no units.'],noResidents:['Բնակիչների տվյալներ չկան։','Данные о жильцах отсутствуют.','No resident records are available.'],noQuantities:['Քանակի պարամետրեր չկան։','Параметры количества отсутствуют.','No quantity parameters are available.'],noApplicability:['Կիրառելիության պարամետրեր չկան։','Параметры применимости отсутствуют.','No applicability parameters are available.'],selectUnitNotice:['Ընտրեք շենքն ու միավորը՝ դրա վճարային պարամետրերը դիտելու համար։','Выберите здание и помещение, чтобы просмотреть параметры начисления.','Choose a building and unit to inspect its billing parameters.'],publishedNote:['Պահպանված և հրապարակված հաշիվները չեն փոխվում այս կարգավորումներով։','Сохранённые и опубликованные счета не изменяются этими настройками.','Saved and published invoices are never changed by these settings.'],emptyParameters:['Այս միավորի համար պարամետրեր սահմանված չեն․ խմբագրեք դաշտերը և պահպանեք։','Для помещения ещё не заданы параметры. Заполните поля и сохраните.','No parameters are set for this unit yet. Enter values and save.'],unitNumber:['Համար','Номер','Number'],chooseMonth:['Ընտրեք ամիսը','Выберите месяц','Choose a month'],optionalEmpty:['Չսահմանված','Не задано','Not set'],quantityHelp:['Մուտքագրեք քանակը որպես տեքստային թիվ։','Введите количество числом.','Enter the quantity as a numeric value.'],
 } as const;
 function text(language:Props['language'],key:Key){return TEXT[key][language==='hy'?0:language==='ru'?1:2]}
+function localized(language:Props['language'],hy:string,ru:string,en:string){return language==='hy'?hy:language==='ru'?ru:en}
 function idString(value:string|number){return String(value)}
 function monthValue(value:string|undefined){return value?value.slice(0,7):new Date().toISOString().slice(0,7)}
 function areaValue(value:string|number|null){return value==null?'':String(value)}
 function localNumber(value:string|number|null|undefined,language:Props['language']){if(value==null)return '—';const number=Number(value);return Number.isFinite(number)?new Intl.NumberFormat(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US',{maximumFractionDigits:2}).format(number):String(value)}
+function amountToMinor(value:string){const match=value.trim().match(/^(\d{1,15})(?:\.(\d{1,2}))?$/);if(!match)return null;const result=BigInt(match[1])*100n+BigInt((match[2]??'').padEnd(2,'0'));return result>0n?result.toString():null}
+function formatMinor(value:string,currency:string,language:Props['language']){const number=Number(value)/100;return Number.isFinite(number)?new Intl.NumberFormat(language==='hy'?'hy-AM':language==='ru'?'ru-RU':'en-US',{style:'currency',currency,maximumFractionDigits:2}).format(number):value}
 function AreaLabel({title,children,id}:{title:string;children:ReactNode;id:string}){return <label className="ubp-field" htmlFor={id}><span>{title}</span>{children}</label>}
 function Alert({message,retry,onRetry}:{message:string;retry:string;onRetry:()=>void}){return <div className="ubp-alert" role="alert" data-testid="status-unit-billing-error"><span>{message}</span><button type="button" className="ubp-button ubp-button-secondary" onClick={onRetry} data-testid="button-unit-billing-retry">{retry}</button></div>}
 
-export default function UnitBillingParameters({language,canManage}:Props){
+export default function UnitBillingParameters({language,canManage,canReview=false}:Props){
  const t=useCallback((key:Key)=>text(language,key),[language]);
- const [config,setConfig]=useState<Config|null>(null),[configLoading,setConfigLoading]=useState(true),[configError,setConfigError]=useState(false);
+ const [config,setConfig]=useState<Config|null>(null),[configLoading,setConfigLoading]=useState(true),[configError,setConfigError]=useState(false),[configMigrationPending,setConfigMigrationPending]=useState(false);
  const [buildingId,setBuildingId]=useState(''),[units,setUnits]=useState<Unit[]>([]),[unitsLoading,setUnitsLoading]=useState(false),[unitsError,setUnitsError]=useState(false),[unitId,setUnitId]=useState('');
  const [detail,setDetail]=useState<Detail|null>(null),[detailLoading,setDetailLoading]=useState(false),[detailError,setDetailError]=useState(false);
  const [billingArea,setBillingArea]=useState(''),[effectiveMonth,setEffectiveMonth]=useState(''),[residentCountMode,setResidentCountMode]=useState<Parameters['resident_count_mode']>('AUTO_ACTIVE_RESIDENTS'),[billingResidentCount,setBillingResidentCount]=useState(''),[occupancyStatus,setOccupancyStatus]=useState<Parameters['occupancy_status']>('UNKNOWN'),[reason,setReason]=useState('');
  const [residentEdits,setResidentEdits]=useState<ResidentEdit[]>([]),[quantityEdits,setQuantityEdits]=useState<QuantityEdit[]>([]),[applicabilityEdits,setApplicabilityEdits]=useState<ApplicabilityEdit[]>([]);
  const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState(false),[saved,setSaved]=useState(false);
+  const [manualServiceId,setManualServiceId]=useState(''),[manualMonth,setManualMonth]=useState(monthValue(undefined)),[manualAmount,setManualAmount]=useState(''),[manualCurrency,setManualCurrency]=useState('AMD'),[manualReason,setManualReason]=useState(''),[manualSaving,setManualSaving]=useState(false),[manualError,setManualError]=useState(false),[manualSaved,setManualSaved]=useState(false);
+  const [reviews,setReviews]=useState<Review[]>([]),[reviewsLoading,setReviewsLoading]=useState(false),[reviewsError,setReviewsError]=useState(false),[reviewActionError,setReviewActionError]=useState(false),[reviewSavingId,setReviewSavingId]=useState('');
  const initializedUnit=useRef<string|null>(null);
  const currentBuildingId=useRef(buildingId),currentUnitId=useRef(unitId);
  currentBuildingId.current=buildingId;currentUnitId.current=unitId;
 
- const loadConfig=useCallback(async()=>{setConfigLoading(true);setConfigError(false);try{setConfig(await request<Config>('/finance/configuration'))}catch{setConfigError(true)}finally{setConfigLoading(false)}},[]);
+ const loadConfig=useCallback(async()=>{setConfigLoading(true);setConfigError(false);setConfigMigrationPending(false);try{setConfig(await request<Config>('/finance/configuration'))}catch(error){setConfigMigrationPending(String(error).includes('billing_configuration_migration_required'));setConfigError(true)}finally{setConfigLoading(false)}},[]);
  useEffect(()=>{void loadConfig()},[loadConfig]);
+  const loadReviews=useCallback(async()=>{if(!canReview)return;setReviewsLoading(true);setReviewsError(false);try{setReviews(await request<Review[]>('/finance/billing-parameter-reviews'))}catch{setReviewsError(true)}finally{setReviewsLoading(false)}},[canReview]);
+  useEffect(()=>{void loadReviews()},[loadReviews]);
  const loadDetail=useCallback(async(id:string)=>{setDetailLoading(true);setDetailError(false);try{const result=await request<Detail>(`/properties/${encodeURIComponent(id)}/billing-parameters`);if(id===currentUnitId.current)setDetail(result)}catch{if(id===currentUnitId.current){setDetail(null);setDetailError(true)}}finally{if(id===currentUnitId.current)setDetailLoading(false)}},[]);
  useEffect(()=>{
   if(!buildingId){setUnits([]);setUnitsError(false);return}
@@ -99,11 +108,44 @@ export default function UnitBillingParameters({language,canManage}:Props){
   catch{setSaveError(true)}
   finally{setSaving(false)}
  }
+  async function createManualCharge(event:FormEvent<HTMLFormElement>){
+   event.preventDefault();if(!canManage||!unitId||manualSaving||!config)return;
+   const amountMinor=amountToMinor(manualAmount),serviceId=manualServiceId||idString(config.services[0]?.id??'');
+   if(!amountMinor||!serviceId){setManualError(true);return}
+   setManualSaving(true);setManualError(false);setManualSaved(false);
+   try{
+    await request('/finance/manual-charges','POST',{unitId,serviceId,period:`${manualMonth}-01`,amountMinor,currency:manualCurrency,reason:manualReason.trim(),key:crypto.randomUUID()});
+    setManualSaved(true);setManualAmount('');setManualReason('');
+    try{setDetail(await request<Detail>(`/properties/${encodeURIComponent(unitId)}/billing-parameters`))}catch{}
+   }catch{setManualError(true)}
+   finally{setManualSaving(false)}
+  }
+  async function decideReview(review:Review,action:'approve'|'reject'|'needs_information'){
+   if(!canReview||reviewSavingId)return;setReviewSavingId(review.id);setReviewActionError(false);
+   try{await request(`/finance/billing-parameter-reviews/${encodeURIComponent(review.id)}/decision`,'POST',{action,version:review.version,note:''});await loadReviews()}
+   catch{setReviewActionError(true)}
+   finally{setReviewSavingId('')}
+  }
  const noBuildings=(config?.buildings.length??0)===0;
  return <section className="ubp-shell" aria-label={t('title')} data-testid="unit-billing-parameters">
   <header className="ubp-header"><div><span className="ubp-kicker">VERNATUN OS / FINANCE</span><h2>{t('title')}</h2><p>{t('intro')}</p></div><span className="ubp-header-mark" aria-hidden="true">UB</span></header>
   <div className="ubp-notices"><p className="ubp-note"><span className="ubp-note-mark" aria-hidden="true">i</span>{t('billingAreaHelp')}</p><p className="ubp-note ubp-note-invoice"><span className="ubp-note-mark" aria-hidden="true">!</span>{t('publishedNote')}</p></div>
-  {configLoading&&!config?<div className="ubp-loading" role="status" data-testid="status-unit-billing-loading"><span>{t('loadingConfig')}</span><i/><i/></div>:configError?<Alert message={t('loadError')} retry={t('refresh')} onRetry={()=>void loadConfig()}/>:config&&<div className="ubp-body">
+   {configLoading&&!config?<div className="ubp-loading" role="status" data-testid="status-unit-billing-loading"><span>{t('loadingConfig')}</span><i/><i/></div>:configError?<Alert message={configMigrationPending?t('migrationRequired'):t('loadError')} retry={t('refresh')} onRetry={()=>void loadConfig()}/>:config&&<div className="ubp-body">
+    {canReview&&<section className="ubp-editor ubp-review-queue" aria-labelledby="ubp-review-heading" data-testid="section-billing-parameter-reviews">
+     <div className="ubp-section-title"><div><span className="ubp-kicker">05 / {localized(language,'Հաստատում','Проверка','Review')}</span><h3 id="ubp-review-heading">{localized(language,'Բնակիչների փոփոխության հարցումներ','Запросы жителей на изменение параметров','Resident parameter requests')}</h3></div><span className="ubp-count">{reviews.filter(r=>r.status==='pending').length.toString().padStart(2,'0')}</span></div>
+     {reviewsLoading&&<p role="status" className="ubp-field-help">{localized(language,'Բեռնվում է…','Загрузка…','Loading…')}</p>}
+     {reviewsError&&<Alert message={t('loadError')} retry={t('refresh')} onRetry={()=>void loadReviews()}/>}
+     {reviewActionError&&<div className="ubp-alert" role="alert" data-testid="status-billing-review-error">{localized(language,'Չհաջողվեց մշակել հարցումը։ Թարմացրեք ցանկը և կրկին փորձեք։','Не удалось обработать запрос. Обновите список и попробуйте снова.','Could not process the request. Refresh the list and try again.')}</div>}
+     {!reviewsLoading&&!reviewsError&&reviews.filter(r=>r.status==='pending').length===0&&<p className="ubp-subtle-empty" data-testid="empty-billing-parameter-reviews">{localized(language,'Սպասող հարցումներ չկան։','Нет ожидающих запросов.','No requests are waiting for review.')}</p>}
+     {reviews.filter(r=>r.status==='pending').map(review=><article className="ubp-review-row" key={review.id} data-testid={`row-billing-review-${review.id}`}>
+      <div className="ubp-record-copy"><strong>{review.resident_name} · {review.building_name} · {review.unit_number}</strong><span>{review.parameter_key}: {JSON.stringify(review.current_value)??'—'} → {JSON.stringify(review.proposed_value)} · {review.reason}</span></div>
+      <div className="ubp-review-actions">
+       <button type="button" className="ubp-button ubp-button-primary" disabled={Boolean(reviewSavingId)} onClick={()=>void decideReview(review,'approve')} data-testid={`button-review-approve-${review.id}`}>{reviewSavingId===review.id?localized(language,'Պահպանվում է…','Сохранение…','Saving…'):localized(language,'Հաստատել','Одобрить','Approve')}</button>
+       <button type="button" className="ubp-button ubp-button-secondary" disabled={Boolean(reviewSavingId)} onClick={()=>void decideReview(review,'needs_information')} data-testid={`button-review-info-${review.id}`}>{localized(language,'Լրացուցիչ տվյալներ','Нужны сведения','Needs info')}</button>
+       <button type="button" className="ubp-button ubp-button-secondary" disabled={Boolean(reviewSavingId)} onClick={()=>void decideReview(review,'reject')} data-testid={`button-review-reject-${review.id}`}>{localized(language,'Մերժել','Отклонить','Reject')}</button>
+      </div>
+     </article>)}
+    </section>}
    <div className="ubp-selectors">
     <AreaLabel title={t('building')} id="ubp-building"><select id="ubp-building" value={buildingId} onChange={e=>{setBuildingId(e.target.value);setUnitId('');setDetail(null);setSaved(false);setSaveError(false)}} data-testid="select-unit-billing-building"><option value="">{t('chooseBuilding')}</option>{config.buildings.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></AreaLabel>
     <AreaLabel title={t('unit')} id="ubp-unit"><select id="ubp-unit" value={unitId} disabled={!buildingId||unitsLoading||unitsError||units.length===0} onChange={e=>{setUnitId(e.target.value);setSaved(false);setSaveError(false)}} data-testid="select-unit-billing-unit"><option value="">{t('chooseUnit')}</option>{units.map(u=><option key={u.id} value={u.id}>{u.number}</option>)}</select></AreaLabel>
@@ -116,7 +158,8 @@ export default function UnitBillingParameters({language,canManage}:Props){
    {!unitId&&!noBuildings&&<div className="ubp-select-prompt" data-testid="empty-unit-billing-selection"><span className="ubp-empty-index">03</span><p>{t('selectUnitNotice')}</p></div>}
    {detailLoading&&<div className="ubp-inline-loading" role="status" data-testid="status-unit-parameters-loading">{t('loadingDetail')}</div>}
    {detailError&&<Alert message={t('loadError')} retry={t('refresh')} onRetry={()=>{if(unitId)void loadDetail(unitId)}}/>}
-   {detail&&selectedUnit&&<form className="ubp-editor" onSubmit={e=>void save(e)} data-testid="form-unit-billing-parameters">
+    {detail&&selectedUnit&&<>
+    <form className="ubp-editor" onSubmit={e=>void save(e)} data-testid="form-unit-billing-parameters">
     <div className="ubp-unit-heading"><div><span className="ubp-kicker">{t('configuration')} / {buildingName}</span><h3>{t('unit')} {selectedUnit.number}</h3></div><span className="ubp-unit-area">{t('legalArea')} <b>{localNumber(selectedUnit.legal_area,language)}</b></span></div>
     {!detail.parameters&&<p className="ubp-first-setup" data-testid="status-unit-billing-unconfigured">{t('emptyParameters')}</p>}
     {!canManage&&<div className="ubp-readonly" role="note" data-testid="status-unit-billing-readonly">{t('readOnly')}</div>}
@@ -143,7 +186,28 @@ export default function UnitBillingParameters({language,canManage}:Props){
      <AreaLabel title={t('reason')} id="ubp-reason"><textarea id="ubp-reason" required minLength={3} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)} placeholder={t('reasonHint')} data-testid="input-unit-billing-reason"/></AreaLabel>
     </fieldset>
     <footer className="ubp-footer"><p>{t('publishedNote')}</p>{canManage&&<button className="ubp-button ubp-button-primary" disabled={saving||!effectiveMonth||!reason.trim()|| (residentCountMode==='MANUAL_COUNT'&&billingResidentCount==='')} data-testid="button-save-unit-billing">{saving?t('saving'):t('save')}</button>}</footer>
-   </form>}
+    </form>
+    <section className="ubp-editor ubp-data-section" aria-labelledby="ubp-manual-heading" data-testid="section-manual-billing-charges">
+     <div className="ubp-section-title"><div><span className="ubp-kicker">04 / {localized(language,'Մեկանգամյա','Разовые','Manual')}</span><h3 id="ubp-manual-heading">{localized(language,'Ձեռքով հաշվարկ','Ручное начисление','Manual charge')}</h3></div><span className="ubp-count">{detail.manualCharges.length.toString().padStart(2,'0')}</span></div>
+     <p className="ubp-field-help">{localized(language,'Պահանջվում է MANUAL հաշվարկման կանոն։ Պահպանված կամ հրապարակված հաշիվները չեն փոխվում։','Нужно правило расчёта MANUAL. Сохранённые и опубликованные счета не изменяются.','Requires an active MANUAL billing rule. Saved and published invoices are not changed.')}</p>
+     {detail.manualCharges.length>0&&<div className="ubp-record-list">{detail.manualCharges.map(charge=><div className="ubp-quantity-row" key={charge.id} data-testid={`row-manual-charge-${charge.id}`}><div className="ubp-record-copy"><strong>{charge.service_name} · {charge.period.slice(0,7)}</strong><span>{charge.reason} · {localized(language,'տարբերակ','версия','revision')} {charge.revision}</span></div><strong>{formatMinor(charge.amount_minor,charge.currency,language)}</strong></div>)}</div>}
+     {!canManage&&<p className="ubp-readonly">{t('readOnly')}</p>}
+     {manualSaved&&<div className="ubp-success" role="status" data-testid="status-manual-charge-saved">{localized(language,'Պահպանված է։ Հաշվարկը կօգտագործի այս տարբերակը։','Сохранено. При расчёте будет использована эта версия.','Saved. This revision will be used in the next calculation.')}</div>}
+     {manualError&&<div className="ubp-alert" role="alert" data-testid="status-manual-charge-error">{localized(language,'Չհաջողվեց պահպանել։ Ստուգեք գումարը և արդյոք ծառայության համար MANUAL կանոն է ակտիվ։','Не удалось сохранить. Проверьте сумму и активное правило MANUAL для услуги.','Could not save. Check the amount and whether an active MANUAL rule exists for this service.')}</div>}
+     {canManage&&<form className="ubp-manual-form" onSubmit={e=>void createManualCharge(e)} data-testid="form-manual-charge">
+      <fieldset className="ubp-fieldset" disabled={manualSaving}>
+       <div className="ubp-form-grid">
+        <AreaLabel title={localized(language,'Ծառայություն','Услуга','Service')} id="ubp-manual-service"><select id="ubp-manual-service" required value={manualServiceId||idString(config.services[0]?.id??'')} onChange={e=>setManualServiceId(e.target.value)} data-testid="select-manual-service"><option value="">{localized(language,'Ընտրեք ծառայությունը','Выберите услугу','Choose service')}</option>{config.services.map(service=><option key={service.id} value={service.id}>{service.name}</option>)}</select></AreaLabel>
+        <AreaLabel title={localized(language,'Ժամանակաշրջան','Период','Period')} id="ubp-manual-month"><input id="ubp-manual-month" type="month" required value={manualMonth} onChange={e=>setManualMonth(e.target.value)} data-testid="input-manual-period"/></AreaLabel>
+        <AreaLabel title={localized(language,'Գումար','Сумма','Amount')} id="ubp-manual-amount"><input id="ubp-manual-amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={manualAmount} onChange={e=>setManualAmount(e.target.value)} data-testid="input-manual-amount"/></AreaLabel>
+        <AreaLabel title={localized(language,'Արժույթ','Валюта','Currency')} id="ubp-manual-currency"><select id="ubp-manual-currency" value={manualCurrency} onChange={e=>setManualCurrency(e.target.value)} data-testid="select-manual-currency"><option value="AMD">AMD</option><option value="RUB">RUB</option><option value="USD">USD</option></select></AreaLabel>
+       </div>
+       <AreaLabel title={t('reason')} id="ubp-manual-reason"><textarea id="ubp-manual-reason" required minLength={5} maxLength={1000} value={manualReason} onChange={e=>setManualReason(e.target.value)} placeholder={t('reasonHint')} data-testid="input-manual-reason"/></AreaLabel>
+      </fieldset>
+      <footer className="ubp-footer"><span>{localized(language,'Գումարը մուտքագրեք առավելագույնը երկու տասնորդականով։','Введите сумму с точностью до двух знаков после запятой.','Enter the amount with up to two decimal places.')}</span><button className="ubp-button ubp-button-primary" disabled={manualSaving||!manualMonth||!manualAmount||!manualReason.trim()||config.services.length===0} data-testid="button-create-manual-charge">{manualSaving?localized(language,'Պահպանվում է…','Сохранение…','Saving…'):localized(language,'Պահպանել ձեռքով հաշվարկը','Сохранить начисление','Save manual charge')}</button></footer>
+     </form>}
+    </section>
+    </>}
   </div>}
  </section>
 }

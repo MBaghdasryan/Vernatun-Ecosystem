@@ -22,5 +22,5 @@ export default function FinanceWorkspace({c,language,currency,onChanged}:{c:Role
     {cur==='bank'&&<BankReconciliation c={c} language={language} onChanged={onChanged}/>}
     {cur==='credits'&&<Credits c={c} language={language} onChanged={onChanged}/>}
     {cur==='configuration'&&<FinanceConfiguration language={language} currency={currency} canManage={can('billing.calculate')} canCalculate={can('billing.calculate')}/>}
-    {cur==='unit-parameters'&&<UnitBillingParameters language={language} canManage={can('billing.calculate')}/>}
+     {cur==='unit-parameters'&&<UnitBillingParameters language={language} canManage={can('billing.calculate')} canReview={can('billing.calculate')&&can('billing.publish')}/>}
    </div>}
