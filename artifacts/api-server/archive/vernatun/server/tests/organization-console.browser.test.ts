@@ -189,7 +189,34 @@ test('platform admin can create and manage organizations in the signed-in consol
   await analyticsLanguage.selectOption('en');
   const analyticsDownload=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export CSV',exact:true}).click();
-  assert.equal((await analyticsDownload).suggestedFilename(),'vernatun-platform-analytics-UTC.csv');
+  const downloadedAnalytics=await analyticsDownload;
+  assert.equal(downloadedAnalytics.suggestedFilename(),'vernatun-platform-analytics-UTC.csv');
+  const analyticsFile=resolve('/tmp',`platform-analytics-${tag}.csv`);
+  try{
+   await downloadedAnalytics.saveAs(analyticsFile);
+   const csv=(await readFile(analyticsFile,'utf8')).replace(/^\uFEFF/,'');
+   const rows=csv.trimEnd().split(/\r?\n/).map(line=>{
+    const values:string[]=[];
+    let value='',quoted=false;
+    for(let i=0;i<line.length;i++){
+     const char=line[i];
+     if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++}
+     else if(char==='"')quoted=!quoted;
+     else if(char===','&&!quoted){values.push(value);value=''}
+     else value+=char;
+    }
+    values.push(value);
+    return values;
+   });
+   const generatedAtRows=rows.filter(row=>row[0]==='report_generated_at_utc');
+   assert.equal(generatedAtRows.length,1,'The downloaded CSV must contain exactly one report generation timestamp');
+   const generatedAt=generatedAtRows[0][1];
+   assert.ok(generatedAt&&Number.isFinite(Date.parse(generatedAt)),'The downloaded CSV must contain a valid report generation timestamp');
+   assert.equal(new Date(generatedAt).toISOString(),generatedAt,'The downloaded report timestamp must be an ISO-formatted UTC value');
+   const timezoneRows=rows.filter(row=>row[0]==='reporting_timezone');
+   assert.equal(timezoneRows.length,1,'The downloaded CSV must contain exactly one reporting timezone');
+   assert.equal(timezoneRows[0][1],'UTC');
+  }finally{await rm(analyticsFile,{force:true})}
 
   await openSection('payments','Company payments');
   await page.getByLabel('Search by company, plan or type').fill('no matching platform payment');
