@@ -87,8 +87,32 @@ api.patch('/modules/:module',async(req,res)=>{
 });
 api.get('/invoices',async(req,res)=>{const c=await context(req);const own=!c.permissions.includes('billing.read');await requirePermission(req,own?'billing.own':'billing.read');const currency=z.enum(['AMD','RUB','USD']).parse(req.query.currency??req.user!.currency);const r=await pool.query(`SELECT i.id,i.period,${invoiceAmounts},i.currency,i.status,u.number FROM invoices i JOIN units u ON u.id=i.unit_id WHERE i.organization_id=$1 AND i.currency=$2 AND ($3::uuid IS NULL OR u.building_id=$3) AND ($4::uuid IS NULL OR u.id=$4) AND (NOT $5::boolean OR (i.payer_user_id=$6 AND i.status='published')) ORDER BY i.period DESC`,[c.organization_id,currency,c.building_id,c.unit_id,own,req.user!.id]);res.json(r.rows)});
 api.get('/audit',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.audit');await requirePermission(req,platform?'platform.audit':'audit.read');const r=await pool.query(`SELECT a.id,a.organization_id,a.actor_user_id,a.action,a.entity_type,a.entity_id,a.details,a.created_at,u.name AS actor FROM audit_events a LEFT JOIN users u ON u.id=a.actor_user_id WHERE ${platform?'TRUE':'a.organization_id=$1'} ORDER BY a.created_at DESC,a.id DESC LIMIT 100`,platform?[]:[c.organization_id]);res.json(r.rows)});
-api.get('/invitations',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.invite');await requirePermission(req,platform?'platform.invite':'people.invite');res.json((await pool.query(`SELECT i.id,i.organization_id,o.name AS organization_name,i.email,i.role_key,i.expires_at,i.accepted_at,i.revoked_at FROM invitations i JOIN organizations o ON o.id=i.organization_id WHERE ${platform?'TRUE':'i.organization_id=$1'} ORDER BY i.expires_at DESC`,platform?[]:[c.organization_id])).rows)});
-api.post('/invitations',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.invite');await requirePermission(req,platform?'platform.invite':'people.invite');assertEmailConfigured();const b=z.object({email:z.string().email().max(254),role:z.enum(roleKeys as [typeof roleKeys[number],...typeof roleKeys[number][]]),organizationId:uuid.optional(),buildingId:uuid.optional(),unitId:uuid.optional()}).strict().parse(req.body);if(!organizationDelegableRoles.includes(b.role)||(platform&&b.role!=='org_admin'))throw new ApiError(403,'forbidden');const org=platform?b.organizationId:c.organization_id;if(!org||(!platform&&b.organizationId&&b.organizationId!==org))throw new ApiError(403,'forbidden');if(c.building_id&&b.buildingId!==c.building_id)throw new ApiError(403,'forbidden');if(c.unit_id&&b.unitId!==c.unit_id)throw new ApiError(403,'forbidden');if(['unit_owner','renter','family'].includes(b.role)&&!b.unitId)throw new ApiError(400,'unit_required');if(b.unitId&&!b.buildingId)throw new ApiError(400,'unit_required');if(b.buildingId){const building=await pool.query('SELECT id FROM buildings WHERE id=$1 AND organization_id=$2',[b.buildingId,org]);if(!building.rowCount)throw new ApiError(404,'not_found')}if(b.unitId){await scopedUnit({...c,organization_id:org,building_id:b.buildingId!,unit_id:null},b.unitId)}const token=randomBytes(32).toString('hex');const r=await transaction(async db=>{const inserted=await db.query('INSERT INTO invitations(organization_id,email,role_key,building_id,unit_id,token_hash,invited_by,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval \'48 hours\') RETURNING id,expires_at',[org,b.email.toLowerCase(),b.role,b.buildingId??null,b.unitId??null,createHash('sha256').update(token).digest('hex'),req.user!.id]);await record(db,req,{...c,organization_id:org},'invitation.create','invitation',inserted.rows[0].id);return inserted.rows[0]});res.status(201).json({...r,...await sendInvitation(req,c,r.id,token)})});
+api.get('/invitations',async(req,res)=>{const c=await context(req);const platform=c.permissions.includes('platform.invite');await requirePermission(req,platform?'platform.invite':'people.invite');res.json((await pool.query(`SELECT i.id,i.organization_id,o.name AS organization_name,i.email,i.role_key,i.expires_at,i.accepted_at,i.revoked_at FROM invitations i LEFT JOIN organizations o ON o.id=i.organization_id WHERE ${platform?'TRUE':'i.organization_id=$1'} ORDER BY i.expires_at DESC`,platform?[]:[c.organization_id])).rows)});
+api.post('/invitations',async(req,res)=>{
+ const c=await context(req),platform=c.permissions.includes('platform.invite');
+ await requirePermission(req,platform?'platform.invite':'people.invite');assertEmailConfigured();
+ const b=z.object({email:z.string().email().max(254),role:z.enum(roleKeys as [typeof roleKeys[number],...typeof roleKeys[number][]]),organizationId:uuid.optional(),buildingId:uuid.optional(),unitId:uuid.optional()}).strict().parse(req.body);
+ const internalSupport=platform&&b.role==='support'&&!b.organizationId&&!b.buildingId&&!b.unitId;
+ if(b.role==='platform_admin'||(!internalSupport&&!organizationDelegableRoles.includes(b.role)))throw new ApiError(403,'forbidden');
+ if(!platform&&b.role==='support')throw new ApiError(403,'forbidden');
+ const org:string|null=internalSupport?null:platform?(b.organizationId??null):c.organization_id;
+ if(!internalSupport&&(!org||(!platform&&b.organizationId&&b.organizationId!==org)))throw new ApiError(403,'forbidden');
+ if(c.building_id&&b.buildingId!==c.building_id)throw new ApiError(403,'forbidden');
+ if(c.unit_id&&b.unitId!==c.unit_id)throw new ApiError(403,'forbidden');
+ if(['unit_owner','renter','family'].includes(b.role)&&!b.unitId)throw new ApiError(400,'unit_required');
+ if(b.unitId&&!b.buildingId)throw new ApiError(400,'unit_required');
+ if(b.buildingId){const building=await pool.query('SELECT id FROM buildings WHERE id=$1 AND organization_id=$2',[b.buildingId,org]);if(!building.rowCount)throw new ApiError(404,'not_found')}
+ if(b.unitId){await scopedUnit({...c,organization_id:org,building_id:b.buildingId!,unit_id:null},b.unitId)}
+ const token=randomBytes(32).toString('hex');
+ const r=await transaction(async db=>{
+  const inserted=await db.query(`INSERT INTO invitations(organization_id,email,role_key,building_id,unit_id,token_hash,invited_by,expires_at)
+   VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '48 hours') RETURNING id,expires_at`,
+  [org,b.email.toLowerCase(),b.role,b.buildingId??null,b.unitId??null,createHash('sha256').update(token).digest('hex'),req.user!.id]);
+  await record(db,req,{...c,organization_id:org},'invitation.create','invitation',inserted.rows[0].id,{role:b.role,internalSupport});
+  return inserted.rows[0];
+ });
+ res.status(201).json({...r,organization_id:org,role_key:b.role,...await sendInvitation(req,c,r.id,token)});
+});
 api.delete('/invitations/:id',async(req,res)=>{
  const c=await context(req),platform=c.permissions.includes('platform.invite');
  await requirePermission(req,platform?'platform.invite':'people.invite');

@@ -141,8 +141,14 @@ iam.patch('/iam/profiles/:id',async(req,res)=>{
 iam.get('/iam/users',async(req,res)=>{
  const c=await actor(req),q=z.string().max(100).parse(req.query.q??''),offset=z.coerce.number().int().min(0).max(100000).parse(req.query.offset??0);
  const args=[isPlatform(c),c.organization_id,c.building_id,c.unit_id,'%'+q+'%',offset];
- const rows=(await pool.query(`SELECT u.id,u.name,u.email,u.account_status,
+  const rows=(await pool.query(`SELECT u.id,u.name,u.email,u.account_status,
  COALESCE((SELECT enabled FROM mfa_credentials WHERE user_id=u.id),false) AS mfa_enabled,count(*) OVER()::int AS total
+  ,COALESCE((SELECT json_agg(json_build_object('role_key',a.role_key,'organization_id',a.organization_id,
+   'organization_name',o.name,'building_id',a.building_id,'building_name',b.name,'unit_id',a.unit_id,
+   'unit_number',un.number,'active',a.active) ORDER BY a.active DESC,a.role_key)
+   FROM role_assignments a LEFT JOIN organizations o ON o.id=a.organization_id
+   LEFT JOIN buildings b ON b.id=a.building_id LEFT JOIN units un ON un.id=a.unit_id
+   WHERE a.user_id=u.id),'[]'::json) AS assignments
  FROM users u WHERE ($1 OR EXISTS(SELECT 1 FROM role_assignments a WHERE a.user_id=u.id AND a.organization_id=$2
  AND ($3::uuid IS NULL OR a.building_id=$3) AND ($4::uuid IS NULL OR a.unit_id=$4)))
  AND (u.name ILIKE $5 OR u.email ILIKE $5) ORDER BY u.name,u.id LIMIT 50 OFFSET $6`,args)).rows;

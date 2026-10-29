@@ -38,6 +38,7 @@ organizationConsole.get('/platform/organizations/:id',async(req,res)=>{
  subscriptions:(await pool.query('SELECT s.*,p.name AS plan_name,p.building_limit FROM subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 ORDER BY s.starts_on DESC',[id])).rows,
  modules:(await pool.query('SELECT * FROM module_entitlements WHERE organization_id=$1',[id])).rows,
  buildings:(await pool.query('SELECT id,name,address FROM buildings WHERE organization_id=$1 ORDER BY name',[id])).rows,
+  units:(await pool.query('SELECT id,number,building_id FROM units WHERE organization_id=$1 ORDER BY building_id,number',[id])).rows,
  users:(await pool.query('SELECT u.id,u.name,m.active FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.organization_id=$1 ORDER BY u.name',[id])).rows,
  onboarding:(await pool.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='completed')::int AS completed FROM onboarding_steps WHERE organization_id=$1",[id])).rows[0],
  supportCases:(await pool.query('SELECT id,subject,status,priority,assigned_to FROM support_cases WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 50',[id])).rows,

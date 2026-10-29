@@ -7,6 +7,7 @@ import {record,transaction} from './operations.js';
 import {moduleKeys,subscriptionPolicy} from './subscription-policy.js';
 import {assertEmailConfigured} from './email.js';
 import {sendInvitation} from './invitation-delivery.js';
+import {organizationDelegableRoles} from './roles.js';
 
 const uuid=z.string().uuid(),reason=z.string().trim().min(8).max(1000);
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{
@@ -164,7 +165,7 @@ platformFoundation.get('/invitations',async(req,res)=>{
   COALESCE(d.delivery_evidence,false) AS delivery_evidence,
   CASE WHEN i.revoked_at IS NOT NULL THEN 'revoked' WHEN i.accepted_at IS NOT NULL THEN 'accepted'
    WHEN i.expires_at<=now() THEN 'expired' ELSE 'pending' END AS status
-  FROM invitations i JOIN organizations o ON o.id=i.organization_id
+   FROM invitations i LEFT JOIN organizations o ON o.id=i.organization_id
   JOIN invitation_delivery_outcomes d ON d.invitation_id=i.id WHERE ${platform?'TRUE':
    'i.organization_id=$1 AND ($2::uuid IS NULL OR i.building_id=$2) AND ($3::uuid IS NULL OR i.unit_id=$3)'}
   ORDER BY i.expires_at DESC,i.id DESC`,values)).rows);
@@ -177,7 +178,8 @@ platformFoundation.post('/invitations/:id/resend',async(req,res)=>{
  const row=await transaction(async db=>{
   const i=(await db.query('SELECT * FROM invitations WHERE id=$1 FOR UPDATE',[id])).rows[0];
   if(!i||(!platform&&i.organization_id!==c.organization_id))throw new ApiError(404,'not_found');
-  if((platform&&i.role_key!=='org_admin')||i.delegation_id||
+   if((platform&&i.role_key!=='support'&&!organizationDelegableRoles.includes(i.role_key))||
+    (!i.organization_id&&i.role_key!=='support')||i.delegation_id||
    (c.building_id&&c.building_id!==i.building_id)||(c.unit_id&&c.unit_id!==i.unit_id))throw new ApiError(403,'forbidden');
   if(i.accepted_at||i.revoked_at)throw new ApiError(409,'invalid_transition');
   const updated=(await db.query(`UPDATE invitations SET token_hash=$1,expires_at=now()+interval '48 hours',

@@ -123,4 +123,49 @@ auth.post('/forgot-password',limit,async(req,res)=>{
  res.json({message:'reset_if_exists',provider:emailProviderState()});
 });
 auth.post('/reset-password',limit,async(req,res)=>{const {token,password}=z.object({token:z.string().length(64),password:passwordSchema}).parse(req.body);const hash=await bcrypt.hash(password,12);const client=await pool.connect();try{await client.query('BEGIN');const r=await client.query('SELECT r.* FROM password_resets r JOIN users u ON u.id=r.user_id WHERE token_hash=$1 AND used_at IS NULL AND expires_at>now() AND NOT u.blocked FOR UPDATE OF r',[digest(token)]);if(!r.rows[0])throw new ApiError(400,'token_invalid');await client.query('UPDATE users SET password_hash=$1 WHERE id=$2',[hash,r.rows[0].user_id]);await client.query('UPDATE password_resets SET used_at=now() WHERE id=$1',[r.rows[0].id]);await client.query(`DELETE FROM session WHERE sess->'passport'->>'user'=$1`,[r.rows[0].user_id]);await client.query("INSERT INTO audit_events(actor_user_id,action,entity_type,entity_id) VALUES($1,'auth.password.reset','user',$2)",[r.rows[0].user_id,r.rows[0].user_id]);await client.query('COMMIT');res.status(204).end()}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}});
-auth.post('/accept-invitation',limit,async(req,res)=>{const {token,name,password}=z.object({token:z.string().length(64),name:z.string().trim().min(2).max(100),password:passwordSchema}).parse(req.body);const passwordHash=await bcrypt.hash(password,12);const client=await pool.connect();try{await client.query('BEGIN');const r=await client.query('SELECT * FROM invitations WHERE token_hash=$1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>now() FOR UPDATE',[digest(token)]);const invitation=r.rows[0];if(!invitation)throw new ApiError(400,'token_invalid');await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[invitation.organization_id]);if((await subscriptionPolicy(invitation.organization_id,client)).readOnly)throw new ApiError(403,'subscription_restricted');let delegation:any;if(invitation.delegation_id){delegation=(await client.query(`SELECT d.* FROM resident_delegations d JOIN role_assignments a ON a.id=d.owner_assignment_id JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id JOIN users u ON u.id=a.user_id WHERE d.id=$1 AND d.revoked_at IS NULL AND d.expires_at>now() AND a.active AND m.active AND NOT u.blocked AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) FOR UPDATE OF d`,[invitation.delegation_id])).rows[0];if(!delegation)throw new ApiError(400,'token_invalid');}const existing=await client.query('SELECT id FROM users WHERE email=$1',[invitation.email]);let id:string;if(existing.rows[0]){if(!req.user||req.user.id!==existing.rows[0].id)throw new ApiError(409,'sign_in_existing');id=req.user.id}else{const u=await client.query('INSERT INTO users(email,name,password_hash) VALUES($1,$2,$3) RETURNING id',[invitation.email,name,passwordHash]);id=u.rows[0].id}const member=await client.query('SELECT active FROM memberships WHERE user_id=$1 AND organization_id=$2',[id,invitation.organization_id]);if(member.rows[0]?.active===false)throw new ApiError(403,'forbidden');await client.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[id,invitation.organization_id]);const assigned=await client.query('INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id,expires_at) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[id,invitation.organization_id,invitation.role_key,invitation.building_id,invitation.unit_id,delegation?.expires_at??null]);if(delegation)await client.query('UPDATE resident_delegations SET assignment_id=$1 WHERE id=$2',[assigned.rows[0].id,delegation.id]);await client.query('UPDATE invitations SET accepted_at=now() WHERE id=$1',[invitation.id]);await client.query("INSERT INTO audit_events(actor_user_id,organization_id,action,entity_type,entity_id) VALUES($1,$2,'invitation.accept','invitation',$3)",[id,invitation.organization_id,invitation.id]);await client.query('COMMIT');res.json({accepted:true})}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}});
+auth.post('/accept-invitation',limit,async(req,res)=>{
+ const {token,name,password}=z.object({token:z.string().length(64),name:z.string().trim().min(2).max(100),password:passwordSchema}).parse(req.body);
+ const passwordHash=await bcrypt.hash(password,12),client=await pool.connect();
+ try{
+  await client.query('BEGIN');
+  const r=await client.query('SELECT * FROM invitations WHERE token_hash=$1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>now() FOR UPDATE',[digest(token)]);
+  const invitation=r.rows[0];if(!invitation)throw new ApiError(400,'token_invalid');
+  const organizationId=invitation.organization_id as string|null;
+  if(organizationId){
+   await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
+   if((await subscriptionPolicy(organizationId,client)).readOnly)throw new ApiError(403,'subscription_restricted');
+  }else if(invitation.role_key!=='support'||invitation.building_id||invitation.unit_id||invitation.delegation_id){
+   throw new ApiError(400,'token_invalid');
+  }
+  let delegation:any;
+  if(invitation.delegation_id){
+   delegation=(await client.query(`SELECT d.* FROM resident_delegations d
+    JOIN role_assignments a ON a.id=d.owner_assignment_id
+    JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id
+    JOIN users u ON u.id=a.user_id WHERE d.id=$1 AND d.revoked_at IS NULL
+    AND d.expires_at>now() AND a.active AND m.active AND NOT u.blocked
+    AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now()) FOR UPDATE OF d`,
+   [invitation.delegation_id])).rows[0];
+   if(!delegation)throw new ApiError(400,'token_invalid');
+  }
+  const existing=await client.query('SELECT id FROM users WHERE email=$1',[invitation.email]);let id:string;
+  if(existing.rows[0]){
+   if(!req.user||req.user.id!==existing.rows[0].id)throw new ApiError(409,'sign_in_existing');
+   id=req.user.id;
+  }else{
+   const u=await client.query('INSERT INTO users(email,name,password_hash) VALUES($1,$2,$3) RETURNING id',[invitation.email,name,passwordHash]);id=u.rows[0].id;
+  }
+  if(organizationId){
+   const member=await client.query('SELECT active FROM memberships WHERE user_id=$1 AND organization_id=$2',[id,organizationId]);
+   if(member.rows[0]?.active===false)throw new ApiError(403,'forbidden');
+   await client.query('INSERT INTO memberships(user_id,organization_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[id,organizationId]);
+  }
+  const assigned=await client.query(`INSERT INTO role_assignments(user_id,organization_id,role_key,building_id,unit_id,expires_at)
+   VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
+  [id,organizationId,invitation.role_key,invitation.building_id,invitation.unit_id,delegation?.expires_at??null]);
+  if(delegation)await client.query('UPDATE resident_delegations SET assignment_id=$1 WHERE id=$2',[assigned.rows[0].id,delegation.id]);
+  await client.query('UPDATE invitations SET accepted_at=now() WHERE id=$1',[invitation.id]);
+  await client.query("INSERT INTO audit_events(actor_user_id,organization_id,action,entity_type,entity_id) VALUES($1,$2,'invitation.accept','invitation',$3)",[id,organizationId,invitation.id]);
+  await client.query('COMMIT');res.json({accepted:true});
+ }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
+});

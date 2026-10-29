@@ -90,6 +90,29 @@ test('Platform invitation list and revocation use platform.invite, while organiz
  const event=(await pool.query("SELECT organization_id FROM audit_events WHERE action='invitation.revoke' AND entity_id=$1",[b.data.id])).rows[0];
  assert.equal(event.organization_id,seeded.fixtures.orgB);
 });
+test('Platform can invite organization roles and Vernatun support without creating a second platform administrator',async()=>{
+ const platform=clients.platform_admin,org=clients.org_admin;
+ const tag=randomUUID(),email=`support-${tag}@example.test`,password='Temporary-Test-Only-0000';
+ const employee=await platform.call('/invitations','POST',{email,role:'support'});
+ assert.equal(employee.status,201);assert.equal(employee.data.organization_id,null);
+ const rotated=await platform.call('/invitations/'+employee.data.id+'/resend','POST',{});
+ assert.equal(rotated.status,200);
+ const listed=await platform.call('/invitations');
+ assert.equal(listed.status,200);assert.ok(listed.data.some((row:any)=>row.id===employee.data.id&&row.role_key==='support'&&row.organization_id===null));
+ const token=new URL(rotated.data.url).searchParams.get('token'),guest=new Client();await guest.call('/auth/session');
+ assert.equal((await guest.call('/auth/accept-invitation','POST',{token,name:'Vernatun Support',password})).status,200);
+ const login=await guest.call('/auth/login','POST',{email,password});assert.equal(login.status,200);
+ assert.ok(login.data.contexts.some((item:any)=>item.role_key==='support'&&item.organization_id===null));
+ const user=(await pool.query('SELECT id FROM users WHERE email=$1',[email])).rows[0];
+ assert.equal((await pool.query('SELECT role_key,organization_id FROM role_assignments WHERE user_id=$1',[user.id])).rows[0].role_key,'support');
+ assert.equal((await pool.query('SELECT count(*)::int AS count FROM memberships WHERE user_id=$1',[user.id])).rows[0].count,0);
+ const users=await platform.call('/iam/users?q='+encodeURIComponent(email));
+ assert.equal(users.status,200);assert.ok(users.data.rows[0].assignments.some((a:any)=>a.role_key==='support'&&a.organization_id===null));
+ assert.equal((await platform.call('/invitations','POST',{email:`admin-${tag}@example.test`,role:'platform_admin'})).status,403);
+ const companyRole=await platform.call('/invitations','POST',{email:`manager-${tag}@example.test`,role:'manager',organizationId:seeded.fixtures.orgA,buildingId:seeded.fixtures.ba});
+ assert.equal(companyRole.status,201);assert.equal(companyRole.data.organization_id,seeded.fixtures.orgA);assert.equal(companyRole.data.role_key,'manager');
+ assert.equal((await org.call('/invitations','POST',{email:`support-org-${tag}@example.test`,role:'support'})).status,403);
+});
 
 test('Platform audit includes organization events and structured details without leaking another organization to org admin',async()=>{
  const first=randomUUID(),second=randomUUID();
