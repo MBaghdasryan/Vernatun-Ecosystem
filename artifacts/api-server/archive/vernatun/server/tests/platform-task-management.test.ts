@@ -219,7 +219,9 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
 test('platform task alerts and direct reads require an active platform membership',async()=>{
  const assignment=(await pool.query(`SELECT id,active,assignment_status,starts_at,expires_at FROM role_assignments
   WHERE user_id=$1 AND organization_id IS NULL AND role_key='platform_admin'`,[platformUserId])).rows[0];
+ const accountState=(await pool.query('SELECT account_status FROM users WHERE id=$1',[platformUserId])).rows[0];
  assert.ok(assignment);
+ assert.ok(accountState);
  const created=await platform.call('/platform/tasks','POST',{
   title:'Membership access regression',description:'Verify task visibility follows role status.',assigneeId:platformUserId,
  });
@@ -256,8 +258,24 @@ test('platform task alerts and direct reads require an active platform membershi
   assert.equal(suspended.platform_task,null);
   assert.deepEqual(suspended.targets,[]);
   assert.equal((await platform.call(`/notifications/${notice.id}/destination`)).status,403);
- }finally{
+
   await pool.query(`UPDATE role_assignments SET active=$2,assignment_status=$3,starts_at=$4,expires_at=$5 WHERE id=$1`,
    [assignment.id,assignment.active,assignment.assignment_status,assignment.starts_at,assignment.expires_at]);
+  await pool.query("UPDATE users SET account_status='disabled' WHERE id=$1",[platformUserId]);
+  const disabledTask=await platform.call('/platform/tasks/'+created.data.id);
+  assert.equal(disabledTask.status,401);
+  assert.deepEqual(disabledTask.data,{error:'unauthenticated'});
+  const disabledNotifications=await platform.call('/notifications');
+  assert.equal(disabledNotifications.status,401);
+  assert.deepEqual(disabledNotifications.data,{error:'unauthenticated'});
+  const disabledDestination=await platform.call(`/notifications/${notice.id}/destination`);
+  assert.equal(disabledDestination.status,401);
+  assert.deepEqual(disabledDestination.data,{error:'unauthenticated'});
+ }finally{
+  await Promise.all([
+   pool.query(`UPDATE role_assignments SET active=$2,assignment_status=$3,starts_at=$4,expires_at=$5 WHERE id=$1`,
+    [assignment.id,assignment.active,assignment.assignment_status,assignment.starts_at,assignment.expires_at]),
+   pool.query('UPDATE users SET account_status=$2 WHERE id=$1',[platformUserId,accountState.account_status]),
+  ]);
  }
 });
