@@ -80,6 +80,7 @@ import {ownerRegistrationAdmin} from './owner-registration.js';
 import {platformCms} from './platform-cms.js';
 import {platformCommunications} from './platform-communications.js';
 import {platformAnalytics} from './platform-analytics.js';
+import {platformTaskManagement} from './platform-task-management.js';
 export const app=express();app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());
 app.use('/api',cors({
  origin(origin,callback){callback(null,origin===config.APP_ORIGIN?origin:false)},
@@ -122,6 +123,7 @@ app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store');if(['G
 app.use('/api',platformCms);
 app.use('/api',platformCommunications);
 app.use('/api',platformAnalytics);
+app.use('/api',platformTaskManagement);
 app.use('/api',edgeManagementApi);
 app.use('/api',ownerRegistrationAdmin);
 app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({status:'ok',stage:1})});

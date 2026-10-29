@@ -16,6 +16,7 @@ const expectedObjects=[
  {migration:'055_owner_registration_approval.sql',name:'resident_owner_access_requests',kind:'relation' as const,idempotent:false},
  {migration:'057_platform_cms.sql',name:'platform_cms_brand_settings',kind:'relation' as const,idempotent:false},
  {migration:'057_platform_cms.sql',name:'platform_cms_pages',kind:'relation' as const,idempotent:false},
+ {migration:'062_platform_tasks.sql',name:'platform_tasks',kind:'relation' as const,idempotent:false},
  {migration:'013_platform_foundation.sql',name:'expire_support_grants(uuid)',kind:'function' as const,idempotent:false},
  {migration:'031_operations_sessions.sql',name:'system_revoked_sessions',kind:'relation' as const,idempotent:false},
  {migration:'032_log_retention.sql',name:'system_log_retention',kind:'relation' as const,idempotent:false},
