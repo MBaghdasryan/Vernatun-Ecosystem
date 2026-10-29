@@ -217,24 +217,30 @@ test('Platform user filters, pagination and CSV export work in the authenticated
   catch(error){
    throw new Error(`Authenticated users page did not render. URL: ${page.url()}; body: ${(await page.locator('body').innerText()).slice(0,1600)}; browser/API logs: ${browserErrors.join(' | ')}`,{cause:error});
   }
-  const tableRows=page.locator('.iam-table tbody tr');
+   const tableRows=page.locator('.p-platform-users .p-table-wrap tbody tr');
+   const addUser=page.getByRole('button',{name:'Add user',exact:true});
+   await addUser.waitFor({timeout:10000});
+   await addUser.click();
+   await page.getByLabel('Account type').selectOption('internal');
+   assert.equal(await page.getByLabel('Role').inputValue(),'Onboarding & support');
+   await page.getByRole('button',{name:'Close',exact:true}).click();
   await tableRows.nth(49).waitFor({timeout:15000});
-  const pagination=page.locator('.iam-main .p-card .iam-row').last();
+   const pagination=page.locator('.p-platform-users .p-pagination');
   const firstPage=await pagination.innerText();
   assert.match(firstPage,/1–50/);
   assert.ok(Number(firstPage.match(/\/ (\d+)/)?.[1])>50,'Pagination must be available with more than 50 matching users');
   assert.equal(await tableRows.count(),50);
   await page.getByRole('button',{name:'Next'}).click();
-  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('51–'));
+   await page.waitForFunction(()=>document.querySelector('.p-platform-users .p-pagination')?.textContent?.includes('51–'));
   assert.ok(await tableRows.count()>0&&await tableRows.count()<50);
   await page.getByRole('button',{name:'Previous'}).click();
-  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('1–50 /'));
+   await page.waitForFunction(()=>document.querySelector('.p-platform-users .p-pagination')?.textContent?.includes('1–50 /'));
 
   await page.getByRole('textbox',{name:'Name or email'}).fill(marker);
   await page.getByLabel('Created from').fill(startDay);
   await page.getByLabel('Created through').fill(endDay);
   await page.getByRole('button',{name:'Search',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('.iam-main .p-card > .iam-row:last-child')?.textContent?.includes('1–2 / 2'));
+   await page.waitForFunction(()=>document.querySelector('.p-platform-users .p-pagination')?.textContent?.includes('1–2 / 2'));
   const displayed=await tableRows.allInnerTexts();
   assert.equal(displayed.length,2);
   assert.ok(displayed.some(row=>row.includes(`${marker}-start@example.test`)),'the starting date is inclusive');

@@ -172,7 +172,7 @@ export default function PlatformUsersConsole({c,language,Modal,ErrorNotice}:Prop
      <td data-label={text(language,'mfa')}>{text(language,user.mfa_enabled?'enabled':'notEnabled')}</td>
      <td data-label={text(language,'manageAccess')}><button className="p-button small" type="button" onClick={()=>{setAccessUser(user.id);setRevisionDetails(value=>value+1)}}><KeyRound size={15}/>{text(language,'manageAccess')}</button></td>
     </tr>)}</tbody></table></div>}
-   {list&&list.total>50&&<div className="p-pagination"><span>{text(language,'count')} {offset+1}–{Math.min(offset+list.rows.length,list.total)} / {list.total}</span>
+    {list&&list.total>0&&<div className="p-pagination"><span>{text(language,'count')} {offset+1}–{Math.min(offset+list.rows.length,list.total)} / {list.total}</span>
     <button className="p-button small" type="button" disabled={offset===0} onClick={()=>setOffset(value=>Math.max(0,value-50))}><ArrowLeft size={15}/>{text(language,'previous')}</button>
     <span>{page} / {pageCount}</span>
     <button className="p-button small" type="button" disabled={offset+50>=list.total} onClick={()=>setOffset(value=>value+50)}>{text(language,'next')}<ArrowRight size={15}/></button>

@@ -4,6 +4,7 @@ import {roleName,index,type Language} from './i18n';
 import type {RoleContext} from './types';
 import EmployeeAssignment from './EmployeeAssignment';
 import OwnerAccessQueue from './OwnerAccessQueue';
+import PlatformUsersConsole from './PlatformUsersConsole';
 import './iam.css';
 
 type Props={language:Language;platform:boolean;view:string;brand:ReactNode;headerTools?:ReactNode;context:RoleContext;onSwitch:()=>void;onLogout:()=>void;
@@ -11,6 +12,7 @@ type Props={language:Language;platform:boolean;view:string;brand:ReactNode;heade
 export default function IAMWorkspace({language,platform,view,brand,headerTools,context,onSwitch,onLogout,Modal,ErrorNotice}:Props){
  const L=index(language),tr=(hy:string,ru:string,en:string)=>[hy,ru,en][L],base=platform?'/console':'/os';
  const canExportUsers=platform&&context.role_key==='platform_admin'&&!context.organization_id;
+  const canInviteUsers=platform&&view==='users'&&context.permissions.includes('platform.invite');
  const [catalog,setCatalog]=useState<any>(),[profiles,setProfiles]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]),[total,setTotal]=useState(0);
  const [q,setQ]=useState(''),[search,setSearch]=useState(''),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0);
  const [createdFromInput,setCreatedFromInput]=useState(''),[createdToInput,setCreatedToInput]=useState('');
@@ -23,13 +25,14 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,c
  const [unitDraft,setUnitDraft]=useState(''),[unitId,setUnitId]=useState(''),[sessionId,setSessionId]=useState('');
  const [action,setAction]=useState<{kind:string;id:string;status?:string;sessionId?:string;version?:string}>(),[reason,setReason]=useState('');
  const refresh=()=>setRevision(v=>v+1);
- useEffect(()=>{let live=true;setLoading(true);setError(undefined);
+  useEffect(()=>{if(canInviteUsers){setLoading(false);return}
+   let live=true;setLoading(true);setError(undefined);
    const params=new URLSearchParams({q:search,offset:String(offset)});
    if(createdFrom)params.set('createdFrom',createdFrom);if(createdTo)params.set('createdTo',createdTo);
    Promise.all([request<any>('/iam/catalog'),request<any[]>('/iam/profiles'),request<any>('/iam/users?'+params)])
    .then(([c,p,u])=>{if(live){setCatalog(c);setProfiles(p);setRows(u.rows);setTotal(u.total)}})
    .catch(e=>{if(live)setError(e)}).finally(()=>{if(live)setLoading(false)});return()=>{live=false};
-  },[revision,search,createdFrom,createdTo,offset]);
+   },[canInviteUsers,platform,view,revision,search,createdFrom,createdTo,offset]);
  useEffect(()=>{if(!userId)return;let live=true;setCard(undefined);
   request('/iam/users/'+userId).then(d=>{if(live)setCard(d)}).catch(setError);return()=>{live=false};
  },[userId,revision]);
@@ -66,10 +69,12 @@ export default function IAMWorkspace({language,platform,view,brand,headerTools,c
  const users=tr('Օգտատերեր','Пользователи','Users'),roles=tr('Դերեր','Роли','Roles'),permissions=tr('Թույլտվություններ','Разрешения','Permissions');
  const statusLabel=(v:string)=>({active:tr('Ակտիվ','Активен','Active'),locked:tr('Արգելափակված','Заблокирован','Locked'),disabled:tr('Անջատված','Отключён','Disabled'),suspended:tr('Կասեցված','Приостановлен','Suspended'),revoked:tr('Հետ կանչված','Отозван','Revoked')}[v]??v);
  const errorBox=error?<div><ErrorNotice error={error}/>{error instanceof ApiClientError&&error.code==='concurrent_change'&&<p>{tr('Տվյալները փոխվել են։ Բացեք քարտը նորից։','Данные изменились. Откройте карточку заново, прежде чем сохранять.','Data changed. Reopen the card before saving.')}</p>}{button(reload,refresh)}</div>:null;
- return <div className="iam-workspace">
+  return <div className="iam-workspace">
   <header className="iam-header">{brand}<nav aria-label="IAM"><a href={base+'/'+(platform?'overview':'organization')}>{tr('Վերադառնալ','К обзору','Overview')}</a><a href={base+'/'+(platform?'users':'people')}>{users}</a><a href={base+'/roles'}>{roles}</a><a href={base+'/'+(platform?'permissions':'roles')+'?matrix=1'}>{permissions}</a><a href={base+'/invitations'}>{tr('Հրավերներ','Приглашения','Invitations')}</a></nav>{headerTools}{button(tr('Փոխել համատեքստը','Сменить контекст','Switch context'),onSwitch)}{button(tr('Ելք','Выйти','Sign out'),onLogout)}</header>
   <main className="iam-main"><h1>{view==='roles'?roles:view==='permissions'?permissions:users}</h1><p>{platform?tr('Հարթակի հասանելիություն․ առանց կազմակերպության բիզնես տվյալների','Доступ платформы — без доступа к бизнес-данным организаций','Platform access — no tenant business-data access'):tr('Կազմակերպության աշխատակիցներ և հասանելիություն','Сотрудники и доступ организации','Organization employees and access')}</p>
-   {errorBox}{loading?<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>:catalog&&<>
+    {errorBox}{canInviteUsers
+     ?<PlatformUsersConsole c={context} language={language} Modal={Modal} ErrorNotice={ErrorNotice}/>
+     :loading?<p role="status">{tr('Բեռնվում է…','Загрузка…','Loading…')}</p>:catalog&&<>
    {(view==='users'||view==='people')&&<section className="p-card">
      {platform?<form className="p-user-search" onSubmit={applyUserFilters}>
       <label><span>{tr('Անուն կամ email','Имя или email','Name or email')}</span><input value={q} onChange={e=>setQ(e.target.value)} maxLength={100}/></label>
