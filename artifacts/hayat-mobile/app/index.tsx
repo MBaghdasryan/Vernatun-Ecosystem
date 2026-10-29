@@ -17,10 +17,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollViewCompat } from "../components/KeyboardAwareScrollViewCompat";
 import {
   createIdempotencyKey,
+  getBroadcastInbox,
   getQueue,
   getSession,
   login,
   logout,
+  markBroadcastRead,
   selectContext,
   transitionDefect,
   type HayatQueueRow,
@@ -313,6 +315,7 @@ function QueueScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reportNote, setReportNote] = useState("");
   const [actionError, setActionError] = useState("");
+  const [showBroadcasts, setShowBroadcasts] = useState(false);
   const queryClient = useQueryClient();
   const activeContext = session.contexts.find((context) => context.id === session.contextId);
   const serverStatus = filter === "all" ? undefined : filter;
@@ -326,6 +329,17 @@ function QueueScreen({
     },
     enabled: !!session.contextId,
     retry: 1,
+  });
+  const broadcastQuery = useQuery({
+    queryKey: ["hayat-broadcasts", session.user.id],
+    queryFn: getBroadcastInbox,
+    enabled: !!session.contextId,
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+  const markBroadcastMutation = useMutation({
+    mutationFn: markBroadcastRead,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hayat-broadcasts", session.user.id] }),
   });
   const transitionMutation = useMutation({
     mutationFn: ({ row, action, note }: { row: HayatQueueRow; action: "start" | "report"; note?: string }) =>
@@ -383,20 +397,39 @@ function QueueScreen({
       >
         <View style={styles.appHeader}>
           <BrandMark />
-          <Pressable
-            onPress={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-            testID="logout-button"
-            style={styles.logoutButton}
-          >
-            {logoutMutation.isPending ? (
-              <ActivityIndicator size="small" color={colors.foreground} />
-            ) : (
-              <Feather name="log-out" size={19} color={colors.foreground} />
-            )}
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => setShowBroadcasts((shown) => !shown)}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              accessibilityState={{ expanded: showBroadcasts }}
+              testID="broadcasts-toggle"
+              style={styles.notificationButton}
+            >
+              <Feather name="bell" size={18} color={colors.foreground} />
+              {(broadcastQuery.data?.filter((item) => !item.read_at).length ?? 0) > 0 ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {broadcastQuery.data?.filter((item) => !item.read_at).length}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable
+              onPress={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              testID="logout-button"
+              style={styles.logoutButton}
+            >
+              {logoutMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.foreground} />
+              ) : (
+                <Feather name="log-out" size={19} color={colors.foreground} />
+              )}
+            </Pressable>
+          </View>
         </View>
         <View style={styles.greetingRow}>
           <View style={styles.greetingCopy}>
@@ -418,6 +451,60 @@ function QueueScreen({
               <Text style={styles.siteMeta}>{activeContext.organization_name}  ·  {session.user.email}</Text>
             </View>
             <Feather name="check-circle" size={17} color={colors.success} />
+          </View>
+        ) : null}
+
+        {showBroadcasts ? (
+          <View style={styles.broadcastPanel} testID="broadcasts-panel">
+            <View style={styles.sectionHeading}>
+              <View>
+                <Eyebrow>Updates from Vernatun</Eyebrow>
+                <Text style={styles.sectionTitle}>Notifications</Text>
+              </View>
+              <Pressable
+                onPress={() => void broadcastQuery.refetch()}
+                accessibilityRole="button"
+                accessibilityLabel="Refresh notifications"
+                style={styles.refreshButton}
+              >
+                <Feather name="refresh-cw" size={17} color={colors.foreground} />
+              </Pressable>
+            </View>
+            {broadcastQuery.isPending ? <ActivityIndicator color={colors.primaryPressed} /> : null}
+            {broadcastQuery.isError ? (
+              <ErrorNotice message="Could not load notifications. Check your connection and retry." onRetry={() => void broadcastQuery.refetch()} />
+            ) : null}
+            {broadcastQuery.data?.length === 0 ? (
+              <View style={styles.broadcastEmpty}>
+                <Feather name="bell" size={18} color={colors.mutedForeground} />
+                <Text style={styles.broadcastEmptyText}>No broadcasts received yet.</Text>
+              </View>
+            ) : null}
+            <View style={styles.broadcastList}>
+              {broadcastQuery.data?.map((item) => (
+                <View key={item.id} style={styles.broadcastCard}>
+                  <View style={styles.cardTop}>
+                    <Text style={styles.broadcastTitle}>{item.title}</Text>
+                    {!item.read_at ? (
+                      <View style={styles.statusAmber}><Text style={styles.statusText}>UNREAD</Text></View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.broadcastDate}>{new Date(item.created_at).toLocaleString()}</Text>
+                  <Text style={styles.broadcastBody}>{item.body}</Text>
+                  {!item.read_at ? (
+                    <Pressable
+                      onPress={() => markBroadcastMutation.mutate(item.id)}
+                      disabled={markBroadcastMutation.isPending}
+                      accessibilityRole="button"
+                      accessibilityLabel="Mark as read"
+                      style={styles.broadcastReadButton}
+                    >
+                      <Text style={styles.broadcastReadText}>Mark as read</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
           </View>
         ) : null}
 
@@ -791,6 +878,10 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: "700", color: colors.foreground, textAlign: "center" },
   emptyBody: { fontSize: 12, lineHeight: 18, color: colors.mutedForeground, textAlign: "center", marginTop: 7, maxWidth: 280 },
   appHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 59 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  notificationButton: { position: "relative", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface },
+  notificationBadge: { position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  notificationBadgeText: { fontSize: 9, lineHeight: 12, fontWeight: "800", color: colors.foreground },
   logoutButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface },
   queueScroll: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 22 },
   greetingRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 22, marginBottom: 18 },
@@ -805,6 +896,16 @@ const styles = StyleSheet.create({
   siteCopy: { flex: 1 },
   siteName: { color: colors.foreground, fontSize: 12, fontWeight: "700" },
   siteMeta: { color: colors.mutedForeground, fontSize: 9, marginTop: 3 },
+  broadcastPanel: { backgroundColor: colors.surfaceMuted, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 25, gap: 10 },
+  broadcastEmpty: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 10, backgroundColor: colors.surface, paddingHorizontal: 12 },
+  broadcastEmptyText: { color: colors.mutedForeground, fontSize: 12 },
+  broadcastList: { gap: 9 },
+  broadcastCard: { backgroundColor: colors.surface, borderRadius: 11, borderWidth: 1, borderColor: colors.border, padding: 12, gap: 8 },
+  broadcastTitle: { flex: 1, color: colors.foreground, fontSize: 14, fontWeight: "700" },
+  broadcastDate: { color: colors.mutedForeground, fontSize: 10 },
+  broadcastBody: { color: colors.foreground, fontSize: 12, lineHeight: 18 },
+  broadcastReadButton: { alignSelf: "flex-start", paddingVertical: 7, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.primarySurface },
+  broadcastReadText: { color: colors.primaryPressed, fontSize: 11, fontWeight: "700" },
   sectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 13 },
   sectionTitle: { fontSize: 21, color: colors.foreground, letterSpacing: -0.5, fontWeight: "800", marginTop: 4 },
   refreshButton: { width: 39, height: 39, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 11, alignItems: "center", justifyContent: "center" },

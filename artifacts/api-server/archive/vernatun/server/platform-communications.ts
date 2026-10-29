@@ -134,7 +134,7 @@ function recipientCount(rows:Recipient[]){
 }
 
 platformCommunications.get('/broadcasts/inbox',async(req,res)=>{
- const rows=(await pool.query(`SELECT n.id,n.manual_batch_id,n.custom_title,n.custom_body,n.created_at,n.read_at,
+ const rows=(await pool.query(`SELECT n.id,n.manual_batch_id,n.custom_title AS title,n.custom_body AS body,n.created_at,n.read_at,
   b.target_type,b.organization_id,b.building_id
   FROM notifications n JOIN platform_notification_batches b ON b.id=n.manual_batch_id
   WHERE n.user_id=$1 AND n.in_app_enabled AND (n.visible_after IS NULL OR n.visible_after<=now())
@@ -172,8 +172,16 @@ platformCommunications.post('/broadcasts',async(req,res)=>{
   body:z.string().trim().min(1).max(5000),expectedRecipients:z.number().int().min(1).max(20000),
   idempotencyKey:uuid}).strict().parse(req.body);
  const created=await transaction(async db=>{
-  const previous=(await db.query('SELECT id,recipient_count FROM platform_notification_batches WHERE idempotency_key=$1',[b.idempotencyKey])).rows[0];
-  if(previous)return {id:previous.id,recipientCount:previous.recipient_count,replayed:true};
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[b.idempotencyKey]);
+  const previous=(await db.query(`SELECT id,recipient_count,created_by,target_type,target_id,building_id,title,body
+   FROM platform_notification_batches WHERE idempotency_key=$1`,[b.idempotencyKey])).rows[0];
+  if(previous){
+   const expectedTargetId=b.target.type==='user'?b.target.id:c.building_id;
+   if(previous.created_by!==req.user!.id||previous.target_type!==b.target.type||previous.target_id!==expectedTargetId||
+    previous.building_id!==c.building_id||previous.title!==b.title||previous.body!==b.body)
+    throw new ApiError(409,'idempotency_conflict');
+   return {id:previous.id,recipientCount:previous.recipient_count,replayed:true};
+  }
   const audience=await managerRecipients(db,c,b.target),count=recipientCount(audience);
   if(count!==b.expectedRecipients)throw new ApiError(409,'audience_changed');
   if(!count)throw new ApiError(409,'empty_audience');

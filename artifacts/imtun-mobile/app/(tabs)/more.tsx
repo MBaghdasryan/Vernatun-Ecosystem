@@ -9,7 +9,7 @@ import { domainTitle, domainViews } from '@/lib/resident/domain';
 import { useGetMobileAuthSession } from '@workspace/api-client-react';
 import { residentRole, residentSectionAllowed, type ResidentRole } from '@/lib/resident/navigation';
 import { EmptyState, ErrorBox, Skeleton } from '@/components/resident/Ui';
-const icons: Record<string, keyof typeof Feather.glyphMap> = { finance: 'credit-card', meetings: 'users', notifications: 'bell', family: 'user-plus', meters: 'activity', announcements: 'volume-2', documents: 'file-text', passes: 'key', building: 'home', vehicles: 'truck', devices: 'smartphone', integrations: 'cpu', agreements: 'check-square', contacts: 'phone', directory: 'book', services: 'grid', community: 'message-circle', marketplace: 'shopping-bag', help: 'life-buoy', feedback: 'message-square', preferences: 'sliders', security: 'lock' };
+const icons: Record<string, keyof typeof Feather.glyphMap> = { finance: 'credit-card', meetings: 'users', notifications: 'bell', broadcasts: 'bell', family: 'user-plus', meters: 'activity', announcements: 'volume-2', documents: 'file-text', passes: 'key', building: 'home', vehicles: 'truck', devices: 'smartphone', integrations: 'cpu', agreements: 'check-square', contacts: 'phone', directory: 'book', services: 'grid', community: 'message-circle', marketplace: 'shopping-bag', help: 'life-buoy', feedback: 'message-square', preferences: 'sliders', security: 'lock' };
 export default function MoreScreen() { const palette = useAppPalette(); const st = React.useMemo(() => make_st(palette), [palette]);
   const l = useLang(); const router = useRouter(); const session = useGetMobileAuthSession(); const ws = useWorkspace();
   const context = session.data?.contexts.find((item) => item.id === session.data?.contextId);
@@ -21,10 +21,10 @@ export default function MoreScreen() { const palette = useAppPalette(); const st
     resident: [...domainViews],
   };
   const superOrder: Record<ResidentRole, readonly string[]> = {
-    owner: ['building', 'vehicles', 'agreements', 'contacts', 'directory', 'devices', 'services', 'community', 'marketplace', 'help', 'feedback', 'preferences'],
-    renter: ['building', 'agreements', 'contacts', 'devices', 'services', 'community', 'help', 'feedback', 'preferences', 'vehicles', 'directory', 'marketplace'],
-    family: ['building', 'contacts', 'devices', 'community', 'services', 'help', 'feedback', 'preferences', 'agreements', 'vehicles', 'directory', 'marketplace'],
-    resident: [...superViews],
+  owner: ['building', 'vehicles', 'agreements', 'contacts', 'directory', 'devices', 'services', 'community', 'marketplace', 'help', 'feedback', 'preferences', 'broadcasts'],
+  renter: ['building', 'agreements', 'contacts', 'devices', 'services', 'community', 'help', 'feedback', 'preferences', 'vehicles', 'directory', 'marketplace', 'broadcasts'],
+  family: ['building', 'contacts', 'devices', 'community', 'services', 'help', 'feedback', 'preferences', 'agreements', 'vehicles', 'directory', 'marketplace', 'broadcasts'],
+  resident: [...superViews, 'broadcasts'],
   };
   const menuDomains = domainOrder[role].filter((key) => (domainViews as readonly string[]).includes(key) && residentSectionAllowed(context, ws.data, key));
   const menuSuper = superOrder[role].filter((key) => residentSectionAllowed(context, ws.data, key));

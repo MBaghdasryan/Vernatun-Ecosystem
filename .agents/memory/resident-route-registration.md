@@ -16,3 +16,14 @@ diagnostic where helpful, and accept the controls on the actual signed-in route.
 Do not treat API tests or successful compilation as evidence of UI integration.
 Manager work uses HAYAT's separate renderer. Mount operational features there;
 do not relax OS product access to compensate for mounting them in the wrong portal.
+
+For broadcast inboxes, keep custom-message payloads on the same `title`/`body`
+contract the web and native readers consume. Verify the displayed message text,
+not only that a notification row exists in the API response.
+
+**Why:** An isolated send and inbox query succeeded while the resident screen
+showed only its timestamp and read status because the response exposed storage
+field names instead of the reader contract.
+
+**How to apply:** When adding a notification kind or channel, test a delivered
+message through each real signed-in shell and confirm its title and body render.

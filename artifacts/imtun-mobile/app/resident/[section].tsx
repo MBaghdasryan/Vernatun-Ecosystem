@@ -16,6 +16,7 @@ import { useDomainAccess } from '@/components/resident/domain/useDomain';
 import Finance from '@/components/resident/domain/Finance';
 import Meetings from '@/components/resident/domain/Meetings';
 import Notifications from '@/components/resident/domain/Notifications';
+import BroadcastInbox from '@/components/resident/domain/BroadcastInbox';
 import Family from '@/components/resident/domain/Family';
 import Meters from '@/components/resident/domain/Meters';
 import Announcements from '@/components/resident/domain/Announcements';
@@ -48,6 +49,7 @@ export default function ResidentSection() { const palette = useAppPalette(); con
       {section === 'security' && <LocalSecurity />}
       {section === 'access' && <Access l={l} />}
       {section === 'integrations' && <IntegrationsOverview l={l} />}
+      {section === 'broadcasts' && <BroadcastInbox />}
       {section === 'preferences' && <>{ws.isPending && <Skeleton />}{ws.isError && <ErrorBox message={L(l, S.fail)} retryLabel={L(l, S.retry)} onRetry={() => ws.refetch()} />}{ws.data && <PrefsForm key={JSON.stringify(ws.data.profile)} profile={ws.data.profile} l={l} />}</>}
       {(domainViews as readonly string[]).includes(section ?? '') && <DomainSection view={section as DomainView} l={l} />}
       {list.map(k => <RecordsList key={k} kind={k} l={l} />)}

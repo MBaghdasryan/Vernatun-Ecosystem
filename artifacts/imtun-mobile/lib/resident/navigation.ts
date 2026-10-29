@@ -26,6 +26,7 @@ export function residentSectionAllowed(context: MobileAuthContext | undefined, w
   integrations?: Array<{ key: string; status: string }>;
 } | undefined, section: string): boolean {
   if (!context) return false;
+  if (section === 'broadcasts') return true;
   if ((domainViews as readonly string[]).includes(section)) {
     return domainAvailable(context, section as DomainView);
   }

@@ -217,6 +217,8 @@ test('manager broadcasts stay inside the assigned building and reach a resident 
   assert.ok(residentBuilding,'A manager-organization building with a resident is required');
   await pool.query('UPDATE role_assignments SET building_id=$1,unit_id=NULL WHERE id=$2',[residentBuilding.id,managerAssignment.id]);
   await signIn(page,managerAccount,'');
+  await page.goto(`http://127.0.0.1:${webPort}/hayat/broadcasts`);
+  await page.getByRole('heading',{name:/New notification|Новое уведомление|Նոր ծանուցում/}).waitFor({timeout:20000});
   const targets=await page.evaluate(async()=>{
    const response=await fetch('/api/broadcasts/targets');
    return {status:response.status,body:await response.json()};
@@ -224,27 +226,32 @@ test('manager broadcasts stay inside the assigned building and reach a resident 
   assert.equal(targets.status,200,`Manager scoped target list failed: ${JSON.stringify(targets.body)}`);
   assert.ok(targets.body.building?.id,'Manager target list should be limited to an assigned building');
   assert.ok(targets.body.residents.length>0,'Test manager building should have residents');
+  const csrf=await page.evaluate(async()=>String((await (await fetch('/api/auth/session')).json()).csrf));
   const foreignAttempt=await page.evaluate(async(id:string)=>{
-   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:{type:'user',id}})});
+   const csrf=String((await (await fetch('/api/auth/session')).json()).csrf);
+   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({target:{type:'user',id}})});
    return response.status;
   },seed.accounts.second_org.id);
-  assert.ok(foreignAttempt===404||foreignAttempt===403,'Manager cannot target an unrelated account');
+  assert.equal(foreignAttempt,404,'Manager cannot target an unrelated account');
   const preview=await page.evaluate(async()=>{
-   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:{type:'building'}})});
+   const csrf=String((await (await fetch('/api/auth/session')).json()).csrf);
+   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({target:{type:'building'}})});
    return {status:response.status,body:await response.json()};
   });
-  assert.equal(preview.status,200);
+  assert.equal(preview.status,200,`Manager preview failed: ${JSON.stringify(preview.body)}`);
   assert.equal(preview.body.count,targets.body.residents.length);
   const idempotencyKey=randomUUID();
   const sent=await page.evaluate(async({expectedRecipients,idempotencyKey}:{expectedRecipients:number;idempotencyKey:string})=>{
-   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   const csrf=String((await (await fetch('/api/auth/session')).json()).csrf);
+   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({
     target:{type:'building'},title:'Isolated broadcast QA',body:'Test-only resident notice.',expectedRecipients,idempotencyKey,
    })});
    return {status:response.status,body:await response.json()};
   },{expectedRecipients:preview.body.count,idempotencyKey});
   assert.equal(sent.status,201);
   const replay=await page.evaluate(async({expectedRecipients,idempotencyKey}:{expectedRecipients:number;idempotencyKey:string})=>{
-   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   const csrf=String((await (await fetch('/api/auth/session')).json()).csrf);
+   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({
     target:{type:'building'},title:'Isolated broadcast QA',body:'Test-only resident notice.',expectedRecipients,idempotencyKey,
    })});
    return {status:response.status,body:await response.json()};
@@ -265,7 +272,12 @@ test('manager broadcasts stay inside the assigned building and reach a resident 
    const inboxPage=await browser!.newPage();
    try{
     await signIn(inboxPage,recipient,'');
-    const inbox=await inboxPage.evaluate(async()=>await (await fetch('/api/broadcasts/inbox')).json());
+    await inboxPage.goto(`http://127.0.0.1:${webPort}/imtun/broadcasts`);
+     const inbox=await inboxPage.evaluate(async()=>await (await fetch('/api/broadcasts/inbox')).json());
+     assert.ok(inbox.some((row:Record<string,any>)=>row.manual_batch_id===sent.body.id),'A scoped resident should receive the in-app broadcast through the API');
+     await inboxPage.waitForTimeout(1500);
+     const inboxUi=await inboxPage.evaluate(()=>({url:location.href,body:document.body.innerText.slice(0,2000)}));
+     assert.match(inboxUi.body,/Isolated broadcast QA/,`Resident broadcast inbox did not render: ${JSON.stringify(inboxUi)}`);
     assert.ok(inbox.some((row:Record<string,any>)=>row.manual_batch_id===sent.body.id),'A scoped resident should receive the in-app broadcast');
    }finally{await inboxPage.close()}
   }else{

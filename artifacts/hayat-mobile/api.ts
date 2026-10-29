@@ -54,6 +54,14 @@ export type HayatQueueResponse = {
   serverTime: string;
 };
 
+export type HayatBroadcast = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -141,6 +149,14 @@ export async function logout(): Promise<void> {
 export function getQueue(status = '', page = 0): Promise<HayatQueueResponse> {
   const query = new URLSearchParams({ page: String(page), ...(status ? { status } : {}) });
   return request(`/hayat/queue?${query.toString()}`);
+}
+
+export function getBroadcastInbox(): Promise<HayatBroadcast[]> {
+  return request('/broadcasts/inbox');
+}
+
+export function markBroadcastRead(id: string): Promise<unknown> {
+  return request(`/notifications/${encodeURIComponent(id)}/read`, 'POST', {});
 }
 
 export function transitionDefect(
