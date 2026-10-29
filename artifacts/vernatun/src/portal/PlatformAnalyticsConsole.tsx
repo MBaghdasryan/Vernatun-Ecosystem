@@ -1,7 +1,8 @@
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {Download,RefreshCw,Building2,Layers,Headset,Receipt} from 'lucide-react';
 import {downloadFile,request} from './client';
 import {fromMinor} from './console-util';
+import {createLatestRequestGuard} from './latest-request';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import './console.css';
@@ -15,9 +16,14 @@ const S={
 const day=(d:Date)=>d.toISOString().slice(0,10);
 export default function PlatformAnalyticsConsole({c,language}:{c:RoleContext;language:Language}){
  const t=S[language],now=new Date(),defaultTo=day(now),first=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-11,1)),defaultFrom=day(first);
- const [from,setFrom]=useState(defaultFrom),[to,setTo]=useState(defaultTo),[currency,setCurrency]=useState('AMD'),[applied,setApplied]=useState({from:defaultFrom,to:defaultTo,currency:'AMD'}),[data,setData]=useState<Data>(),[error,setError]=useState(''),[loading,setLoading]=useState(true),[tick,setTick]=useState(0),[selected,setSelected]=useState('');
- const load=useCallback(async()=>{setLoading(true);setError('');try{const q=new URLSearchParams(applied);setData(await request<Data>('/platform/analytics?'+q));setSelected('')}catch(e){setError(String((e as Error).message??t.error))}finally{setLoading(false)}},[applied,t.error]);
- useEffect(()=>{void load()},[load,tick,c.id]);
+  const [from,setFrom]=useState(defaultFrom),[to,setTo]=useState(defaultTo),[currency,setCurrency]=useState('AMD'),[applied,setApplied]=useState({from:defaultFrom,to:defaultTo,currency:'AMD'}),[report,setReport]=useState<{key:string;data:Data}>(),[error,setError]=useState(''),[loading,setLoading]=useState(true),[tick,setTick]=useState(0),[selected,setSelected]=useState('');
+  const latestRequest=useRef(createLatestRequestGuard()),filterKey=JSON.stringify(applied),data=report?.key===filterKey?report.data:undefined;
+  useEffect(()=>{
+   const requestId=latestRequest.current.begin();
+   setLoading(true);setError('');
+   void (async()=>{try{const q=new URLSearchParams(applied),result=await request<Data>('/platform/analytics?'+q);if(latestRequest.current.isLatest(requestId)){setReport({key:filterKey,data:result});setSelected('')}}catch(e){if(latestRequest.current.isLatest(requestId))setError(String((e as Error).message??t.error))}finally{if(latestRequest.current.isLatest(requestId))setLoading(false)}})();
+   return()=>{if(latestRequest.current.isLatest(requestId))latestRequest.current.invalidate()};
+  },[applied,filterKey,t.error,tick,c.id]);
  const months=data?.monthly??[],focus=months.find(m=>m.month===selected)??months.at(-1);
  const max=Math.max(1,...months.map(m=>Math.max(Number(m.billed_minor),Number(m.paid_minor))));
  const money=(minor:string)=>`${fromMinor(String(minor))} ${data?.period.currency??currency}`;
@@ -28,7 +34,7 @@ export default function PlatformAnalyticsConsole({c,language}:{c:RoleContext;lan
  return <div className="p-business cx-wrap p-platform-analytics">
   <section className="p-card cx-form"><div className="cx-row" style={{justifyContent:'space-between'}}><div><h2>{t.title}</h2><p className="p-muted-note">{t.subtitle}</p></div><div className="cx-row">
     <button className="p-button" onClick={exportCsv} disabled={!data}><Download size={16}/>{t.export}</button><button className="p-button" onClick={()=>setTick(n=>n+1)} disabled={loading}><RefreshCw size={16}/>{t.refresh}</button>
-    </div></div><form className="cx-row" onSubmit={e=>{e.preventDefault();setApplied({from,to,currency})}}><label>{t.from}<input type="date" value={from} max={to} onChange={e=>setFrom(e.target.value)} required/></label><label>{t.to}<input type="date" value={to} min={from} onChange={e=>setTo(e.target.value)} required/></label><label>{t.currency}<select value={currency} onChange={e=>setCurrency(e.target.value)}><option>AMD</option><option>RUB</option><option>USD</option></select></label><button className="p-button orange">{t.apply}</button><span className="p-muted-note" style={{flex:'1 1 100%',minWidth:0,overflowWrap:'anywhere',margin:'0'}}>{t.period}: {data?.period.from??applied.from} — {data?.period.to??applied.to} · {data?.period.currency??applied.currency} · {t.timezone}{data?.generatedAt&&<> · {t.lastUpdated}: <time dateTime={data.generatedAt}>{new Intl.DateTimeFormat(language,{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(data.generatedAt))} UTC</time></>}</span></form>
+     </div></div><form className="cx-row" onSubmit={e=>{e.preventDefault();latestRequest.current.invalidate();setApplied({from,to,currency})}}><label>{t.from}<input type="date" value={from} max={to} onChange={e=>setFrom(e.target.value)} required/></label><label>{t.to}<input type="date" value={to} min={from} onChange={e=>setTo(e.target.value)} required/></label><label>{t.currency}<select value={currency} onChange={e=>setCurrency(e.target.value)}><option>AMD</option><option>RUB</option><option>USD</option></select></label><button className="p-button orange">{t.apply}</button><span className="p-muted-note" style={{flex:'1 1 100%',minWidth:0,overflowWrap:'anywhere',margin:'0'}}>{t.period}: {data?.period.from??applied.from} — {data?.period.to??applied.to} · {data?.period.currency??applied.currency} · {t.timezone}{data?.generatedAt&&<> · {t.lastUpdated}: <time dateTime={data.generatedAt}>{new Intl.DateTimeFormat(language,{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(data.generatedAt))} UTC</time></>}</span></form>
   </section>
   {loading&&!data?<p role="status">{t.loading}</p>:error?<div className="p-card" role="alert"><p className="p-error">{error}</p><button className="p-button" onClick={()=>setTick(n=>n+1)}>{t.refresh}</button></div>:data&&<>
    <div className="p-metrics">
