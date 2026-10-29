@@ -50,7 +50,7 @@ async function loadAnalytics(input:unknown){
     count(*) FILTER(WHERE status IN ('issued','partially_paid','overdue'))::int AS open_count
    FROM platform_invoices WHERE currency=$3 AND issued_at >= $1::date AND issued_at < ($2::date + interval '1 day')`,
    [range.from,range.to,range.currency]),
-  pool.query(`SELECT m.month::date AS month,
+   pool.query(`SELECT to_char(m.month::date,'YYYY-MM-DD') AS month,
     (SELECT count(*)::int FROM organizations o WHERE o.created_at>=m.month AND o.created_at<m.month+interval '1 month') AS organizations,
     (SELECT COALESCE(sum(i.amount_minor),0)::text FROM platform_invoices i WHERE i.billing_period=m.month::date AND i.currency=$3) AS billed_minor,
     (SELECT COALESCE(sum(i.amount_minor) FILTER(WHERE i.status='paid'),0)::text FROM platform_invoices i WHERE i.billing_period=m.month::date AND i.currency=$3) AS paid_minor,

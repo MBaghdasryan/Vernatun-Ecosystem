@@ -54,6 +54,9 @@ test('platform admin can create and manage organizations in the signed-in consol
   browser=await chromium.launch({headless:true,executablePath:process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE,args:['--no-sandbox']});
   const context=await browser.newContext({acceptDownloads:true});
   const page=await context.newPage();
+  const browserErrors:string[]=[];
+  page.on('pageerror',error=>browserErrors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error')browserErrors.push(message.text())});
   page.setDefaultTimeout(12000);
   await page.goto(origin+'/login');
   await page.locator('.p-auth-side .p-selectors select').first().selectOption('en');
@@ -141,6 +144,78 @@ test('platform admin can create and manage organizations in the signed-in consol
    assert.ok(csv.includes('smart_building'));
    assert.ok(csv.includes('documents'));
   }finally{await rm(file,{force:true})}
+
+  async function openSection(view:string,heading:string,inviteExpected=false){
+   const link=page.locator(`.p-sidebar nav a[href="/console/${view}"]`);
+   await link.waitFor({state:'visible'});
+   await link.click();
+   await page.getByRole('heading',{name:heading,exact:true}).first().waitFor();
+   assert.equal(await page.locator('.p-page-heading').getByRole('button',{name:'Invite user',exact:true}).count(),inviteExpected?1:0,`Invite user availability is incorrect on ${view}`);
+   assert.equal(await page.getByRole('alert').count(),0,`${view} should load without an error notice`);
+  }
+  async function checkNoNarrowOverflow(){
+   const width=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,content:document.documentElement.scrollWidth}));
+   assert.ok(width.content<=width.viewport+1,`Unexpected horizontal page overflow: ${JSON.stringify(width)} at ${page.url()}`);
+  }
+
+  await openSection('overview','Platform overview',true);
+  await openSection('analytics','Platform analytics');
+  const analyticsResponse=await page.evaluate(async()=>{
+   const response=await fetch('/api/platform/analytics?currency=AMD',{credentials:'include'});
+   return {status:response.status,body:await response.text()};
+  });
+  assert.equal(analyticsResponse.status,200,`Platform analytics API failed: ${analyticsResponse.body}`);
+  const analyticsData=JSON.parse(analyticsResponse.body);
+  assert.ok(analyticsData.monthly.every((row:{month:string})=>/^\d{4}-\d{2}-\d{2}$/.test(row.month)),'Monthly analytics dates must be ISO-formatted');
+  assert.equal(await page.locator('.p-platform-analytics').count(),1,`Platform analytics view did not render at ${page.url()}: ${await page.locator('body').innerText()} Browser errors: ${browserErrors.join(' | ')}`);
+  assert.equal(await page.getByLabel('From',{exact:true}).count(),1);
+  assert.equal(await page.getByLabel('To',{exact:true}).count(),1);
+  await page.locator('.p-platform-analytics .p-metrics').waitFor();
+  const analyticsDownload=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Export CSV',exact:true}).click();
+  assert.equal((await analyticsDownload).suggestedFilename(),'vernatun-platform-analytics.csv');
+
+  await openSection('payments','Company payments');
+  await page.getByLabel('Search by company, plan or type').fill('no matching platform payment');
+  await page.getByRole('button',{name:'Apply',exact:true}).click();
+  await page.getByText('No company payments found.',{exact:true}).waitFor();
+
+  await openSection('notifications','Platform notifications');
+  await page.getByLabel('Search notifications').last().fill('no matching platform notification');
+  await page.getByRole('button',{name:'Apply',exact:true}).click();
+  await page.getByText('No notifications found.',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Send in app',exact:true}).count(),1,'Notification compose action should be available without sending');
+
+  await openSection('email','Email campaigns');
+  await page.getByLabel('Search campaigns').fill('no matching campaign');
+  await page.getByRole('search').getByRole('button',{name:'Apply',exact:true}).click();
+  await page.getByText('No campaigns found.',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Start sending',exact:false}).count(),0,'Opening the campaign console must not start delivery');
+
+  await openSection('audit','Audit log');
+  const auditDownload=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Export CSV',exact:true}).click();
+  assert.equal((await auditDownload).suggestedFilename(),'audit-events.csv');
+
+  await openSection('invitations','Invitations',true);
+
+  await page.setViewportSize({width:390,height:844});
+  await checkNoNarrowOverflow();
+  for(const [view,heading] of [
+   ['organizations','Organization record'],
+   ['analytics','Platform analytics'],
+   ['payments','Company payments'],
+   ['notifications','Platform notifications'],
+   ['email','Email campaigns'],
+   ['audit','Audit log'],
+   ['invitations','Invitations'],
+  ] as const){
+   await page.locator('.p-menu').click();
+   await page.locator(`.p-sidebar.mobile-open nav a[href="/console/${view}"]`).click();
+   await page.getByRole('heading',{name:heading,exact:true}).first().waitFor();
+   await checkNoNarrowOverflow();
+  }
+  assert.deepEqual(browserErrors,[],'The authenticated admin session should have no browser errors');
   await context.close();
  }finally{
   await browser?.close();

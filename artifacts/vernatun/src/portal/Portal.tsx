@@ -184,7 +184,11 @@ function AuthenticatedShell(props:Parameters<typeof AppShell>[0]){
  if(product==='imtun'||!Object.keys(products).includes(product)&&primaryProduct(props.c.role_key)==='imtun')
   return <ResidentApp {...props} language={language} currency={currency} setLanguage={setLanguage}
    setCurrency={setCurrency} security={<SecurityPage c={props.c}/>}/>;
- return <WorkspaceToolsContext.Provider value={props.c}><AppShell {...props}/></WorkspaceToolsContext.Provider>;
+  // Organization module entitlements do not scope the global platform console.
+  const shellProps=props.c.role_key==='platform_admin'&&!props.c.organization_id
+   ?{...props,c:{...props.c,modules:undefined}}
+   :props;
+  return <WorkspaceToolsContext.Provider value={shellProps.c}><AppShell {...shellProps}/></WorkspaceToolsContext.Provider>;
 }
 export default function Portal(){
  const [language,setLanguageState]=useState<Language>(()=>{const l=localStorage.getItem('vernatun.language');return l==='ru'||l==='en'?l:'hy'});

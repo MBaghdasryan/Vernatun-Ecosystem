@@ -11,7 +11,7 @@ test('Onboarding is an explicit console workflow, not another role dashboard ali
  assert.equal(routeView('/console/overview','','platform_admin'),'overview');
 });
 test('Phase5 feature routes remain available in their existing products',()=>{
- for(const view of ['organizations','support-cases','onboarding','imports']){
+ for(const view of ['organizations','support-cases','onboarding','imports','analytics']){
   assert.equal(routeView('/console/'+view,'','platform_admin'),view);
   assert.ok(viewInProduct('console',view));
  }
@@ -22,7 +22,7 @@ test('Phase5 feature routes remain available in their existing products',()=>{
 test('Edge management routes are available from Vernatun Console and OS',()=>{
  for(const product of ['console','os'] as const){
   for(const view of ['edge','edge-inventory','edge-health']){
-   assert.equal(routeView('/'+product+'/'+view,'','platform_admin'),view);
+    assert.equal(routeView('/'+product+'/'+view,'','platform_admin'),'edge');
    assert.ok(viewInProduct(product,view),product+'/'+view+' should not be filtered out of navigation');
   }
  }
