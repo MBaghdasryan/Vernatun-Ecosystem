@@ -498,3 +498,17 @@ mtime_ms = 1793208362340
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/20a574b2-4746-44ec-be97-c5c732b3d6dc/df47af40-30ce-452f-9f53-35112bd930b2"
 storage_version_token = "1793208452843073"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "-wd4d0ynp9QDYkzyTyDg-"
+uri = "file://generated-artifacts/vernatun-1.0.1.zip"
+type = "unspecified"
+title = "Vernatun 1.0.1 — пакет релиза"
+description = "ZIP для Operations Center: версия 1.0.1 совместима с 1.0.0; включает API, Web и миграцию 059. В манифесте указано databaseMigrationRequired=true. Архив не применяет миграцию и не выполняет выкладку."
+logical_id = "73a787f5-7a3e-4e0c-b890-eb2a2d0c4ce0"
+content_hash = "sha256:62f1f2e7bfd1550c3b5da7cac9ec0fc5c82c37fd95417072c5d332e23199327c"
+size = 11458574
+mtime_ms = 1793276196910
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:631cf9d7-bd91-4bff-9503-cd7cb4d6e442/73a787f5-7a3e-4e0c-b890-eb2a2d0c4ce0/b5853c31-a21f-428d-8269-7811aff9155a"
+storage_version_token = "1793276247177215"
+content_type = "application/octet-stream"
