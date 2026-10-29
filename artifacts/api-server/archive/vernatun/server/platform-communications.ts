@@ -2,11 +2,13 @@ import {Router,type Request,type Response} from 'express';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {pool} from './db.js';
-import {ApiError,context,requirePermission} from './access.js';
+import {ApiError,context,requireAuth,requirePermission,type Context} from './access.js';
 import {transaction,record} from './operations.js';
 import {deliverEmail} from './email.js';
+import {activeLeasePredicate} from './lease-policy.js';
 
 export const platformCommunications=Router();
+platformCommunications.use('/broadcasts',requireAuth);
 platformCommunications.use(['/platform/communications','/platform/notifications','/platform/email'],async(req,_res,next)=>{
  try{
   const c=await context(req);
@@ -29,6 +31,14 @@ const targetSchema=z.object({
 });
 type Target=z.infer<typeof targetSchema>;
 type Recipient={user_id:string;organization_id:string;email:string};
+const managerTargetSchema=z.object({
+ type:z.enum(['building','user']),
+ id:uuid.optional(),
+}).strict().superRefine((v,ctx)=>{
+ if(v.type==='user'&&!v.id)ctx.addIssue({code:'custom',path:['id'],message:'target_id_required'});
+ if(v.type==='building'&&v.id)ctx.addIssue({code:'custom',path:['id'],message:'building_is_context_scoped'});
+});
+type ManagerTarget=z.infer<typeof managerTargetSchema>;
 const dateFilter=z.object({
  q:z.string().trim().max(160).default(''),
  from:z.string().date().optional(),
@@ -87,6 +97,111 @@ async function targetLabel(db:any,target:Target){
  if(target.type==='building')return (await db.query('SELECT o.name AS organization_name,b.name AS building_name FROM buildings b JOIN organizations o ON o.id=b.organization_id WHERE b.id=$1 AND b.organization_id=$2',[target.id,target.organizationId])).rows[0]?.organization_name+' · '+((await db.query('SELECT name FROM buildings WHERE id=$1',[target.id])).rows[0]?.name??'Building');
  return (await db.query('SELECT name,email FROM users WHERE id=$1',[target.id])).rows[0]?.name??'User';
 }
+
+async function managerBroadcastContext(req:Request):Promise<Context>{
+ const c=await requirePermission(req,'announcements.manage');
+ if(c.role_key!=='manager'||!c.organization_id||!c.building_id)throw new ApiError(403,'building_scope_required');
+ return c;
+}
+
+async function managerRecipients(db:any,c:Context,target:ManagerTarget):Promise<Recipient[]>{
+ const selectedUser=target.type==='user'?target.id:null;
+ const rows=(await db.query(`SELECT DISTINCT a.user_id,a.organization_id,lower(u.email) AS email
+  FROM role_assignments a
+  JOIN roles role ON role.key=a.role_key AND role.shell='home'
+  JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id AND m.active
+  JOIN users u ON u.id=a.user_id AND NOT u.blocked
+  LEFT JOIN units unit ON unit.id=a.unit_id AND unit.organization_id=a.organization_id
+  WHERE a.organization_id=$1 AND COALESCE(a.building_id,unit.building_id)=$2
+   AND a.role_key IN('unit_owner','renter','family') AND a.active
+   AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now())
+   AND ${activeLeasePredicate('a')}
+   AND ($3::uuid IS NULL OR a.user_id=$3)
+  ORDER BY a.user_id`,[c.organization_id,c.building_id,selectedUser])).rows as Recipient[];
+ if(target.type==='user'&&!rows.length)throw new ApiError(404,'resident_not_in_assigned_building');
+ return rows;
+}
+
+async function managerTargetLabel(db:any,c:Context,target:ManagerTarget){
+ if(target.type==='building'){
+  return (await db.query('SELECT name FROM buildings WHERE id=$1 AND organization_id=$2',[c.building_id,c.organization_id])).rows[0]?.name??'Building residents';
+ }
+ return (await db.query('SELECT name FROM users WHERE id=$1',[target.id])).rows[0]?.name??'Resident';
+}
+
+function recipientCount(rows:Recipient[]){
+ return new Set(rows.map(r=>r.user_id+':'+r.organization_id)).size;
+}
+
+platformCommunications.get('/broadcasts/inbox',async(req,res)=>{
+ const rows=(await pool.query(`SELECT n.id,n.manual_batch_id,n.custom_title,n.custom_body,n.created_at,n.read_at,
+  b.target_type,b.organization_id,b.building_id
+  FROM notifications n JOIN platform_notification_batches b ON b.id=n.manual_batch_id
+  WHERE n.user_id=$1 AND n.in_app_enabled AND (n.visible_after IS NULL OR n.visible_after<=now())
+  ORDER BY n.created_at DESC,n.id DESC LIMIT 100`,[req.user!.id])).rows;
+ res.set('Cache-Control','private, no-store').json(rows);
+});
+
+platformCommunications.get('/broadcasts/targets',async(req,res)=>{
+ const c=await managerBroadcastContext(req);
+ const residents=(await pool.query(`SELECT DISTINCT u.id,u.name,u.email
+  FROM role_assignments a JOIN roles role ON role.key=a.role_key AND role.shell='home'
+  JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id AND m.active
+  JOIN users u ON u.id=a.user_id AND NOT u.blocked
+  LEFT JOIN units unit ON unit.id=a.unit_id AND unit.organization_id=a.organization_id
+  WHERE a.organization_id=$1 AND COALESCE(a.building_id,unit.building_id)=$2
+   AND a.role_key IN('unit_owner','renter','family') AND a.active
+   AND a.starts_at<=now() AND (a.expires_at IS NULL OR a.expires_at>now())
+   AND ${activeLeasePredicate('a')}
+   AND (u.name ILIKE $3 OR u.email ILIKE $3)
+  ORDER BY u.name,u.id LIMIT 500`,
+ [c.organization_id,c.building_id,searchPattern(z.string().trim().max(100).default('').parse(req.query.q??''))])).rows;
+ const building=(await pool.query('SELECT id,name,address FROM buildings WHERE id=$1 AND organization_id=$2',[c.building_id,c.organization_id])).rows[0];
+ res.json({building,residents});
+});
+
+platformCommunications.post('/broadcasts/preview',async(req,res)=>{
+ const c=await managerBroadcastContext(req),target=managerTargetSchema.parse(req.body.target);
+ const rows=await managerRecipients(pool,c,target);
+ res.json({count:recipientCount(rows),target:await managerTargetLabel(pool,c,target)});
+});
+
+platformCommunications.post('/broadcasts',async(req,res)=>{
+ const c=await managerBroadcastContext(req);
+ const b=z.object({target:managerTargetSchema,title:z.string().trim().min(1).max(140),
+  body:z.string().trim().min(1).max(5000),expectedRecipients:z.number().int().min(1).max(20000),
+  idempotencyKey:uuid}).strict().parse(req.body);
+ const created=await transaction(async db=>{
+  const previous=(await db.query('SELECT id,recipient_count FROM platform_notification_batches WHERE idempotency_key=$1',[b.idempotencyKey])).rows[0];
+  if(previous)return {id:previous.id,recipientCount:previous.recipient_count,replayed:true};
+  const audience=await managerRecipients(db,c,b.target),count=recipientCount(audience);
+  if(count!==b.expectedRecipients)throw new ApiError(409,'audience_changed');
+  if(!count)throw new ApiError(409,'empty_audience');
+  const buildingId=c.building_id!;
+  const targetId=b.target.type==='user'?b.target.id:buildingId;
+  const batch=(await db.query(`INSERT INTO platform_notification_batches
+   (idempotency_key,target_type,target_id,organization_id,building_id,title,body,recipient_count,created_by)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+   [b.idempotencyKey,b.target.type,targetId,c.organization_id,buildingId,b.title,b.body,count,req.user!.id])).rows[0];
+  await db.query(`INSERT INTO notifications(user_id,organization_id,kind,event_code,entity_type,
+   manual_batch_id,custom_title,custom_body,dedupe_key)
+   SELECT r.user_id,r.organization_id,'platform_notice','broadcast_notice','platform_notice',
+    $3,$4,$5,NULL FROM unnest($1::uuid[],$2::uuid[]) AS r(user_id,organization_id)`,
+   [audience.map(r=>r.user_id),audience.map(r=>r.organization_id),batch.id,b.title,b.body]);
+  await record(db,req,c,'broadcast.send','platform_notification_batch',batch.id,
+   {targetType:b.target.type,recipientCount:count,buildingId});
+  return {id:batch.id,recipientCount:count,replayed:false};
+ });
+ res.status(created.replayed?200:201).json(created);
+});
+
+platformCommunications.get('/broadcasts/sent',async(req,res)=>{
+ const c=await managerBroadcastContext(req);
+ const rows=(await pool.query(`SELECT id,target_type,target_id,title,body,recipient_count,created_at
+  FROM platform_notification_batches WHERE organization_id=$1 AND building_id=$2
+  ORDER BY created_at DESC,id DESC LIMIT 100`,[c.organization_id,c.building_id])).rows;
+ res.json(rows);
+});
 
 platformCommunications.get('/platform/communications/targets/:kind',async(req,res)=>{
  const kind=z.enum(['organizations','buildings','users']).parse(req.params.kind);
@@ -187,7 +302,7 @@ platformCommunications.post('/platform/notifications',async(req,res)=>{
    : audience;
   await db.query(`INSERT INTO notifications(user_id,organization_id,kind,event_code,entity_type,
    manual_batch_id,custom_title,custom_body,dedupe_key)
-   SELECT r.user_id,r.organization_id,'platform_notice','legacy_request_event','platform_notice',
+   SELECT r.user_id,r.organization_id,'platform_notice','broadcast_notice','platform_notice',
     $3,$4,$5,NULL FROM unnest($1::uuid[],$2::uuid[]) AS r(user_id,organization_id)`,
    [recipientsForNotification.map(r=>r.user_id),recipientsForNotification.map(r=>r.organization_id),
     batch.id,b.title,b.body]);

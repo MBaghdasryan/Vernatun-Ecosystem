@@ -5,6 +5,7 @@ import {fmtDate} from './console-util';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
 import AudiencePicker,{type AudienceTarget} from './AudiencePicker';
+import Notifications from './Notifications';
 import './console.css';
 type Row=Record<string,any>;
 const S={
@@ -13,6 +14,7 @@ const S={
  hy:{title:'Հարթակի ծանուցումներ',compose:'Նոր ծանուցում',headline:'Վերնագիր',body:'Ծանուցման տեքստ',preview:'Ստուգել լսարանը',send:'Ուղարկել հավելվածում',search:'Որոնել ծանուցումներ',from:'Սկսած',to:'Մինչև',apply:'Կիրառել',export:'CSV արտահանում',refresh:'Թարմացնել',target:'Ստացողներ',recipients:'Քանակը',date:'Ստեղծվել է',empty:'Ծանուցումներ չկան։',confirm:'Ուղարկե՞լ ծանուցումը ընտրված օգտատերերին հավելվածում։',previewCount:'Նախնական ստուգման ստացողների թիվը',busy:'Ուղարկվում է…',sent:'Ծանուցումը ստեղծվել և ավելացվել է հավելվածի մուտքային բաժնում։'},
 } as const;
 export default function PlatformNotificationsConsole({c,language}:{c:RoleContext;language:Language}){
+ if(location.pathname.endsWith('/notifications'))return <Notifications c={c} language={language}/>;
  const t=S[language];const [target,setTarget]=useState<AudienceTarget>({type:'all'}),[title,setTitle]=useState(''),[body,setBody]=useState('');
  const [preview,setPreview]=useState<number>(),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState('');
  const [q,setQ]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[applied,setApplied]=useState({q:'',from:'',to:''});

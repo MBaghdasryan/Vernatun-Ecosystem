@@ -202,3 +202,78 @@ test('family role can open and read an in-app system notification',async()=>{
  }
 });
 
+test('manager broadcasts stay inside the assigned building and reach a resident inbox once',async()=>{
+ const page=await browser!.newPage();
+ try{
+  const managerAccount=seed.accounts.manager;
+  const managerAssignment=(await pool.query(`SELECT id,organization_id FROM role_assignments
+   WHERE user_id=$1 AND role_key='manager' AND active ORDER BY id LIMIT 1`,[managerAccount.id])).rows[0];
+  assert.ok(managerAssignment,'A manager assignment is required for the scoped broadcast fixture');
+  const residentBuilding=(await pool.query(`SELECT b.id FROM buildings b WHERE b.organization_id=$1
+   AND EXISTS(SELECT 1 FROM role_assignments a LEFT JOIN units u ON u.id=a.unit_id
+    WHERE a.organization_id=b.organization_id AND a.role_key IN('unit_owner','renter','family')
+     AND a.active AND COALESCE(a.building_id,u.building_id)=b.id)
+   ORDER BY b.id LIMIT 1`,[managerAssignment.organization_id])).rows[0];
+  assert.ok(residentBuilding,'A manager-organization building with a resident is required');
+  await pool.query('UPDATE role_assignments SET building_id=$1,unit_id=NULL WHERE id=$2',[residentBuilding.id,managerAssignment.id]);
+  await signIn(page,managerAccount,'');
+  const targets=await page.evaluate(async()=>{
+   const response=await fetch('/api/broadcasts/targets');
+   return {status:response.status,body:await response.json()};
+  });
+  assert.equal(targets.status,200,`Manager scoped target list failed: ${JSON.stringify(targets.body)}`);
+  assert.ok(targets.body.building?.id,'Manager target list should be limited to an assigned building');
+  assert.ok(targets.body.residents.length>0,'Test manager building should have residents');
+  const foreignAttempt=await page.evaluate(async(id:string)=>{
+   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:{type:'user',id}})});
+   return response.status;
+  },seed.accounts.second_org.id);
+  assert.ok(foreignAttempt===404||foreignAttempt===403,'Manager cannot target an unrelated account');
+  const preview=await page.evaluate(async()=>{
+   const response=await fetch('/api/broadcasts/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:{type:'building'}})});
+   return {status:response.status,body:await response.json()};
+  });
+  assert.equal(preview.status,200);
+  assert.equal(preview.body.count,targets.body.residents.length);
+  const idempotencyKey=randomUUID();
+  const sent=await page.evaluate(async({expectedRecipients,idempotencyKey}:{expectedRecipients:number;idempotencyKey:string})=>{
+   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    target:{type:'building'},title:'Isolated broadcast QA',body:'Test-only resident notice.',expectedRecipients,idempotencyKey,
+   })});
+   return {status:response.status,body:await response.json()};
+  },{expectedRecipients:preview.body.count,idempotencyKey});
+  assert.equal(sent.status,201);
+  const replay=await page.evaluate(async({expectedRecipients,idempotencyKey}:{expectedRecipients:number;idempotencyKey:string})=>{
+   const response=await fetch('/api/broadcasts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    target:{type:'building'},title:'Isolated broadcast QA',body:'Test-only resident notice.',expectedRecipients,idempotencyKey,
+   })});
+   return {status:response.status,body:await response.json()};
+  },{expectedRecipients:preview.body.count,idempotencyKey});
+  assert.equal(replay.body.id,sent.body.id);
+  assert.equal(replay.body.replayed,true);
+  const badScope=await pool.query(`SELECT count(*) FROM notifications n
+   JOIN platform_notification_batches b ON b.id=n.manual_batch_id
+   WHERE n.manual_batch_id=$1 AND NOT EXISTS(
+    SELECT 1 FROM role_assignments a LEFT JOIN units u ON u.id=a.unit_id
+    WHERE a.user_id=n.user_id AND a.organization_id=n.organization_id AND a.active
+     AND a.role_key IN('unit_owner','renter','family') AND a.organization_id=b.organization_id
+     AND COALESCE(a.building_id,u.building_id)=b.building_id
+   )`,[sent.body.id]);
+  assert.equal(Number(badScope.rows[0].count),0,'Every delivered recipient must be a resident in the scoped building');
+  const recipient=Object.values(seed.accounts).find((a:any)=>targets.body.residents.some((r:Record<string,any>)=>r.id===a.id));
+  if(recipient){
+   const inboxPage=await browser!.newPage();
+   try{
+    await signIn(inboxPage,recipient,'');
+    const inbox=await inboxPage.evaluate(async()=>await (await fetch('/api/broadcasts/inbox')).json());
+    assert.ok(inbox.some((row:Record<string,any>)=>row.manual_batch_id===sent.body.id),'A scoped resident should receive the in-app broadcast');
+   }finally{await inboxPage.close()}
+  }else{
+   const inboxStatus=await page.evaluate(async()=> (await fetch('/api/broadcasts/inbox')).status);
+   assert.equal(inboxStatus,200,'Authenticated inbox endpoint should be available to managers too');
+  }
+ }finally{
+  await page.close();
+ }
+});
+
