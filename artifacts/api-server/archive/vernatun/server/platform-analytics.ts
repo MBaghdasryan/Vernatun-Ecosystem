@@ -84,9 +84,12 @@ function csvCell(value:unknown){
  return '"'+safe.replace(/"/g,'""')+'"';
 }
 function analyticsCsv(res:Response,data:Awaited<ReturnType<typeof loadAnalytics>>){
- const {period,metrics,monthly}=data;
+ const {generatedAt,period,metrics,monthly}=data;
  const rows:unknown[][]=[
-  ['metric','value','currency','from','to'],
+   ['report_generated_at_utc',generatedAt],
+   ['reporting_timezone','UTC'],
+   [],
+   ['metric','value','currency','from','to'],
   ['organizations',metrics.total,'',period.from,period.to],
   ['active_organizations',metrics.active,'',period.from,period.to],
   ['pilot_organizations',metrics.pilot,'',period.from,period.to],

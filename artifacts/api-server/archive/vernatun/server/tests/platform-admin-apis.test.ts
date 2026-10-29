@@ -180,11 +180,23 @@ test('platform analytics and server CSV preserve month boundaries in a non-UTC s
   assert.deepEqual(json.data.monthly.map((month:any)=>month.billed_minor),[String(amounts.lower),String(amounts.upper)]);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.paid_minor),[String(amounts.lower),'0']);
 
+  const exportStartedAt=Date.now();
   const csv=await platform.raw(`/platform/analytics/export.csv?${query}`);
+  const exportFinishedAt=Date.now();
   assert.equal(csv.status,200);
   assert.match(csv.contentType,/text\/csv/);
   const rows=csv.text.replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/).map(parseCsvRow);
-  const metricRows=rows.slice(1,rows.findIndex(row=>row[0]===''));
+  const metricHeader=rows.findIndex(row=>row[0]==='metric');
+  assert.ok(metricHeader>0,'CSV metadata must precede the report data');
+  const metadata=new Map(rows.slice(0,metricHeader).filter(row=>row.length>=2).map(row=>[row[0],row[1]]));
+  const exportedAt=metadata.get('report_generated_at_utc');
+  assert.ok(exportedAt,'CSV must include the API-generated report timestamp');
+  assert.equal(new Date(exportedAt).toISOString(),exportedAt,'export timestamp must be ISO-formatted UTC');
+  assert.ok(Date.parse(exportedAt)>=exportStartedAt&&Date.parse(exportedAt)<=exportFinishedAt,
+   'export timestamp must be generated during this export request');
+  assert.equal(metadata.get('reporting_timezone'),'UTC');
+  const metricEnd=rows.findIndex((row,index)=>index>metricHeader&&row[0]==='');
+  const metricRows=rows.slice(metricHeader+1,metricEnd);
   const metricValues=new Map(metricRows.map(row=>[row[0],row[1]]));
   const metricFields:{
    [csvName:string]:keyof typeof json.data.metrics
