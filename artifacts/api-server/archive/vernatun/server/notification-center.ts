@@ -104,7 +104,10 @@ async function list(req:any,id?:string){const options=await contexts(req.user.id
   return {n,t,task};
  }));
 }
-notificationCenter.get('/notifications',async(req,res)=>res.json((await list(req)).map(({n,t,task})=>({id:n.id,kind:n.kind,event_code:n.code,category:n.category,critical:n.critical,created_at:n.created_at,read_at:n.read_at,manual_batch_id:n.manual_batch_id??null,custom_title:n.custom_title??null,custom_body:n.custom_body??null,platform_task:task,access_denied:!t.length,targets:t.map(({c})=>({id:c.id,role_key:c.role_key,organization_name:c.organization_name,building_name:c.building_name,unit_number:c.unit_number}))}))));
+notificationCenter.get('/notifications',async(req,res)=>res.json((await list(req)).map(({n,t,task})=>{
+ const accessDenied=!t.length,hideTaskSummary=n.entity_type==='platform_task'&&accessDenied;
+ return {id:n.id,kind:n.kind,event_code:n.code,category:n.category,critical:n.critical,created_at:n.created_at,read_at:n.read_at,manual_batch_id:n.manual_batch_id??null,custom_title:hideTaskSummary?null:n.custom_title??null,custom_body:hideTaskSummary?null:n.custom_body??null,platform_task:task,access_denied:accessDenied,targets:t.map(({c})=>({id:c.id,role_key:c.role_key,organization_name:c.organization_name,building_name:c.building_name,unit_number:c.unit_number}))};
+})));
 notificationCenter.get('/notifications/unread-count',async(req,res)=>{
  const unread=Number((await pool.query('SELECT count(*) FROM notifications WHERE user_id=$1 AND in_app_enabled AND read_at IS NULL AND (visible_after IS NULL OR visible_after<=now())',[req.user!.id])).rows[0].count);
  res.set('Cache-Control','private, no-store').json({unread});

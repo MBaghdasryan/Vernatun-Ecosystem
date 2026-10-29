@@ -162,6 +162,8 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
 
  const notices=await platform.call('/notifications');
  const visible=notices.data.find((item:any)=>item.id===first.id);
+ assert.equal(visible.custom_title,create.data.title);
+ assert.equal(visible.custom_body,'Status: todo. Due: 2026-12-20');
  assert.equal(visible.platform_task.status,'todo');
  assert.equal(visible.platform_task.dueOn,'2026-12-20');
  const destination=await platform.call(`/notifications/${first.id}/destination?contextId=${platformUserId}`);
@@ -194,6 +196,8 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
  assert.equal(supportNotice.event_code,'platform_task_assigned');
  const formerNotice=(await platform.call('/notifications')).data.find((item:any)=>item.id===first.id);
  assert.equal(formerNotice.access_denied,true);
+ assert.equal(formerNotice.custom_title,null);
+ assert.equal(formerNotice.custom_body,null);
  assert.equal(formerNotice.platform_task,null);
  assert.deepEqual(formerNotice.targets,[]);
  assert.equal((await platform.call(`/notifications/${first.id}/destination`)).status,403);
@@ -228,12 +232,17 @@ test('platform task alerts and direct reads require an active platform membershi
   const active=await platform.call(`/notifications/${notice.id}/destination`);
   assert.equal(active.status,200);
   assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,200);
-  assert.equal((await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id)?.platform_task?.id,created.data.id);
+   const activeNotice=(await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id);
+  assert.equal(activeNotice.platform_task?.id,created.data.id);
+  assert.equal(activeNotice.custom_title,created.data.title);
+  assert.equal(activeNotice.custom_body,'Status: todo. Due: —');
 
   await pool.query("UPDATE role_assignments SET starts_at=now()-interval '2 days',expires_at=now()-interval '1 day' WHERE id=$1",[assignment.id]);
   assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,404);
   const expired=(await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id);
   assert.equal(expired.access_denied,true);
+  assert.equal(expired.custom_title,null);
+  assert.equal(expired.custom_body,null);
   assert.equal(expired.platform_task,null);
   assert.deepEqual(expired.targets,[]);
   assert.equal((await platform.call(`/notifications/${notice.id}/destination`)).status,403);
@@ -242,6 +251,8 @@ test('platform task alerts and direct reads require an active platform membershi
   assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,404);
   const suspended=(await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id);
   assert.equal(suspended.access_denied,true);
+  assert.equal(suspended.custom_title,null);
+  assert.equal(suspended.custom_body,null);
   assert.equal(suspended.platform_task,null);
   assert.deepEqual(suspended.targets,[]);
   assert.equal((await platform.call(`/notifications/${notice.id}/destination`)).status,403);
