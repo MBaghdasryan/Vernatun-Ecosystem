@@ -39,7 +39,7 @@ The configurable billing framework is implemented in source code; it is not prod
 
 ### Not enabled or not fully accepted
 
-- Migration 064 has been exercised by isolated API tests only. It has **not** been applied to the shared development database or Production. The API returns `billing_configuration_migration_required` until the migration exists.
+- Development already had migration 064 applied with its original checksum. Its registered SQL was restored unchanged after finding a later local edit, and the manual-charge table was separated into additive migration 065. The normal post-merge setup applied 065 to development and completed successfully. Production was not changed.
 - No real payment provider was configured or tested. Provider setup, live collection, and settlement verification remain separate work.
 - The tested end-to-end calculation path uses area billing and manual charges; the other supported calculation methods, all exception combinations, all role/language/device combinations, and real Android/iOS acceptance still need broader test coverage.
 - No Production deployment or database migration was performed as part of this implementation.
