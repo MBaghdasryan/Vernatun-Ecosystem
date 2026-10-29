@@ -97,15 +97,28 @@ test('public session and login remain available beside the protected platform AP
  assert.equal((await new Client().call('/platform/email/campaigns')).status,401);
 });
 
-test('platform analytics and server CSV include only the selected currency',async()=>{
+test('platform analytics and server CSV preserve month boundaries in a non-UTC session',async()=>{
  const adminId=seeded.accounts.platform_admin.id;
  const from='2040-06-15',to='2040-07-14';
- await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgA,'2040-05-31T22:00:00.000Z']);
- await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgB,'2040-06-30T23:59:59.999Z']);
- await pool.query(`INSERT INTO support_cases(organization_id,created_by,subject,body,created_at)
-  VALUES($1,$3,$2,'Timezone boundary fixture','2040-05-31T22:00:00.000Z'),
-        ($1,$3,$4,'Timezone boundary fixture','2040-06-30T23:59:59.999Z')`,
-  [orgA,`Before month boundary ${randomUUID()}`,adminId,`End month boundary ${randomUUID()}`]);
+ const monthBoundaryInstants=[
+  '2040-05-31T23:59:59.999Z',
+  '2040-05-31T22:00:00.000Z',
+  '2040-06-01T00:00:00.000Z',
+  '2040-06-15T12:00:00.000Z',
+  '2040-06-30T23:59:59.999Z',
+  '2040-07-01T00:00:00.000Z',
+  '2040-07-31T23:59:59.999Z',
+  '2040-08-01T00:00:00.000Z',
+ ];
+ for(const [index,createdAt] of monthBoundaryInstants.entries()){
+  if(index===0)await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgA,createdAt]);
+  else if(index===1)await pool.query('UPDATE organizations SET created_at=$2 WHERE id=$1',[orgB,createdAt]);
+  else await pool.query('INSERT INTO organizations(name,created_at) VALUES($1,$2)',
+   [`Month-boundary analytics ${randomUUID()}`,createdAt]);
+  await pool.query(`INSERT INTO support_cases(organization_id,created_by,subject,body,created_at)
+   VALUES($1,$2,$3,'Month-boundary analytics fixture',$4)`,
+   [orgA,adminId,`Month-boundary support ${index} ${randomUUID()}`,createdAt]);
+ }
  const currencies={
   AMD:{lower:100,upper:200,before:1000,after:2000},
   RUB:{lower:10,upper:20,before:100,after:200},
@@ -159,8 +172,8 @@ test('platform analytics and server CSV include only the selected currency',asyn
   assert.equal(json.data.metrics.invoiceCount,2);
   assert.equal(json.data.metrics.openInvoices,1);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.month),['2040-06-01','2040-07-01']);
-   assert.deepEqual(json.data.monthly.map((month:any)=>month.organizations),[1,0]);
-   assert.deepEqual(json.data.monthly.map((month:any)=>month.support_cases),[1,0]);
+   assert.deepEqual(json.data.monthly.map((month:any)=>month.organizations),[3,2]);
+   assert.deepEqual(json.data.monthly.map((month:any)=>month.support_cases),[3,2]);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.billed_minor),[String(amounts.lower),String(amounts.upper)]);
   assert.deepEqual(json.data.monthly.map((month:any)=>month.paid_minor),[String(amounts.lower),'0']);
 
