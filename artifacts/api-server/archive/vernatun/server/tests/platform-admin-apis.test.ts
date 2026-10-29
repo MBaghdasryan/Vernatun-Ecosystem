@@ -166,6 +166,9 @@ test('platform analytics and server CSV preserve month boundaries in a non-UTC s
   const query=`from=${from}&to=${to}&currency=${currency}`;
   const json=await platform.call(`/platform/analytics?${query}`);
   assert.equal(json.status,200);
+  assert.equal(typeof json.data.generatedAt,'string');
+  assert.ok(Number.isFinite(Date.parse(json.data.generatedAt)));
+  assert.equal(new Date(json.data.generatedAt).toISOString(),json.data.generatedAt);
   assert.deepEqual(json.data.period,{from,to,currency});
   assert.equal(json.data.metrics.billedMinor,String(amounts.lower+amounts.upper));
   assert.equal(json.data.metrics.paidMinor,String(amounts.lower));

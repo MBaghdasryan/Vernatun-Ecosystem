@@ -66,6 +66,7 @@ async function loadAnalytics(input:unknown){
    ORDER BY m.month`,[range.from,range.to,range.currency]),
  ]);
  return {
+  generatedAt:new Date().toISOString(),
   period:range,
   metrics:{...organizations.rows[0],buildings:Number(buildings.rows[0].total),
    billedMinor:invoices.rows[0].billed_minor,paidMinor:invoices.rows[0].paid_minor,

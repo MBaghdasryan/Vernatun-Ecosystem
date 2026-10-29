@@ -166,14 +166,16 @@ test('platform admin can create and manage organizations in the signed-in consol
   });
   assert.equal(analyticsResponse.status,200,`Platform analytics API failed: ${analyticsResponse.body}`);
   const analyticsData=JSON.parse(analyticsResponse.body);
+  assert.ok(Number.isFinite(Date.parse(analyticsData.generatedAt)),'Analytics response should include its generation time');
   assert.ok(analyticsData.monthly.every((row:{month:string})=>/^\d{4}-\d{2}-\d{2}$/.test(row.month)),'Monthly analytics dates must be ISO-formatted');
   assert.equal(await page.locator('.p-platform-analytics').count(),1,`Platform analytics view did not render at ${page.url()}: ${await page.locator('body').innerText()} Browser errors: ${browserErrors.join(' | ')}`);
   assert.equal(await page.getByLabel('From',{exact:true}).count(),1);
   assert.equal(await page.getByLabel('To',{exact:true}).count(),1);
   await page.locator('.p-platform-analytics .p-metrics').waitFor();
+  assert.equal(await page.locator('.p-platform-analytics time').count(),1,'The analytics report should show when its data was generated');
   const analyticsDownload=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export CSV',exact:true}).click();
-  assert.equal((await analyticsDownload).suggestedFilename(),'vernatun-platform-analytics.csv');
+  assert.equal((await analyticsDownload).suggestedFilename(),'vernatun-platform-analytics-UTC.csv');
 
   await openSection('payments','Company payments');
   await page.getByLabel('Search by company, plan or type').fill('no matching platform payment');
