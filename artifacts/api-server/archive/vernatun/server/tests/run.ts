@@ -91,6 +91,8 @@ const checks=process.argv.includes('--org-console-only')
  ? [['--test','server/tests/phase7.test.ts']]
  : process.argv.includes('--notifications-only')
  ? [['--test','server/tests/notification-center.test.ts']]
+ : process.argv.includes('--communications-only')
+ ? [['--test','server/tests/platform-communications.test.ts']]
  : process.argv.includes('--inventory-only')
  ? [['--test','server/tests/storage-inventory.test.ts']]
  : process.argv.includes('--delivery-only')

@@ -12,6 +12,7 @@
     "test:phase8": "cd archive/vernatun && tsx server/tests/run.ts --phase8-only",
     "test:phase7": "cd archive/vernatun && tsx server/tests/run.ts --phase7-only",
     "test:notifications": "cd archive/vernatun && tsx server/tests/run.ts --notifications-only",
+    "test:communications": "cd archive/vernatun && tsx server/tests/run.ts --communications-only",
     "test:platform-admin-apis": "cd archive/vernatun && tsx server/tests/run.ts --platform-admin-apis-only",
     "test:phase6-files": "cd archive/vernatun && tsx server/tests/run.ts --phase6-files-only",
     "test:core": "cd archive/vernatun && tsx server/tests/run.ts --core-only",
