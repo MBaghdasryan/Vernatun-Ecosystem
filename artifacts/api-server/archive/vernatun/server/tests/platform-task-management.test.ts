@@ -201,3 +201,42 @@ test('platform task assignment, reassignment, deadline notices use channel prefe
  assert.ok(audit.some((row:any)=>row.action==='platform.task.deadline_changed'&&row.details.toDueOn==='2026-12-27'));
  assert.ok(audit.some((row:any)=>row.action==='platform.task.reassigned'&&row.details.newAssigneeId===supportUserId));
 });
+
+test('platform task alerts and direct reads require an active platform membership',async()=>{
+ const assignment=(await pool.query(`SELECT id,active,assignment_status,starts_at,expires_at FROM role_assignments
+  WHERE user_id=$1 AND organization_id IS NULL AND role_key='platform_admin'`,[platformUserId])).rows[0];
+ assert.ok(assignment);
+ const created=await platform.call('/platform/tasks','POST',{
+  title:'Membership access regression',description:'Verify task visibility follows role status.',assigneeId:platformUserId,
+ });
+ assert.equal(created.status,201);
+ const notice=(await pool.query(`SELECT id FROM notifications WHERE user_id=$1 AND entity_type='platform_task' AND entity_id=$2`,
+  [platformUserId,created.data.id])).rows[0];
+ assert.ok(notice);
+
+ try{
+  const active=await platform.call(`/notifications/${notice.id}/destination`);
+  assert.equal(active.status,200);
+  assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,200);
+  assert.equal((await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id)?.platform_task?.id,created.data.id);
+
+  await pool.query("UPDATE role_assignments SET starts_at=now()-interval '2 days',expires_at=now()-interval '1 day' WHERE id=$1",[assignment.id]);
+  assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,404);
+  const expired=(await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id);
+  assert.equal(expired.access_denied,true);
+  assert.equal(expired.platform_task,null);
+  assert.deepEqual(expired.targets,[]);
+  assert.equal((await platform.call(`/notifications/${notice.id}/destination`)).status,403);
+
+  await pool.query(`UPDATE role_assignments SET starts_at=now()-interval '2 days',expires_at=NULL,assignment_status='suspended' WHERE id=$1`,[assignment.id]);
+  assert.equal((await platform.call('/platform/tasks/'+created.data.id)).status,404);
+  const suspended=(await platform.call('/notifications')).data.find((item:any)=>item.id===notice.id);
+  assert.equal(suspended.access_denied,true);
+  assert.equal(suspended.platform_task,null);
+  assert.deepEqual(suspended.targets,[]);
+  assert.equal((await platform.call(`/notifications/${notice.id}/destination`)).status,403);
+ }finally{
+  await pool.query(`UPDATE role_assignments SET active=$2,assignment_status=$3,starts_at=$4,expires_at=$5 WHERE id=$1`,
+   [assignment.id,assignment.active,assignment.assignment_status,assignment.starts_at,assignment.expires_at]);
+ }
+});
