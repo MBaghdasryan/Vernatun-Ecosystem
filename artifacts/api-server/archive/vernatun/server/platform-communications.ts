@@ -291,8 +291,18 @@ platformCommunications.post('/platform/notifications',async(req,res)=>{
   body:z.string().trim().min(1).max(5000),expectedRecipients:z.number().int().min(1).max(20000),
   idempotencyKey:uuid}).strict().parse(req.body);
  const created=await transaction(async db=>{
-  const previous=(await db.query('SELECT id,recipient_count FROM platform_notification_batches WHERE idempotency_key=$1',[b.idempotencyKey])).rows[0];
-  if(previous)return {id:previous.id,recipientCount:previous.recipient_count,replayed:true};
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[b.idempotencyKey]);
+  const previous=(await db.query(`SELECT id,recipient_count,created_by,target_type,target_id,organization_id,building_id,title,body
+   FROM platform_notification_batches WHERE idempotency_key=$1`,[b.idempotencyKey])).rows[0];
+  if(previous){
+   if(previous.created_by!==req.user!.id||previous.target_type!==b.target.type||
+    previous.target_id!==(b.target.id??null)||
+    previous.organization_id!==(b.target.type==='organization'?b.target.id:b.target.organizationId??null)||
+    previous.building_id!==(b.target.type==='building'?b.target.id:null)||
+    previous.title!==b.title||previous.body!==b.body)
+    throw new ApiError(409,'idempotency_conflict');
+   return {id:previous.id,recipientCount:previous.recipient_count,replayed:true};
+  }
   const audience=await recipients(db,b.target);
   const count=b.target.type==='all'?new Set(audience.map(r=>r.email)).size:
    b.target.type==='building'||b.target.type==='organization'?new Set(audience.map(r=>r.user_id+':'+r.organization_id)).size:
@@ -378,8 +388,18 @@ platformCommunications.post('/platform/email/campaigns',async(req,res)=>{
   body:z.string().trim().min(1).max(10000),expectedRecipients:z.number().int().min(1).max(5000),
   idempotencyKey:uuid}).strict().parse(req.body);
  const created=await transaction(async db=>{
-  const previous=(await db.query('SELECT id,recipient_count,status FROM platform_email_campaigns WHERE idempotency_key=$1',[b.idempotencyKey])).rows[0];
-  if(previous)return {...previous,replayed:true};
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[b.idempotencyKey]);
+  const previous=(await db.query(`SELECT id,recipient_count,status,created_by,target_type,target_id,organization_id,building_id,subject,body_text
+   FROM platform_email_campaigns WHERE idempotency_key=$1`,[b.idempotencyKey])).rows[0];
+  if(previous){
+   if(previous.created_by!==req.user!.id||previous.target_type!==b.target.type||
+    previous.target_id!==(b.target.id??null)||
+    previous.organization_id!==(b.target.type==='organization'?b.target.id:b.target.organizationId??null)||
+    previous.building_id!==(b.target.type==='building'?b.target.id:null)||
+    previous.subject!==b.subject||previous.body_text!==b.body)
+    throw new ApiError(409,'idempotency_conflict');
+   return {id:previous.id,recipient_count:previous.recipient_count,status:previous.status,replayed:true};
+  }
   const audience=await recipients(db,b.target);
   const distinct=[...new Map(audience.map(r=>[r.email.toLowerCase(),r])).values()];
   if(distinct.length!==b.expectedRecipients)throw new ApiError(409,'audience_changed');

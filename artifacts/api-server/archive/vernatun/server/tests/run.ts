@@ -61,6 +61,8 @@ const checks=process.argv.includes('--org-console-only')
  ? [['--test','server/tests/role-dashboards.test.ts']]
  : process.argv.includes('--platform-support-meetings-only')
  ? [['--test','server/tests/platform-support-meetings.test.ts']]
+  : process.argv.includes('--platform-admin-apis-only')
+  ? [['--test','server/tests/platform-admin-apis.test.ts']]
  : process.argv.includes('--iam-only')
  ? [['--test','server/tests/assignment-management.test.ts']]
  : process.argv.includes('--iam-template-only')

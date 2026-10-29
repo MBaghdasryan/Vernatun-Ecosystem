@@ -9,6 +9,12 @@ Vernatun is a property-management platform with four user-facing products: Conso
 
 **How to apply:** Reuse the shared business model and preserve permissions from the active server-resolved role and scope. Switching product surfaces must not grant additional authority.
 
+For scoped staff actions, a role is not enough: resolve an active organization/building assignment and validate every requested target on the server. Test manager actions with a real scoped assignment, not a role-only account.
+
+**Why:** A manager session without building context is correctly denied; role membership must never imply organization-wide audience or device authority.
+
+**How to apply:** Build tests with explicit active assignments, then verify foreign organizations, buildings, and residents are rejected before any side effect.
+
 Extend the resident property listings and inquiries in place; do not create a parallel marketplace. Photos and viewing requests must not disclose unrelated documents or contacts, or publish listings automatically.
 
 **Why:** The user explicitly required preserving the existing moderated marketplace and its building opt-in/privacy boundary.

@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {Download,RefreshCw,Building2,Layers,Headset,Receipt} from 'lucide-react';
-import {request} from './client';
+import {downloadFile,request} from './client';
 import {fromMinor} from './console-util';
 import type {Language} from './i18n';
 import type {RoleContext} from './types';
@@ -23,9 +23,7 @@ export default function PlatformAnalyticsConsole({c,language}:{c:RoleContext;lan
  const money=(minor:string)=>`${fromMinor(String(minor))} ${data?.period.currency??currency}`;
  const mixTotal=(data?.companyTypes??[]).reduce((n,r)=>n+r.count,0);
  const monthLabel=(iso:string)=>new Intl.DateTimeFormat(language,{month:'short',year:'2-digit'}).format(new Date(`${iso.slice(0,7)}-01T12:00:00Z`));
- function exportCsv(){if(!data)return;const rows=[['metric','value'],['period_from',data.period.from],['period_to',data.period.to],['organizations',data.metrics.total],['active_organizations',data.metrics.active],['pilot_organizations',data.metrics.pilot],['buildings',data.metrics.buildings],['billed_minor',data.metrics.billedMinor],['paid_minor',data.metrics.paidMinor],['open_invoices',data.metrics.openInvoices],['open_support_cases',data.metrics.openSupport],['urgent_support_cases',data.metrics.urgentSupport],['onboarding_completed',data.metrics.onboardingCompleted],['onboarding_overdue',data.metrics.onboardingOverdue],[],['month','new_organizations','billed_minor','paid_minor','support_cases'],...months.map(m=>[m.month,m.organizations,m.billed_minor,m.paid_minor,m.support_cases])];
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return'"'+(/^[\s]*[=+@-]/.test(s)?`'${s}`:s).replace(/"/g,'""')+'"'}).join(',')).join('\r\n');
-  const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='vernatun-platform-analytics.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+  async function exportCsv(){if(!data)return;try{const q=new URLSearchParams(applied),blob=await downloadFile('/platform/analytics/export.csv?'+q.toString()),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='vernatun-platform-analytics.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){setError(String((e as Error).message??t.error))}}
  const barTitle=useMemo(()=>months.map(m=>`${monthLabel(m.month)}: ${t.newCompanies} ${m.organizations}; ${t.billed} ${money(m.billed_minor)}; ${t.paid} ${money(m.paid_minor)}; ${t.supportCases} ${m.support_cases}`).join('\n'),[months,language,t,currency,data?.period.currency]);
  return <div className="p-business cx-wrap p-platform-analytics">
   <section className="p-card cx-form"><div className="cx-row" style={{justifyContent:'space-between'}}><div><h2>{t.title}</h2><p className="p-muted-note">{t.subtitle}</p></div><div className="cx-row">
