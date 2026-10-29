@@ -65,8 +65,15 @@ const expectedObjects=[
 
 async function migrationFiles(through?:string):Promise<Migration[]>{
  if(through&&(!/^\d{3}$/.test(through)||config.NODE_ENV!=='test'))throw new Error('Partial migration is for isolated tests only');
+ const compareNames=(left:string,right:string)=>{
+  // This notification migration predates the discussion migration despite
+  // sharing its numeric prefix; production already records it first.
+  if(left==='063_platform_task_notifications.sql'&&right==='063_platform_task_discussion.sql')return -1;
+  if(left==='063_platform_task_discussion.sql'&&right==='063_platform_task_notifications.sql')return 1;
+  return left<right?-1:left>right?1:0;
+ };
  const names=(await listFiles(new URL('./migrations/',import.meta.url)))
-  .filter(name=>/^\d{3}_[a-z0-9_-]+\.sql$/i.test(name)&&(!through||name.slice(0,3)<=through)).sort();
+  .filter(name=>/^\d{3}_[a-z0-9_-]+\.sql$/i.test(name)&&(!through||name.slice(0,3)<=through)).sort(compareNames);
  return Promise.all(names.map(async name=>{
   const sql=await readFile(new URL('./migrations/'+name,import.meta.url),'utf8');
   return {name,sql,checksum:createHash('sha256').update(sql).digest('hex')};

@@ -13,6 +13,8 @@ This is a read-only preparation plan, not authorization to run a production migr
 
 The live production ledger and its pending list are not available from this Replit workspace. Read them from the Coolify API container; do not assume which migrations are pending.
 
+The latest Coolify preflight shared by the operator stopped at `063_platform_task_notifications.sql`. The release contains a later-added `063_platform_task_discussion.sql`, which alphabetical sorting placed before the already-applied notification migration. The migration runner now preserves the historical order: notifications first, then discussion. After deploying this runner, the expected pending sequence is discussion, 064, and 065 if the production ledger and schema are otherwise unchanged; confirm this with the new plan output.
+
 ## Prepare the Coolify release
 
 The migration-lineage correction and migration 065 must first be included in the API source revision used by Coolify. Build/deploy that API package without applying database changes; this plan does not deploy it. Then verify the packaged files below before querying the production ledger.
