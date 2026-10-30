@@ -43,6 +43,7 @@ export async function referencedFiles(db:PoolClient|Client,schema:string){
   const hasAvatars=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='resident_avatars'",[schema])).rowCount;
   const hasListings=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='resident_listing_photos'",[schema])).rowCount;
   const hasPlatformTaskAttachments=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='platform_task_attachments'",[schema])).rowCount;
+  const hasEdgeCommands=(await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='edge_commands'",[schema])).rowCount;
   return (await db.query(`
     SELECT 'photos' AS kind,storage_key AS key,'image/jpeg' AS media_type FROM ${s}.request_photos
     ${hasAvatars?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.resident_avatars`:''}
@@ -51,5 +52,7 @@ export async function referencedFiles(db:PoolClient|Client,schema:string){
     ${hasListings?`UNION SELECT 'photos',storage_key,'image/jpeg' FROM ${s}.resident_listing_photos`:''}
     UNION SELECT 'documents',storage_key,media_type FROM ${s}.documents
     ${hasPlatformTaskAttachments?`UNION SELECT 'documents',storage_key::text,media_type FROM ${s}.platform_task_attachments`:''}
+    ${hasEdgeCommands?`UNION SELECT 'photos',source_context->'cameraSnapshot'->>'storageKey','image/jpeg'
+      FROM ${s}.edge_commands WHERE source_context->'cameraSnapshot'->>'storageKey' IS NOT NULL`:''}
     ORDER BY kind,key,media_type`)).rows as {kind:'photos'|'documents';key:string;media_type:string}[];
 }

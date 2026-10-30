@@ -8,6 +8,7 @@ import {logger} from '../../../src/lib/logger.js';
 import {isEdgeConnected,sendEdgeMessage} from './edge-sockets.js';
 import {cameraMediaGateway} from './camera-media-gateway.js';
 import type {MediaViewerToken} from './camera-media-gateway.js';
+import {readPrivateFile} from './private-files.js';
 
 export const cameraMedia=express.Router();
 const uuid=z.string().uuid();
@@ -55,7 +56,9 @@ function streamState(row:CameraRow){
   if(deviceOnline===false)return {available:false,state:'CAMERA_OFFLINE' as const,reason:'camera_offline'};
   if(deviceOnline!==true)return {available:false,state:'VIDEO_UNAVAILABLE' as const,reason:'camera_status_unknown'};
  if(!fresh||telemetry.videoLoss===true)return {available:false,state:'VIDEO_UNAVAILABLE' as const,reason:telemetry.videoLoss?'video_loss':'camera_telemetry_stale'};
- const capable=row.media_protocol_version>=1&&row.media_capabilities.cameraPublisher===true&&row.media_capabilities.livekitProvider===true;
+ const reportedCameraIds=Array.isArray(row.media_capabilities.cameraDeviceIds)?row.media_capabilities.cameraDeviceIds:[];
+ const capable=row.media_protocol_version>=1&&row.media_capabilities.cameraPublisher===true
+  &&row.media_capabilities.livekitProvider===true&&reportedCameraIds.includes(row.edge_device_id);
  if(!capable)return {available:false,state:'VIDEO_UNAVAILABLE' as const,reason:'edge_media_agent_not_ready'};
  return {available:true,state:'READY' as const,reason:'ready_to_start'};
 }
@@ -199,11 +202,16 @@ cameraMedia.post('/camera-media/cameras/:cameraId/sessions',async(req,res)=>{
    await cameraMediaGateway.createRoom(result.session.room_name);
     const publisher=await cameraMediaGateway.createPublisherSession(result.session.room_name,result.session.edge_participant_identity);
    const sent=sendEdgeMessage(row.edge_node_id,{
-     type:'MEDIA_SESSION_START',protocol:'WEBRTC',provider:'livekit',sessionId:result.session.id,
-     deviceId:row.edge_device_id,cameraId:row.edge_device_id,edgeDeviceId:row.edge_device_id,
-     roomName:result.session.room_name,serverUrl:cameraMediaGateway.serverUrl,
-     publishUrl:publisher.publishUrl,publisherToken:publisher.publisherToken,
-     expiresAt:new Date(new Date(result.session.created_at).getTime()+4*60*60*1000).toISOString(),iceServers:[],
+    type:'MEDIA_SESSION_START',
+    session:{
+     sessionId:result.session.id,
+     deviceId:row.edge_device_id,
+     protocol:'WEBRTC',
+     publishUrl:publisher.publishUrl,
+     publisherToken:publisher.publisherToken,
+     expiresAt:new Date(new Date(result.session.created_at).getTime()+4*60*60*1000).toISOString(),
+     iceServers:publisher.iceServers??[],
+    },
    });
    if(!sent)throw new Error('edge_disconnected');
   }
@@ -270,6 +278,25 @@ cameraMedia.delete('/camera-media/sessions/:sessionId',async(req,res)=>{
  if(!viewer)throw new ApiError(404,'not_found');
  if(!(await cameraRows(c,viewer.camera_id)).length)throw new ApiError(403,'camera_access_revoked');
  res.json(await stopCameraSession(sessionId,viewerId,req.user!.id,c,req));
+});
+
+cameraMedia.get('/edge/commands/:commandId/snapshot',async(req,res)=>{
+ const commandId=uuid.parse(req.params.commandId);
+ const c=await requirePermission(req,'device.camera.snapshot');
+ if(!c.organization_id)throw new ApiError(403,'organization_required');
+ const command=(await pool.query(`SELECT device_inventory_id,source_context
+  FROM edge_commands
+  WHERE command_id=$1 AND capability='CAMERA.SNAPSHOT' AND organization_id=$2
+   AND ($3::uuid IS NULL OR building_id=$3)`,
+ [commandId,c.organization_id,c.building_id])).rows[0];
+ const snapshot=command?.source_context?.cameraSnapshot;
+ if(!command||!snapshot?.uploadedAt||!/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.jpg$/i.test(snapshot.storageKey??''))
+  throw new ApiError(404,'not_found');
+ if(!(await cameraRows(c,command.device_inventory_id)).length)throw new ApiError(404,'not_found');
+ const body=await readPrivateFile('photos',snapshot.storageKey);
+ await transaction(db=>record(db,req,c,'camera.snapshot.read','edge_command',commandId,
+  {deviceInventoryId:command.device_inventory_id}));
+ res.set({'Content-Type':'image/jpeg','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).send(body);
 });
 
 export async function sweepCameraMediaSessions(){

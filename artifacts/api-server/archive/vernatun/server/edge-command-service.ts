@@ -1,4 +1,4 @@
-import {createHash,randomUUID} from 'node:crypto';
+import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import type {Request} from 'express';
 import {pool} from './db.js';
 import type {Context} from './access.js';
@@ -17,6 +17,16 @@ const permissionFor=(capability:string,role:string)=>{
  if(capability==='BARRIER.CLOSE')return 'device.barrier.close.building';
  return getDeviceActionDefinition(capability)?.permission??null;
 };
+function snapshotUploadOrigin(){
+ const configured=process.env.VERNATUN_CLOUD_PUBLIC_API_BASE_URL
+  ??(process.env.NODE_ENV==='production'?'https://api.vernatun.io':'');
+ let url:URL;
+ try{url=new URL(configured)}catch{throw new ApiError(503,'snapshot_upload_not_configured')}
+ if(url.username||url.password||url.search||url.hash||
+  (process.env.NODE_ENV==='production'&&url.protocol!=='https:')||
+  !['https:','http:'].includes(url.protocol))throw new ApiError(503,'snapshot_upload_not_configured');
+ return url.origin;
+}
 type CommandInput={buildingId:string;deviceId:string;capability:string;reason:string;idempotencyKey?:string};
 
 const scalar=(value:any):string=>{
@@ -51,8 +61,18 @@ async function policyReason(db:any,c:Context,device:any,capability:string,permis
  if(!action?.adapterVerified)return 'adapter_not_verified';
  if(!Array.isArray(device.capabilities)||!device.capabilities.includes(capability))return 'device_capability_not_reported';
  if(!Array.isArray(device.enabled_capabilities)||!device.enabled_capabilities.includes(capability))return 'capability_disabled_by_policy';
+ if(capability==='CAMERA.SNAPSHOT'){
+  const ids=Array.isArray(device.media_capabilities?.snapshotDeviceIds)?device.media_capabilities.snapshotDeviceIds:[];
+  if(device.media_protocol_version<1||!ids.includes(device.edge_device_id))return 'edge_camera_snapshot_unavailable';
+ }
+ if(capability==='CAMERA.LIVE_VIEW'){
+  const ids=Array.isArray(device.media_capabilities?.cameraDeviceIds)?device.media_capabilities.cameraDeviceIds:[];
+  if(device.media_protocol_version<1||device.media_capabilities?.cameraPublisher!==true
+   ||device.media_capabilities?.livekitProvider!==true||!ids.includes(device.edge_device_id))
+   return 'edge_camera_stream_unavailable';
+ }
  if(residentRoles.has(c.role_key)){
-  if(capability!=='BARRIER.OPEN')return 'operational_role_required';
+  if(!['BARRIER.OPEN','CAMERA.SNAPSHOT','CAMERA.LIVE_VIEW'].includes(capability))return 'operational_role_required';
   if(!c.unit_id)return 'unit_device_access_missing';
   const access=await db.query(`SELECT 1 FROM edge_device_access WHERE device_id=$1
    AND organization_id=$2 AND building_id=$3 AND unit_id=$4 AND $5=ANY(allowed_capabilities)`,
@@ -84,7 +104,7 @@ export async function availableDeviceActions(c:Context,deviceId:string,buildingI
  if(!c.organization_id&&c.role_key!=='platform_admin')throw new ApiError(403,'organization_scope_required');
  const target=await pool.query(`SELECT d.*,d.id AS device_inventory_id,n.status,n.registration_state,n.last_heartbeat_at,
   n.last_inventory_at,n.last_telemetry_at AS node_last_telemetry_at,n.local_authorization_status,n.queue_depth,
-  n.management_config,n.archived_at,
+  n.management_config,n.archived_at,n.media_protocol_version,n.media_capabilities,
   EXISTS(SELECT 1 FROM edge_credentials ec WHERE ec.edge_node_id=n.id AND ec.status='active' AND ec.revoked_at IS NULL) AS credential_active
   FROM edge_device_inventory d JOIN edge_nodes n ON n.id=d.edge_node_id WHERE d.id=$1
   AND d.building_id=$2 AND ($3::uuid IS NULL OR d.organization_id=$3)`,
@@ -113,6 +133,7 @@ export async function availableDeviceActions(c:Context,deviceId:string,buildingI
 
 export async function requestEdgeCommand(req:Request,context:Context,input:CommandInput){
  if(!req.user)throw new ApiError(401,'unauthenticated');
+ const snapshotOrigin=input.capability==='CAMERA.SNAPSHOT'?snapshotUploadOrigin():null;
  if(!context.organization_id){
   if(context.role_key!=='platform_admin'||!context.permissions.includes('edge.commands.execute'))throw new ApiError(403,'command_execution_permission_required');
   const target=await pool.query('SELECT organization_id FROM edge_device_inventory WHERE id=$1 AND building_id=$2',[input.deviceId,input.buildingId]);
@@ -126,7 +147,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
  const permission=permissionFor(input.capability,context.role_key);
  const permissionResult=permission?await permissionDecision(context,permission,'POST'):{allowed:false,reason:'capability_not_supported'};
  const client=await pool.connect();
- let created:any,dispatch:{nodeId:string;command:any}|undefined;
+ let created:any,dispatch:{nodeId:string;command:any}|undefined,snapshotUpload:{url:string;token:string}|undefined;
  try{
   await client.query('BEGIN');
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+key]);
@@ -147,6 +168,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
      n.organization_id,d.building_id,n.building_id AS node_building_id,n.status,n.registration_state,n.name AS edge_name,
      n.block_id,n.protocol_version,n.last_heartbeat_at,n.last_inventory_at,n.last_telemetry_at AS node_last_telemetry_at,
      n.local_authorization_status,n.queue_depth,n.management_config,n.archived_at,
+     n.media_protocol_version,n.media_capabilities,
      EXISTS(SELECT 1 FROM edge_credentials ec WHERE ec.edge_node_id=n.id AND ec.status='active'
        AND ec.revoked_at IS NULL) AS credential_active
     FROM edge_device_inventory d JOIN edge_nodes n ON n.id=d.edge_node_id
@@ -166,7 +188,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
     const decision=rejection?'DENY':'ALLOW',decisionReason=rejection??'role_scope_and_device_policy_verified';
      const offlineReason=await connectionReason(client,device);
     const online=offlineReason===null;
-   const commandId=randomUUID(),expiresAt=new Date(Date.now()+30_000).toISOString();
+   const commandId=randomUUID(),expiresAt=new Date(Date.now()+(input.capability==='CAMERA.SNAPSHOT'?120_000:30_000)).toISOString();
    const denied=decision!=='ALLOW',offline=decision==='ALLOW'&&!online;
    const status=denied?'DENIED':offline?'FAILED':'QUEUED';
     const reason=denied?decisionReason:offline?offlineReason:decisionReason;
@@ -176,6 +198,17 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
    const sourceProduct=['unit_owner','renter','family'].includes(context.role_key)?'imtun':
     ['technician','contractor','security','dispatcher'].includes(context.role_key)?'hayat':
     context.role_key==='platform_admin'?'console':'vernatun_os';
+   const sourceContext:any={edgeName:device.edge_name,deviceType:device.device_type};
+   if(input.capability==='CAMERA.SNAPSHOT'&&!denied&&!offline){
+    const token=randomBytes(32).toString('base64url');
+    snapshotUpload={url:`${snapshotOrigin}/api/edge/v1/camera-snapshots/${commandId}`,token};
+    sourceContext.cameraSnapshot={
+     storageKey:`${randomUUID()}.jpg`,
+     tokenHash:createHash('sha256').update(token).digest('hex'),
+     expiresAt,
+     uploadedAt:null,
+    };
+   }
    const row=await client.query(`INSERT INTO edge_commands
     (command_id,idempotency_key,request_hash,edge_node_id,device_inventory_id,organization_id,building_id,
      edge_device_id,capability,requested_by_user_id,requested_role_assignment_id,requested_role,source_product,
@@ -187,7 +220,7 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
    [commandId,key,requestHash,device.edge_node_id,device.device_inventory_id,context.organization_id,
     input.buildingId,device.edge_device_id,input.capability,req.user.id,context.id,context.role_key,
     sourceProduct,input.reason,status,decision,reason,JSON.stringify(actorClaim),
-    JSON.stringify({edgeName:device.edge_name,deviceType:device.device_type}),expiresAt,
+    JSON.stringify(sourceContext),expiresAt,
      offline?offlineReason:denied?'authorization_denied':null]);
    created={...row.rows[0],idempotent:false};
    await client.query(`INSERT INTO audit_events(organization_id,actor_user_id,action,entity_type,entity_id,details)
@@ -202,7 +235,8 @@ export async function requestEdgeCommand(req:Request,context:Context,input:Comma
      ...(device.protocol_version===2?{protocolVersion:2,blockId:device.block_id}:{}),
      buildingId:input.buildingId,
      deviceId:device.thingsboard_id??device.edge_device_id,edgeDeviceId:device.edge_device_id,
-     capability:input.capability,reason,source:sourceProduct,actor:actorClaim,expiresAt
+     capability:input.capability,reason,source:sourceProduct,actor:actorClaim,expiresAt,
+     ...(snapshotUpload?{snapshotUpload}:{}),
      }};
     }
    }

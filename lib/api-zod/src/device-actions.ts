@@ -41,8 +41,10 @@ export const DEVICE_ACTION_REGISTRY: readonly DeviceActionProfile[] = [
     { capability: 'DOOR.LOCK', labelKey: 'deviceLock', permission: 'device.door.lock.building', category: 'access', adapterVerified: false, confirmation: true },
     { capability: 'DOOR.UNLOCK', labelKey: 'deviceUnlock', permission: 'device.door.unlock.building', category: 'access', adapterVerified: false, confirmation: true },
   ], hardDenied: [] },
-  { profile: 'Vernatun Camera', deviceType: 'camera', adapterVerified: false, actions: [
-    { capability: 'CAMERA.SNAPSHOT', labelKey: 'deviceSnapshot', permission: 'device.camera.snapshot', category: 'security', adapterVerified: false, confirmation: false },
+  { profile: 'Vernatun Camera', deviceType: 'camera', adapterVerified: true, actions: [
+    { capability: 'CAMERA.SNAPSHOT', labelKey: 'deviceSnapshot', permission: 'device.camera.snapshot', category: 'security', adapterVerified: true, confirmation: false },
+    // Live viewing uses the scoped media-session protocol, not an actuator
+    // command through the local command-authorization service.
     { capability: 'CAMERA.LIVE_VIEW', labelKey: 'deviceLiveView', permission: 'device.camera.live_view', category: 'security', adapterVerified: false, confirmation: false },
   ], hardDenied: [] },
   { profile: 'Vernatun Smoke Detector', deviceType: 'smoke_detector', adapterVerified: false, actions: [], hardDenied: ['FIRE.CONTROL'] },

@@ -62,6 +62,7 @@ class Settings:
         os.getenv("VERNATUN_EDGE_MEDIA_PORT", str(nested("service.port", 8093)))
     )
     api_key: str = os.getenv("VERNATUN_EDGE_MEDIA_API_KEY", "")
+    allow_docker_bridge: bool = os.getenv("VERNATUN_EDGE_MEDIA_ALLOW_DOCKER_BRIDGE", "").lower() == "true"
     allowed_publish_hosts: tuple[str, ...] = tuple(
         str(host).lower().lstrip(".")
         for host in (nested("media.allowedPublishHosts", ["livekit.cloud"]) or [])
@@ -95,8 +96,10 @@ if settings.host.lower() != "localhost":
         loopback_host = ipaddress.ip_address(settings.host).is_loopback
     except ValueError:
         loopback_host = False
-    if not loopback_host:
+    if not loopback_host and not settings.allow_docker_bridge:
         raise RuntimeError("Edge Media API must bind to a loopback address")
+    if settings.host in ("0.0.0.0", "::") and not settings.allow_docker_bridge:
+        raise RuntimeError("Non-loopback Edge Media binding requires the explicit Docker bridge setting")
 
 
 def camera_configs() -> list[dict[str, Any]]:

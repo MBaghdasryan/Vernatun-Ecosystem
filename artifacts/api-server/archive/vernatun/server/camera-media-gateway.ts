@@ -1,7 +1,8 @@
 import {AccessToken,IngressClient,IngressInput,RoomServiceClient,TrackSource,TrackType,type VideoGrant} from 'livekit-server-sdk';
+import {createHmac} from 'node:crypto';
 
 export type MediaViewerToken={serverUrl:string;joinToken:string;tokenExpiresAt:string};
-export type MediaPublisherSession={publishUrl:string;publisherToken:string};
+export type MediaPublisherSession={publishUrl:string;publisherToken:string;iceServers?:Array<Record<string,string|string[]>>};
 export interface CameraMediaGateway{
  configured:boolean;
  serverUrl:string|null;
@@ -26,6 +27,24 @@ function normalizedUrls(value:string|undefined){
    clientUrl:clientUrl.toString().replace(/\/$/,''),
   };
  }catch{return null}
+}
+
+function configuredIceServers(sessionId:string){
+ const parseList=(value:string|undefined)=>String(value??'').split(',').map(item=>item.trim()).filter(Boolean);
+ const valid=(value:string,protocols:string[])=>protocols.some(protocol=>
+  new RegExp(`^${protocol}:[A-Za-z0-9.\\-\\[\\]:]+(?::\\d+)?(?:\\?[A-Za-z0-9=&._-]+)?$`,'i').test(value));
+ const stunUrls=parseList(process.env.VERNATUN_STUN_URLS).filter(value=>valid(value,['stun','stuns']));
+ const turnUrls=parseList(process.env.VERNATUN_TURN_URLS).filter(value=>valid(value,['turn','turns']));
+ const servers:Array<Record<string,string|string[]>>=[];
+ if(stunUrls.length)servers.push({urls:stunUrls});
+ const sharedSecret=process.env.VERNATUN_TURN_SHARED_SECRET;
+ if(turnUrls.length&&sharedSecret){
+  const expiresAt=Math.floor(Date.now()/1000)+4*60*60;
+  const username=`${expiresAt}:${sessionId}`;
+  const credential=createHmac('sha1',sharedSecret).update(username).digest('base64');
+  servers.push({urls:turnUrls,username,credential});
+ }
+ return servers;
 }
 
 class LiveKitCloudGateway implements CameraMediaGateway{
@@ -66,7 +85,11 @@ class LiveKitCloudGateway implements CameraMediaGateway{
     if(ingress.ingressId)await this.ingress!.deleteIngress(ingress.ingressId).catch(()=>{});
     throw new Error('media_ingress_incomplete');
    }
-   return {publishUrl:ingress.url,publisherToken:ingress.streamKey};
+   return {
+    publishUrl:ingress.url,
+    publisherToken:ingress.streamKey,
+    iceServers:configuredIceServers(roomName),
+   };
  }
  async createViewerToken(roomName:string,identity:string):Promise<MediaViewerToken>{
   this.assertConfigured();
