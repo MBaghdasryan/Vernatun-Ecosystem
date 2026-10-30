@@ -1,5 +1,6 @@
--- Preserve the already-applied 064 checksum; add the manual-charge ledger
--- separately so existing invoice history and records remain untouched.
+-- Manual one-off charges need an append-only revision history separate from
+-- published invoices. Editing an active charge supersedes a revision; it does
+-- not rewrite the calculation snapshot already published on an invoice.
 CREATE TABLE billing_manual_charges(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  organization_id uuid NOT NULL,

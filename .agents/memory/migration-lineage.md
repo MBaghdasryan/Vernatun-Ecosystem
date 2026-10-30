@@ -7,6 +7,8 @@ Check the GitHub deployment branch as well as the workspace before choosing the 
 
 Also compare the development database migration ledger: different feature branches can reserve the same number even when their local migration directories look current.
 
+Migration checksums cover the exact SQL file bytes, including comments. Never edit an applied migration for documentation-only changes; restore its exact applied bytes and put new behavior in a new migration.
+
 When a migration recreates a view, preserve the latest definition's full behavior, not just its columns and joins. Earlier definitions can silently drop later ordering or evidence rules.
 
 **Why:** The workspace once had a pipeline migration under an earlier duplicate number while GitHub already reserved its later number. Assigning resident changes from the local listing alone collided with that upstream history.
@@ -14,6 +16,8 @@ When a migration recreates a view, preserve the latest definition's full behavio
 **Why:** The applied development ledger can contain a migration that was not visible in the feature branch where another migration was being added.
 
 **Why:** Replacing a delivery view with an older definition regressed event-priority behavior even though the view still compiled and returned the same columns.
+
+**Why:** A comment-only edit to an applied migration caused the checksum guard to stop development setup despite identical SQL behavior.
 
 **How to apply:** Compare exact checksums before restoring upstream names. A controlled development-only filename reconciliation may change ledger names only when old/new contents match exactly and target entries are absent. Never silently rename production history, rewrite its checksums, add dummy migrations, or hide unexpected existing tables with broad `IF NOT EXISTS`.
 
