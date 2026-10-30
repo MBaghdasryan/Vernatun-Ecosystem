@@ -6,6 +6,7 @@ import {authenticateEdgeToken} from './edge-auth.js';
 import {edgeTimestampedRecord} from './edge-timestamp.js';
 import {logger} from '../../../src/lib/logger.js';
 import {getDeviceActionDefinition} from '@workspace/api-zod';
+import {handleCameraMediaEdgeMessage,markCameraMediaNodeOffline} from './camera-media-edge-events.js';
 
 const SOCKET_PATH_V1='/api/edge/v1/connect';
 const SOCKET_PATH_V2='/api/edge/v2/connect';
@@ -158,6 +159,8 @@ export function attachEdgeWebSocket(server:Server){
       if(node.protocol_version===2)info.buildingIds=(await pool.query(
        'SELECT building_id FROM edge_node_buildings WHERE edge_node_id=$1 ORDER BY building_id',[node.id])).rows.map(r=>r.building_id);
       socket.send(JSON.stringify({type:'CONFIG',...info}));
+      }else if(await handleCameraMediaEdgeMessage(node.id,message)){
+       // Media readiness and state use this authenticated socket, separate from telemetry.
      }
     }catch{
      // Do not include message bodies or credentials in logs.
@@ -170,6 +173,7 @@ export function attachEdgeWebSocket(server:Server){
     connected.delete(node.id);
     void pool.query(`UPDATE edge_nodes SET last_disconnected_at=now(),
      status=CASE WHEN status='DISABLED' THEN status ELSE 'OFFLINE' END,updated_at=now() WHERE id=$1`,[node.id]);
+     void markCameraMediaNodeOffline(node.id).catch(()=>{});
    }
   });
   socket.on('error',()=>{});

@@ -45,6 +45,9 @@ import type {
   BillingPublicationInput,
   BillingRuleInput,
   BillingRuleUpdateInput,
+  CameraMediaJoinToken,
+  CameraMediaSessionStart,
+  CameraMediaSessionState,
   CastWeightedVote201,
   CastWeightedVoteBody,
   CategoryInput,
@@ -136,6 +139,7 @@ import type {
   GetApiCenter200,
   GetApiCenterParams,
   GetApiHealth200,
+  GetCameraMediaSessionParams,
   GetContractorScorecard200Item,
   GetContractorScorecardParams,
   GetDefectCollaborationParams,
@@ -201,6 +205,8 @@ import type {
   HandoverReadiness,
   HayatQueueResponse,
   HealthStatus,
+  HeartbeatCameraMediaSession200,
+  HeartbeatCameraMediaSessionBody,
   IamAccessInput,
   IamAccountStatusInput,
   IamAssignmentPolicyInput,
@@ -227,6 +233,7 @@ import type {
   LeaseLifecycleInput,
   LegacyTariffInput,
   ListBankTransactionsParams,
+  ListCameraMediaCameras200,
   ListDocumentVersions200Item,
   ListEdgeAlarms200Item,
   ListEdgeBlocksParams,
@@ -324,6 +331,7 @@ import type {
   PostResidentMessageBody,
   PostResidentMessageParams,
   RecentAuthenticationInput,
+  RefreshCameraMediaTokenBody,
   ReleasePipelineCallbackInput,
   RemoveOrganizationLogoParams,
   RemoveResidentRecordParams,
@@ -368,7 +376,10 @@ import type {
   StaffAvailability,
   StageSystemUpdate200,
   StageSystemUpdateBody,
+  StartCameraMediaSessionBody,
   StartResidentEmailVerification202,
+  StopCameraMediaSession200,
+  StopCameraMediaSessionParams,
   SubmitResidentMeterReadingBody,
   SuggestBankMatchesParams,
   SupportKnowledgeArticle,
@@ -2728,6 +2739,486 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateResidentServiceBookingMutationOptions(options));
+    }
+
+export const getListCameraMediaCamerasUrl = () => {
+
+
+
+
+  return `/api/camera-media/cameras`
+}
+
+export const listCameraMediaCameras = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListCameraMediaCameras200> => {
+
+  return customFetch<ListCameraMediaCameras200>(getListCameraMediaCamerasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCameraMediaCamerasQueryKey = () => {
+    return [
+    `/api/camera-media/cameras`
+    ] as const;
+    }
+
+
+export const getListCameraMediaCamerasQueryOptions = <TData = Awaited<ReturnType<typeof listCameraMediaCameras>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCameraMediaCameras>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCameraMediaCamerasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCameraMediaCameras>>> = ({ signal }) => listCameraMediaCameras({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCameraMediaCameras>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCameraMediaCamerasQueryResult = NonNullable<Awaited<ReturnType<typeof listCameraMediaCameras>>>
+export type ListCameraMediaCamerasQueryError = ErrorType<void>
+
+
+
+export function useListCameraMediaCameras<TData = Awaited<ReturnType<typeof listCameraMediaCameras>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCameraMediaCameras>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCameraMediaCamerasQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartCameraMediaSessionUrl = (cameraId: string,) => {
+
+
+
+
+  return `/api/camera-media/cameras/${cameraId}/sessions`
+}
+
+export const startCameraMediaSession = async (cameraId: string,
+    startCameraMediaSessionBody: StartCameraMediaSessionBody, options?: Parameters<typeof customFetch>[1]): Promise<CameraMediaSessionStart> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CameraMediaSessionStart>(getStartCameraMediaSessionUrl(cameraId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(startCameraMediaSessionBody)
+  }
+);}
+
+
+
+
+
+export const getStartCameraMediaSessionMutationKey = () => ['startCameraMediaSession'] as const;
+
+export const getStartCameraMediaSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCameraMediaSession>>, TError,StartCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startCameraMediaSession>>, TError,StartCameraMediaSessionMutationVariables, TContext> => {
+
+const mutationKey = getStartCameraMediaSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startCameraMediaSession>>, StartCameraMediaSessionMutationVariables> = (props) => {
+          const {cameraId,data} = props ?? {};
+
+          return  startCameraMediaSession(cameraId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartCameraMediaSessionMutationResult = NonNullable<Awaited<ReturnType<typeof startCameraMediaSession>>>
+    export type StartCameraMediaSessionMutationBody = BodyType<StartCameraMediaSessionBody>
+    export type StartCameraMediaSessionMutationError = ErrorType<void>
+    export type StartCameraMediaSessionMutationVariables = {cameraId: string;data: BodyType<StartCameraMediaSessionBody>}
+
+    export const useStartCameraMediaSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCameraMediaSession>>, TError,StartCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startCameraMediaSession>>,
+        TError,
+        StartCameraMediaSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartCameraMediaSessionMutationOptions(options));
+    }
+
+export const getGetCameraMediaSessionUrl = (sessionId: string,
+    params: GetCameraMediaSessionParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/camera-media/sessions/${sessionId}?${stringifiedParams}` : `/api/camera-media/sessions/${sessionId}`
+}
+
+export const getCameraMediaSession = async (sessionId: string,
+    params: GetCameraMediaSessionParams, options?: Parameters<typeof customFetch>[1]): Promise<CameraMediaSessionState> => {
+
+  return customFetch<CameraMediaSessionState>(getGetCameraMediaSessionUrl(sessionId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCameraMediaSessionQueryKey = (sessionId: string,
+    params?: GetCameraMediaSessionParams,) => {
+    return [
+    `/api/camera-media/sessions/${sessionId}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCameraMediaSessionQueryOptions = <TData = Awaited<ReturnType<typeof getCameraMediaSession>>, TError = ErrorType<void>>(sessionId: string,
+    params: GetCameraMediaSessionParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCameraMediaSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCameraMediaSessionQueryKey(sessionId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCameraMediaSession>>> = ({ signal }) => getCameraMediaSession(sessionId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCameraMediaSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCameraMediaSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getCameraMediaSession>>>
+export type GetCameraMediaSessionQueryError = ErrorType<void>
+
+
+
+export function useGetCameraMediaSession<TData = Awaited<ReturnType<typeof getCameraMediaSession>>, TError = ErrorType<void>>(
+ sessionId: string,
+    params: GetCameraMediaSessionParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCameraMediaSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCameraMediaSessionQueryOptions(sessionId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStopCameraMediaSessionUrl = (sessionId: string,
+    params: StopCameraMediaSessionParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/camera-media/sessions/${sessionId}?${stringifiedParams}` : `/api/camera-media/sessions/${sessionId}`
+}
+
+export const stopCameraMediaSession = async (sessionId: string,
+    params: StopCameraMediaSessionParams, options?: Parameters<typeof customFetch>[1]): Promise<StopCameraMediaSession200> => {
+
+  return customFetch<StopCameraMediaSession200>(getStopCameraMediaSessionUrl(sessionId,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getStopCameraMediaSessionMutationKey = () => ['stopCameraMediaSession'] as const;
+
+export const getStopCameraMediaSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopCameraMediaSession>>, TError,StopCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopCameraMediaSession>>, TError,StopCameraMediaSessionMutationVariables, TContext> => {
+
+const mutationKey = getStopCameraMediaSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopCameraMediaSession>>, StopCameraMediaSessionMutationVariables> = (props) => {
+          const {sessionId,params} = props ?? {};
+
+          return  stopCameraMediaSession(sessionId,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopCameraMediaSessionMutationResult = NonNullable<Awaited<ReturnType<typeof stopCameraMediaSession>>>
+
+    export type StopCameraMediaSessionMutationError = ErrorType<void>
+    export type StopCameraMediaSessionMutationVariables = {sessionId: string;params: StopCameraMediaSessionParams}
+
+    export const useStopCameraMediaSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopCameraMediaSession>>, TError,StopCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stopCameraMediaSession>>,
+        TError,
+        StopCameraMediaSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStopCameraMediaSessionMutationOptions(options));
+    }
+
+export const getRefreshCameraMediaTokenUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/camera-media/sessions/${sessionId}/token`
+}
+
+export const refreshCameraMediaToken = async (sessionId: string,
+    refreshCameraMediaTokenBody: RefreshCameraMediaTokenBody, options?: Parameters<typeof customFetch>[1]): Promise<CameraMediaJoinToken> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CameraMediaJoinToken>(getRefreshCameraMediaTokenUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(refreshCameraMediaTokenBody)
+  }
+);}
+
+
+
+
+
+export const getRefreshCameraMediaTokenMutationKey = () => ['refreshCameraMediaToken'] as const;
+
+export const getRefreshCameraMediaTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshCameraMediaToken>>, TError,RefreshCameraMediaTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshCameraMediaToken>>, TError,RefreshCameraMediaTokenMutationVariables, TContext> => {
+
+const mutationKey = getRefreshCameraMediaTokenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshCameraMediaToken>>, RefreshCameraMediaTokenMutationVariables> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  refreshCameraMediaToken(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshCameraMediaTokenMutationResult = NonNullable<Awaited<ReturnType<typeof refreshCameraMediaToken>>>
+    export type RefreshCameraMediaTokenMutationBody = BodyType<RefreshCameraMediaTokenBody>
+    export type RefreshCameraMediaTokenMutationError = ErrorType<void>
+    export type RefreshCameraMediaTokenMutationVariables = {sessionId: string;data: BodyType<RefreshCameraMediaTokenBody>}
+
+    export const useRefreshCameraMediaToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshCameraMediaToken>>, TError,RefreshCameraMediaTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof refreshCameraMediaToken>>,
+        TError,
+        RefreshCameraMediaTokenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRefreshCameraMediaTokenMutationOptions(options));
+    }
+
+export const getHeartbeatCameraMediaSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/camera-media/sessions/${sessionId}/heartbeat`
+}
+
+export const heartbeatCameraMediaSession = async (sessionId: string,
+    heartbeatCameraMediaSessionBody: HeartbeatCameraMediaSessionBody, options?: Parameters<typeof customFetch>[1]): Promise<HeartbeatCameraMediaSession200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<HeartbeatCameraMediaSession200>(getHeartbeatCameraMediaSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(heartbeatCameraMediaSessionBody)
+  }
+);}
+
+
+
+
+
+export const getHeartbeatCameraMediaSessionMutationKey = () => ['heartbeatCameraMediaSession'] as const;
+
+export const getHeartbeatCameraMediaSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatCameraMediaSession>>, TError,HeartbeatCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof heartbeatCameraMediaSession>>, TError,HeartbeatCameraMediaSessionMutationVariables, TContext> => {
+
+const mutationKey = getHeartbeatCameraMediaSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof heartbeatCameraMediaSession>>, HeartbeatCameraMediaSessionMutationVariables> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  heartbeatCameraMediaSession(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HeartbeatCameraMediaSessionMutationResult = NonNullable<Awaited<ReturnType<typeof heartbeatCameraMediaSession>>>
+    export type HeartbeatCameraMediaSessionMutationBody = BodyType<HeartbeatCameraMediaSessionBody>
+    export type HeartbeatCameraMediaSessionMutationError = ErrorType<void>
+    export type HeartbeatCameraMediaSessionMutationVariables = {sessionId: string;data: BodyType<HeartbeatCameraMediaSessionBody>}
+
+    export const useHeartbeatCameraMediaSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatCameraMediaSession>>, TError,HeartbeatCameraMediaSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof heartbeatCameraMediaSession>>,
+        TError,
+        HeartbeatCameraMediaSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getHeartbeatCameraMediaSessionMutationOptions(options));
     }
 
 export const getReviewResidentServiceBookingUrl = (id: string,

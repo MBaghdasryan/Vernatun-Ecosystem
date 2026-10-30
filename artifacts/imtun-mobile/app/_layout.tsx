@@ -50,6 +50,7 @@ function RootLayoutNav() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="legal/[document]" options={{ headerShown: false }} />
+      <Stack.Screen name="resident/cameras" options={{ headerShown: false }} />
     </Stack>
   );
 }

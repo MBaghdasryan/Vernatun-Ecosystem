@@ -4465,6 +4465,106 @@ export interface ResidentContinuity {
   bookings: ResidentServiceBooking[];
 }
 
+export type CameraMediaCameraCameraStatus = typeof CameraMediaCameraCameraStatus[keyof typeof CameraMediaCameraCameraStatus];
+
+
+export const CameraMediaCameraCameraStatus = {
+  ONLINE: 'ONLINE',
+  STALE: 'STALE',
+  OFFLINE: 'OFFLINE',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type CameraMediaCameraTelemetry = {
+  /** @nullable */
+  online: boolean | null;
+  /** @nullable */
+  cameraOpen: boolean | null;
+  /** @nullable */
+  videoLoss: boolean | null;
+  /** @nullable */
+  tamper: boolean | null;
+  /** @nullable */
+  fps: number | null;
+  /** @nullable */
+  resolution: string | null;
+};
+
+export type CameraMediaCameraStreamState = typeof CameraMediaCameraStreamState[keyof typeof CameraMediaCameraStreamState];
+
+
+export const CameraMediaCameraStreamState = {
+  NOT_CONFIGURED: 'NOT_CONFIGURED',
+  EDGE_OFFLINE: 'EDGE_OFFLINE',
+  CAMERA_OFFLINE: 'CAMERA_OFFLINE',
+  VIDEO_UNAVAILABLE: 'VIDEO_UNAVAILABLE',
+} as const;
+
+export type CameraMediaCameraStream = {
+  available: boolean;
+  state: CameraMediaCameraStreamState;
+  reason: string;
+};
+
+export interface CameraMediaCamera {
+  id: string;
+  name: string;
+  buildingId: string;
+  buildingName: string;
+  /** @nullable */
+  zone?: string | null;
+  edgeId: string;
+  edgeStatus: string;
+  edgeConnected: boolean;
+  cameraStatus: CameraMediaCameraCameraStatus;
+  /** @nullable */
+  lastTelemetryAt: string | null;
+  telemetry: CameraMediaCameraTelemetry;
+  stream: CameraMediaCameraStream;
+}
+
+export type CameraMediaSessionStartState = typeof CameraMediaSessionStartState[keyof typeof CameraMediaSessionStartState];
+
+
+export const CameraMediaSessionStartState = {
+  STARTING: 'STARTING',
+  ACTIVE: 'ACTIVE',
+} as const;
+
+export interface CameraMediaSessionStart {
+  sessionId: string;
+  viewerId: string;
+  state: CameraMediaSessionStartState;
+  serverUrl: string;
+  joinToken: string;
+  tokenExpiresAt: string;
+}
+
+export type CameraMediaSessionStateState = typeof CameraMediaSessionStateState[keyof typeof CameraMediaSessionStateState];
+
+
+export const CameraMediaSessionStateState = {
+  STARTING: 'STARTING',
+  ACTIVE: 'ACTIVE',
+  FAILED: 'FAILED',
+  STOPPING: 'STOPPING',
+  ENDED: 'ENDED',
+} as const;
+
+export interface CameraMediaSessionState {
+  sessionId: string;
+  viewerId: string;
+  state: CameraMediaSessionStateState;
+  /** @nullable */
+  failureCode?: string | null;
+}
+
+export interface CameraMediaJoinToken {
+  serverUrl: string;
+  joinToken: string;
+  tokenExpiresAt: string;
+}
+
 export interface ResidentIdResult {
   id: string;
 }
@@ -5347,6 +5447,36 @@ export type CreateResidentServiceBookingBody = {
   endsAt: string;
   /** @maxLength 1000 */
   note: string;
+};
+
+export type ListCameraMediaCameras200 = {
+  cameras: CameraMediaCamera[];
+};
+
+export type StartCameraMediaSessionBody = { [key: string]: unknown };
+
+export type GetCameraMediaSessionParams = {
+viewerId: string;
+};
+
+export type StopCameraMediaSessionParams = {
+viewerId: string;
+};
+
+export type StopCameraMediaSession200 = {
+  stopped: boolean;
+};
+
+export type RefreshCameraMediaTokenBody = {
+  viewerId: string;
+};
+
+export type HeartbeatCameraMediaSessionBody = {
+  viewerId: string;
+};
+
+export type HeartbeatCameraMediaSession200 = {
+  ok: boolean;
 };
 
 export type ReviewResidentServiceBookingParams = {

@@ -1,0 +1,226 @@
+openapi: 3.1.0
+info:
+  title: Camera media API
+  version: 1.0.0
+paths:
+  /camera-media/cameras:
+    get:
+      operationId: listCameraMediaCameras
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Cameras visible in the active organization/building context.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cameras]
+                properties:
+                  cameras:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CameraMediaCamera"
+        "401": { description: Authentication required }
+        "403": { description: Camera access permission or scope required }
+  /camera-media/cameras/{cameraId}/sessions:
+    post:
+      operationId: startCameraMediaSession
+      security:
+        - SessionCookie: []
+          CsrfToken: []
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        "202":
+          description: On-demand stream requested; wait for Edge publisher confirmation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraMediaSessionStart"
+        "401": { description: Authentication required }
+        "403": { description: Camera access permission or scope required }
+        "409": { description: "Camera, Edge media agent, or provider is not ready" }
+        "503": { description: Media provider is unavailable }
+  /camera-media/sessions/{sessionId}:
+    get:
+      operationId: getCameraMediaSession
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: viewerId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current on-demand stream state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraMediaSessionState"
+        "401": { description: Authentication required }
+        "403": { description: Viewer access is no longer authorized }
+        "404": { description: Session not found }
+    delete:
+      operationId: stopCameraMediaSession
+      security:
+        - SessionCookie: []
+          CsrfToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: viewerId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Viewer stopped; Edge stream is stopped when no viewers remain.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stopped]
+                properties:
+                  stopped: { type: boolean }
+        "401": { description: Authentication required }
+        "403": { description: Viewer access is no longer authorized }
+        "404": { description: Session not found }
+  /camera-media/sessions/{sessionId}/token:
+    post:
+      operationId: refreshCameraMediaToken
+      security:
+        - SessionCookie: []
+          CsrfToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [viewerId]
+              properties:
+                viewerId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Short-lived subscribe-only token for the authorized viewer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraMediaJoinToken"
+        "401": { description: Authentication required }
+        "403": { description: Viewer access is no longer authorized }
+        "404": { description: Active session not found }
+  /camera-media/sessions/{sessionId}/heartbeat:
+    post:
+      operationId: heartbeatCameraMediaSession
+      security:
+        - SessionCookie: []
+          CsrfToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [viewerId]
+              properties:
+                viewerId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Viewer activity recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean }
+        "401": { description: Authentication required }
+        "403": { description: Viewer access is no longer authorized }
+        "404": { description: Active session not found }
+components:
+  schemas:
+    CameraMediaCamera:
+      type: object
+      required: [id, name, buildingId, buildingName, edgeId, edgeStatus, edgeConnected, cameraStatus, lastTelemetryAt, telemetry, stream]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        zone: { type: [string, "null"] }
+        edgeId: { type: string }
+        edgeStatus: { type: string }
+        edgeConnected: { type: boolean }
+        cameraStatus: { type: string, enum: [ONLINE, STALE, OFFLINE, UNKNOWN] }
+        lastTelemetryAt: { type: [string, "null"], format: date-time }
+        telemetry:
+          type: object
+          required: [online, cameraOpen, videoLoss, tamper, fps, resolution]
+          properties:
+            online: { type: [boolean, "null"] }
+            cameraOpen: { type: [boolean, "null"] }
+            videoLoss: { type: [boolean, "null"] }
+            tamper: { type: [boolean, "null"] }
+            fps: { type: [number, "null"] }
+            resolution: { type: [string, "null"] }
+        stream:
+          type: object
+          required: [available, state, reason]
+          properties:
+            available: { type: boolean }
+            state: { type: string, enum: [NOT_CONFIGURED, EDGE_OFFLINE, CAMERA_OFFLINE, VIDEO_UNAVAILABLE, READY] }
+            reason: { type: string }
+    CameraMediaSessionStart:
+      type: object
+      required: [sessionId, viewerId, state, serverUrl, joinToken, tokenExpiresAt]
+      properties:
+        sessionId: { type: string, format: uuid }
+        viewerId: { type: string, format: uuid }
+        state: { type: string, enum: [STARTING, ACTIVE] }
+        serverUrl: { type: string, format: uri }
+        joinToken: { type: string }
+        tokenExpiresAt: { type: string, format: date-time }
+    CameraMediaSessionState:
+      type: object
+      required: [sessionId, viewerId, state]
+      properties:
+        sessionId: { type: string, format: uuid }
+        viewerId: { type: string, format: uuid }
+        state: { type: string, enum: [STARTING, ACTIVE, FAILED, STOPPING, ENDED] }
+        failureCode: { type: [string, "null"] }
+    CameraMediaJoinToken:
+      type: object
+      required: [serverUrl, joinToken, tokenExpiresAt]
+      properties:
+        serverUrl: { type: string, format: uri }
+        joinToken: { type: string }
+        tokenExpiresAt: { type: string, format: date-time }

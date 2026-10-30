@@ -574,6 +574,110 @@ export const CreateResidentServiceBookingResponse = zod.object({
 })
 
 
+export const ListCameraMediaCamerasResponse = zod.object({
+  "cameras": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "buildingId": zod.string().uuid(),
+  "buildingName": zod.string(),
+  "zone": zod.string().nullish(),
+  "edgeId": zod.string(),
+  "edgeStatus": zod.string(),
+  "edgeConnected": zod.boolean(),
+  "cameraStatus": zod.enum(['ONLINE', 'STALE', 'OFFLINE', 'UNKNOWN']),
+  "lastTelemetryAt": zod.coerce.date().nullable(),
+  "telemetry": zod.object({
+  "online": zod.boolean().nullable(),
+  "cameraOpen": zod.boolean().nullable(),
+  "videoLoss": zod.boolean().nullable(),
+  "tamper": zod.boolean().nullable(),
+  "fps": zod.number().nullable(),
+  "resolution": zod.string().nullable()
+}),
+  "stream": zod.object({
+  "available": zod.boolean(),
+  "state": zod.enum(['NOT_CONFIGURED', 'EDGE_OFFLINE', 'CAMERA_OFFLINE', 'VIDEO_UNAVAILABLE']),
+  "reason": zod.string()
+})
+}))
+})
+
+
+export const StartCameraMediaSessionParams = zod.object({
+  "cameraId": zod.coerce.string().uuid()
+})
+
+export const StartCameraMediaSessionBody = zod.object({
+
+})
+
+export const StartCameraMediaSessionResponse = zod.object({
+  "sessionId": zod.string().uuid(),
+  "viewerId": zod.string().uuid(),
+  "state": zod.enum(['STARTING', 'ACTIVE']),
+  "serverUrl": zod.string().url(),
+  "joinToken": zod.string(),
+  "tokenExpiresAt": zod.coerce.date()
+})
+
+
+export const GetCameraMediaSessionParams = zod.object({
+  "sessionId": zod.coerce.string().uuid()
+})
+
+export const GetCameraMediaSessionQueryParams = zod.object({
+  "viewerId": zod.coerce.string().uuid()
+})
+
+export const GetCameraMediaSessionResponse = zod.object({
+  "sessionId": zod.string().uuid(),
+  "viewerId": zod.string().uuid(),
+  "state": zod.enum(['STARTING', 'ACTIVE', 'FAILED', 'STOPPING', 'ENDED']),
+  "failureCode": zod.string().nullish()
+})
+
+
+export const StopCameraMediaSessionParams = zod.object({
+  "sessionId": zod.coerce.string().uuid()
+})
+
+export const StopCameraMediaSessionQueryParams = zod.object({
+  "viewerId": zod.coerce.string().uuid()
+})
+
+export const StopCameraMediaSessionResponse = zod.object({
+  "stopped": zod.boolean()
+})
+
+
+export const RefreshCameraMediaTokenParams = zod.object({
+  "sessionId": zod.coerce.string().uuid()
+})
+
+export const RefreshCameraMediaTokenBody = zod.object({
+  "viewerId": zod.string().uuid()
+})
+
+export const RefreshCameraMediaTokenResponse = zod.object({
+  "serverUrl": zod.string().url(),
+  "joinToken": zod.string(),
+  "tokenExpiresAt": zod.coerce.date()
+})
+
+
+export const HeartbeatCameraMediaSessionParams = zod.object({
+  "sessionId": zod.coerce.string().uuid()
+})
+
+export const HeartbeatCameraMediaSessionBody = zod.object({
+  "viewerId": zod.string().uuid()
+})
+
+export const HeartbeatCameraMediaSessionResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
 export const ReviewResidentServiceBookingParams = zod.object({
   "id": zod.coerce.string().uuid()
 })

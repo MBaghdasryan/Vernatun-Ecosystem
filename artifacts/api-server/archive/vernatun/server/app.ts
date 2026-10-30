@@ -15,6 +15,7 @@ import {workspaceSearch} from './workspace-search.js';
 import {implementationTools} from './implementation-tools.js';
 import {platformSupportMeetings} from './platform-support-meetings.js';
 import {hayat} from './hayat.js';
+import {cameraMedia} from './camera-media.js';
 import {reporting} from './reporting.js';
 import {lifecycle} from './lifecycle.js';
 import {documents} from './documents.js';
@@ -146,6 +147,7 @@ app.use('/api',documentVersions);app.use('/api',ownership);app.use('/api',govern
 app.use('/api',notificationCenter);app.use('/api',branding);app.use('/api',portfolioObjects);
 app.use('/api',platformFoundation);app.use('/api',coreOperations);app.use('/api',operationIncidents);app.use('/api',photos);app.use('/api',workflow);app.use('/api',finance);app.use('/api',field);app.use('/api',residentLifecycle);app.use('/api',notificationLinks);app.use('/api',grants);app.use('/api',maintenance);app.use('/api',services);app.use('/api',imports);app.use('/api',lifecycle);app.use('/api',documents);app.use('/api',reporting);app.use('/api',insights);app.use('/api',api);
 app.use('/api',hayat);
+ app.use('/api',cameraMedia);
 app.use('/api',billingBatches,billingConfiguration);
 app.use('/api',bankReconciliation);
 app.use('/api',organizationConsole);

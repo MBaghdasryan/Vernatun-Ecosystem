@@ -79,6 +79,16 @@ paths:
     $ref: './resident-continuity.yaml#/paths/~1resident~1ai-history~1{id}'
   /resident/service-bookings:
     $ref: './resident-continuity.yaml#/paths/~1resident~1service-bookings'
+  /camera-media/cameras:
+    $ref: './camera-media.yaml#/paths/~1camera-media~1cameras'
+  /camera-media/cameras/{cameraId}/sessions:
+    $ref: './camera-media.yaml#/paths/~1camera-media~1cameras~1{cameraId}~1sessions'
+  /camera-media/sessions/{sessionId}:
+    $ref: './camera-media.yaml#/paths/~1camera-media~1sessions~1{sessionId}'
+  /camera-media/sessions/{sessionId}/token:
+    $ref: './camera-media.yaml#/paths/~1camera-media~1sessions~1{sessionId}~1token'
+  /camera-media/sessions/{sessionId}/heartbeat:
+    $ref: './camera-media.yaml#/paths/~1camera-media~1sessions~1{sessionId}~1heartbeat'
   /resident/service-bookings/{id}:
     $ref: './resident-continuity.yaml#/paths/~1resident~1service-bookings~1{id}'
   /meters:

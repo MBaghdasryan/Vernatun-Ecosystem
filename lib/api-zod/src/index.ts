@@ -41,6 +41,11 @@ export {
 export type {ActManagedApiKeyBody,CreateApiClientBody,CreateManagedApiKeyBody,GetExternalRecordsParams,SetApiClientStatusBody} from "./generated/types";
 // Orval emits these operation-query aliases in both generated modules.
 export type {GetPrivateBrandLogoParams,GetScopedRecordPageParams} from "./generated/types";
+export type {
+  GetCameraMediaSessionParams, HeartbeatCameraMediaSessionBody,
+  RefreshCameraMediaTokenBody, StartCameraMediaSessionBody,
+  StopCameraMediaSessionParams,
+} from "./generated/types";
 export type { CastWeightedVoteBody } from "./generated/types/castWeightedVoteBody";
 export type { ChangeGovernanceMeetingBody } from "./generated/types/changeGovernanceMeetingBody";
 export type { CreateGovernanceMeetingBody } from "./generated/types/createGovernanceMeetingBody";
