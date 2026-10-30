@@ -29,7 +29,7 @@
 - [HAYAT project boundary](hayat-project-boundary.md) — keep the contractor app in its own Replit project to preserve an independent APK.
 - [Search dialog keyboard](search-dialog-keyboard.md) — verify Escape with populated search inputs; native input defaults can consume dismissal.
 - [QA journey isolation](qa-journey-isolation.md) — destructive IAM fixtures require fresh per-journey schemas in aggregate regression runs.
-- [Edge integration contract](edge-integration-contract.md) — preserve v1; versioned v2 assigns each Edge node to a block with explicit building/device scope.
+- [Edge integration contract](edge-integration-contract.md) — preserve v1/v2 scope; keep video separate from telemetry and prove streams with real tracks.
 - [Physical command policy](edge-device-command-policy.md) — platform administration is not execution authority; accepted RPC is not confirmed device movement.
 - [IAM role and user permissions](per-user-iam-overrides.md) — platform admins can edit shared role templates; preserve protected platform roles, audit changes, and retain scoped per-user overrides.
 - [Browser QA origin](browser-qa-origin.md) — authenticated browser tests must use the same local origin configured as the API's test APP_ORIGIN.

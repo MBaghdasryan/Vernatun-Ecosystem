@@ -162,16 +162,26 @@ cameraMedia.post('/camera-media/cameras/:cameraId/sessions',async(req,res)=>{
  let createdSession=false;
  const result=await transaction(async db=>{
   await db.query('SELECT id FROM edge_device_inventory WHERE id=$1 FOR UPDATE',[cameraId]);
+   await db.query(`UPDATE edge_camera_media_sessions SET state=CASE WHEN state='STARTING' THEN 'FAILED' ELSE 'ENDED' END,
+    failure_code=CASE WHEN state='STARTING' THEN 'session_expired' ELSE failure_code END,
+    ended_at=COALESCE(ended_at,now()),last_activity_at=now()
+    WHERE camera_id=$1 AND state IN ('STARTING','ACTIVE','STOPPING') AND expires_at<=now()`,[cameraId]);
   let session=(await db.query(`SELECT * FROM edge_camera_media_sessions
    WHERE camera_id=$1 AND state IN ('STARTING','ACTIVE') AND expires_at>now()
    ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,[cameraId])).rows[0];
   if(!session){
+    const stopping=(await db.query(`SELECT id FROM edge_camera_media_sessions
+     WHERE camera_id=$1 AND state='STOPPING' FOR UPDATE`,[cameraId])).rows[0];
+    if(stopping)throw new ApiError(409,'camera_session_stopping');
    session=(await db.query(`INSERT INTO edge_camera_media_sessions
     (organization_id,building_id,edge_node_id,camera_id,room_name,edge_participant_identity,started_by_user_id,expires_at)
     VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '15 minutes') RETURNING *`,
    [c.organization_id,row.building_id,row.edge_node_id,cameraId,roomName,edgeIdentity,req.user!.id])).rows[0];
    createdSession=true;
   }
+   await db.query(`UPDATE edge_camera_media_viewers SET ended_at=COALESCE(ended_at,now()),
+    last_activity_at=now() WHERE session_id=$1 AND user_id=$2 AND ended_at IS NULL AND expires_at<=now()`,
+   [session.id,req.user!.id]);
   let viewer=(await db.query(`SELECT * FROM edge_camera_media_viewers
    WHERE session_id=$1 AND user_id=$2 AND ended_at IS NULL AND expires_at>now()
    ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,[session.id,req.user!.id])).rows[0];

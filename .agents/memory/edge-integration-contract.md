@@ -67,3 +67,15 @@ WebSocket connectivity to fail despite passing transport tests.
 **How to apply:** Exercise the same server assembly used by deployment when
 testing upgrades. Keep real Windows acceptance separate from local test results;
 never rotate an already-issued machine credential to mask a server-wiring issue.
+
+Camera telemetry is not evidence of a live video stream. Keep video on an
+authenticated WebRTC media plane, separate from MQTT/ThingsBoard telemetry, and
+report a session as live only after Cloud verifies the publisher's camera track.
+Residents and contractors receive no camera access by default.
+
+**Why:** The user selected on-demand LiveKit Cloud viewing for HAYAT and ImTun,
+while the existing Edge telemetry reports camera state but does not carry video.
+
+**How to apply:** Preserve tenant/building/user scope and require an explicit
+camera-view permission. Do not infer stream health from `online`, `camera_open`,
+or `video_loss=false`; require real provider evidence and Edge acceptance.

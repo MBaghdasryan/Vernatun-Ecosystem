@@ -8,7 +8,7 @@ import {useLang} from '@/lib/resident/hooks';
 import {L} from '@/lib/resident/text';
 import type {CameraMediaCamera,CameraMediaSessionStart} from '@workspace/api-client-react';
 
-type NativePlayer=React.ComponentType<{serverUrl:string;token:string;palette:{surface:string;foreground:string;mutedForeground:string}}>;
+type NativePlayer=React.ComponentType<{serverUrl:string;token:string;palette:{surface:string;foreground:string;mutedForeground:string};waitingText:string;unsupportedText:string}>;
 export default function ResidentCamerasScreen(){
  const palette=useAppPalette(),st=React.useMemo(()=>styles(palette),[palette]),l=useLang(),router=useRouter();
  const auth=useGetMobileAuthSession(),context=auth.data?.contexts.find(item=>item.id===auth.data?.contextId);
@@ -31,6 +31,8 @@ export default function ResidentCamerasScreen(){
   stop:L(l,['Դադարեցնել','Остановить','Stop viewing']),
   ready:L(l,['Պատրաստ է','Готово','Ready']),
   waiting:L(l,['Սպասում ենք Vernatun Edge-ի տեսահոսքին։','Ожидаем видеопоток от Vernatun Edge.','Waiting for video from Vernatun Edge.']),
+  waitingTrack:L(l,['Սպասում ենք տեսահոսքին…','Ожидаем видеопоток…','Waiting for video…']),
+  unsupported:L(l,['Հոսքի դիտման համար անհրաժեշտ է ImTun-ի մշակման հավաքածու՝ LiveKit-ի տեղական մոդուլով։','Для просмотра нужен development build ImTun с нативным модулем LiveKit.','Live viewing requires an ImTun development build with the native LiveKit module.']),
   unavailable:L(l,['Տեսահոսքը հիմա հասանելի չէ։','Видеопоток сейчас недоступен.','Video is not available right now.']),
   failed:L(l,['Չհաջողվեց սկսել դիտումը։','Не удалось начать просмотр.','Could not start live view.']),
  };
@@ -71,12 +73,12 @@ export default function ResidentCamerasScreen(){
    <Pressable accessibilityRole="button" accessibilityLabel={L(l,['Հետ','Назад','Back'])} onPress={()=>router.back()} style={st.back}><Feather name="arrow-left" size={20} color={palette.foreground}/></Pressable>
    <View style={{flex:1}}><Text accessibilityRole="header" style={st.title}>{strings.title}</Text><Text style={st.description}>{strings.description}</Text></View>
   </View>
-  {!allowed?<View style={st.notice}><Feather name="shield" size={22} color={palette.primary}/><Text style={st.noticeText}>{strings.denied}</Text></View>
+  {!allowed?<View style={st.content}><View style={st.videoPlaceholder}><Feather name="video-off" size={28} color="#b8c6c8"/><Text style={st.videoText}>{strings.unavailable}</Text></View><View style={st.notice}><Feather name="shield" size={22} color={palette.primary}/><Text style={st.noticeText}>{strings.denied}</Text></View></View>
    :cameras.isPending?<View style={st.notice}><ActivityIndicator color={palette.primary}/><Text style={st.noticeText}>{strings.loading}</Text></View>
    :cameras.isError?<View style={st.notice}><Feather name="alert-triangle" size={21} color={palette.primary}/><Text style={st.noticeText}>{strings.failed}</Text></View>
    :!cameras.data?.cameras.length?<View style={st.notice}><Feather name="video-off" size={22} color={palette.primary}/><Text style={st.noticeText}>{strings.empty}</Text></View>
    :<View style={st.content}>
-    {active&&NativePlayer?<NativePlayer serverUrl={active.serverUrl} token={active.joinToken} palette={{surface:palette.surface,foreground:palette.foreground,mutedForeground:palette.mutedForeground}}/>
+    {active&&NativePlayer?<NativePlayer serverUrl={active.serverUrl} token={active.joinToken} palette={{surface:palette.surface,foreground:palette.foreground,mutedForeground:palette.mutedForeground}} waitingText={strings.waitingTrack} unsupportedText={strings.unsupported}/>
      :<View style={st.videoPlaceholder}><Feather name="video-off" size={28} color="#b8c6c8"/><Text style={st.videoText}>{active?strings.waiting:strings.unavailable}</Text></View>}
     {cameras.data.cameras.map(camera=><View key={camera.id} style={st.cameraCard}>
      <View style={st.cameraHeader}><View style={st.cameraIcon}><Feather name="video" size={18} color={palette.primary}/></View><View style={{flex:1}}><Text style={st.cameraName}>{camera.name}</Text><Text style={st.cameraLocation}>{camera.buildingName}{camera.zone?` · ${camera.zone}`:''}</Text></View><Text style={[st.status,camera.cameraStatus==='ONLINE'?st.online:st.offline]}>{camera.cameraStatus}</Text></View>

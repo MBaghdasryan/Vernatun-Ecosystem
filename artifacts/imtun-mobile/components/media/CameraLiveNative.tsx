@@ -3,27 +3,27 @@ import {StyleSheet,Text,View} from 'react-native';
 import {LiveKitRoom,VideoTrack,isTrackReference,registerGlobals,useTracks} from '@livekit/react-native';
 import {Track} from 'livekit-client';
 
-type Props={serverUrl:string;token:string;palette:{surface:string;foreground:string;mutedForeground:string}};
+type Props={serverUrl:string;token:string;palette:{surface:string;foreground:string;mutedForeground:string};waitingText:string;unsupportedText:string};
 
-function LiveVideo({palette}:{palette:Props['palette']}){
+function LiveVideo({palette,waitingText}:{palette:Props['palette'];waitingText:string}){
  const tracks=useTracks([Track.Source.Camera]);
  const track=tracks.find(isTrackReference);
- if(!track)return <View style={[styles.wait,{backgroundColor:'#101d25'}]}><Text style={{color:'#dbe4e6'}}>Waiting for Edge video…</Text></View>;
+ if(!track)return <View style={[styles.wait,{backgroundColor:'#101d25'}]}><Text style={{color:'#dbe4e6'}}>{waitingText}</Text></View>;
  return <VideoTrack trackRef={track} style={styles.video}/>;
 }
 
-export default function CameraLiveNative({serverUrl,token,palette}:Props){
+export default function CameraLiveNative({serverUrl,token,palette,waitingText,unsupportedText}:Props){
  const [ready,setReady]=useState(false);
  const [unsupported,setUnsupported]=useState(false);
  useEffect(()=>{
   try{registerGlobals();setReady(true)}
   catch{setUnsupported(true)}
  },[]);
- if(unsupported)return <View style={[styles.card,{backgroundColor:palette.surface}]}><Text style={{color:palette.foreground}}>Live video needs an ImTun development build with the native LiveKit module.</Text></View>;
+ if(unsupported)return <View style={[styles.card,{backgroundColor:palette.surface}]}><Text style={{color:palette.foreground}}>{unsupportedText}</Text></View>;
  if(!ready)return <View style={[styles.card,{backgroundColor:palette.surface}]}><Text style={{color:palette.mutedForeground}}>Preparing secure video…</Text></View>;
  return <View style={styles.frame}>
   <LiveKitRoom serverUrl={serverUrl} token={token} connect={true} audio={false} video={false}>
-   <LiveVideo palette={palette}/>
+   <LiveVideo palette={palette} waitingText={waitingText}/>
   </LiveKitRoom>
  </View>;
 }

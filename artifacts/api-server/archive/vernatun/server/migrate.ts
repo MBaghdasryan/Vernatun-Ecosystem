@@ -24,6 +24,8 @@ const expectedObjects=[
  {migration:'064_configurable_billing_rules.sql',name:'unit_billing_service_applicability',kind:'relation' as const,idempotent:false},
  {migration:'064_configurable_billing_rules.sql',name:'billing_parameter_review_requests',kind:'relation' as const,idempotent:false},
  {migration:'065_billing_manual_charge_revisions.sql',name:'billing_manual_charges',kind:'relation' as const,idempotent:false},
+ {migration:'066_camera_media_sessions.sql',name:'edge_camera_media_sessions',kind:'relation' as const,idempotent:false},
+ {migration:'066_camera_media_sessions.sql',name:'edge_camera_media_viewers',kind:'relation' as const,idempotent:false},
  {migration:'063_platform_task_discussion.sql',name:'platform_task_comments',kind:'relation' as const,idempotent:false},
  {migration:'063_platform_task_discussion.sql',name:'platform_task_attachments',kind:'relation' as const,idempotent:false},
  {migration:'013_platform_foundation.sql',name:'expire_support_grants(uuid)',kind:'function' as const,idempotent:false},

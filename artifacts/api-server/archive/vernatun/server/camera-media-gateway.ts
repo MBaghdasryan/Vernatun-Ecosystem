@@ -11,27 +11,37 @@ export interface CameraMediaGateway{
  deleteRoom(roomName:string):Promise<void>;
 }
 
-function normalizedServerUrl(value:string|undefined){
+function normalizedUrls(value:string|undefined){
  if(!value)return null;
  try{
   const url=new URL(value);
   if(!['wss:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password)return null;
-  return url.toString().replace(/\/$/,'');
+  const serviceUrl=new URL(url.toString());
+  const clientUrl=new URL(url.toString());
+  serviceUrl.protocol='https:';
+  clientUrl.protocol='wss:';
+  return {
+   serviceUrl:serviceUrl.toString().replace(/\/$/,''),
+   clientUrl:clientUrl.toString().replace(/\/$/,''),
+  };
  }catch{return null}
 }
 
 class LiveKitCloudGateway implements CameraMediaGateway{
  readonly serverUrl:string|null;
  readonly configured:boolean;
+  private readonly serviceUrl:string|null;
  private readonly apiKey:string;
  private readonly apiSecret:string;
  private readonly rooms:RoomServiceClient|null;
  constructor(){
-  this.serverUrl=normalizedServerUrl(process.env.LIVEKIT_URL);
+   const urls=normalizedUrls(process.env.LIVEKIT_URL);
+   this.serverUrl=urls?.clientUrl??null;
+   this.serviceUrl=urls?.serviceUrl??null;
   this.apiKey=process.env.LIVEKIT_API_KEY??'';
   this.apiSecret=process.env.LIVEKIT_API_SECRET??'';
-  this.configured=!!(this.serverUrl&&this.apiKey&&this.apiSecret);
-  this.rooms=this.configured?new RoomServiceClient(this.serverUrl!,this.apiKey,this.apiSecret):null;
+   this.configured=!!(this.serverUrl&&this.serviceUrl&&this.apiKey&&this.apiSecret);
+   this.rooms=this.configured?new RoomServiceClient(this.serviceUrl!,this.apiKey,this.apiSecret):null;
  }
  private assertConfigured(){
   if(!this.configured||!this.serverUrl||!this.rooms)throw new Error('media_provider_not_configured');

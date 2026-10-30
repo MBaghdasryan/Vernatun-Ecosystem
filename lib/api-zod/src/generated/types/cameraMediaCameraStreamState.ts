@@ -14,4 +14,5 @@ export const CameraMediaCameraStreamState = {
   EDGE_OFFLINE: 'EDGE_OFFLINE',
   CAMERA_OFFLINE: 'CAMERA_OFFLINE',
   VIDEO_UNAVAILABLE: 'VIDEO_UNAVAILABLE',
+  READY: 'READY',
 } as const;

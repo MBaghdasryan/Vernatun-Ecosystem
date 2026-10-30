@@ -596,7 +596,7 @@ export const ListCameraMediaCamerasResponse = zod.object({
 }),
   "stream": zod.object({
   "available": zod.boolean(),
-  "state": zod.enum(['NOT_CONFIGURED', 'EDGE_OFFLINE', 'CAMERA_OFFLINE', 'VIDEO_UNAVAILABLE']),
+  "state": zod.enum(['NOT_CONFIGURED', 'EDGE_OFFLINE', 'CAMERA_OFFLINE', 'VIDEO_UNAVAILABLE', 'READY']),
   "reason": zod.string()
 })
 }))
