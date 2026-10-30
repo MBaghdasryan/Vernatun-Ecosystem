@@ -35,7 +35,7 @@ The configurable billing framework is implemented in source code; it is not prod
 - The API supports service/tariff configuration, organization/building/unit rules, rule-based previews and drafts, scoped unit settings, resident parameter-review requests, audited manager decisions, and revisioned manual charges.
 - Vernatun OS has configuration, per-unit parameters, manual-charge entry, and a manager review queue. ImTun displays saved calculation details and lets residents submit parameter corrections for review.
 - Published invoice calculations remain snapshots. Corrections do not rewrite an already published invoice, and payment merchant/beneficiary settings are not changed by billing rules.
-- API tests cover area-based calculation, invoice publication and snapshot retention, manual-charge idempotency and revisions, parameter-review authorization, and service-applicability approval. The API schema also generates typed clients from the new routes.
+- API tests cover area-based calculation, invoice publication and snapshot retention, manual-charge idempotency and revisions, parameter-review authorization, and service-applicability approval. An isolated migration regression test also compares a previously published invoice, its lines, totals, and calculation snapshots before and after migration 065. The API schema generates typed clients from the new routes.
 
 ### Not enabled or not fully accepted
 

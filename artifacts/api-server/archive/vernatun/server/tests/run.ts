@@ -124,6 +124,8 @@ const checks=process.argv.includes('--org-console-only')
  ? [['--test','server/tests/phase6.test.ts']]
  : process.argv.includes('--billing-rules-only')
  ? [['--test-name-pattern=Calculation','server/tests/business.test.ts']]
+  : process.argv.includes('--billing-migration-only')
+  ? [['--test-name-pattern=Additive manual-charge migration','server/tests/business.test.ts']]
  : process.argv.includes('--phase4-only')
  ? [['--test','server/tests/phase4.test.ts']]
  : process.argv.includes('--backup-only')

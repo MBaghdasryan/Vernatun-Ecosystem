@@ -29,6 +29,7 @@
     "test:marketplace-mobile": "cd archive/vernatun && tsx server/tests/run.ts --resident-marketplace-mobile-only",
     "test:seven-chains": "cd archive/vernatun && tsx server/tests/run.ts --seven-chains-only",
     "test:payments": "cd archive/vernatun && tsx server/tests/run.ts --payments-only",
+    "test:billing-migration": "cd archive/vernatun && tsx server/tests/run.ts --billing-migration-only",
     "test:storage": "cd archive/vernatun && tsx server/tests/run.ts --storage-only",
     "test:offline": "cd archive/vernatun && node --import tsx server/tests/run.ts --offline-only",
     "test:delivery": "cd archive/vernatun && tsx server/tests/run.ts --delivery-only",

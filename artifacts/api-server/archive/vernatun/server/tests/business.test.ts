@@ -14,6 +14,55 @@ class Client{cookie='';csrf='';async call(path:string,method='GET',body?:unknown
 let accountant:Client,owner:Client,family:Client,other:Client,developer:Client,contractor:Client,guard:Client,support:Client,org:Client;
 before(async()=>{await pool.query("DELETE FROM auth_rate_limits");await new Promise<void>(r=>server.listening?r():server.on('listening',r));base='http://127.0.0.1:'+(server.address() as {port:number}).port;accountant=await new Client().login('accountant');owner=await new Client().login('unit_owner');family=await new Client().login('family');other=await new Client().login('second_org');developer=await new Client().login('developer');contractor=await new Client().login('contractor');guard=await new Client().login('security');support=await new Client().login('support');org=await new Client().login('org_admin')});
 after(async()=>{server.close();server.closeAllConnections();await pool.end()});
+test('Additive manual-charge migration leaves published invoice amounts, lines and calculation snapshots unchanged',async()=>{
+ const schema='qa_billing_migration_'+randomBytes(10).toString('hex');
+ const db=await pool.connect();
+ try{
+  await db.query(`CREATE SCHEMA "${schema}"`);
+  await db.query(`SET search_path TO "${schema}",public`);
+  await db.query(`
+   CREATE TABLE users(id uuid PRIMARY KEY);
+   CREATE TABLE units(id uuid PRIMARY KEY,organization_id uuid NOT NULL,UNIQUE(id,organization_id));
+   CREATE TABLE services(id uuid PRIMARY KEY,organization_id uuid NOT NULL,UNIQUE(id,organization_id));
+   CREATE TABLE invoices(id uuid PRIMARY KEY,amount_minor bigint NOT NULL,currency text NOT NULL,status text NOT NULL);
+   CREATE TABLE invoice_lines(
+    id uuid PRIMARY KEY,invoice_id uuid NOT NULL REFERENCES invoices(id),description text NOT NULL,
+    quantity_hundredths bigint NOT NULL,rate_minor bigint NOT NULL,amount_minor bigint NOT NULL,
+    calculation_metadata jsonb NOT NULL
+   );
+   CREATE TABLE billing_batches(id uuid PRIMARY KEY,snapshot jsonb NOT NULL)
+  `);
+  const organizationId=crypto.randomUUID(),unitId=crypto.randomUUID(),serviceId=crypto.randomUUID();
+  const payerId=crypto.randomUUID(),invoiceId=crypto.randomUUID(),lineId=crypto.randomUUID(),batchId=crypto.randomUUID();
+  const metadata={method:'PER_SQUARE_METER',baseQuantity:'66.30',rateMinor:'12000',rawAmountMinor:'795600',roundedAmountMinor:'795600'};
+  const calculationSnapshot={period:'2026-10-01',chargeCount:1,totalMinor:'795600',charges:[{unitId,serviceId,amountMinor:'795600',calculation:metadata}]};
+  await db.query('INSERT INTO users(id) VALUES($1)',[payerId]);
+  await db.query('INSERT INTO units(id,organization_id) VALUES($1,$2)',[unitId,organizationId]);
+  await db.query('INSERT INTO services(id,organization_id) VALUES($1,$2)',[serviceId,organizationId]);
+  await db.query("INSERT INTO invoices(id,amount_minor,currency,status) VALUES($1,795600,'AMD','published')",[invoiceId]);
+  await db.query(`INSERT INTO invoice_lines(id,invoice_id,description,quantity_hundredths,rate_minor,amount_minor,calculation_metadata)
+   VALUES($1,$2,'Area service',6630,12000,795600,$3)`,[lineId,invoiceId,JSON.stringify(metadata)]);
+  await db.query('INSERT INTO billing_batches(id,snapshot) VALUES($1,$2)',[batchId,JSON.stringify(calculationSnapshot)]);
+  const readPublishedState=async()=>({
+   invoice:(await db.query(`SELECT i.id::text,i.amount_minor::text,i.currency,i.status,
+    COALESCE(jsonb_agg(jsonb_build_object('id',l.id::text,'description',l.description,
+     'quantityHundredths',l.quantity_hundredths::text,'rateMinor',l.rate_minor::text,
+     'amountMinor',l.amount_minor::text,'calculationMetadata',l.calculation_metadata)
+     ORDER BY l.id) FILTER(WHERE l.id IS NOT NULL),'[]'::jsonb) AS lines
+    FROM invoices i LEFT JOIN invoice_lines l ON l.invoice_id=i.id WHERE i.id=$1
+    GROUP BY i.id`,[invoiceId])).rows[0],
+   calculationSnapshot:(await db.query('SELECT snapshot FROM billing_batches WHERE id=$1',[batchId])).rows[0].snapshot
+  });
+  const before=await readPublishedState();
+  const migration=await readFile('server/migrations/065_billing_manual_charge_revisions.sql','utf8');
+  await db.query(migration);
+  assert.equal((await db.query("SELECT to_regclass('billing_manual_charges') IS NOT NULL AS present")).rows[0].present,true);
+  assert.deepEqual(await readPublishedState(),before);
+ }finally{
+  try{await db.query('RESET search_path');await db.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}
+  finally{db.release()}
+ }
+});
 test('Calculation → publication → idempotent payment → adjustment; no float or resident privilege escalation',async()=>{
  const tariff=await accountant.call('/finance/tariffs','POST',{name:'Maintenance '+Date.now(),amountMinor:'12345',currency:'AMD',basis:'area'});assert.equal(tariff.status,201);
  const payer=await accountant.call('/finance/payers','POST',{unitId:seeded.fixtures.ua,payerId:seeded.accounts.unit_owner.id,serviceId:tariff.data.service_id,startsOn:'2026-09-01'});assert.equal(payer.status,201);
