@@ -9,11 +9,14 @@ that a WebRTC video track is reaching a viewer.
 
 - Cloud control uses the already authenticated outbound Edge WebSocket at
   `/api/edge/v1/connect`. Do not create a second public Edge control endpoint.
-- Camera video uses LiveKit WebRTC directly. Do not send media bytes through
+- Camera video uses provider-agnostic WHIP publishing to a session-scoped
+  LiveKit Ingress created by Vernatun Cloud. Do not send media bytes through
   MQTT, ThingsBoard telemetry, or the Cloud API.
 - Cloud gives the browser/mobile client a five-minute, subscribe-only token.
-  Edge receives a separate five-minute token limited to publishing camera
-  video in one opaque room. Neither side receives the LiveKit API secret.
+  Edge receives a session-scoped Ingress URL and stream key only over the
+  authenticated Edge WebSocket. The backend deletes that Ingress when the
+  session ends or expires. Neither Edge nor clients receive the LiveKit API
+  secret.
 - Live sessions are started on demand. A camera may have one active room with
   multiple authorized viewers. Cloud ends the room when viewers stop or their
   heartbeats expire.
@@ -46,19 +49,25 @@ When an authorized user requests a view, Cloud sends:
 ```json
 {
   "type": "MEDIA_SESSION_START",
+  "protocol": "WEBRTC",
+  "provider": "livekit",
   "sessionId": "opaque-session-uuid",
+  "deviceId": "edge-camera-id",
   "cameraId": "edge-camera-id",
   "edgeDeviceId": "edge-camera-id",
   "roomName": "opaque-room-name",
   "serverUrl": "wss://configured-livekit-host",
-  "publisherToken": "short-lived-room-scoped-token"
+  "publishUrl": "https://configured-livekit-ingress-host/path",
+  "publisherToken": "session-scoped-ingress-key",
+  "expiresAt": "UTC expiry",
+  "iceServers": []
 }
 ```
 
-The Edge service opens the camera only for this session, publishes a camera
-video track using the supplied token, and does not publish audio. If an RTSP
-source is used later, the RTSP-to-WebRTC gateway stays on Edge; its source URL
-and credentials remain local to that service.
+The Edge service opens the camera only for this session and publishes a camera
+video track over WHIP without audio. If an RTSP source is used later, the
+RTSP-to-WebRTC gateway stays on Edge; its source URL and credentials remain
+local to that service.
 
 ## State and stop messages
 
@@ -68,11 +77,12 @@ Edge reports state only after performing the corresponding action:
 {
   "type": "MEDIA_SESSION_STATE",
   "sessionId": "opaque-session-uuid",
-  "state": "ACTIVE"
+  "state": "LIVE"
 }
 ```
 
-Supported states are `STARTING`, `ACTIVE`, `FAILED`, `STOPPING`, and `ENDED`.
+Supported states are `STARTING`, `LIVE`, `ACTIVE` (legacy), `FAILED`,
+`STOPPING`, and `ENDED`.
 `FAILED` may include a short machine-readable `errorCode` without secrets or
 source URLs. Cloud accepts `ACTIVE` only after the LiveKit Room Service confirms
 that the expected opaque Edge participant has published a camera video track.

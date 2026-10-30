@@ -68,14 +68,19 @@ WebSocket connectivity to fail despite passing transport tests.
 testing upgrades. Keep real Windows acceptance separate from local test results;
 never rotate an already-issued machine credential to mask a server-wiring issue.
 
-Camera telemetry is not evidence of a live video stream. Keep video on an
-authenticated WebRTC media plane, separate from MQTT/ThingsBoard telemetry, and
-report a session as live only after Cloud verifies the publisher's camera track.
-Residents and contractors receive no camera access by default.
+Camera telemetry is not evidence of a live video stream. Keep video on a
+provider-agnostic WHIP media plane, separate from MQTT/ThingsBoard telemetry.
+For LiveKit Cloud, create a session-scoped WHIP Ingress only after authorization;
+send its URL and stream key only to the Edge over the authenticated control
+socket, and delete the Ingress when the session ends. Report a session as live
+only after Cloud verifies the publisher's camera track. Residents and
+contractors receive no camera access by default.
 
 **Why:** The user selected on-demand LiveKit Cloud viewing for HAYAT and ImTun,
-while the existing Edge telemetry reports camera state but does not carry video.
+and the provided Edge Media service publishes with WHIP. The existing Edge
+telemetry reports camera state but does not carry video.
 
 **How to apply:** Preserve tenant/building/user scope and require an explicit
-camera-view permission. Do not infer stream health from `online`, `camera_open`,
-or `video_loss=false`; require real provider evidence and Edge acceptance.
+camera-view permission. Never expose ingress credentials to HAYAT or ImTun. Do
+not infer stream health from `online`, `camera_open`, or `video_loss=false`;
+require real provider evidence and Edge acceptance.

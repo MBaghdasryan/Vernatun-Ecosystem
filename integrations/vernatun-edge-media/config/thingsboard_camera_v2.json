@@ -1,0 +1,61 @@
+{
+  "schema": "vernatun-thingsboard-camera-config-v2",
+  "version": "2.0.0",
+  "deviceProfile": {
+    "name": "Vernatun Camera",
+    "deviceType": "camera",
+    "telemetry": [
+      "online",
+      "camera_open",
+      "video_loss",
+      "tamper",
+      "fps",
+      "width",
+      "height",
+      "last_frame_at",
+      "media_service_online",
+      "stream_state",
+      "active_viewers",
+      "active_media_sessions",
+      "source_type",
+      "adapter_version",
+      "observed_at"
+    ],
+    "capabilities": [
+      "CAMERA.LIVE_VIEW",
+      "CAMERA.SNAPSHOT"
+    ],
+    "alarmRules": [
+      {
+        "alarmType": "CAMERA_VIDEO_LOSS",
+        "severity": "MAJOR",
+        "createWhen": {
+          "key": "video_loss",
+          "equals": true
+        },
+        "clearWhen": {
+          "key": "video_loss",
+          "equals": false
+        }
+      },
+      {
+        "alarmType": "CAMERA_TAMPER",
+        "severity": "CRITICAL",
+        "createWhen": {
+          "key": "tamper",
+          "equals": true
+        },
+        "clearWhen": {
+          "key": "tamper",
+          "equals": false
+        }
+      }
+    ]
+  },
+  "mqttGatewayMapping": {
+    "topicFilter": "vernatun/building01/camera/+",
+    "deviceName": "last topic segment",
+    "deviceProfile": "Vernatun Camera"
+  },
+  "important": "Video frames never go through ThingsBoard. ThingsBoard carries telemetry/alarms only."
+}

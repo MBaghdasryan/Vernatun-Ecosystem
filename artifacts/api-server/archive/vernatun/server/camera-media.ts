@@ -197,11 +197,13 @@ cameraMedia.post('/camera-media/cameras/:cameraId/sessions',async(req,res)=>{
  try{
   if(createdSession){
    await cameraMediaGateway.createRoom(result.session.room_name);
-   const publisherToken=await cameraMediaGateway.createPublisherToken(result.session.room_name,result.session.edge_participant_identity);
+    const publisher=await cameraMediaGateway.createPublisherSession(result.session.room_name,result.session.edge_participant_identity);
    const sent=sendEdgeMessage(row.edge_node_id,{
-    type:'MEDIA_SESSION_START',sessionId:result.session.id,cameraId:row.edge_device_id,
-    edgeDeviceId:row.edge_device_id,roomName:result.session.room_name,serverUrl:cameraMediaGateway.serverUrl,
-    publisherToken,
+     type:'MEDIA_SESSION_START',protocol:'WEBRTC',provider:'livekit',sessionId:result.session.id,
+     deviceId:row.edge_device_id,cameraId:row.edge_device_id,edgeDeviceId:row.edge_device_id,
+     roomName:result.session.room_name,serverUrl:cameraMediaGateway.serverUrl,
+     publishUrl:publisher.publishUrl,publisherToken:publisher.publisherToken,
+     expiresAt:new Date(new Date(result.session.created_at).getTime()+4*60*60*1000).toISOString(),iceServers:[],
    });
    if(!sent)throw new Error('edge_disconnected');
   }

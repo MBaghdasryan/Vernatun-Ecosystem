@@ -1,0 +1,56 @@
+version: 1
+
+service:
+  name: Vernatun Edge Media
+  host: 127.0.0.1
+  port: 8093
+  logLevel: INFO
+
+identity:
+  edgeId: edge-building01
+  tenantId: 9e8e581c-d8cf-4bb4-9548-d6e1e961e090
+  buildingId: a6e398fc-2f1d-4724-9db4-11e7874683c7
+  siteCode: building01
+
+mqtt:
+  enabled: true
+  host: 127.0.0.1
+  port: 1884
+  qos: 1
+  telemetryIntervalSeconds: 5
+
+media:
+  defaultIdleTimeoutSeconds: 45
+  sessionMaxSeconds: 14400
+  whipConnectTimeoutSeconds: 20
+  snapshotQuality: 90
+  # Add the exact custom LiveKit Ingress host here for self-hosted deployments.
+  allowedPublishHosts:
+    - livekit.cloud
+
+cameras:
+  - deviceId: Laptop-Camera-01
+    enabled: true
+    sourceType: USB_WEBCAM
+    cameraIndex: 0
+    backend: AUTO
+    targetWidth: 640
+    targetHeight: 480
+    targetFps: 30
+    location: TEST Building 01
+    zone: Entrance / Security
+    capabilities:
+      - CAMERA.LIVE_VIEW
+      - CAMERA.SNAPSHOT
+
+# Future examples:
+#
+#  - deviceId: Camera-Parking-01
+#    enabled: false
+#    sourceType: RTSP
+#    sourceUrl: rtsp://192.168.1.20/stream1
+#    usernameEnv: CAMERA_PARKING_01_USER
+#    passwordEnv: CAMERA_PARKING_01_PASSWORD
+#    capabilities:
+#      - CAMERA.LIVE_VIEW
+#      - CAMERA.SNAPSHOT

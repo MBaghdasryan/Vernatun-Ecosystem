@@ -19,12 +19,12 @@ export async function handleCameraMediaEdgeMessage(edgeNodeId:string,message:any
  if(type!=='MEDIA_SESSION_STATE')return false;
  const sessionId=String(message.sessionId??'');
  const reported=String(message.state??'').toUpperCase();
- if(!/^[0-9a-f-]{36}$/i.test(sessionId)||!['STARTING','ACTIVE','FAILED','STOPPING','ENDED'].includes(reported))
+  if(!/^[0-9a-f-]{36}$/i.test(sessionId)||!['STARTING','ACTIVE','LIVE','FAILED','STOPPING','ENDED'].includes(reported))
   throw new Error('invalid_media_session_state');
  const row=(await pool.query(`SELECT id,room_name,edge_participant_identity,state FROM edge_camera_media_sessions
   WHERE id=$1 AND edge_node_id=$2 AND state IN ('STARTING','ACTIVE','STOPPING')`,[sessionId,edgeNodeId])).rows[0];
  if(!row)return true;
- if(reported==='ACTIVE'){
+  if(reported==='ACTIVE'||reported==='LIVE'){
   // Edge's status message is not sufficient proof of a media stream. The
   // Cloud must also observe the authorized publisher's actual video track.
   const hasTrack=await cameraMediaGateway.hasVideoPublisher(row.room_name,row.edge_participant_identity);
