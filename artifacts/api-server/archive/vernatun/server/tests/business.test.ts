@@ -109,6 +109,213 @@ test('Calculation — configurable billing preserves an auditable rule snapshot 
   const organizationId=(await pool.query('SELECT organization_id FROM units WHERE id=$1',[unit])).rows[0].organization_id;
   assert.equal((await pool.query('SELECT enabled FROM unit_billing_service_applicability WHERE organization_id=$1 AND unit_id=$2 AND service_id=$3 AND effective_from=$4',[organizationId,unit,manualService.data.id,period])).rows[0].enabled,false);
 });
+test('Calculation — billing formulas, limits, proration and saved line explanations',async()=>{
+ const period='2040-01-01',unit=seeded.fixtures.ua;
+ const buildingId=(await pool.query('SELECT building_id FROM units WHERE id=$1',[unit])).rows[0].building_id;
+ const organizationId=(await pool.query('SELECT organization_id FROM units WHERE id=$1',[unit])).rows[0].organization_id;
+ const daysInPeriod=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).getUTCDate();
+ const activeFrom=`${period.slice(0,7)}-11`,activeUntil=`${period.slice(0,7)}-20`,activeDays=10;
+ const stamp=randomBytes(5).toString('hex');
+ const ownerAssignment=(await pool.query("SELECT id FROM role_assignments WHERE user_id=$1 AND unit_id=$2 AND role_key='unit_owner' AND active",[seeded.accounts.unit_owner.id,unit])).rows[0].id;
+ const familyAssignment=(await pool.query("SELECT id FROM role_assignments WHERE user_id=$1 AND unit_id=$2 AND role_key='family' AND active",[seeded.accounts.family.id,unit])).rows[0].id;
+ const makeRule=async(serviceId:string,tariffId:string,options:Record<string,any>={})=>{
+  const scopeKind=options.scopeKind??'unit';
+  const body={serviceId,tariffId,scopeKind,...(scopeKind==='organization'?{}:{buildingId}),
+   ...(scopeKind==='unit'?{unitId:unit}:{}),calculationMethod:options.method,zeroPolicy:'ALLOW_ZERO',
+   roundingMode:options.roundingMode??'NEAREST_AMD',prorationMode:options.prorationMode??'DISABLED',
+   validFrom:options.validFrom??period,...(options.validUntil?{validUntil:options.validUntil}:{}),
+   priority:options.priority??10,active:true,...(options.minimumAmount?{minimumAmount:options.minimumAmount}:{}),
+   ...(options.maximumAmount?{maximumAmount:options.maximumAmount}:{}),
+   ...(options.occupancyCountMode?{occupancyCountMode:options.occupancyCountMode}:{}),
+   ...(options.meterKind?{meterKind:options.meterKind}:{})};
+  const result=await accountant.call('/finance/billing-rules','POST',body);
+  assert.equal(result.status,201,JSON.stringify(result.data));return result.data;
+ };
+ const createCase=async(name:string,method:string,rate:string,options:Record<string,any>={})=>{
+  const service=await accountant.call('/finance/services','POST',{name:`${name} ${stamp}`,description:'Billing formula integration test',
+   category:'maintenance',mandatory:true,defaultCalculationMethod:method});
+  assert.equal(service.status,201,JSON.stringify(service.data));
+  const tariff=await accountant.call('/finance/configuration/tariffs','POST',{
+   serviceId:service.data.id,name:`${name} tariff ${stamp}`,amountMinor:rate,currency:'AMD',
+   calculationMethod:method,rateUnit:options.rateUnit??'AMD/unit',validFrom:period
+  });
+  assert.equal(tariff.status,201,JSON.stringify(tariff.data));
+  const payer=await accountant.call('/finance/payers','POST',{
+   unitId:unit,payerId:seeded.accounts.unit_owner.id,serviceId:service.data.id,startsOn:period
+  });
+  assert.equal(payer.status,201,JSON.stringify(payer.data));
+  const rule=await makeRule(service.data.id,tariff.data.id,{method,...options});
+  return {name:service.data.name,service:service.data,tariff:tariff.data,payer:payer.data,rule};
+ };
+ const fixed=await createCase('Fixed', 'FIXED_PER_UNIT','12345',{minimumAmount:'13000'});
+ const residents=await createCase('Residents','PER_RESIDENT','300',{occupancyCountMode:'AUTO_ACTIVE_RESIDENTS',rateUnit:'AMD/resident'});
+ const parking=await createCase('Parking','PER_PARKING_SPACE','1250',{rateUnit:'AMD/parking_space'});
+ const quantity=await createCase('Quantity','PER_QUANTITY','50',{rateUnit:'AMD/quantity'});
+ const meter=await createCase('Meter','PER_METER_CONSUMPTION','800',{meterKind:'water',rateUnit:'AMD/m³'});
+ const prorated=await createCase('Prorated','FIXED_PER_UNIT','3100',{
+  validFrom:activeFrom,validUntil:activeUntil,prorationMode:'DAILY'
+ });
+ const daily=await createCase('Daily','PER_DAY','400',{
+  validFrom:activeFrom,validUntil:activeUntil,rateUnit:'AMD/day'
+ });
+ const capped=await createCase('Maximum','FIXED_PER_UNIT','24890',{maximumAmount:'24000'});
+ const roundUp=await createCase('Round up','FIXED_PER_UNIT','123',{roundingMode:'ROUND_UP_AMD'});
+ const roundDown=await createCase('Round down','FIXED_PER_UNIT','177',{roundingMode:'ROUND_DOWN_AMD'});
+ const overlapping=await createCase('Overlapping','FIXED_PER_UNIT','777');
+ const missingQuantity=await createCase('Missing quantity','PER_QUANTITY','100');
+ const missingMeter=await createCase('Missing meter','PER_METER_CONSUMPTION','100',{meterKind:'electricity'});
+ const higherLevelRule=await makeRule(overlapping.service.id,overlapping.tariff.id,{
+  scopeKind:'organization',method:'FIXED_PER_UNIT',priority:99
+ });
+ const parameters=await accountant.call(`/properties/${unit}/billing-parameters`,'PATCH',{
+  effectiveFrom:period,billingArea:null,residentCountMode:'AUTO_ACTIVE_RESIDENTS',billingResidentCount:null,
+  occupancyStatus:'OCCUPIED',reason:'Set isolated billing formula fixtures',
+  residents:[ownerAssignment,familyAssignment].map(assignmentId=>({assignmentId,residesHere:true,countsForBilling:true})),
+  serviceQuantities:[{serviceId:parking.service.id,quantity:'2'},{serviceId:quantity.service.id,quantity:'3'}],
+  serviceApplicability:[]
+ });
+ assert.equal(parameters.status,200,JSON.stringify(parameters.data));
+ let waterMeters=(await pool.query("SELECT id FROM meters WHERE organization_id=$1 AND unit_id=$2 AND kind='water' ORDER BY id",[organizationId,unit])).rows;
+ if(!waterMeters.length)waterMeters=[(await pool.query(`INSERT INTO meters(organization_id,unit_id,serial_number,kind)
+  VALUES($1,$2,$3,'water') RETURNING id`,[organizationId,unit,`billing-${stamp}`])).rows[0]];
+ const previousMonth=new Date(period+'T00:00:00Z');previousMonth.setUTCMonth(previousMonth.getUTCMonth()-1);
+ const previousPeriod=previousMonth.toISOString().slice(0,10);
+ for(const readingMeter of waterMeters)await pool.query(`INSERT INTO meter_readings(meter_id,value_thousandths,period,created_by)
+  VALUES($1,10000,$2,$3),($1,12500,$4,$3)
+  ON CONFLICT(meter_id,period) DO UPDATE SET value_thousandths=EXCLUDED.value_thousandths`,
+ [readingMeter.id,previousPeriod,seeded.accounts.accountant.id,period]);
+ const preview=await accountant.call('/finance/billing/preview','POST',{buildingId,period});
+ assert.equal(preview.status,200,JSON.stringify(preview.data));
+ const lineFor=(item:any)=>preview.data.charges.find((line:any)=>line.serviceName===item.name);
+ const fixedLine=lineFor(fixed),residentLine=lineFor(residents),parkingLine=lineFor(parking),quantityLine=lineFor(quantity);
+ const meterLine=lineFor(meter),proratedLine=lineFor(prorated),dailyLine=lineFor(daily),cappedLine=lineFor(capped);
+ const roundUpLine=lineFor(roundUp),roundDownLine=lineFor(roundDown),overlapLine=lineFor(overlapping);
+ for(const [label,line] of Object.entries({fixedLine,residentLine,parkingLine,quantityLine,meterLine,proratedLine,dailyLine,cappedLine,roundUpLine,roundDownLine,overlapLine}))
+  assert.ok(line,`Expected ${label} in preview: ${JSON.stringify(preview.data.exceptions)}`);
+ assert.deepEqual(
+  [fixedLine.calculationMethod,fixedLine.baseQuantity,fixedLine.rawAmountMinor,fixedLine.roundedAmountMinor],
+  ['FIXED_PER_UNIT','1','12345','13000']
+ );
+ assert.deepEqual(
+  [residentLine.calculationMethod,residentLine.baseQuantity,residentLine.rawAmountMinor,residentLine.roundedAmountMinor],
+  ['PER_RESIDENT','2','600','600']
+ );
+ assert.deepEqual(
+  [parkingLine.calculationMethod,parkingLine.baseQuantity,parkingLine.rawAmountMinor,parkingLine.roundedAmountMinor],
+  ['PER_PARKING_SPACE','2.0000','2500','2500']
+ );
+ assert.deepEqual(
+  [quantityLine.calculationMethod,quantityLine.baseQuantity,quantityLine.rawAmountMinor,quantityLine.roundedAmountMinor],
+  ['PER_QUANTITY','3.0000','150','200']
+ );
+ const meterQuantity=`${2*waterMeters.length}.500`,meterAmount=String(2000*waterMeters.length);
+ assert.deepEqual(
+  [meterLine.calculationMethod,meterLine.baseQuantity,meterLine.rawAmountMinor,meterLine.roundedAmountMinor],
+  ['PER_METER_CONSUMPTION',meterQuantity,meterAmount,meterAmount]
+ );
+ const proratedScaled=(BigInt(activeDays)*10000n+BigInt(Math.floor(daysInPeriod/2)))/BigInt(daysInPeriod);
+ const proratedQuantity=`${proratedScaled/10000n}.${(proratedScaled%10000n).toString().padStart(4,'0')}`;
+ const proratedRaw=(3100n*proratedScaled+5000n)/10000n;
+ const proratedRounded=((proratedRaw+50n)/100n)*100n;
+ assert.deepEqual(
+  [proratedLine.calculationMethod,proratedLine.baseQuantity,proratedLine.rawAmountMinor,proratedLine.roundedAmountMinor],
+  ['FIXED_PER_UNIT',proratedQuantity,proratedRaw.toString(),proratedRounded.toString()]
+ );
+ assert.deepEqual(
+  [dailyLine.calculationMethod,dailyLine.baseQuantity,dailyLine.rawAmountMinor,dailyLine.roundedAmountMinor],
+  ['PER_DAY','10','4000','4000']
+ );
+ assert.deepEqual(
+  [cappedLine.calculationMethod,cappedLine.baseQuantity,cappedLine.rawAmountMinor,cappedLine.roundedAmountMinor],
+  ['FIXED_PER_UNIT','1','24890','24000']
+ );
+ assert.deepEqual(
+  [roundUpLine.calculationMethod,roundUpLine.rawAmountMinor,roundUpLine.roundedAmountMinor],
+  ['FIXED_PER_UNIT','123','200']
+ );
+ assert.deepEqual(
+  [roundDownLine.calculationMethod,roundDownLine.rawAmountMinor,roundDownLine.roundedAmountMinor],
+  ['FIXED_PER_UNIT','177','100']
+ );
+ assert.ok(preview.data.exceptions.some((x:any)=>x.serviceName===missingQuantity.name&&x.code==='missing_service_quantity'));
+ assert.ok(preview.data.exceptions.some((x:any)=>x.serviceName===missingMeter.name&&x.code==='missing_meter_reading'));
+ assert.equal(lineFor(missingQuantity),undefined);assert.equal(lineFor(missingMeter),undefined);
+ const batch=await accountant.call('/finance/rule-batches','POST',{buildingId,period,key:crypto.randomUUID()});
+ assert.equal(batch.status,201,JSON.stringify(batch.data));
+ const batchLines=batch.data.snapshot.charges;
+ assert.equal(batchLines.find((line:any)=>line.serviceId===overlapping.service.id).ruleId,overlapping.rule.id,
+  'the unit rule must take precedence over the higher-priority organization rule');
+ const published=await accountant.call(`/finance/batches/${batch.data.id}/publish`,'POST',{
+  key:crypto.randomUUID(),version:batch.data.version,acceptWarnings:true
+ });
+ assert.equal(published.status,200,JSON.stringify(published.data));
+ const payerIds=[fixed,residents,parking,quantity,meter,prorated,daily,capped,roundUp,roundDown,overlapping].map(item=>item.payer.id);
+ const savedRows=(await pool.query(`SELECT ch.payer_assignment_id,i.id AS invoice_id,il.amount_minor::text,il.calculation_metadata
+  FROM charges ch JOIN invoices i ON i.id=ch.invoice_id JOIN invoice_lines il ON il.invoice_id=i.id
+  WHERE ch.period=$1 AND ch.payer_assignment_id=ANY($2::uuid[])`,[period,payerIds])).rows;
+ const savedByPayer=new Map(savedRows.map(row=>[row.payer_assignment_id,row]));
+ const expected=[
+  [fixed,fixedLine], [residents,residentLine], [parking,parkingLine], [quantity,quantityLine],
+  [meter,meterLine], [prorated,proratedLine], [daily,dailyLine], [capped,cappedLine],
+  [roundUp,roundUpLine], [roundDown,roundDownLine], [overlapping,overlapLine]
+ ] as const;
+ for(const [item,line] of expected){
+  const saved=savedByPayer.get(item.payer.id);
+  assert.ok(saved,`Expected a saved invoice line for ${item.name}`);
+  assert.equal(saved.amount_minor,line.roundedAmountMinor);
+  assert.equal(saved.calculation_metadata.method,line.calculationMethod);
+  assert.equal(saved.calculation_metadata.ruleId,item===overlapping?overlapping.rule.id:item.rule.id);
+  assert.equal(saved.calculation_metadata.tariffId,item.tariff.id);
+  assert.equal(saved.calculation_metadata.baseQuantity,line.baseQuantity);
+  assert.equal(saved.calculation_metadata.baseUnit,line.baseUnit);
+  assert.equal(saved.calculation_metadata.rateMinor,line.rateMinor);
+  assert.equal(saved.calculation_metadata.rawAmountMinor,line.rawAmountMinor);
+  assert.equal(saved.calculation_metadata.roundedAmountMinor,line.roundedAmountMinor);
+  assert.equal(saved.calculation_metadata.roundingMode,item===roundUp?'ROUND_UP_AMD':item===roundDown?'ROUND_DOWN_AMD':'NEAREST_AMD');
+ }
+ assert.equal(fixedLine.roundedAmountMinor,'13000','minimum amount applies after rounding');
+ assert.equal(cappedLine.roundedAmountMinor,'24000','maximum amount caps the rounded result');
+ const proratedSnapshotLine=batchLines.find((line:any)=>line.serviceId===prorated.service.id);
+ const dailySnapshotLine=batchLines.find((line:any)=>line.serviceId===daily.service.id);
+ assert.equal(proratedSnapshotLine.unproratedQuantity,'1');
+ assert.equal(proratedSnapshotLine.prorationDays,activeDays);
+ assert.equal(dailySnapshotLine.baseQuantity,'10');
+ assert.equal(dailySnapshotLine.prorationDays,activeDays);
+ assert.equal(savedByPayer.get(prorated.payer.id)?.calculation_metadata.unproratedQuantity,'1');
+ assert.equal(savedByPayer.get(prorated.payer.id)?.calculation_metadata.prorationDays,activeDays);
+ assert.equal(savedByPayer.get(daily.payer.id)?.calculation_metadata.prorationDays,activeDays);
+ assert.equal(savedByPayer.get(overlapping.payer.id)?.calculation_metadata.ruleId,overlapping.rule.id);
+ assert.ok(higherLevelRule.id!==overlapping.rule.id);
+
+ const nextDate=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),1));
+ nextDate.setUTCMonth(nextDate.getUTCMonth()+1);
+ const nextPeriod=nextDate.toISOString().slice(0,10),changeFrom=`${nextPeriod.slice(0,7)}-15`;
+ const changingResident=await createCase('Resident change','PER_RESIDENT','500',{
+  occupancyCountMode:'AUTO_ACTIVE_RESIDENTS',validFrom:nextPeriod,rateUnit:'AMD/resident'
+ });
+ const nextParameters=await accountant.call(`/properties/${unit}/billing-parameters`,'PATCH',{
+  effectiveFrom:nextPeriod,billingArea:null,residentCountMode:'AUTO_ACTIVE_RESIDENTS',billingResidentCount:null,
+  occupancyStatus:'OCCUPIED',reason:'Start the resident-change boundary fixture',
+  residents:[ownerAssignment,familyAssignment].map(assignmentId=>({assignmentId,residesHere:true,countsForBilling:true})),
+  serviceQuantities:[],serviceApplicability:[]
+ });
+ assert.equal(nextParameters.status,200,JSON.stringify(nextParameters.data));
+ await pool.query(`UPDATE unit_billing_resident_eligibility SET effective_until=$3::date-1
+  WHERE organization_id=$1 AND unit_id=$2 AND role_assignment_id=ANY($4::uuid[]) AND effective_from=$5::date`,
+ [organizationId,unit,changeFrom,[ownerAssignment,familyAssignment],nextPeriod]);
+ const renterAssignment=(await pool.query("SELECT id FROM role_assignments WHERE user_id=$1 AND unit_id=$2 AND role_key='renter' AND active",
+  [seeded.accounts.renter.id,unit])).rows[0].id;
+ await pool.query('UPDATE role_assignments SET starts_at=$2::date,expires_at=NULL WHERE id=$1',[renterAssignment,nextPeriod]);
+ await pool.query(`INSERT INTO unit_billing_resident_eligibility(organization_id,unit_id,role_assignment_id,resides_here,
+  counts_for_billing,effective_from,reason,changed_by) VALUES($1,$2,$3,true,true,$4,'Resident enters during billing period',$5)`,
+ [organizationId,unit,renterAssignment,changeFrom,seeded.accounts.accountant.id]);
+ const residentChangePreview=await accountant.call('/finance/billing/preview','POST',{buildingId,period:nextPeriod});
+ assert.equal(residentChangePreview.status,200,JSON.stringify(residentChangePreview.data));
+ assert.ok(residentChangePreview.data.exceptions.some((x:any)=>
+  x.serviceName===changingResident.name&&x.code==='resident_eligibility_changed_mid_period'));
+ assert.equal(residentChangePreview.data.charges.some((line:any)=>line.serviceName===changingResident.name),false,
+  'a mid-period resident change must be reviewed rather than silently prorated');
+ });
 test('Defect assigned contractor cannot self-accept; return and acceptance use separate accounts',async()=>{
  const d=await developer.call('/defects','POST',{unitId:seeded.fixtures.ua,subject:'Window repair',location:'Kitchen',description:'Seal needs repair',contractorId:seeded.accounts.contractor.id,dueOn:'2026-12-01'});assert.equal(d.status,201);const path='/defects/'+d.data.id;
  assert.equal((await family.call(path)).status,403);assert.equal((await other.call(path)).status,403);

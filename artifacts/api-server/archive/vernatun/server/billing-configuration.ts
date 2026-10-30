@@ -100,7 +100,8 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    AND effective_from<=$3::date AND (effective_until IS NULL OR effective_until>=$4::date)
    ORDER BY unit_id,effective_from DESC,id DESC`,[c.organization_id,units.map(u=>u.id),periodEnd,period])).rows;
  const paramsByUnit=new Map(params.map(p=>[p.unit_id,p]));
- const eligibility=(await db.query(`SELECT e.*,a.user_id,a.role_key,a.starts_at,a.expires_at,m.active AS membership_active,u.blocked
+ const eligibility=(await db.query(`SELECT e.*,e.effective_from::text AS eligibility_from,e.effective_until::text AS eligibility_until,
+   a.user_id,a.role_key,a.starts_at,a.expires_at,m.active AS membership_active,u.blocked
    FROM unit_billing_resident_eligibility e JOIN role_assignments a ON a.id=e.role_assignment_id
    JOIN memberships m ON m.user_id=a.user_id AND m.organization_id=a.organization_id
    JOIN users u ON u.id=a.user_id
@@ -182,9 +183,9 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
     let count:number|undefined;
     if(first.occupancy_count_mode==='AUTO_ACTIVE_RESIDENTS'){
      const records=eligibleByUnit.get(unit.id)??[];
-      if(records.some(e=>e.resides_here&&e.counts_for_billing&&(e.effective_from>period||e.effective_until&&e.effective_until<periodEnd))){fail('resident_eligibility_changed_mid_period');continue}
+      if(records.some(e=>e.resides_here&&e.counts_for_billing&&(e.eligibility_from>period||e.eligibility_until&&e.eligibility_until<periodEnd))){fail('resident_eligibility_changed_mid_period');continue}
      if(!records.length&&p.occupancy_status!=='VACANT'){fail('resident_count_unknown');continue}
-     count=records.filter(e=>e.resides_here&&e.counts_for_billing&&e.effective_from<=periodEnd&&(!e.effective_until||e.effective_until>=period)).length;
+     count=records.filter(e=>e.resides_here&&e.counts_for_billing&&e.eligibility_from<=periodEnd&&(!e.eligibility_until||e.eligibility_until>=period)).length;
     }else count=p.billing_resident_count===null?undefined:Number(p.billing_resident_count);
     if(count===undefined){fail('resident_count_unknown');continue}
     if(count===0&&p.occupancy_status!=='VACANT'&&first.zero_policy==='MANUAL_REVIEW'){fail('zero_resident_review');continue}
@@ -214,7 +215,8 @@ export async function calculateRuleBilling(db:PoolClient,c:Context,buildingId:st
    }
    const unproratedQuantity=quantity;
     if(!manualCharge&&first.proration_mode==='DAILY'&&first.calculation_method!=='PER_DAY'&&activeDays<daysInMonth(period)){
-    const value=(scaled(quantity)*BigInt(activeDays)+BigInt(daysInMonth(period)/2))/BigInt(daysInMonth(period));
+    const monthDays=BigInt(daysInMonth(period));
+    const value=(scaled(quantity)*BigInt(activeDays)+monthDays/2n)/monthDays;
     quantity=(value/10000n).toString()+'.'+(value%10000n).toString().padStart(4,'0');
    }
     const rateMinor=manualCharge?String(manualCharge.amount_minor):String(first.amount_minor);
