@@ -4,11 +4,13 @@ import {createHash} from 'node:crypto';
 import {config} from './config.js';
 import type {PoolClient} from 'pg';
 import {safeDatabaseFailure} from './system-diagnostics.js';
+import {assertMigrationPlanApplicable,createMigrationStatus,type ExpectedObjectObservation} from './migration-plan.js';
 
 type Migration={name:string;sql:string;checksum:string};
 type MigrationPlan={
  database:string;schema:string;canCreateSchema:boolean;ledgerExists:boolean;
- applied:string[];pending:string[];drift:string[];
+ applied:string[];pending:string[];checksumDrift:string[];missingObjects:string[];
+ unexpectedObjects:string[];historyDrift:string[];schemaDrift:string[];drift:string[];
 };
 const lockId=6172921;
 const expectedObjects=[
@@ -90,11 +92,13 @@ async function assertNoUntrackedTables(client:PoolClient,reason:string){
  if(existing.length)throw new Error(`${reason}; refusing untracked schema (${existing.map(row=>row.table_name).join(', ')})`);
 }
 
-async function inspectCoolifyPlan(client:PoolClient,files:Migration[]):Promise<MigrationPlan>{
+async function inspectMigrationPlan(client:PoolClient,files:Migration[],expectedDatabase?:string):Promise<MigrationPlan>{
  const identity=(await client.query<{database:string;schema:string;canCreateSchema:boolean}>(
   `SELECT current_database() AS database,current_schema() AS schema,
    has_schema_privilege(current_schema(),'CREATE') AS "canCreateSchema"`)).rows[0];
- if(!identity||identity.database!=='vernatun')throw new Error('Coolify migration target must be database vernatun');
+ if(!identity)throw new Error('Could not identify migration database and schema');
+ if(expectedDatabase&&identity.database!==expectedDatabase)
+  throw new Error(`Migration target must be database ${expectedDatabase}`);
  const ledgerExists=Boolean((await client.query<{present:boolean}>(
   `SELECT to_regclass('schema_migrations') IS NOT NULL AS present`)).rows[0]?.present);
  let rows:{name:string;checksum:string}[]=[];
@@ -107,25 +111,15 @@ async function inspectCoolifyPlan(client:PoolClient,files:Migration[]):Promise<M
  if(rows.length===0){
   await assertNoUntrackedTables(client,'Migration ledger is empty');
  }
- const byName=new Map(files.map(file=>[file.name,file]));
- const applied=new Map(rows.map(row=>[row.name,row.checksum]));
- for(const row of rows)if(!byName.has(row.name))throw new Error(`Database has an unknown migration record: ${row.name}`);
- const drift:string[]=[];
- let gap=false;
- for(const file of files){
-  const checksum=applied.get(file.name);
-  if(checksum===undefined){gap=true;continue}
-  if(gap)throw new Error(`Migration history is not a contiguous prefix; stopped at ${file.name}`);
-  if(checksum!==file.checksum)throw new Error(`Migration checksum mismatch: ${file.name}`);
- }
- const appliedNames=new Set(applied.keys());
+ const objectObservations:ExpectedObjectObservation[]=[];
  for(const object of expectedObjects){
   const present=object.kind==='function'
    ?Boolean((await client.query<{present:boolean}>('SELECT to_regprocedure($1) IS NOT NULL AS present',[object.name])).rows[0]?.present)
    :Boolean((await client.query<{present:boolean}>('SELECT to_regclass($1) IS NOT NULL AS present',[object.name])).rows[0]?.present);
-  if(appliedNames.has(object.migration)&&!present)drift.push(`Recorded ${object.migration}, but ${object.kind} ${object.name} is missing`);
-  if(!appliedNames.has(object.migration)&&present&&!object.idempotent)drift.push(`${object.kind} ${object.name} exists without its migration record ${object.migration}`);
+  objectObservations.push({...object,present});
  }
+ const status=createMigrationStatus(files,rows,objectObservations);
+ const schemaDrift:string[]=[];
  const sessionExists=Boolean((await client.query<{present:boolean}>(
   `SELECT to_regclass('session') IS NOT NULL AS present`)).rows[0]?.present);
  if(sessionExists){
@@ -134,10 +128,10 @@ async function inspectCoolifyPlan(client:PoolClient,files:Migration[]):Promise<M
     WHERE table_schema=current_schema() AND table_name='session'`)).rows;
   const byColumn=new Map(columns.map(column=>[column.column_name,column.data_type]));
   const missing=['sid','sess','expire'].filter(column=>!byColumn.has(column));
-  if(missing.length)drift.push(`Existing session table lacks required columns: ${missing.join(', ')}`);
-  if(byColumn.has('sid')&&byColumn.get('sid')!=='character varying')drift.push('Existing session table has an incompatible sid type');
-  if(byColumn.has('sess')&&!['json','jsonb'].includes(byColumn.get('sess')!))drift.push('Existing session table has an incompatible sess type');
-  if(byColumn.has('expire')&&byColumn.get('expire')!=='timestamp without time zone')drift.push('Existing session table has an incompatible expire type');
+  if(missing.length)schemaDrift.push(`Existing session table lacks required columns: ${missing.join(', ')}`);
+  if(byColumn.has('sid')&&byColumn.get('sid')!=='character varying')schemaDrift.push('Existing session table has an incompatible sid type');
+  if(byColumn.has('sess')&&!['json','jsonb'].includes(byColumn.get('sess')!))schemaDrift.push('Existing session table has an incompatible sess type');
+  if(byColumn.has('expire')&&byColumn.get('expire')!=='timestamp without time zone')schemaDrift.push('Existing session table has an incompatible expire type');
   const uniqueSid=Boolean((await client.query<{present:boolean}>(`
    SELECT EXISTS(
     SELECT 1 FROM information_schema.table_constraints tc
@@ -151,12 +145,12 @@ async function inspectCoolifyPlan(client:PoolClient,files:Migration[]):Promise<M
        AND kcu2.constraint_name=tc.constraint_name AND kcu2.table_schema=tc.table_schema
        AND kcu2.table_name=tc.table_name)=1
    ) AS present`)).rows[0]?.present);
-  if(!uniqueSid)drift.push('Existing session table lacks a unique key on sid');
+  if(!uniqueSid)schemaDrift.push('Existing session table lacks a unique key on sid');
  }
+  const drift=[...status.missingObjects,...status.unexpectedObjects,...status.historyDrift,...schemaDrift];
  return {
   database:identity.database,schema:identity.schema,canCreateSchema:identity.canCreateSchema,ledgerExists,
-  applied:files.filter(file=>appliedNames.has(file.name)).map(file=>file.name),
-  pending:files.filter(file=>!appliedNames.has(file.name)).map(file=>file.name),drift,
+  ...status,schemaDrift,drift,
  };
 }
 
@@ -170,8 +164,21 @@ async function printCoolifyPlan(){
  assertCoolifyEnvironment(false);
  const files=await migrationFiles(),client=await pool.connect();
  try{
-  const plan=await inspectCoolifyPlan(client,files);
+  const plan=await inspectMigrationPlan(client,files,'vernatun');
   console.log(JSON.stringify({mode:'read_only_preflight',...plan,noWrites:true},null,2));
+ }finally{client.release()}
+}
+
+async function printDevelopmentPlan(){
+ if(config.NODE_ENV!=='development')throw new Error('Development migration plan requires NODE_ENV=development');
+ const files=await migrationFiles(),client=await pool.connect();
+ try{
+  const plan=await inspectMigrationPlan(client,files);
+  console.log(JSON.stringify({
+   mode:'development_read_only_plan',...plan,
+   canApply:plan.checksumDrift.length===0&&plan.drift.length===0,
+   noWrites:true,
+  },null,2));
  }finally{client.release()}
 }
 
@@ -181,13 +188,13 @@ async function applyCoolifyMigrations(){
  let locked=false;
  try{
   await client.query('SELECT pg_advisory_lock($1)',[lockId]);locked=true;
-  let plan=await inspectCoolifyPlan(client,files);
-  if(plan.drift.length)throw new Error(`Schema drift blocks automatic migration: ${plan.drift.join('; ')}`);
+  let plan=await inspectMigrationPlan(client,files,'vernatun');
+  assertMigrationPlanApplicable(plan,plan.schemaDrift);
   if(plan.pending.length&&!plan.canCreateSchema)throw new Error('Database role lacks CREATE privilege on the current schema');
   if(!plan.ledgerExists)await client.query(
    'CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz DEFAULT now())');
-  plan=await inspectCoolifyPlan(client,files);
-  if(plan.drift.length)throw new Error(`Schema drift blocks automatic migration: ${plan.drift.join('; ')}`);
+  plan=await inspectMigrationPlan(client,files,'vernatun');
+  assertMigrationPlanApplicable(plan,plan.schemaDrift);
   const byName=new Map(files.map(file=>[file.name,file]));
   for(const name of plan.pending){
    const file=byName.get(name)!;
@@ -203,7 +210,7 @@ async function applyCoolifyMigrations(){
     throw new Error(`Migration failed at ${name}; earlier committed migrations remain recorded and no data reset was attempted`);
    }
   }
-  const final=await inspectCoolifyPlan(client,files);
+  const final=await inspectMigrationPlan(client,files,'vernatun');
   if(final.pending.length||final.drift.length)throw new Error('Post-migration schema verification failed');
   console.log(JSON.stringify({mode:'applied',database:final.database,appliedCount:final.applied.length,pending:final.pending,drift:final.drift},null,2));
  }finally{
@@ -218,6 +225,10 @@ export async function migrate(){
  const files=await migrationFiles(through),client=await pool.connect();
  try{
   await client.query('SELECT pg_advisory_lock($1)',[lockId]);
+  if(config.NODE_ENV==='development'){
+   const currentPlan=await inspectMigrationPlan(client,await migrationFiles());
+   assertMigrationPlanApplicable(currentPlan,currentPlan.schemaDrift);
+  }
   await client.query('CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz DEFAULT now())');
   for(const file of files){
    const previous=await client.query<{checksum:string}>('SELECT checksum FROM schema_migrations WHERE name=$1',[file.name]);
@@ -238,10 +249,12 @@ export async function migrate(){
 
 async function main(){
  const coolifyPlan=process.argv.includes('--coolify-plan'),coolifyApply=process.argv.includes('--coolify-apply');
- if(coolifyPlan&&coolifyApply)throw new Error('Choose only one Coolify migration mode');
+ const developmentPlan=process.argv.includes('--development-plan');
+ if([coolifyPlan,coolifyApply,developmentPlan].filter(Boolean).length>1)throw new Error('Choose only one migration mode');
  try{
   if(coolifyPlan)await printCoolifyPlan();
   else if(coolifyApply)await applyCoolifyMigrations();
+  else if(developmentPlan)await printDevelopmentPlan();
   else await migrate();
  }finally{await pool.end()}
 }

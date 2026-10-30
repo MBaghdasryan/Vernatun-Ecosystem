@@ -6,6 +6,7 @@
   "scripts": {
     "backup:encrypted-drill": "tsx archive/vernatun/server/operations-restore-cli.ts",
     "test:system": "cd archive/vernatun && node --import tsx server/tests/run.ts --system-only",
+    "test:migration-plan": "cd archive/vernatun && node --import tsx --test server/tests/migration-plan.test.ts",
     "test:readiness": "cd archive/vernatun && node --import tsx server/tests/run.ts --readiness-only",
     "test:unit-plans": "cd archive/vernatun && node --import tsx server/tests/run.ts --unit-plans-only",
     "test:availability": "cd archive/vernatun && node --import tsx server/tests/run.ts --availability-only",
@@ -22,6 +23,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "tsx archive/vernatun/server/migrate.ts",
+    "db:migrate:development:plan": "tsx archive/vernatun/server/migrate.ts --development-plan",
     "db:seed": "tsx archive/vernatun/server/seed.ts && tsx archive/vernatun/server/seed-modules.ts",
     "test:api": "cd archive/vernatun && tsx server/tests/run.ts",
     "test:marketplace-mobile": "cd archive/vernatun && tsx server/tests/run.ts --resident-marketplace-mobile-only",
