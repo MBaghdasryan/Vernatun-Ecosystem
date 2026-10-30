@@ -9,7 +9,7 @@ This is a read-only preparation plan, not authorization to run a production migr
 - No production migration or production deployment was run during preparation.
 - Current source checksums:
   - `064_configurable_billing_rules.sql`: `0c4a26748e3afbdbeff59401bac919fd6cfa851f5ab52368f03c543a557ff72f`
-  - `065_billing_manual_charge_revisions.sql`: `883adc7527652d67dbc5295f35b90c4b42c265b003f13f38648f379757b91a66`
+  - `065_billing_manual_charge_revisions.sql`: `53696d275abae07ec490b2f6beb2bda80f83b6cd36a7b23eed4037a927c51d0b`
 
 The live production ledger and its pending list are not available from this Replit workspace. Read them from the Coolify API container; do not assume which migrations are pending.
 

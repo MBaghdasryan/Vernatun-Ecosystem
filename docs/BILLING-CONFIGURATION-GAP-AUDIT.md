@@ -31,7 +31,7 @@ Audit scope: the attached Vernatun OS + ImTun tariff and area/resident billing m
 
 The configurable billing framework is implemented in source code; it is not production-enabled yet.
 
-- Migration `064_configurable_billing_rules.sql` adds effective-dated tariff/rule versions, unit parameters, resident billing eligibility, service applicability and quantities, manual-charge revisions, and immutable calculation metadata for invoice lines.
+- Migration `064_configurable_billing_rules.sql` adds effective-dated tariff/rule versions, unit parameters, resident billing eligibility, service applicability and quantities, and immutable calculation metadata for invoice lines. Migration `065_billing_manual_charge_revisions.sql` adds the revisioned manual-charge ledger without rewriting the already-applied `064` history.
 - The API supports service/tariff configuration, organization/building/unit rules, rule-based previews and drafts, scoped unit settings, resident parameter-review requests, audited manager decisions, and revisioned manual charges.
 - Vernatun OS has configuration, per-unit parameters, manual-charge entry, and a manager review queue. ImTun displays saved calculation details and lets residents submit parameter corrections for review.
 - Published invoice calculations remain snapshots. Corrections do not rewrite an already published invoice, and payment merchant/beneficiary settings are not changed by billing rules.
@@ -39,7 +39,7 @@ The configurable billing framework is implemented in source code; it is not prod
 
 ### Not enabled or not fully accepted
 
-- Development already had migration 064 applied with its original checksum. Its registered SQL was restored unchanged after finding a later local edit, and the manual-charge table was separated into additive migration 065. The normal post-merge setup applied 065 to development and completed successfully. Production was not changed.
+- Development already had migration 064 applied with its original checksum. The missing manual-charge table was added through additive migration 065 after explicit user approval. The DDL was consolidated under the shared migration filename without changing its applied checksum. The paired development backup was restored successfully in an isolated target before 065. After 065, the authenticated billing API integration tests passed on an isolated schema; a live unauthenticated development request passed the migration gate and correctly received 401. Production was not changed.
 - No real payment provider was configured or tested. Provider setup, live collection, and settlement verification remain separate work.
 - The tested end-to-end calculation path uses area billing and manual charges; the other supported calculation methods, all exception combinations, all role/language/device combinations, and real Android/iOS acceptance still need broader test coverage.
 - No Production deployment or database migration was performed as part of this implementation.
