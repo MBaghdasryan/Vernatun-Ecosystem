@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ImTun by Vernatun",
-    "slug": "imtun-by-vernatun",
+    "slug": "imtun",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -84,8 +84,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b01e9cdc-c4d1-48c5-90e5-07868a12aabe"
+        "projectId": "0745b875-293a-4c1b-a5d9-903608d5e373"
       }
-    }
+    },
+    "owner": "cubeappmaker-agency"
   }
 }
