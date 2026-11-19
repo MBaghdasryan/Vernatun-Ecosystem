@@ -171,7 +171,12 @@ try {
   for (const [module, enabled] of modules) {
     await client.query(
       `INSERT INTO module_entitlements(organization_id,module,enabled,override_state,override_reason)
-       VALUES($1,$2,$3,$4,$5)`,
+       VALUES($1,$2,$3,$4,$5)
+       ON CONFLICT (organization_id,module) DO UPDATE SET
+         enabled=EXCLUDED.enabled,
+         override_state=EXCLUDED.override_state,
+         override_reason=EXCLUDED.override_reason,
+         updated_at=now()`,
       [
         organizationId,
         module,
