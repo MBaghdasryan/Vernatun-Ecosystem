@@ -218,9 +218,9 @@ try {
   );
   await client.query(
     `INSERT INTO audit_events(organization_id,actor_user_id,action,entity_type,entity_id,details)
-     VALUES($1,NULL,'demo.test_accounts.provision','organization',$1::text,
+     VALUES($1,NULL,'demo.test_accounts.provision','organization',$2::text,
        '{"source":"coolify","synthetic_data":true,"external_messages_sent":false}')`,
-    [organizationId],
+    [organizationId, organizationId],
   );
 
   await client.query('COMMIT');
