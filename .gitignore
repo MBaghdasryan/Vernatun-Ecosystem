@@ -33,6 +33,7 @@ node_modules
 /coverage
 /generated-artifacts/
 /artifacts/imtun-mobile/static-build/
+/artifacts/vernatun/public/downloads/*.apk
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log

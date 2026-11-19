@@ -12,6 +12,7 @@ export default function SiteFooter({homePrefix='',onLogin=()=>location.assign('/
    {ecosystem.products.map(p=><a key={p.id} href={`${homePrefix}#${p.id}`}>{p.brand==="Vernatun OS"?p.brand:<ProductLogo brand={p.brand}/>}</a>)}
    <button onClick={onLogin}>{e("Войти","Մուտք","Sign in")}</button>
    <a href={`${homePrefix}#lead-form`}>{lt('s049')}</a>
+   <a href="/apps">{e("Приложения","Հավելվածներ","Apps")}</a>
    <a href="/privacy" aria-current={activeLegal==='privacy'?'page':undefined}>{e("Конфиденциальность","Գաղտնիություն","Privacy")}</a>
    <a href="/terms" aria-current={activeLegal==='terms'?'page':undefined}>{e("Условия использования","Օգտագործման պայմաններ","Terms of use")}</a>
   </nav>
