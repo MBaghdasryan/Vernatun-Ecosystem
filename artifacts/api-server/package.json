@@ -44,6 +44,7 @@
     "db:migrate:coolify:plan": "node dist/migrate.mjs --coolify-plan",
     "db:migrate:coolify:apply": "node dist/migrate.mjs --coolify-apply",
     "db:provision:edge-test-lab": "node archive/vernatun/server/scripts/provision-edge-test-lab.mjs",
+    "db:provision:demo-testers": "node archive/vernatun/server/scripts/provision-demo-testers.mjs",
     "db:recover:global-account": "node archive/vernatun/server/scripts/recover-global-account.mjs",
     "db:provision:global-accounts": "node archive/vernatun/server/scripts/provision-global-accounts.mjs",
     "db:verify:global-accounts": "node archive/vernatun/server/scripts/verify-global-accounts.mjs",

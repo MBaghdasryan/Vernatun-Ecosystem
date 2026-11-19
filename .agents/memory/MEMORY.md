@@ -4,6 +4,7 @@
 - [Paired recovery](paired-recovery.md) — SQL rollback does not imply private-byte recovery; verify matched snapshots in isolation.
 - [Archived-script execution](archived-script-execution.md) — pnpm exec can change a nested legacy script’s working directory; preserve archive-relative paths.
 - [Platform completion scope](platform-completion-scope.md) — active completion spec preserves shared architecture; screenshot logos do not override product/user branding.
+- [Public demo access](public-demo-access.md) — shared tester accounts use normal roles only inside synthetic demo data; keep real resident data and physical integrations outside their scope.
 - [Subscription rollout](subscription-rollout.md) — restored organizations retain legacy access until a real subscription/policy is explicitly activated.
 - [Email provider boundary](email-provider-boundary.md) — Resend is selected; provider adapters must remain replaceable without rewriting business logic.
 - [Payer responsibility notifications](payer-notification-policy.md) — resolve consent notices by live unit role and delegation, not broad invoice permissions.
